@@ -15,41 +15,6 @@
     <p v-if="failure || indexFailure" role="alert" class="text-danger">
       {{ failure || indexFailure }}
     </p>
-    <section
-      v-if="djController.available.value && !tracks.length"
-      class="rounded-panel border border-line-2 bg-surface p-5"
-    >
-      <h2 class="text-display text-xl font-semibold">Vos mixes DJ</h2>
-      <p class="mt-2 text-sm text-muted">
-        Des transitions adaptées et une sélection qui se prolonge en continu, à
-        partir de votre bibliothèque.
-      </p>
-      <div class="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
-        <button
-          v-for="recipe in djRecipes"
-          :key="recipe.label"
-          type="button"
-          class="rounded-panel bg-gradient-to-br from-violet-900 to-indigo-950 p-5 text-left text-white hover:from-violet-800 disabled:opacity-50"
-          :disabled="djController.busy.value || !djController.ready.value"
-          @click="
-            djController.startTheme(recipe.theme, recipe.style || 'library')
-          "
-        >
-          <strong class="block">{{ recipe.label }}</strong
-          ><span class="mt-2 block text-xs text-white/65"
-            >DJ continu · local</span
-          >
-        </button>
-      </div>
-      <p class="mt-3 text-sm text-muted" role="status">
-        {{
-          djController.notice.value ||
-          (!djController.ready.value
-            ? 'Le DJ doit être validé sur ce serveur avant sa première écoute.'
-            : '')
-        }}
-      </p>
-    </section>
     <div class="flex flex-wrap items-center gap-3">
       <div
         v-if="enabled('daily') || enabled('weekly')"
@@ -187,6 +152,7 @@
           @click="play(tracks[0])"
           >Tout écouter</UiButton
         >
+        <UiButton :disabled="busy" @click="shuffleAll">Mélanger</UiButton>
         <UiButton :disabled="busy" icon="plus" @click="enqueueAll"
           >Ajouter à la file</UiButton
         >
@@ -243,11 +209,11 @@
 
 <script setup>
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import AppIcon from '/src/components/ui/AppIcon.vue'
 import UiButton from '/src/components/ui/UiButton.vue'
 import { musicAI } from '/src/model/musicAI'
-import { djController } from '/src/model/djController'
+import { usePlayer } from '/src/model/player'
 import { readMixIndex } from '/src/model/musicAiRead'
 import { normalizeTrack } from '/src/lib/library'
 import { useLibrary } from '/src/model/library'
@@ -256,6 +222,7 @@ import { useTrackActions } from '/src/model/trackActions'
 const router = useRouter(),
   library = useLibrary(),
   actions = useTrackActions()
+const route = useRoute()
 const playlists = ref([]),
   tracks = ref([]),
   cadence = ref('daily'),
@@ -275,24 +242,13 @@ const cadences = [
   { id: 'daily', label: 'Mixes du jour' },
   { id: 'weekly', label: 'Mixes de la semaine' },
 ]
-const djRecipes = [
-  { label: 'Fête', theme: 'fete' },
-  { label: 'Rap', theme: 'energie', style: 'rap' },
-  { label: 'Rock', theme: 'energie', style: 'rock' },
-  { label: 'Électro', theme: 'fete', style: 'electro' },
-  { label: 'Calme', theme: 'calme' },
-  { label: 'Concentration', theme: 'concentration' },
-  { label: 'Énergie', theme: 'energie' },
-  { label: 'Détente', theme: 'detente' },
-  { label: 'Mélancolie', theme: 'melancolie' },
-]
 const moods = {
   calme: { label: 'Calme', color: 'from-indigo-700 to-violet-700' },
   concentration: {
     label: 'Concentration',
     color: 'from-slate-800 to-indigo-700',
   },
-  energie: { label: 'Énergie', color: 'from-orange-700 to-rose-800' },
+  energie: { label: 'Motivation', color: 'from-orange-700 to-rose-800' },
   fete: { label: 'Fête', color: 'from-fuchsia-800 to-purple-800' },
   melancolie: { label: 'Mélancolie', color: 'from-blue-800 to-slate-700' },
   detente: { label: 'Détente', color: 'from-teal-800 to-emerald-800' },
@@ -396,6 +352,15 @@ const enqueueAll = () =>
     () => musicAI.playable(tracks.value),
     (rows) => actions.enqueue(rows.map(normalizeTrack))
   )
+const shuffleAll = () =>
+  run(
+    () => musicAI.playable(tracks.value),
+    (rows) =>
+      usePlayer().playList(rows.map(normalizeTrack), {
+        shuffled: true,
+        context: { type: 'playlist', title: title.value },
+      })
+  )
 const save = () =>
   run(
     () => musicAI.save(name.value.trim(), tracks.value, source.value),
@@ -406,8 +371,26 @@ const save = () =>
   )
 function mix() {
   musicAI.selectForDj(tracks.value)
-  router.push('/settings/ai?mode=dj')
+  router.push('/music-dj')
 }
+watch(
+  () => [
+    route.query.mood,
+    route.query.cadence,
+    musicAI.account.value,
+    enabled('daily'),
+    enabled('weekly'),
+  ],
+  () => {
+    const mood = String(route.query.mood || ''),
+      value = String(route.query.cadence || 'daily')
+    if (moods[mood] && enabled(value)) {
+      cadence.value = value
+      open({ mood, cadence: value })
+    }
+  },
+  { immediate: true }
+)
 watch(
   [
     () => musicAI.account.value,
@@ -446,10 +429,7 @@ watch(
 )
 onMounted(() => {
   musicAI.refresh()
-  timer = setInterval(() => {
-    musicAI.refresh()
-    loadIndex()
-  }, 60000)
+  loadIndex()
 })
 onUnmounted(() => {
   disposed = true

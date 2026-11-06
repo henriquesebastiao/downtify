@@ -566,3 +566,36 @@ class LibrarySync:
                 ).fetchall():
                     found[row['path']] = row['track_id']
         return found
+
+    def rows_for(self, identities: Iterable[str]) -> list[dict[str, Any]]:
+        """Bounded point lookups for playlist cards and playback selections."""
+        wanted = list(dict.fromkeys(identities))
+        found = {}
+        with self._connect() as conn:
+            for start in range(0, len(wanted), 500):
+                chunk = wanted[start : start + 500]
+                marks = ','.join('?' for _ in chunk)
+                for row in conn.execute(
+                    f'SELECT track_id,row_json FROM sync_tracks WHERE deleted_at IS NULL AND track_id IN ({marks})',
+                    chunk,
+                ):
+                    found[row['track_id']] = {
+                        'id': row['track_id'],
+                        **json.loads(row['row_json']),
+                    }
+            for identity in wanted:
+                replacement = replacement_for_id(conn, identity)
+                if replacement is not None:
+                    row = conn.execute(
+                        'SELECT row_json FROM sync_tracks WHERE path=? AND deleted_at IS NULL',
+                        (replacement['file'],),
+                    ).fetchone()
+                    found[identity] = {
+                        'id': identity,
+                        **(
+                            json.loads(row['row_json'])
+                            if row
+                            else public_row(replacement)
+                        ),
+                    }
+        return [found[identity] for identity in wanted if identity in found]

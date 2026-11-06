@@ -33,7 +33,9 @@ def client(tmp_path, monkeypatch):
         }
     access = {'allowed': None, 'hidden': set(), 'hidden_resolved': set()}
     monkeypatch.setattr(routes, 'store', lambda: database)
-    monkeypatch.setattr(api, 'allowed_entry_keys', lambda _: access['allowed'])
+    monkeypatch.setattr(
+        api, 'allowed_entry_keys', lambda _, entries=None: access['allowed']
+    )
     monkeypatch.setattr(
         api,
         'library_context',
@@ -90,6 +92,101 @@ def test_dj_requires_auth_and_a_live_enabled_engine(client):
     database.set_preferences(-1, {'dj_prepared': False})
     assert create(http).status_code == 409
     assert DjStore(database).list(1) == []
+
+
+def test_light_status_is_private_cached_and_bounded(client):
+    http, database, _, _ = client
+    identity = create(http).json()['id']
+    summary = http.get(
+        '/api/v1/music-ai/dj/sessions?summary=true',
+        headers={'x-test-user': '1'},
+    ).json()['sessions'][0]
+    assert summary['tracks'] == []
+    assert summary['timeline'] == []
+    assert summary['track_count'] == 2
+    url = f'/api/v1/music-ai/dj/sessions/{identity}?view=playback&position=0'
+    response = http.get(url, headers={'x-test-user': '1'})
+    assert response.status_code == 200
+    assert len(response.json()['tracks']) <= 4
+    assert (
+        http.get(
+            url,
+            headers={
+                'x-test-user': '1',
+                'If-None-Match': response.headers['ETag'],
+            },
+        ).status_code
+        == 304
+    )
+    assert (
+        http.get(
+            url,
+            headers={
+                'x-test-user': '2',
+                'If-None-Match': response.headers['ETag'],
+            },
+        ).status_code
+        == 404
+    )
+    assert (
+        http.get(
+            url.replace('position=0', 'position=nan'),
+            headers={'x-test-user': '1'},
+        ).status_code
+        == 422
+    )
+
+
+def test_trial_is_explicit_and_does_not_make_a_renderer_qualified(client):
+    http, database, _, _ = client
+    for uid in (-1, 1):
+        database.set_preferences(uid, {'dj_interactive': True})
+    database.set_metadata(
+        'dj',
+        {
+            'prepared_ready': True,
+            'interactive_ready': False,
+            'seen': time.time(),
+        },
+    )
+    assert create(http, mode='interactive').status_code == 503
+    assert create(http, mode='interactive', trial=True).status_code == 409
+    for uid in (-1, 1):
+        database.set_preferences(uid, {'dj_trial': True})
+    response = create(http, mode='interactive', trial=True)
+    assert response.status_code == 202
+    assert DjStore(database).get(1, response.json()['id'])['trial'] is True
+    assert database.metadata('dj')['interactive_ready'] is False
+
+
+def test_continuation_accepts_new_tracks_but_never_revives_a_cancelled_render(
+    client,
+):
+    http, database, _, _ = client
+    for uid in (-1, 1):
+        database.set_preferences(
+            uid, {'dj_interactive': True, 'dj_trial': True}
+        )
+    response = create(http, mode='interactive', continuous=True, trial=True)
+    assert response.status_code == 202
+    dj = DjStore(database)
+    job = dj.claim()
+    sources = {
+        'third': {
+            'path': 'private-fixture',
+            'source_version': [1],
+            'fingerprint': 'f',
+        }
+    }
+    assert dj.replenish(1, job['id'], ['third'], sources)
+    assert dj.get(1, job['id'])['ids'] == ['one', 'two', 'third']
+    assert not dj.replenish(
+        2, job['id'], ['fourth'], {'fourth': sources['third']}
+    )
+    dj.stop(1, job['id'])
+    assert not dj.replenish(
+        1, job['id'], ['fourth'], {'fourth': sources['third']}
+    )
 
 
 def test_requests_are_idempotent_and_never_expose_snapshots(client):
@@ -475,3 +572,45 @@ def test_continuous_and_queue_are_rejected_for_prepared_mode(client):
             },
         )
         assert response.status_code == 422
+
+
+def test_seed_handover_excludes_the_audible_title_and_requires_two_analyzed_followers(
+    client, monkeypatch
+):
+    import numpy as np
+
+    from downtify import mobile_routes
+
+    http, database, _, music = client
+    original = mobile_routes._sync()
+    rows = {
+        key: dict(original.row_for(key), duration=180)
+        for key in ('one', 'two')
+    }
+    rows['three'] = dict(
+        rows['two'], id='three', title='three', file='three.wav'
+    )
+    (music / 'three.wav').write_bytes(b'original-content')
+    monkeypatch.setattr(
+        mobile_routes, '_sync', lambda: SimpleNamespace(row_for=rows.get)
+    )
+    monkeypatch.setattr(routes, 'catalog', lambda _: list(rows.values()))
+    monkeypatch.setattr(routes, 'current_sources', lambda values: values)
+    database.set_metadata('model', {'id': 'fixture'})
+    vectors = {key: np.array([1.0, 0.0], dtype='float32') for key in rows}
+    monkeypatch.setattr(database, 'vectors', lambda *_: vectors)
+    payload = {'ids': [], 'seed_id': 'one', 'skip_seed': True, 'count': 2}
+    response = create(http, **payload)
+    assert response.status_code == 202, response.text
+    assert {row['id'] for row in response.json()['tracks']} == {'two', 'three'}
+    assert create(http, **payload).json()['id'] == response.json()['id']
+    assert create(http, **dict(payload, skip_seed=False)).status_code == 422
+    vectors.pop('three')
+    assert (
+        create(http, **dict(payload, request_id='not-enough')).status_code
+        == 503
+    )
+    assert (
+        create(http, ids=[], skip_seed=True, request_id='no-seed').status_code
+        == 422
+    )

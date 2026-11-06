@@ -42,6 +42,7 @@ class Worker:
         self.roots = [Path(root).resolve(strict=True) for root in roots]
         self.checked = self.renewed = 0.0
         self.active_token = None
+        self.compute_ticket = None
         generation = store.metadata('analysis_generation', 0)
         vectors = {
             mood: encoder.encode_text(prompt) for mood, prompt in MOODS.items()
@@ -52,6 +53,8 @@ class Worker:
             release()
 
     def checkpoint(self, job, *, force=False):
+        if self.compute_ticket is not None and not self.compute_ticket.renew():
+            raise Deferred()
         now = time.monotonic()
         if self.active_token != job['lease_token']:
             self.active_token = job['lease_token']
@@ -142,6 +145,7 @@ class AnalysisService:
         )
         self.encoder = self.worker = None
         self.worker_generation = None
+        self.compute_ticket = None
 
     def step(self):
         try:
@@ -168,11 +172,34 @@ class AnalysisService:
                     return False
                 self.worker = candidate
                 self.worker_generation = generation
+            self.worker.compute_ticket = self.compute_ticket
             return self.worker.step()
         except sqlite3.OperationalError as error:
             if not is_busy(error):
                 raise
             return False
+
+    def run_cycle(self):
+        from .compute_budget import acquire
+
+        flags = self.store.preferences(-1)
+        if self.store.metadata('analysis_paused', False) or not any(
+            flags[key] for key in ANALYSIS_FEATURES
+        ):
+            return (
+                self.step()
+            )  # Release a loaded model without taking a compute lease.
+        ticket = retry_busy(lambda: acquire(self.store, 'analysis'), seconds=3)
+        if ticket is None:
+            return False
+        self.compute_ticket = ticket
+        try:
+            return self.step()
+        finally:
+            self.compute_ticket = None
+            if self.worker is not None:
+                self.worker.compute_ticket = None
+            retry_busy(ticket.release, seconds=3)
 
 
 def main():
@@ -188,7 +215,7 @@ def main():
         store, lambda: Encoder(options.models), options.root
     )
     while True:
-        if not service.step():
+        if not service.run_cycle():
             time.sleep(3)
 
 

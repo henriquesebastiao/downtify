@@ -23,9 +23,12 @@ class LiveRenderer:
         self.plan = LivePlan(
             [Profile(**value['profile']) for value in results.values()],
             worker.job['theme'],
-            order=worker.job['ids'] if worker.job.get('queue_order') else None,
+            order=worker.job['ids'][:4]
+            if worker.job.get('queue_order') or worker.job.get('seed_id')
+            else None,
         )
         self.sources = {}
+        self.pending_ids = list(worker.job['ids'][4:])
         if worker.job.get('continuous') and not worker.job.get('queue_order'):
             self.plan.rows = self.plan.rows[:6]
             self.plan.rows[-1]['transition'] = None
@@ -48,6 +51,8 @@ class LiveRenderer:
         self.continuous = worker.job.get('continuous', False)
         self.media_origin = None
         self.listener_checked = 0.0
+        self.pool_checked = -10.0
+        self.refill_revision = 0
         self.live_started = None
 
     def idle(self):
@@ -79,16 +84,48 @@ class LiveRenderer:
         return False
 
     def extend(self):
-        """Reuse the bounded analyzed pool without restarting the HLS encoder."""
-        if not self.continuous:
+        """Prepare at most three following decks without restarting HLS."""
+        if not self.continuous and not self.pending_ids:
             return
         rendered = self.mixer.position / RATE
+        if (
+            self.continuous
+            and self.clock() - self.pool_checked >= 5
+            and hasattr(self.worker.dj, 'sources')
+        ):
+            self.pool_checked = self.clock()
+            latest = self.worker.dj.get(
+                self.worker.job['owner'], self.worker.job['id']
+            )
+            if latest.get('refill_revision', 0) != self.refill_revision:
+                self.refill_revision = latest.get('refill_revision', 0)
+                sources = self.worker.dj.sources(
+                    self.worker.job['owner'], self.worker.job['id']
+                )
+                fresh = [
+                    identity
+                    for identity in latest['ids']
+                    if identity not in self.worker.job['sources']
+                ]
+                self.worker.job['sources'].update(sources)
+                self.pending_ids.extend(fresh)
         # Keep at least two complete future decks. An extension changes only
         # the last, unrendered transition, never the current or next deck.
         future = [
             row for row in self.plan.rows if row['start'] > rendered + 30
         ]
         if len(future) >= 3:
+            return
+        if self.pending_ids:
+            identity = self.pending_ids.pop(0)
+            if identity not in self.results:
+                self.results[identity] = self.worker.prepare_deck(
+                    identity, self.io
+                )
+            selected = [Profile(**self.results[identity]['profile'])]
+            self.plan.append(selected, rendered)
+            self.plan.trim(rendered)
+            self.mixer.replan(self.plan.rows)
             return
         from .dj_plan import order_tracks
 
@@ -170,6 +207,17 @@ class LiveRenderer:
             if all_sources or key not in active:
                 self.sources.pop(key)._mmap.close()
                 self.files.pop(key).unlink(missing_ok=True)
+        if hasattr(self.worker, 'release_decks'):
+            keep = (
+                set()
+                if all_sources
+                else {
+                    row['id']
+                    for row in self.plan.rows
+                    if row['end'] > position
+                }
+            )
+            self.worker.release_decks(self.io, keep)
 
     def commands(self):
         if self.clock() - self.command_checked < 0.5:
@@ -236,6 +284,7 @@ class LiveRenderer:
             theme=self.plan.theme,
             revision=self.plan.revision,
             renewals=self.plan.renewals,
+            remaining_decks=len(self.pending_ids),
             continuous=self.continuous,
             media_origin=self.media_origin,
             engine=self.worker.engine,
@@ -256,14 +305,18 @@ class LiveRenderer:
                 self.commands()
                 if self.idle():
                     return encoder.manifest
-                self.extend()
                 self.publish()
                 if (
                     self.paused
                     or self.mixer.position / RATE >= self.position() + 24
                 ):
+                    if hasattr(self.worker, 'yield_compute'):
+                        self.worker.yield_compute()
                     self.sleep(0.1)
                     continue
+                if hasattr(self.worker, 'require_compute'):
+                    self.worker.require_compute()
+                self.extend()
                 started = self.clock()
                 encoder.write(self.mixer.read(RATE))
                 self.compute_seconds += self.clock() - started

@@ -26,6 +26,7 @@ DEFAULTS = {
     'external_beta': False,
     'dj_prepared': False,
     'dj_interactive': False,
+    'dj_trial': False,
 }
 MOODS = {
     'calme': 'Calm gentle music with soft dynamics',
@@ -76,6 +77,11 @@ class Store:
                 CREATE TABLE IF NOT EXISTS source_versions (
                     id TEXT PRIMARY KEY REFERENCES tracks(id) ON DELETE CASCADE,
                     signature TEXT NOT NULL);
+                CREATE TABLE IF NOT EXISTS catalog_live (id TEXT PRIMARY KEY);
+                CREATE TABLE IF NOT EXISTS catalog_pending (id TEXT PRIMARY KEY, priority REAL NOT NULL DEFAULT 0);
+                CREATE INDEX IF NOT EXISTS catalog_pending_priority ON catalog_pending(priority DESC,id);
+                CREATE TABLE IF NOT EXISTS compute_lease (id INTEGER PRIMARY KEY, token TEXT NOT NULL, kind TEXT NOT NULL, expires REAL NOT NULL);
+                CREATE INDEX IF NOT EXISTS listen_track_time ON listens(track,at);
             """)
             columns = {row[1] for row in db.execute('PRAGMA table_info(jobs)')}
             if 'lease_token' not in columns:
@@ -151,6 +157,10 @@ class Store:
         if owner <= 0:
             raise ValueError('A user identity is required')
         with self.connect() as db:
+            if db.execute(
+                'SELECT 1 FROM preferences WHERE owner=?', (owner,)
+            ).fetchone():
+                return
             db.execute(
                 'INSERT OR IGNORE INTO preferences VALUES (?,?)',
                 (owner, json.dumps(DEFAULTS)),
@@ -260,12 +270,21 @@ class Store:
         """Invalidate derived audio even for equal-size, same-second replacements."""
         value = json.dumps(signature)
         with self.connect() as db:
+            previous = db.execute(
+                'SELECT signature FROM source_versions WHERE id=?', (track,)
+            ).fetchone()
+            if previous is not None and previous[0] == value:
+                return True
             db.execute('BEGIN IMMEDIATE')
             previous = db.execute(
                 'SELECT signature FROM source_versions WHERE id=?', (track,)
             ).fetchone()
             if previous is None or previous[0] != value:
                 db.execute('DELETE FROM analyses WHERE id=?', (track,))
+                db.execute(
+                    'INSERT OR IGNORE INTO catalog_pending(id) SELECT id FROM tracks WHERE id=?',
+                    (track,),
+                )
                 db.execute(
                     'INSERT OR REPLACE INTO source_versions VALUES (?,?)',
                     (track, value),
@@ -329,17 +348,24 @@ class Store:
     def vectors(self, model: str, allowed: set[str]):
         import numpy as np
 
+        result = {}
+        identities = list(allowed)
+        if not identities:
+            return result
         with self.connect() as db:
-            cursor = db.execute(
-                """SELECT a.id,a.vector FROM analyses a JOIN tracks t
-                ON a.id=t.id AND a.fingerprint=t.fingerprint WHERE a.model=?""",
-                (model,),
-            )
-            return {
-                row['id']: np.frombuffer(row['vector'], dtype='<f4')
-                for row in cursor
-                if row['id'] in allowed
-            }
+            for offset in range(0, len(identities), 500):
+                chunk = identities[offset : offset + 500]
+                marks = ','.join('?' for _ in chunk)
+                cursor = db.execute(
+                    'SELECT a.id,a.vector FROM analyses a JOIN tracks t '
+                    f'ON a.id=t.id AND a.fingerprint=t.fingerprint WHERE a.model=? AND a.id IN ({marks})',
+                    (model, *chunk),
+                )
+                result.update({
+                    row['id']: np.frombuffer(row['vector'], dtype='<f4')
+                    for row in cursor
+                })
+        return result
 
     def listen(
         self,

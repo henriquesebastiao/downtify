@@ -89,7 +89,7 @@
         <div class="flex items-center justify-between gap-3">
           <strong
             >{{ moods[session.theme] }} ·
-            {{ session.tracks.length }} titres</strong
+            {{ session.track_count ?? session.tracks.length }} titres</strong
           >
           <span role="status">{{ stateLabel(session) }}</span>
           <UiButton
@@ -311,6 +311,7 @@ import UiButton from '/src/components/ui/UiButton.vue'
 import MusicDjAudio from '/src/components/library/MusicDjAudio.vue'
 import { musicAI } from '/src/model/musicAI'
 import { usePlayer } from '/src/model/player'
+import { djController } from '/src/model/djController'
 
 const props = defineProps({ selection: { type: Array, default: () => [] } })
 const player = usePlayer()
@@ -341,12 +342,11 @@ const isAdmin = computed(
 const enabled = computed(
   () => preparedEnabled.value || interactiveEnabled.value
 )
-const ready = computed(
-  () =>
-    (mode.value === 'prepared'
-      ? preparedEnabled.value
-      : interactiveEnabled.value) &&
-    musicAI.capabilities.value?.dj?.[`${mode.value}_ready`] === true
+const ready = computed(() =>
+  mode.value === 'interactive'
+    ? djController.ready.value
+    : preparedEnabled.value &&
+      musicAI.capabilities.value?.dj?.prepared_ready === true
 )
 const shownSessions = computed(() =>
   sessions.value.filter((session) =>
@@ -438,6 +438,11 @@ async function create(validation = false, reuse = null) {
   try {
     const selection = {
       mode: reuse ? 'interactive' : mode.value,
+      trial:
+        !validation &&
+        (reuse ? 'interactive' : mode.value) === 'interactive' &&
+        musicAI.capabilities.value?.dj?.interactive_ready !== true &&
+        musicAI.capabilities.value?.features?.dj_trial === true,
       theme: reuse?.theme || theme.value,
       count: reuse
         ? Math.min(12, reuse.tracks.length)
@@ -471,6 +476,15 @@ async function create(validation = false, reuse = null) {
   }
 }
 async function control(session, action, payload = {}) {
+  if (
+    djController.session.value?.id === session.id &&
+    ['pause', 'resume', 'next'].includes(action)
+  ) {
+    if (action === 'pause') player.pause()
+    else if (action === 'resume') player.play()
+    else player.next()
+    return
+  }
   busy.value = true
   if (action === 'pause') players.get(session.id)?.pause()
   try {
@@ -493,7 +507,8 @@ async function control(session, action, payload = {}) {
 async function stop(session) {
   busy.value = true
   try {
-    await musicAI.stopDj(session.id)
+    if (djController.session.value?.id === session.id) await djController.stop()
+    else await musicAI.stopDj(session.id)
     await refresh()
   } catch {
     failure.value = 'Impossible d’arrêter le rendu.'

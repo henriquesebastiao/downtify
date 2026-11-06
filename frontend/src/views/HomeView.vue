@@ -2,39 +2,7 @@
   <div
     class="mx-auto flex max-w-[1680px] flex-col gap-10 px-4 pt-6 sm:px-6 md:pt-8 lg:px-10"
   >
-    <div
-      role="tablist"
-      aria-label="Accueil"
-      class="flex gap-2 border-b border-line-2 pb-3"
-    >
-      <button
-        v-if="forYouAvailable"
-        type="button"
-        role="tab"
-        :aria-selected="showForYou"
-        aria-controls="home-for-you"
-        class="rounded-control px-5 py-3 font-semibold"
-        :class="showForYou ? 'bg-accent/10 text-accent' : 'text-muted'"
-        @click="router.replace({ query: { ...route.query, tab: 'for-you' } })"
-      >
-        Pour vous
-      </button>
-      <button
-        type="button"
-        role="tab"
-        :aria-selected="!showForYou"
-        aria-controls="home-library"
-        class="rounded-control px-5 py-3 font-semibold"
-        :class="!showForYou ? 'bg-accent/10 text-accent' : 'text-muted'"
-        @click="router.replace({ query: { ...route.query, tab: 'library' } })"
-      >
-        Ma musique
-      </button>
-    </div>
-    <div v-if="showForYou" id="home-for-you" role="tabpanel">
-      <MusicForYou />
-    </div>
-    <div v-else id="home-library" role="tabpanel" class="flex flex-col gap-10">
+    <div id="home-library" class="flex flex-col gap-10">
       <!-- Hero: paste or search -->
       <div
         class="grid gap-4 animate-rise lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]"
@@ -233,6 +201,8 @@
         />
       </div>
 
+      <MusicForYouShelf />
+
       <!-- Recently added -->
       <section
         v-if="recentAlbums.length"
@@ -301,6 +271,19 @@
         </div>
       </section>
 
+      <nav
+        aria-label="Découvrir et mixer"
+        class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4"
+      >
+        <RouterLink
+          v-for="item in shortcuts"
+          :key="item.to"
+          :to="item.to"
+          class="rounded-panel border border-line-2 bg-surface p-5 font-semibold hover:border-accent/50"
+          >{{ item.label }}</RouterLink
+        >
+      </nav>
+
       <!-- First run -->
       <section
         v-if="library.loaded.value && !library.trackCount.value"
@@ -325,7 +308,7 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import MusicForYou from '/src/components/home/MusicForYou.vue'
+import MusicForYouShelf from '/src/components/home/MusicForYouShelf.vue'
 import { musicAI } from '/src/model/musicAI'
 import AppIcon from '/src/components/ui/AppIcon.vue'
 import CoverArt from '/src/components/ui/CoverArt.vue'
@@ -349,14 +332,14 @@ import { useI18n } from '/src/i18n'
 const { t } = useI18n()
 const router = useRouter()
 const route = useRoute()
-const forYouAvailable = computed(() =>
-  ['personalization', 'daily', 'weekly'].some(
-    (key) => musicAI.capabilities.value?.features?.[key] === true
-  )
-)
-const showForYou = computed(
-  () => forYouAvailable.value && route.query.tab !== 'library'
-)
+const shortcuts = computed(() => [
+  { to: '/discover', label: 'Découvrir' },
+  { to: '/similar', label: 'Titres similaires' },
+  { to: '/podcasts', label: 'Podcasts' },
+  ...(musicAI.capabilities.value?.version === 1
+    ? [{ to: '/music-dj', label: 'DJ · Bêta' }]
+    : []),
+])
 onMounted(() => musicAI.refresh())
 const library = useLibrary()
 const favoriteActions = usePlaylistActions()

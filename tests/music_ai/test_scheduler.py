@@ -64,3 +64,48 @@ def test_initial_partial_analysis_is_not_frozen_as_empty(tmp_path):
     assert refresh_due(store, 'm', lambda uid: True, lambda uid: rows) == 0
     with store.connect() as db:
         assert db.execute('SELECT count(*) FROM playlists').fetchone()[0] == 0
+
+
+def test_generation_yields_before_ranking_when_dj_requests_compute(tmp_path):
+    store = opted_in_store(tmp_path / 'derived.db')
+    assert (
+        refresh_due(
+            store,
+            'm',
+            lambda uid: True,
+            lambda uid: [{'id': 'one'}],
+            checkpoint=lambda: False,
+        )
+        == 0
+    )
+    with store.connect() as db:
+        assert db.execute('SELECT count(*) FROM playlists').fetchone()[0] == 0
+
+
+def test_native_sweep_does_not_load_catalog_when_compute_is_busy(
+    tmp_path, monkeypatch
+):
+    from types import SimpleNamespace
+
+    from downtify import api
+    from downtify.music_ai import compute_budget, routes, scheduler
+
+    database = opted_in_store(tmp_path / 'derived.db')
+    database.set_metadata('model', {'id': 'm', 'ready': True})
+    monkeypatch.setattr(routes, 'store', lambda: database)
+    monkeypatch.setattr(
+        api.state,
+        'auth',
+        SimpleNamespace(
+            users=SimpleNamespace(get=lambda uid: {'role': 'admin'})
+        ),
+    )
+    monkeypatch.setattr(compute_budget, 'acquire', lambda *args: None)
+    monkeypatch.setattr(
+        routes,
+        'catalog',
+        lambda *args: (_ for _ in ()).throw(
+            AssertionError('No catalog read while DJ owns compute')
+        ),
+    )
+    scheduler.native_sweep()

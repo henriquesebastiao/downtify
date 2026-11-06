@@ -93,6 +93,7 @@ describe('music AI capability isolation', () => {
     expect(http.post.mock.calls[0]).toEqual([
       '/api/v1/music-ai/dj/sessions',
       intent,
+      {},
     ])
     expect(http.post.mock.calls[1]).toEqual([
       '/api/v1/music-ai/dj/admin/validation-sessions',

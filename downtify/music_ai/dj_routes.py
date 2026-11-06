@@ -13,7 +13,7 @@ from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel, ConfigDict, Field
 
-from .dj_store import DjStore
+from .dj_store import CancelledDjRequest, DjStore
 from .ranking import rank
 from .worker import signature
 
@@ -31,12 +31,14 @@ def _open_dj(store):
     return DjStore(store)
 
 
-def service(mode):
+def service(mode, *, trial=False):
     from . import routes as base
 
     status = base.store().metadata('dj', {})
     age = time.time() - status.get('seen', 0)
-    if not 0 <= age <= 20 or not status.get(f'{mode}_ready'):
+    if not 0 <= age <= 20 or not status.get(
+        'prepared_ready' if trial else f'{mode}_ready'
+    ):
         raise HTTPException(
             503, 'Le moteur DJ est indisponible ou encore en validation.'
         )
@@ -70,14 +72,19 @@ def visible(request, ids, *, sources=False, known_paths=None):
     from . import routes as base
 
     base.owner(request)
-    allowed, context, sync = (
-        api.allowed_entry_keys(request),
-        api.library_context(),
-        mobile_routes._sync(),
-    )
+    context, sync = api.library_context(), mobile_routes._sync()
     rows, snapshots = {}, {}
+    # One native connection for a window, rather than one connection per title.
+    bulk = (
+        {row['id']: row for row in sync.rows_for(ids)}
+        if hasattr(sync, 'rows_for')
+        else {identity: sync.row_for(identity) for identity in ids}
+    )
+    allowed = api.allowed_entry_keys(
+        request, entries=[row for row in bulk.values() if row is not None]
+    )
     for identity in ids:
-        row = sync.row_for(identity)
+        row = bulk.get(identity)
         if (
             not row
             or row.get('file') in context.hidden_files
@@ -213,6 +220,10 @@ class Selection(BaseModel):
     continuous: bool = False
     queue_files: list[str] = Field(default_factory=list, max_length=40)
     style: Literal['library', 'rap', 'rock', 'electro'] = 'library'
+    seed_id: str = Field(default='', max_length=80)
+    seed_file: str = Field(default='', max_length=4096)
+    trial: bool = False
+    skip_seed: bool = False
 
 
 @router.post('/sessions', status_code=202)
@@ -236,6 +247,12 @@ def create_session(payload, request, *, validation=False):
     from . import routes as base
 
     uid = base.require(request, 'dj_' + payload.mode)
+    if payload.trial:
+        base.require(request, 'dj_trial')
+        if payload.mode != 'interactive' or validation:
+            raise HTTPException(422, 'L’essai bêta concerne le DJ interactif.')
+    if database().request_cancelled(uid, payload.request_id):
+        raise HTTPException(410, 'Cette création DJ a été annulée.')
     if (
         (
             (payload.queue_order or payload.continuous)
@@ -271,6 +288,23 @@ def create_session(payload, request, *, validation=False):
                 422, 'Le filtre de genre nécessite une sélection automatique.'
             )
         intention.append({'style': payload.style})
+    if payload.seed_id or payload.seed_file:
+        if (
+            payload.ids
+            or payload.queue_files
+            or payload.style != 'library'
+            or (payload.seed_id and payload.seed_file)
+        ):
+            raise HTTPException(422, 'Choisissez un seul titre de départ.')
+        intention.append({
+            'seed_id': payload.seed_id,
+            'seed_file': payload.seed_file,
+            'skip_seed': payload.skip_seed,
+        })
+    elif payload.skip_seed:
+        raise HTTPException(422, 'Un titre de départ est requis.')
+    if payload.trial:
+        intention.append({'trial': True})
     request_intent = json.dumps(intention, separators=(',', ':'))
     try:
         previous = database().find_request(
@@ -287,10 +321,24 @@ def create_session(payload, request, *, validation=False):
                 410, 'Ce set a été supprimé. Créez une nouvelle demande.'
             )
         return public(previous, visible_session(request, previous))
-    service('prepared' if validation else payload.mode)
+    service('prepared' if validation else payload.mode, trial=payload.trial)
     ids = payload.ids
+    seed_id = payload.seed_id
+    if payload.seed_file:
+        from .. import mobile_routes
+
+        seed_id = (
+            mobile_routes
+            ._sync()
+            .ids_for_paths([payload.seed_file])
+            .get(payload.seed_file, '')
+        )
+        if not seed_id:
+            raise HTTPException(404, 'Ce titre n’est plus disponible.')
     if payload.queue_files:
-        by_file = {row.get('file'): row['id'] for row in base.catalog(request)}
+        from .. import mobile_routes
+
+        by_file = mobile_routes._sync().ids_for_paths(payload.queue_files)
         if any(file not in by_file for file in payload.queue_files):
             raise HTTPException(
                 404,
@@ -336,7 +384,36 @@ def create_session(payload, request, *, validation=False):
         ]
         analyzed = [row for row in candidates if row['id'] in vectors]
         selected = []
-        if prompt and len(analyzed) >= 2:
+        if seed_id:
+            base.require(request, 'similarity')
+            seed = next(
+                (row for row in candidates if row['id'] == seed_id), None
+            )
+            if seed is None:
+                raise HTTPException(404, 'Ce titre n’est plus accessible.')
+            if seed_id not in vectors:
+                raise HTTPException(
+                    503, 'L’analyse de ce titre est en préparation.'
+                )
+            selected = (
+                [] if payload.skip_seed else [seed]
+            ) + base.current_sources(
+                rank(
+                    [row for row in analyzed if row['id'] != seed_id],
+                    vectors,
+                    target=vectors[seed_id],
+                    limit=payload.count
+                    if payload.skip_seed
+                    else payload.count - 1,
+                    rotation=payload.request_id,
+                )
+            )
+            if len(selected) < 2:
+                raise HTTPException(
+                    503,
+                    'Pas encore assez de titres analysés pour cette similarité.',
+                )
+        elif prompt and len(analyzed) >= 2:
             import numpy as np
 
             selected = base.current_sources(
@@ -376,7 +453,12 @@ def create_session(payload, request, *, validation=False):
             selection_basis=basis,
             queue_order=payload.queue_order,
             continuous=payload.continuous,
+            seed_id='' if payload.skip_seed else seed_id,
+            trial=payload.trial,
+            style=payload.style,
         )
+    except CancelledDjRequest:
+        raise HTTPException(410, 'Cette création DJ a été annulée.') from None
     except PermissionError:
         raise HTTPException(409, 'Cette fonction est désactivée.') from None
     except ValueError:
@@ -397,6 +479,17 @@ class Command(BaseModel):
     request_id: str = Field(min_length=1, max_length=128)
     action: Literal['pause', 'resume', 'next', 'replace', 'theme']
     payload: dict[str, str] = Field(default_factory=dict, max_length=1)
+
+
+@router.delete('/requests/{nonce}')
+def cancel_creation(nonce: str, request: Request):
+    from . import routes as base
+
+    uid = base.owner(request)
+    if not re.fullmatch(r'[A-Za-z0-9_-]{1,128}', nonce):
+        raise HTTPException(422, 'Identifiant de création invalide.')
+    database().cancel_request(uid, nonce)
+    return {'ok': True}
 
 
 @router.post('/sessions/{identity}/commands', status_code=202)
@@ -517,7 +610,7 @@ def hls(identity: str, filename: str, request: Request):
 
 
 @router.get('/sessions')
-def sessions(request: Request):
+def sessions(request: Request, summary: bool = False):
     from . import routes as base
 
     uid = base.owner(request)
@@ -525,6 +618,11 @@ def sessions(request: Request):
     result = []
     for session in database().list(uid):
         if not flags['dj_' + session['mode']]:
+            continue
+        if summary:
+            item = public({**session, 'ids': [], 'timeline': []}, {})
+            item['track_count'] = len(session.get('ids', []))
+            result.append(item)
             continue
         try:
             result.append(public(session, visible_session(request, session)))
@@ -535,9 +633,67 @@ def sessions(request: Request):
 
 
 @router.get('/sessions/{identity}')
-def status(identity: str, request: Request):
+def status(
+    identity: str,
+    request: Request,
+    view: Literal['full', 'playback'] = 'full',
+    position: float | None = None,
+):
     session = owned(request, identity)
-    return public(session, visible_session(request, session))
+    from .dj_refill import schedule
+
+    schedule(request, session)
+    if view == 'full':
+        return public(session, visible_session(request, session))
+    import math
+
+    if position is not None and (
+        not math.isfinite(position) or not 0 <= position <= 1_000_000
+    ):
+        raise HTTPException(422, 'Position de lecture invalide.')
+    timeline = session.get('timeline', [])
+    clock = position if position is not None else session.get('position', 0)
+    index = max(
+        (i for i, row in enumerate(timeline) if row.get('start', 0) <= clock),
+        default=0,
+    )
+    window = timeline[max(0, index - 1) : index + 4]
+    ids = list(dict.fromkeys(row['id'] for row in window))
+    if not timeline:
+        ids = session.get('ids', [])[:4]
+    slim = {**session, 'ids': ids, 'timeline': window}
+    value = public(
+        slim,
+        visible(
+            request,
+            ids,
+            known_paths=database().source_paths(session['owner'], identity),
+        ),
+    )
+    # Running wall clocks do not invalidate an otherwise identical playback plan.
+    stable = {
+        key: item
+        for key, item in value.items()
+        if key
+        not in {'updated', 'position', 'rendered', 'progress', 'render_speed'}
+    }
+    etag = (
+        '"'
+        + hashlib.sha256(
+            json.dumps(stable, sort_keys=True).encode()
+        ).hexdigest()
+        + '"'
+    )
+    headers = {
+        'ETag': etag,
+        'Cache-Control': 'private, no-cache',
+        'Vary': 'Authorization, Cookie',
+    }
+    if request.headers.get('if-none-match') == etag:
+        return Response(status_code=304, headers=headers)
+    from fastapi.responses import JSONResponse
+
+    return JSONResponse(value, headers=headers)
 
 
 @router.delete('/sessions/{identity}')

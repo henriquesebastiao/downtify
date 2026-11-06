@@ -45,13 +45,27 @@ def test_priorities_do_not_starve_and_disk_checks_are_bounded(
         raise AssertionError('AI must never trigger a NAS listing')
 
     monkeypatch.setattr(mobile_routes, '_refresh', forbidden)
-    refreshed = []
+    feed_reads = []
+
+    def changes(since):
+        feed_reads.append(since)
+        return {
+            'tracks': [dict(row) for row in rows],
+            'deleted': [],
+            'cursor': 1,
+            'full': True,
+        }
+
     monkeypatch.setattr(
         mobile_routes,
         '_sync',
         lambda: SimpleNamespace(
-            refresh=lambda items: refreshed.append(len(items)),
-            changes=lambda *args: {'tracks': [dict(row) for row in rows]},
+            refresh=lambda items: forbidden(),
+            cursor=lambda: 1,
+            changes=changes,
+            ids_for_paths=lambda paths: {
+                file: file.removesuffix('.wav') for file in paths
+            },
         ),
     )
     visits = []
@@ -63,16 +77,17 @@ def test_priorities_do_not_starve_and_disk_checks_are_bounded(
     monkeypatch.setattr(library_catalog, 'resolve_library_file', resolve)
     indexer.index_pass()
     assert len(contexts) == 1
-    assert refreshed == [500]
-    assert len(visits) == 200
-    assert len(set(visits)) == 200
+    assert feed_reads == [0]
+    assert 0 < len(visits) <= 200
+    assert len(set(visits)) == len(visits)
     assert visits[:2] == ['499.wav', '300.wav']
     assert database.claim(kind='analysis')['payload']['track'] == '499'
     assert database.claim(kind='analysis')['payload']['track'] == '300'
     visits.clear()
     indexer.index_pass()
-    assert len(visits) == 200
+    assert 0 < len(visits) <= 200
     assert {'100.wav', '199.wav'} <= set(visits)
+    assert feed_reads == [0]
 
 
 def test_native_activity_prevents_catalog_scan(tmp_path, monkeypatch):

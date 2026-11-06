@@ -161,5 +161,33 @@ def summaries(store, owner, rows, *, now=None):
                 'period': key,
                 'created': created,
                 'count': count,
+                'cover_track_ids': [
+                    identity
+                    for identity in json.loads(ids)
+                    if identity in allowed
+                ][:4],
+                'state': 'ready',
             })
     return result
+
+
+def stored_selections(store, owner, *, now=None):
+    flags = store.effective(owner)
+    with store.connect() as db:
+        rows = db.execute(
+            'SELECT cadence,mood,period,ids,created FROM playlists WHERE owner=? AND period IN (?,?)',
+            (owner, period('daily', now), period('weekly', now)),
+        ).fetchall()
+    return [
+        dict(
+            cadence=row['cadence'],
+            mood=row['mood'],
+            period=row['period'],
+            ids=json.loads(row['ids']),
+            created=row['created'],
+        )
+        for row in rows
+        if flags.get(row['cadence'])
+        and row['period'] == period(row['cadence'], now)
+        and row['mood'] in MOODS
+    ]

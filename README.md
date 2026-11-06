@@ -30,46 +30,58 @@
 
 ## Experimental music AI and DJ beta
 
-I am testing an optional local recommendation and DJ companion. **All seven
-modules default off** for new installations and accounts; administrators enable
-server capabilities and each user chooses their own synchronized preferences.
-Existing explicit choices are preserved during upgrades.
+**Opt-in beta. All modules and the additional unqualified-DJ trial default off
+for new installations/accounts.** Existing explicit preferences survive updates.
 
-Home → **For you** contains daily/weekly mood playlists and continuous themed DJ
-shortcuts. Song actions can start a mix from that exact local title. The normal
-player gains a DJ button for its current queue, current/next title metadata and
-transition progress. Sleep timers and a bounded recent-playlist menu also work
-with ordinary playback. External discovery is a separate opt-in beta; continuous
-DJ uses local files and does not fall back to a radio.
+My music shows four daily selections below favorite playlists: Relaxation,
+Focus, Motivation and Calm, with a See all page for daily/weekly playlists.
+The separate DJ page offers themes/genres, prepared sets and continuous local
+mixes. Song menus distinguish a classic similar-track mix from a DJ mix.
+The queue also has a DJ button; playback, pause, sleep timer and system media
+controls use the same player.
 
-| Resource | Operator budget / behavior |
+DCLAP/ONNX analysis runs in a separate CPU companion. Beat This!, Rubber Band
+and a single HLS encoder prepare server transitions. Audio roots stay read-only.
+Native authentication, current catalog visibility and per-account isolation
+remain authoritative. External discovery is separately optional; DJ uses local
+files and never falls back to radio.
+
+| Component | Configured starting budget |
 | --- | --- |
-| Analysis companion | CPU ONNX/DCLAP, one thread; example cap: 1 CPU, 1.5 GiB RAM |
-| DJ companion | CPU Beat This! + Rubber Band; example cap: 1 CPU, 2 GiB RAM |
-| DJ cache | Separate 5 GiB default, configurable; 2 GiB free-disk reserve |
-| Embeddings | 512 float32 values = 2 KiB/title; ~195 MiB raw for 100,000 titles, before database overhead |
-| Interactive transport | One render session, shared by its clients; six-second HLS segments |
+| Analysis | 0.5 CPU, 1.5 GiB memory cap, one file and one inference thread |
+| DJ | 1 CPU, 2 GiB memory cap, one session, separate 5 GiB disk cache |
+| Scheduling | One heavy compute lease shared by analysis and DJ; DJ has priority |
+| Preparation | Current deck plus up to three following decks; 24-second committed render horizon |
+| Android | 64 MiB audio allocator target; live HLS bypasses the persistent library cache |
 
-These are configurable budgets and storage arithmetic, **not measured minimum
-requirements or a hardware performance guarantee**. No GPU or paid AI service is
-required. Analysis and mixing run outside the web process; originals are mounted
-read-only. See [the operator and licensing guide](docs/music-ai.md).
+These are configurable limits, **not measured minimum requirements or measured
+phone consumption**. Pausing DJ or filling its render horizon yields compute
+back to analysis. Interactive HTTP reads do not reconcile the full catalog;
+the indexer consumes native revisions in the background. DJ status uses bounded
+playback windows, private ETags and session summaries.
 
-The delivered candidate passed 760 frontend tests (one skipped) and its production
-build. Focused Linux checks passed 69 native/API tests, 91 preference/privacy/route
-tests and 63 DJ tests as UID 1000. These groups overlap and must not be summed into
-a unique total. The companion's latest engine still needs a real uninterrupted
-one-hour playback test, sustained rendering above 1.5× real time and zero
-interruptions before ordinary interactive creation is enabled. That acceptance
-test is deliberately separate from synthetic tests. Human comparative listening,
-resource measurements under sustained load and physical Android background
-recovery remain pending. This contribution is a **draft beta**.
+A local synthetic comparison on 50,000 catalog entries measured home cards at
+46.49 ms median / 51.81 ms p95 over 25 runs, resolving at most 160 selected ids
+and making zero full-catalog calls. The reconstructed former reconciliation
+path measured 2,812.54 ms median over three runs. This is an in-process
+comparison, **not** a LAN, NAS or Android benchmark.
 
-Continuous selection currently cycles a bounded pool (24 tracks for theme
-shortcuts, up to 40 from the queue), avoids recent repeats when possible and
-extends only uncommitted audio. Commands take effect at the next available
-transition, with the effective delay shown. It does not yet choose indefinitely
-from the entire library. Prepared sets are available separately.
+Latest corrective-candidate checks: 766 web tests passed (one skipped), a
+production web build, 116 focused Python checks, 75 Linux DJ checks with local
+models, and 3,375 native/server checks plus ten subtests. Test groups overlap;
+they are not a subjective music-quality score. The broad server harness needs
+a writable temporary workspace for its trash fixtures, while production can
+remain read-only.
+
+The real uninterrupted one-hour DJ qualification, comparative listening,
+physical Android/background acceptance and phone thermal/battery measurements
+remain pending. A separate **voluntary unqualified-engine trial** allows testing
+an available server engine without pretending it is qualified. It requires both
+administrator and user opt-in and can be disabled independently. On-device DJ
+is not qualified and is not advertised as a working engine.
+
+See [builds, licenses, API behavior and beta limits](docs/music-ai.md).
+The matching Android contribution is [downtify-android#49](https://github.com/henriquesebastiao/downtify-android/pull/49).
 
 ## Overview
 

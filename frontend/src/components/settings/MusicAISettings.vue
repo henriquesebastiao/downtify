@@ -55,13 +55,13 @@
         </label>
       </SettingGroup>
       <p v-if="mode === 'playlists'" class="text-sm text-muted">
-        Retrouvez vos mixes dans Accueil → Pour vous. Les mixes du jour sont
-        renouvelés à 04 h ; ceux de la semaine, le lundi à 04 h 15, heure de
-        Paris.
+        Retrouvez vos quatre sélections sous les playlists favorites dans Ma
+        musique. Renouvellement à 04 h ; sélection hebdomadaire le lundi à 04 h
+        15, heure de Paris.
       </p>
       <RouterLink
         v-if="mode === 'playlists'"
-        to="/?tab=for-you"
+        to="/music-ai"
         class="text-sm font-semibold text-accent"
         >Voir mes playlists personnalisées →</RouterLink
       >
@@ -71,7 +71,14 @@
           direct, le prochain titre et le thème changent à la prochaine
           transition disponible.
         </p>
-        <MusicDjPanel :selection="musicAI.djSelection.value" />
+        <p class="text-sm text-muted">
+          L’essai bêta autorise un moteur disponible avant sa qualification
+          d’une heure. Il ne garantit pas une lecture continue sans rupture et
+          peut être désactivé à tout moment.
+        </p>
+        <RouterLink to="/music-dj" class="text-sm font-semibold text-accent"
+          >Ouvrir le studio DJ →</RouterLink
+        >
         <p
           v-if="!enabled('dj_prepared') && !enabled('dj_interactive')"
           class="text-sm text-muted"
@@ -183,6 +190,7 @@ const features = {
   external_beta: 'Découverte externe — bêta',
   dj_prepared: 'Sets DJ préparés',
   dj_interactive: 'DJ en temps réel',
+  dj_trial: 'Autoriser le DJ non qualifié — essai bêta volontaire',
 }
 const shownFeatures = computed(() =>
   Object.fromEntries(

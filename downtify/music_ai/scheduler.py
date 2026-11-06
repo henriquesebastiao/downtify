@@ -6,7 +6,15 @@ from .playlists import generate, period
 from .store import MOODS
 
 
-def refresh_due(database, identity, user_for, rows_for, *, now=None):
+def refresh_due(
+    database,
+    identity,
+    user_for,
+    rows_for,
+    *,
+    now=None,
+    checkpoint=lambda: True,
+):
     with database.connect() as db:
         users = [
             row[0]
@@ -40,6 +48,8 @@ def refresh_due(database, identity, user_for, rows_for, *, now=None):
             if not rows:
                 continue
             for mood in sorted(missing):
+                if not checkpoint():
+                    return created
                 try:
                     generate(
                         database, uid, cadence, mood, rows, identity, now=now
@@ -66,7 +76,16 @@ def native_sweep():
     def user_for(uid):
         return api.state.auth.users.get(uid)
 
+    ticket = None
+
     def rows_for(uid):
+        nonlocal ticket
+        from .compute_budget import acquire
+
+        if ticket is None:
+            ticket = acquire(store(), 'analysis')
+            if ticket is None:
+                return []
         user = user_for(uid)
         if user is None:
             return []
@@ -88,4 +107,14 @@ def native_sweep():
         })
         return catalog(request)
 
-    refresh_due(store(), status['id'], user_for, rows_for)
+    try:
+        refresh_due(
+            store(),
+            status['id'],
+            user_for,
+            rows_for,
+            checkpoint=lambda: ticket is None or ticket.renew(),
+        )
+    finally:
+        if ticket is not None:
+            ticket.release()

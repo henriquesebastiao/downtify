@@ -1,6 +1,6 @@
 # Optional local music analysis
 
-**Experimental beta: all seven modules default off for new installations and
+**Experimental beta: all modules and the separate unqualified-engine trial default off for new installations and
 accounts.** Existing explicit preferences are retained. Set
 `DOWNTIFY_MUSIC_AI_ENABLED=1` only after supplying the optional web dependencies,
 matching companion images, verified model build contexts and shared derived
@@ -135,7 +135,7 @@ session selection, and theme changes reorder its remaining tracks. The UI
 shows the effective delay. Prepared sets retain full seeking; live playback
 follows the active HLS window. There is no promise of instantaneous changes.
 
-Live inputs are frozen into private temporary files at session preparation,
+Live inputs are frozen and analyzed progressively in a window of four decks,
 within the same 5 GiB DJ budget and disk reserve. This prevents a concurrent
 concurrent library replacement from breaking an ongoing live set. File versions
 are checked during the copy, originals stay read-only, and temporary copies
@@ -147,8 +147,10 @@ analysis. Whole-library recommendation indexing follows its four independent
 recommendation/playlist switches. Creation retries retain the same selection
 even when the catalog or its analyses advance during a request.
 
-Interactive mode is unavailable until an administrator runs its local
-validation from the music page. Both global and user interactive switches
+Qualified interactive mode requires the administrator's local validation.
+An independently disabled-by-default `dj_trial` preference (administrator and user)
+permits a voluntary trial of an available unqualified engine. This does not
+create a qualification receipt or relax authentication/visibility/module gates. Both global and user interactive switches
 must be enabled; this does not bypass disabled modules. The administrator
 validation endpoint is separate from ordinary session creation. It chooses
 up to forty local tracks and requires at least 3700 seconds of planned audio.
@@ -199,9 +201,11 @@ transition progress. The classic queue is retained when leaving DJ mode.
 Android uses its existing foreground Media3 service and updates compatible
 media-item metadata without changing the stream address.
 
-Continuous themes reuse a bounded pool of up to 40 analyzed local tracks
-(24 for the home shortcuts), exclude recently planned titles where the pool
-allows, and append transitions beyond the committed render horizon. One HLS
+Continuous themes start from a bounded local selection and replenish it with
+currently authorized catalog candidates in a single background selector. The
+interactive request never performs this renewal calculation. Recently selected
+ids are excluded (up to 80), genre filters remain active, and unavailable
+continuations retain the existing local pool without falling back to radio. One HLS
 encoder remains alive; decoded decks, rolling segments and timeline history
 are bounded. The pool rotates without performing downloads or starting a
 classic radio. Rap, rock and electronic shortcuts filter native genre tags;
@@ -210,7 +214,8 @@ insufficient matching metadata yields a clear error, never a different genre.
 Program-date-time timestamps map late-joining clients onto the same absolute
 timeline. A continuous session without HLS readers pauses after 90 seconds
 and stops after 15 minutes. Restarting playback resumes a paused session.
-The engine qualification remains mandatory and version-specific; proofs for
+Engine qualification remains version-specific; a voluntary unqualified trial
+is identified separately and requires explicit opt-in. Proofs for
 previous engines are retained for rollback. Synthetic accelerated tests do
 not qualify a new engine for interactive use.
 
@@ -222,3 +227,64 @@ Design references checked 6 November 2026:
 This section describes candidate behavior, not a deployment or listening
 qualification receipt. Physical Android background playback and subjective
 listening comparisons still require their own evidence.
+
+## Corrective architecture and current validation — 6 November 2026
+
+Home reads stored selections and native point lookups only (four daily cards,
+at most 160 ids), with account-private ETag validation. It does not generate
+playlists, rehash the library or reconcile the native catalog. The background
+indexer consumes native revision changes and a bounded pending-analysis queue;
+unchanged native cursors do not reload the feed. Erasure and file replacement
+invalidate derived analyses. Explicit full similarity/ranking requests still
+read the derived snapshot; background jobs/caching for those requests remain
+follow-up work and must not be described as already completed.
+
+Web and Android use a single playback authority. User play/pause intent is
+independent from renderer state. Every mode/account/manual-selection change
+invalidates old asynchronous work. An owner-scoped cancellation tombstone also
+rejects a creation that completes after cancellation or a timeout. Returning
+from DJ selects the dominant deck during overlap and maps cue plus adjusted
+playback speed back to the source time. Queue occurrences distinguish repeated
+copies of the same title. Theme and seed mixes remain local; seed mixes require
+a current sound embedding and start with the chosen track. If that title is already playing, clients
+let it finish and request a seed-excluded selection for the next boundary.
+
+Use `GET /dj/sessions?summary=true` for page summaries and
+`GET /dj/sessions/{id}?view=playback&position=...` for a bounded playback plan.
+Private ETags return 304 when that plan is unchanged. Legacy full responses
+remain available. The renderer prepares at most three future decks, reuses
+snapshot slots after passed decks, and retains the 24-second committed horizon.
+Analysis and DJ share one expiring compute lease. DJ requests priority; an
+analysis checkpoint yields. A paused/full renderer releases the lease. Analysis
+also defers under native activity or guest memory/I/O pressure.
+
+Starting deployment budgets: analysis 0.5 CPU/1.5 GiB, DJ 1 CPU/2 GiB and 5 GiB
+separate disk cache. No GPU or paid service is required. Do not confuse configured
+caps with actual usage, minimum hardware or a phone battery result. Android's
+64 MiB target bounds the audio allocator; artwork/offline caches have separate
+budgets. Its beta build enables R8, resource shrinking and shell profiling.
+Physical Macrobenchmark/baseline-profile measurements must use the real paired
+server and report Android version, startup, warm home, pause p95, memory,
+temperature and transport recovery. No physical-device numbers are claimed yet.
+
+Current automated evidence: web 771 passed/one skipped plus production build;
+focused Python 116 passed; isolated Linux DJ 75 passed; isolated native/server
+3375 passed and ten subtests. Groups overlap. A synthetic local 50000-entry
+comparison measured home p50=46.49ms/p95=51.81ms (25 requests), max160 ids and
+zero full-catalog calls, versus a reconstructed previous p50=2812.538ms (three
+requests). Script SHA256:
+`7a46e50ada8d8e9b8cd9224aba712854f27ff7c5d67c5ce69ab3b73541a96a00`.
+This comparison does not establish LAN/NAS/Pixel performance or subjective quality.
+The synthetic corpus contains no user library content.
+
+Pending gates: latest full Android build/tests and static checks; physical Pixel
+background/Bluetooth/latency/thermal tests; 20 comparative transitions and seed
+listening; one uninterrupted hour and longer battery testing. On-device Beat
+This! small0 ONNX export/inference and a dual-deck transport are unqualified;
+server mode remains the available implementation. A larger model is not a fix
+for lifecycle races or full-catalog work on interactive requests.
+
+Official references rechecked 6 November 2026:
+- https://developer.android.com/media/media3/session/player
+- https://developer.android.com/topic/performance/benchmarking/macrobenchmark-overview
+- https://github.com/CPJKU/beat_this#available-models

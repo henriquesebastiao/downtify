@@ -24,3 +24,22 @@ export function djPresentation(session, position) {
     duration: row ? row.end - row.start : 0,
   }
 }
+
+export function djResumePoint(session, position) {
+  const state = djPresentation(session, position)
+  const row =
+    state.transition !== null && state.transition >= 0.5
+      ? state.nextRow
+      : state.row
+  const track = row && session.tracks?.find((item) => item.id === row.id)
+  if (!track?.file) return null
+  return {
+    file: track.file,
+    id: row.id,
+    occurrence: row.occurrence ?? session.timeline.indexOf(row),
+    seconds: Math.max(
+      0,
+      (row.cue || 0) + (position - row.start) * (row.speed || 1)
+    ),
+  }
+}

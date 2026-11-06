@@ -11,10 +11,10 @@ from pathlib import Path
 from typing import Literal
 
 from fastapi import APIRouter, HTTPException, Query, Request
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse, Response
 from pydantic import BaseModel, Field
 
-from .playlists import generate, summaries
+from .playlists import period, stored_selections, summaries
 from .ranking import rank
 from .store import MOODS, Store
 
@@ -64,29 +64,43 @@ def admin(request):
 
 
 def catalog(request):
-    from .. import api, mobile_routes
+    from .. import api
+    from ..library_catalog import entry_content_key
+    from .catalog import snapshot
 
     owner(request)
     # Native startup and background indexing maintain the ids. An interactive
     # request must never start a full NAS walk or metadata reconciliation.
-    rows = mobile_routes._sync().changes(
-        0, allowed_keys=api.allowed_entry_keys(request)
-    )['tracks']
+    rows = snapshot(store())
+    allowed = api.allowed_entry_keys(request, entries=rows)
     hidden = api.library_context().hidden_files
-    rows = [row for row in rows if row.get('file') not in hidden]
-    for row in rows:
-        identity = (
-            row.get('file'),
-            row.get('size'),
-            row.get('modified'),
-            row.get('added'),
-            row.get('duration'),
-        )
-        row['fingerprint'] = hashlib.sha256(
-            json.dumps(identity).encode()
-        ).hexdigest()
-    store().observe(rows)
-    return rows
+    return [
+        row
+        for row in rows
+        if row.get('file') not in hidden
+        and (allowed is None or entry_content_key(row) in allowed)
+    ]
+
+
+def visible_rows(request, identities):
+    """Current ACLs and native metadata, bounded by the selected ids only."""
+    from .. import api, mobile_routes
+    from ..library_catalog import entry_content_key
+    from .catalog import fingerprint
+
+    owner(request)
+    if not identities:
+        return []
+    hidden = api.library_context().hidden_files
+    sync = mobile_routes._sync()
+    rows = sync.rows_for(identities)
+    allowed = api.allowed_entry_keys(request, entries=rows)
+    return [
+        {**row, 'fingerprint': fingerprint(row)}
+        for row in rows
+        if row.get('file') not in hidden
+        and (allowed is None or entry_content_key(row) in allowed)
+    ]
 
 
 def listening_track(request, identity, library_file):
@@ -300,6 +314,10 @@ def capabilities(request: Request):
         }
     return {
         'version': 1,
+        'home_cards': True,
+        'dj_request_cancel': True,
+        'dj_light_status': True,
+        'dj_seed_mix': True,
         'administrator': api.request_is_admin(request),
         'profile_revision': store().metadata(f'profile_revision:{uid}', 0),
         'features': store().effective(uid),
@@ -390,35 +408,116 @@ async def recommendations(
 
 
 @router.get('/playlists')
-@bounded_query
 async def playlist_index(request: Request):
+    return {'playlists': await asyncio.to_thread(playlist_cards, request)}
+
+
+def playlist_cards(request, home_only=False):
     uid = owner(request)
     flags = store().effective(uid)
     if not flags['daily'] and not flags['weekly']:
-        return {'playlists': []}
-    rows = await asyncio.to_thread(catalog, request)
-    result = await asyncio.to_thread(summaries, store(), uid, rows)
+        return []
+    selections = stored_selections(store(), uid)
+    if home_only:
+        selections = [
+            item
+            for item in selections
+            if item['cadence'] == 'daily'
+            and item['mood']
+            in {'detente', 'concentration', 'energie', 'calme'}
+        ]
+    identities = list(
+        dict.fromkeys(
+            identity for item in selections for identity in item['ids']
+        )
+    )
+    rows = visible_rows(request, identities)
+    result = summaries(store(), uid, rows)
     flags = store().effective(uid)
-    return {'playlists': [item for item in result if flags[item['cadence']]]}
+    return [item for item in result if flags[item['cadence']]]
+
+
+@router.get('/home')
+async def home(request: Request):
+    uid = owner(request)
+    flags = store().effective(uid)
+    result = []
+    if any(flags[key] for key in ('daily', 'weekly', 'personalization')):
+        ready = (
+            await asyncio.to_thread(playlist_cards, request, True)
+            if flags['daily']
+            else []
+        )
+        for mood, title in [
+            ('detente', 'Détente'),
+            ('concentration', 'Concentration'),
+            ('energie', 'Motivation'),
+            ('calme', 'Calme'),
+        ]:
+            card = next(
+                (
+                    item
+                    for item in ready
+                    if item['cadence'] == 'daily' and item['mood'] == mood
+                ),
+                None,
+            )
+            result.append(
+                card
+                or {
+                    'cadence': 'daily',
+                    'mood': mood,
+                    'period': period('daily'),
+                    'count': 0,
+                    'state': 'preparing' if flags['daily'] else 'disabled',
+                    'cover_track_ids': [],
+                }
+            )
+            result[-1] = {**result[-1], 'title': title}
+    value = {'cards': result}
+    etag = (
+        '"'
+        + hashlib.sha256(
+            json.dumps([uid, value], sort_keys=True).encode()
+        ).hexdigest()
+        + '"'
+    )
+    headers = {'ETag': etag, 'Cache-Control': 'private, no-cache'}
+    if request.headers.get('if-none-match') == etag:
+        return Response(status_code=304, headers=headers)
+    return JSONResponse(value, headers=headers)
 
 
 @router.get('/playlists/{cadence}/{mood}')
-@bounded_query
 async def mood_playlist(
     cadence: Literal['daily', 'weekly'], mood: str, request: Request
 ):
     uid = require(request, cadence)
     if mood not in MOODS:
         raise HTTPException(404, 'Unknown mood')
-    rows = await asyncio.to_thread(catalog, request)
-    try:
-        result = await asyncio.to_thread(
-            generate, store(), uid, cadence, mood, rows, model()
-        )
-    except RuntimeError:
-        raise HTTPException(503, 'Mood analysis is not ready') from None
-    except PermissionError:
-        raise HTTPException(409, 'Feature disabled') from None
+    selections = stored_selections(store(), uid)
+    chosen = next(
+        (
+            item
+            for item in selections
+            if item['cadence'] == cadence and item['mood'] == mood
+        ),
+        None,
+    )
+    if chosen is None:
+        return {
+            'cadence': cadence,
+            'mood': mood,
+            'state': 'preparing',
+            'tracks': [],
+        }
+    result = await asyncio.to_thread(visible_rows, request, chosen['ids'])
+    by_id = {row['id']: row for row in result}
+    result = [
+        {**by_id[identity], 'reason': 'Correspond à cette humeur'}
+        for identity in chosen['ids']
+        if identity in by_id
+    ]
     result = await asyncio.to_thread(current_sources, result)
     require(request, cadence)
     return {
@@ -443,7 +542,8 @@ async def playback_selection(payload: PlaybackSelection, request: Request):
     # The existing web player consumes library-relative file handles. Resolve
     # them only from the current native ACL-filtered catalog, never client paths.
     visible = {
-        row['id']: row for row in await asyncio.to_thread(catalog, request)
+        row['id']: row
+        for row in await asyncio.to_thread(visible_rows, request, payload.ids)
     }
     if any(identity not in visible for identity in payload.ids):
         raise HTTPException(404, 'A selected track is no longer available')
@@ -467,7 +567,8 @@ async def save_selection(payload: SavedSelection, request: Request):
     from ..manual_playlists import ManualPlaylistError, copy_playlist
 
     visible = {
-        row['id']: row for row in await asyncio.to_thread(catalog, request)
+        row['id']: row
+        for row in await asyncio.to_thread(visible_rows, request, payload.ids)
     }
     if any(identity not in visible for identity in payload.ids):
         raise HTTPException(404, 'A selected track is no longer available')
@@ -565,7 +666,6 @@ def resume_analysis(request: Request):
     return {'queued': True}
 
 
-# Register DJ after shared route adapters exist, avoiding a circular import.
 from .dj_routes import router as dj_router  # noqa: E402
 
 router.include_router(dj_router)

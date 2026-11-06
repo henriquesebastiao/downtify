@@ -186,6 +186,7 @@ class DjWorker:
         self.stage = 'preparing'
         self.checked = self.renewed = 0.0
         self.models_validated = False
+        self.compute_ticket = None
 
     def capabilities(self):
         from .dj_validation import runtime_identity, saved_proof, validated
@@ -204,6 +205,7 @@ class DjWorker:
                 'prepared_ready': ready,
                 'queue_supported': True,
                 'continuous_supported': True,
+                'interactive_trial_ready': ready,
                 'interactive_ready': ready
                 and validated(
                     saved_proof(
@@ -228,9 +230,16 @@ class DjWorker:
         return retry_busy(self._checkpoint, seconds=8)
 
     def _checkpoint(self):
+        if self.compute_ticket is not None and not self.compute_ticket.renew():
+            raise PermissionError('compute_slot_lost')
         clock = time.monotonic()
         if clock - self.checked < 0.25:
             return
+        if (
+            self.job.get('trial')
+            and not self.database.effective(self.job['owner'])['dj_trial']
+        ):
+            raise PermissionError('dj_trial_disabled')
         if not self.dj.alive(self.job['id'], self.job['lease_token']):
             raise PermissionError('dj_session_stopped')
         if clock - self.renewed >= 5:
@@ -324,6 +333,52 @@ class DjWorker:
             )
         return results
 
+    def prepare_deck(self, track, io):
+        """Freeze and analyze only a deck entering the short playback window."""
+        source = self.job['sources'][track]
+        if 'snapshot' not in source:
+            self.publish(phase='snapshot')
+            occupied = {Path(value).name for value in io.snapshots}
+            slot = next(
+                index
+                for index in range(40)
+                if f'source-{index}.audio' not in occupied
+            )
+            source['snapshot'] = io.freeze(
+                source['path'], source['source_version'], slot, self.checkpoint
+            )
+        return self.analyze(
+            track, source, io, self.database.metadata('analysis_generation', 0)
+        )
+
+    def release_decks(self, io, keep):
+        for track, source in self.job['sources'].items():
+            snapshot = source.get('snapshot')
+            if track in keep or snapshot is None:
+                continue
+            path = Path(snapshot['path'])
+            if (
+                path.parent.resolve() == io.workspace.resolve()
+                and not path.is_symlink()
+            ):
+                path.unlink(missing_ok=True)
+                io.snapshots.pop(str(path), None)
+                source.pop('snapshot')
+
+    def yield_compute(self):
+        if self.compute_ticket is not None:
+            retry_busy(self.compute_ticket.release, seconds=3)
+            self.compute_ticket = None
+
+    def require_compute(self):
+        from .compute_budget import acquire
+
+        while self.compute_ticket is None:
+            self.checkpoint()
+            self.compute_ticket = acquire(self.database, 'dj')
+            if self.compute_ticket is None:
+                time.sleep(0.25)
+
     def prepared(self, io):
         started = time.monotonic()
         results = self.analyzed_sources(io)
@@ -331,6 +386,10 @@ class DjWorker:
         ordered = order_tracks(
             profiles, self.job['theme'], limit=len(profiles)
         )
+        if self.job.get('seed_id'):
+            ordered = sorted(
+                ordered, key=lambda profile: profile.id != self.job['seed_id']
+            )
         rows = timeline(ordered)
         self.stage = 'rendering'
         self.publish(
@@ -413,7 +472,16 @@ class DjWorker:
         self.job, self.stage = job, 'preparing'
         self.checked = self.renewed = 0
         io = None
+        ticket = None
         try:
+            from .compute_budget import acquire
+
+            while ticket is None:
+                self.checkpoint()
+                ticket = acquire(self.database, 'dj')
+                if ticket is None:
+                    time.sleep(0.25)
+            self.compute_ticket = ticket
             io = AudioIO(
                 self.cache,
                 self.roots,
@@ -431,23 +499,22 @@ class DjWorker:
                     validated,
                 )
 
-                if not job.get('validation') and not validated(
-                    saved_proof(
-                        self.database, self.engine, runtime_identity()
-                    ),
-                    self.engine,
-                    runtime_identity(),
+                if (
+                    not job.get('validation')
+                    and not job.get('trial')
+                    and not validated(
+                        saved_proof(
+                            self.database, self.engine, runtime_identity()
+                        ),
+                        self.engine,
+                        runtime_identity(),
+                    )
                 ):
                     raise AudioError('interactive_not_validated')
-                for index, source in enumerate(job['sources'].values()):
-                    self.publish(phase='snapshot', progress=0.0)
-                    source['snapshot'] = io.freeze(
-                        source['path'],
-                        source['source_version'],
-                        index,
-                        self.checkpoint,
-                    )
-                results = self.analyzed_sources(io)
+                first = list(dict.fromkeys(job['ids'][:4]))
+                results = {
+                    track: self.prepare_deck(track, io) for track in first
+                }
                 renderer = LiveRenderer(self, io, results)
                 if (
                     job.get('validation')
@@ -500,6 +567,11 @@ class DjWorker:
             if io is not None:
                 io.release_snapshots()
             self.job = None
+            if self.compute_ticket is not None:
+                retry_busy(self.compute_ticket.release, seconds=3)
+            elif ticket is not None:
+                retry_busy(ticket.release, seconds=3)
+            self.compute_ticket = None
         return True
 
     def run_cycle(self):

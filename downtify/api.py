@@ -1388,7 +1388,7 @@ def admin_hidden_rules(request: Optional[Request]) -> Optional[HiddenRules]:
     return rules if rules else None
 
 
-def allowed_entry_keys(request: Optional[Request]) -> Optional[set[str]]:
+def allowed_entry_keys(request: Optional[Request], *, entries=None) -> Optional[set[str]]:
     """Content keys *request* may browse (``None``: everything).
 
     The library is shared: an admin sees all of it, and so does everyone
@@ -1405,7 +1405,7 @@ def allowed_entry_keys(request: Optional[Request]) -> Optional[set[str]]:
         return None
     return {
         entry_content_key(entry)
-        for entry in listing_for_request(library_context())
+        for entry in (entries if entries is not None else listing_for_request(library_context()))
         if not rules.hides(entry)
     }
 

@@ -3,7 +3,7 @@ import { v4 as uuid } from 'uuid'
 import { musicAI } from './musicAI'
 import { usePlayer } from './player'
 import { createDjStream } from './djStream'
-import { djPresentation } from './djPresentation'
+import { djPresentation, djResumePoint } from './djPresentation'
 import { normalizeTrack } from '/src/lib/library'
 import { useUi } from './ui'
 
@@ -20,21 +20,42 @@ let serial = 0,
   reporting = false,
   sequence = 0,
   interruptions = 0
+let playIntent = 0
+let commandTail = Promise.resolve()
+let creation = null
 const available = computed(
   () => musicAI.capabilities.value?.features?.dj_interactive === true
 )
 const ready = computed(
   () =>
     available.value &&
-    musicAI.capabilities.value?.dj?.interactive_ready === true &&
+    (musicAI.capabilities.value?.dj?.interactive_ready === true ||
+      (musicAI.capabilities.value?.features?.dj_trial === true &&
+        musicAI.capabilities.value?.dj?.interactive_trial_ready === true)) &&
     musicAI.capabilities.value?.dj?.queue_supported === true
 )
+const trial = () =>
+  musicAI.capabilities.value?.dj?.interactive_ready !== true &&
+  musicAI.capabilities.value?.features?.dj_trial === true
 const player = usePlayer()
 
 async function command(action) {
   const value = session.value
   if (!value || owner !== musicAI.account.value || !available.value) return
-  await musicAI.commandDj(value.id, { request_id: uuid(), action, payload: {} })
+  const mine = serial,
+    account = owner
+  const work = commandTail
+    .catch(() => {})
+    .then(async () => {
+      if (mine !== serial || account !== musicAI.account.value) return
+      return musicAI.commandDj(value.id, {
+        request_id: uuid(),
+        action,
+        payload: {},
+      })
+    })
+  commandTail = work
+  return work
 }
 function error(value) {
   failure.value =
@@ -43,20 +64,57 @@ function error(value) {
     'Lecture DJ indisponible.'
   useUi().toast(failure.value, { kind: 'error' })
 }
-function clear() {
+function clear({ stopRemote = false } = {}) {
+  const id = session.value?.id || pending?.id,
+    account = owner,
+    previous = commandTail
+  const remote = !session.value || session.value.mode === 'interactive'
+  const request = creation
+  creation = null
+  if (request && stopRemote) {
+    request.abort.abort()
+    if (request.owner === musicAI.account.value)
+      void musicAI.cancelDjRequest(request.id).catch(() => {})
+  }
   serial++
+  playIntent++
+  commandTail = Promise.resolve()
   clearInterval(timer)
   timer = null
   pending = null
   player.armDjHandover(null)
-  stream?.unload()
-  stream = null
   if (player.dj.value) player.detachDj()
+  else stream?.unload()
+  stream = null
   session.value = null
   busy.value = false
+  if (stopRemote && id && remote)
+    void previous
+      .catch(() => {})
+      .then(() => {
+        if (account === musicAI.account.value) return musicAI.stopDj(id)
+      })
+      .catch(() => {})
 }
 async function listen(value, options = {}) {
-  clear()
+  if (!value.tracks?.length) {
+    const account = musicAI.account.value,
+      mine = serial,
+      selection = player.selectionVersion.value
+    value = await musicAI.djSession(value.id)
+    if (
+      !value ||
+      account !== musicAI.account.value ||
+      mine !== serial ||
+      selection !== player.selectionVersion.value
+    )
+      return
+  }
+  if (session.value?.id === value.id && player.dj.value) {
+    player.play()
+    return
+  }
+  clear({ stopRemote: (session.value?.id || pending?.id) !== value.id })
   session.value = value
   proof.value = null
   owner = musicAI.account.value
@@ -66,13 +124,23 @@ async function listen(value, options = {}) {
   )
   let audibleRow, audibleBase, audibleTrack
   let node
+  let ownStream
   const transport = {
     position() {
       return (
-        stream?.position?.(session.value?.media_origin) ??
+        ownStream?.position?.(session.value?.media_origin) ??
         node?.currentTime ??
         0
       )
+    },
+    resumePoint() {
+      return djResumePoint(session.value, transport.position())
+    },
+    queueEntries() {
+      return (session.value?.timeline || []).map((row, index) => ({
+        occurrence: row.occurrence ?? index,
+        track: tracks.get(row.id),
+      }))
     },
     presentation(position) {
       const state = djPresentation(session.value, position)
@@ -94,20 +162,28 @@ async function listen(value, options = {}) {
       }
     },
     async play() {
+      const intent = ++playIntent
       try {
         if (value.mode === 'interactive') await command('resume')
-        if (mine !== serial) return
-        if (!(await stream.connect()) || mine !== serial) return
+        if (mine !== serial || intent !== playIntent) return
+        if (
+          !(await ownStream.connect()) ||
+          mine !== serial ||
+          intent !== playIntent
+        )
+          return
         await node.play()
       } catch (reason) {
         if (mine === serial) error(reason)
       }
     },
     async pause() {
+      playIntent++
+      node.pause()
       try {
         if (value.mode === 'interactive') await command('pause')
       } catch (reason) {
-        error(reason)
+        if (mine === serial) error(reason)
       }
     },
     async next() {
@@ -124,17 +200,40 @@ async function listen(value, options = {}) {
         node.currentTime = (player.dj.value?.row?.start || 0) + seconds
     },
     unload() {
-      stream?.unload()
+      ownStream?.unload()
+    },
+    detached() {
+      if (mine !== serial) return
+      const previous = commandTail,
+        account = owner
+      clear()
+      void previous
+        .catch(() => {})
+        .then(() => {
+          if (value.mode === 'interactive' && account === musicAI.account.value)
+            return musicAI.stopDj(value.id)
+        })
+        .catch(() => {})
     },
   }
-  node = player.attachDj(transport, options)
+  const queueTracks =
+    options.resumeNext !== true
+      ? (value.timeline || []).map((row) => tracks.get(row.id)).filter(Boolean)
+      : null
+  node = player.attachDj(transport, {
+    ...options,
+    queueTracks,
+    queueOccurrences: (value.timeline || []).map(
+      (row, index) => row.occurrence ?? index
+    ),
+  })
   const onInterruption = () => {
     if (reporting) interruptions++
   }
   for (const event of ['waiting', 'seeking', 'pause'])
     node.addEventListener(event, onInterruption)
   transport.unload = () => {
-    stream?.unload()
+    ownStream?.unload()
     for (const event of ['waiting', 'seeking', 'pause'])
       node.removeEventListener(event, onInterruption)
   }
@@ -153,6 +252,7 @@ async function listen(value, options = {}) {
           },
           unload() {},
         }
+  ownStream = stream
   sequence = 0
   interruptions = 0
   reporting = false
@@ -162,9 +262,8 @@ async function listen(value, options = {}) {
     polling = true
     try {
       await musicAI.refresh()
-      const values = await musicAI.djSessions()
+      const current = await musicAI.djSession(value.id, transport.position())
       if (mine !== serial) return
-      const current = values.find((item) => item.id === value.id)
       if (
         !current ||
         musicAI.capabilities.value?.features?.['dj_' + current.mode] !== true ||
@@ -174,7 +273,8 @@ async function listen(value, options = {}) {
         return
       }
       session.value = current
-      if (current.state === 'paused' && !node.paused) node.pause()
+      // Render status is not a transport command. A delayed status must never
+      // override the latest local pause/resume, or control a new classic track.
       for (const track of current.tracks || [])
         tracks.set(track.id, normalizeTrack(track))
       player.refreshDj(node.currentTime)
@@ -202,12 +302,13 @@ async function listen(value, options = {}) {
       polling = false
     }
   }, 5000)
-  await transport.play()
+  await player.play()
 }
 async function startQueue() {
   if (busy.value) return
   const mine = serial,
     account = musicAI.account.value
+  owner = account
   busy.value = true
   failure.value = ''
   await musicAI.refresh(true)
@@ -223,7 +324,7 @@ async function startQueue() {
     player.currentTrack.value,
     ...player.upcoming.value.map((item) => item.track),
   ].filter(Boolean)
-  const defer = player.isPlaying.value
+  const defer = Boolean(player.currentTrack.value)
   const queue = defer ? selection.slice(1) : selection
   if (
     queue.length < 2 ||
@@ -245,14 +346,29 @@ async function startQueue() {
   notice.value =
     'Préparation des transitions. Votre écoute continue ; le DJ prendra le relais au prochain titre.'
   try {
-    const value = await musicAI.createDj({
-      request_id: uuid(),
-      mode: 'interactive',
-      theme: 'fete',
-      queue_order: true,
-      queue_files: queue.map((track) => track.file),
-    })
-    if (mine !== serial || account !== musicAI.account.value) return
+    const request = {
+      id: uuid(),
+      owner: account,
+      abort: new AbortController(),
+      origin: defer ? selection[0].file : null,
+    }
+    creation = request
+    const value = await musicAI.createDj(
+      {
+        request_id: request.id,
+        mode: 'interactive',
+        theme: 'fete',
+        queue_order: true,
+        queue_files: queue.map((track) => track.file),
+        trial: trial(),
+      },
+      { signal: request.abort.signal }
+    )
+    if (creation === request) creation = null
+    if (mine !== serial || account !== musicAI.account.value) {
+      if (account === musicAI.account.value) await musicAI.stopDj(value.id)
+      return
+    }
     pending = {
       id: value.id,
       signature,
@@ -271,12 +387,13 @@ async function startQueue() {
       })
     // Poll preparation without tying its lifetime to the queue panel.
     clearInterval(timer)
+    let polling = false
     timer = setInterval(async () => {
-      if (!pending || pending.owner !== musicAI.account.value) return
+      if (polling || !pending || pending.owner !== musicAI.account.value) return
+      polling = true
       try {
-        const values = await musicAI.djSessions()
+        const current = await musicAI.djSession(pending.id)
         if (!pending || mine !== serial) return
-        const current = values.find((item) => item.id === pending.id)
         if (
           !current ||
           ['failed', 'stopped', 'cancelled'].includes(current.state)
@@ -309,33 +426,49 @@ async function startQueue() {
           }
         }
       } catch (reason) {
-        error(reason)
-        clear()
+        if (mine === serial) {
+          error(reason)
+          clear({ stopRemote: true })
+        }
+      } finally {
+        polling = false
       }
     }, 1500)
   } catch (reason) {
-    error(reason)
-    busy.value = false
+    if (mine === serial) {
+      if (creation?.owner === musicAI.account.value)
+        void musicAI.cancelDjRequest(creation.id).catch(() => {})
+      creation = null
+      error(reason)
+      busy.value = false
+    }
   }
 }
 async function stop() {
   const id = session.value?.id || pending?.id
-  clear()
+  const remote = !session.value || session.value.mode === 'interactive'
+  const previous = commandTail,
+    account = musicAI.account.value
+  const resume = player.desiredPlaying.value || player.isPlaying.value
+  clear({ stopRemote: !id })
+  if (resume) player.play()
   notice.value = 'Mode DJ désactivé. Votre file classique est conservée.'
-  if (id)
+  if (id && remote)
     try {
-      await musicAI.stopDj(id)
+      await previous.catch(() => {})
+      if (account === musicAI.account.value) await musicAI.stopDj(id)
     } catch (reason) {
       error(reason)
     }
 }
-async function startTheme(theme, style = 'library') {
+async function startTheme(theme, style = 'library', seed = null) {
   if (busy.value || session.value) {
     error(new Error('Arrêtez le mix DJ en cours avant d’en lancer un autre.'))
     return
   }
   const account = musicAI.account.value,
     mine = serial
+  owner = account
   busy.value = true
   await musicAI.refresh(true)
   if (mine !== serial || account !== musicAI.account.value) return
@@ -344,27 +477,68 @@ async function startTheme(theme, style = 'library') {
     error(new Error('Le DJ continu nécessite un moteur interactif validé.'))
     return
   }
+  if (seed && musicAI.capabilities.value?.dj_seed_mix !== true) {
+    busy.value = false
+    error(
+      new Error(
+        'Ce serveur ne prend pas encore en charge les mixes DJ à partir d’un titre.'
+      )
+    )
+    return
+  }
+  const defer = Boolean(
+    seed && !player.dj.value && player.currentTrack.value?.file === seed.file
+  )
   busy.value = true
   try {
-    const created = await musicAI.createDj({
-      request_id: uuid(),
-      mode: 'interactive',
-      continuous: true,
-      theme,
-      style,
-      count: 24,
-    })
-    if (account !== musicAI.account.value || mine !== serial) return
-    pending = { id: created.id, owner: account }
+    const request = {
+      id: uuid(),
+      owner: account,
+      abort: new AbortController(),
+      origin: defer ? seed.file : null,
+    }
+    creation = request
+    const created = await musicAI.createDj(
+      {
+        request_id: request.id,
+        mode: 'interactive',
+        continuous: true,
+        theme,
+        style,
+        count: 24,
+        trial: trial(),
+        ...(seed ? { seed_file: seed.file, skip_seed: defer } : {}),
+      },
+      { signal: request.abort.signal }
+    )
+    if (creation === request) creation = null
+    if (account !== musicAI.account.value || mine !== serial) {
+      if (account === musicAI.account.value) await musicAI.stopDj(created.id)
+      return
+    }
+    pending = {
+      id: created.id,
+      owner: account,
+      first: defer ? seed.file : null,
+      ready: null,
+    }
+    if (defer)
+      player.armDjHandover(() => {
+        if (!pending?.ready || pending.owner !== musicAI.account.value)
+          return false
+        const value = pending.ready
+        void listen(value)
+        notice.value = 'DJ continu · transitions adaptées'
+        return true
+      })
     notice.value = 'Préparation du DJ continu…'
     let polling = false
     timer = setInterval(async () => {
       if (polling || mine !== serial) return
       polling = true
       try {
-        const values = await musicAI.djSessions()
+        const value = await musicAI.djSession(created.id)
         if (mine !== serial) return
-        const value = values.find((item) => item.id === created.id)
         if (
           !value ||
           ['failed', 'stopped', 'cancelled'].includes(value.state)
@@ -374,8 +548,19 @@ async function startTheme(theme, style = 'library') {
           return
         }
         if (value.media_url && ['playing', 'paused'].includes(value.state)) {
-          await listen(value)
-          notice.value = 'DJ continu · transitions adaptées'
+          if (!defer) {
+            await listen(value)
+            notice.value = 'DJ continu · transitions adaptées'
+          } else if (value.state === 'playing')
+            await musicAI.commandDj(value.id, {
+              request_id: uuid(),
+              action: 'pause',
+              payload: {},
+            })
+          else {
+            pending.ready = value
+            notice.value = 'Mix DJ prêt · relais au prochain titre.'
+          }
         }
       } catch (reason) {
         if (mine === serial) {
@@ -388,12 +573,34 @@ async function startTheme(theme, style = 'library') {
     }, 2000)
   } catch (reason) {
     if (mine === serial) {
+      if (creation?.owner === musicAI.account.value)
+        void musicAI.cancelDjRequest(creation.id).catch(() => {})
+      creation = null
       error(reason)
       busy.value = false
     }
   }
 }
-watch(musicAI.account, clear)
+watch(musicAI.account, () => clear(), { flush: 'sync' })
+watch(
+  player.selectionVersion,
+  () => {
+    if (session.value || pending || busy.value) clear({ stopRemote: true })
+  },
+  { flush: 'sync' }
+)
+watch(
+  () => player.currentTrack.value?.file,
+  (file) => {
+    const origin = creation?.origin || pending?.first
+    if (origin && origin !== file) {
+      clear({ stopRemote: true })
+      notice.value =
+        'Le titre a changé avant le relais. La lecture classique continue.'
+    }
+  },
+  { flush: 'sync' }
+)
 watch(
   () => musicAI.capabilities.value?.features,
   (features) => {
@@ -404,6 +611,10 @@ watch(
       clear()
   }
 )
+const startSeed = (seed) =>
+  seed?.file && !seed.stream && !seed.isPodcast
+    ? startTheme('fete', 'library', seed)
+    : undefined
 export const djController = {
   session,
   busy,
@@ -415,5 +626,6 @@ export const djController = {
   listen,
   startQueue,
   startTheme,
+  startSeed,
   stop,
 }

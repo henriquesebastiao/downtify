@@ -539,6 +539,7 @@ import { useBuyLinks } from '/src/model/buyLinks'
 import { buyTargetForTrack } from '/src/lib/buyLinks'
 import { useI18n } from '/src/i18n'
 import { startSongMix, mixAvailable, songMixLoading } from '/src/model/songMix'
+import { djController } from '/src/model/djController'
 
 const player = usePlayer()
 const library = useLibrary()
@@ -695,6 +696,20 @@ const trackMenu = computed(() => {
       hidden: !mixAvailable.value || !tr.file || tr.stream || tr.isPodcast,
       disabled: songMixLoading.value,
       action: () => startSongMix(tr),
+    },
+    {
+      label: 'Lancer un mix DJ à partir de ce titre',
+      icon: 'wand',
+      hidden:
+        !mixAvailable.value ||
+        !djController.available.value ||
+        !tr.file ||
+        tr.stream ||
+        tr.isPodcast,
+      action: () => {
+        navigate({ name: 'MusicDJ' })
+        return djController.startSeed(tr)
+      },
     },
     {
       label: t('player.goToAlbum'),

@@ -44,6 +44,7 @@ def tail(profiles, first, *, skip_after=None):
             'source_end': source_end,
             'speed': speed,
             'transition': asdict(mix) if mix else None,
+            'occurrence': first.get('occurrence', 0) + index,
         }
         result.append(row)
         if mix:
@@ -76,6 +77,8 @@ class LivePlan:
             else timeline(selected)
         )
         self.revision = 0
+        for index, row in enumerate(self.rows):
+            row['occurrence'] = index
         self.renewals = 0
 
     def append(self, profiles, rendered, *, guard=6.0):

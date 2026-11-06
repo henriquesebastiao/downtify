@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import secrets
 import time
@@ -26,6 +27,10 @@ def enabled(db, owner, mode):
         ).fetchone()
         flags[identity] = {**DEFAULTS, **(json.loads(row[0]) if row else {})}
     return flags[-1][feature] and flags[owner][feature]
+
+
+class CancelledDjRequest(Exception):
+    pass
 
 
 class DjStore:
@@ -89,6 +94,9 @@ class DjStore:
         selection_basis='explicit',
         queue_order=False,
         continuous=False,
+        seed_id='',
+        trial=False,
+        style='library',
     ):
         if type(validation) is not bool or (
             validation and mode != 'interactive'
@@ -151,10 +159,24 @@ class DjStore:
             document['queue_order'] = True
         if continuous:
             document['continuous'] = True
+            document['style'] = style
+        if seed_id:
+            if seed_id != ids[0]:
+                raise ValueError('Seed must start the selection')
+            document['seed_id'] = seed_id
+        if trial:
+            document['trial'] = True
         with self.database.connect() as db:
             db.execute('BEGIN IMMEDIATE')
             if not enabled(db, owner, mode):
                 raise PermissionError('DJ module disabled')
+            if nonce:
+                cancelled = db.execute(
+                    'SELECT value FROM metadata WHERE key=?',
+                    (self.cancellation_key(owner, nonce),),
+                ).fetchone()
+                if cancelled and json.loads(cancelled[0]) > now:
+                    raise CancelledDjRequest('DJ creation was cancelled')
             previous = (
                 db.execute(
                     'SELECT intent,session FROM dj_requests WHERE owner=? AND nonce=?',
@@ -216,6 +238,35 @@ class DjStore:
             raise ValueError('Request identifier already used')
         return self.unpack(row)
 
+    @staticmethod
+    def cancellation_key(owner, nonce):
+        return (
+            f'dj_cancel:{owner}:' + hashlib.sha256(nonce.encode()).hexdigest()
+        )
+
+    def request_cancelled(self, owner, nonce):
+        return (
+            self.database.metadata(self.cancellation_key(owner, nonce), 0)
+            > time.time()
+        )
+
+    def cancel_request(self, owner, nonce):
+        now = time.time()
+        with self.database.connect() as db:
+            db.execute('BEGIN IMMEDIATE')
+            db.execute(
+                'INSERT OR REPLACE INTO metadata VALUES (?,?)',
+                (self.cancellation_key(owner, nonce), json.dumps(now + 900)),
+            )
+            db.execute(
+                "UPDATE dj_sessions SET state='cancelled',lease_token='',lease_until=0,updated=? WHERE owner=? AND id IN (SELECT session FROM dj_requests WHERE owner=? AND nonce=?) AND state NOT IN ('deleted','deleting','cancelled','stopped','failed')",
+                (now, owner, owner, nonce),
+            )
+            db.execute(
+                "DELETE FROM metadata WHERE key LIKE 'dj_cancel:%' AND CAST(value AS REAL)<?",
+                (now,),
+            )
+
     def get(self, owner, identity):
         with self.database.connect() as db:
             row = db.execute(
@@ -243,6 +294,56 @@ class DjStore:
         return {
             row['track']: json.loads(row['value']).get('path') for row in rows
         }
+
+    def sources(self, owner, identity):
+        with self.database.connect() as db:
+            return {
+                row[0]: json.loads(row[1])
+                for row in db.execute(
+                    'SELECT s.track,s.value FROM dj_sources s JOIN dj_sessions j ON j.id=s.session WHERE j.owner=? AND j.id=?',
+                    (owner, identity),
+                )
+            }
+
+    def replenish(self, owner, identity, ids, sources):
+        """Accept a small currently authorized continuation, never revive a retired render."""
+        if not 1 <= len(ids) <= 4 or set(ids) != set(sources):
+            raise ValueError('Invalid continuation')
+        with self.database.connect() as db:
+            db.execute('BEGIN IMMEDIATE')
+            row = db.execute(
+                'SELECT * FROM dj_sessions WHERE owner=? AND id=?',
+                (owner, identity),
+            ).fetchone()
+            if (
+                row is None
+                or row['state'] not in ACTIVE
+                or not enabled(db, owner, 'interactive')
+            ):
+                return False
+            document = json.loads(row['document'])
+            if not document.get('continuous') or document.get('queue_order'):
+                return False
+            fresh = [track for track in ids if track not in document['ids']]
+            if not fresh:
+                return False
+            document['ids'] = (document['ids'] + fresh)[-80:]
+            document['refill_revision'] = (
+                document.get('refill_revision', 0) + 1
+            )
+            document['refilled_at'] = time.time()
+            db.executemany(
+                'INSERT OR REPLACE INTO dj_sources VALUES (?,?,?)',
+                [
+                    (identity, track, json.dumps(sources[track]))
+                    for track in fresh
+                ],
+            )
+            db.execute(
+                'UPDATE dj_sessions SET document=? WHERE id=?',
+                (json.dumps(document), identity),
+            )
+            return True
 
     def claim(self, *, now=None, seconds=45):
         now = time.time() if now is None else now

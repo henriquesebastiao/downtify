@@ -7,6 +7,11 @@ const CHARTS_TABS = 'tracks|albums|artists|playlists'
 
 const routes = [
   {
+    path: '/music-dj',
+    name: 'MusicDJ',
+    component: () => import('/src/views/MusicDJView.vue'),
+  },
+  {
     path: '/music-ai',
     name: 'MusicAI',
     component: () => import('/src/views/MusicAIView.vue'),

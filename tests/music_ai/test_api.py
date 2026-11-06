@@ -16,7 +16,9 @@ def test_catalog_reads_native_feed_without_scan_and_keeps_visibility(
     database = opted_in_store(tmp_path / 'derived.db')
     monkeypatch.setattr(routes, 'store', lambda: database)
     monkeypatch.setattr(routes, 'owner', lambda _: 1)
-    monkeypatch.setattr(api, 'allowed_entry_keys', lambda _: {'allowed'})
+    monkeypatch.setattr(
+        api, 'allowed_entry_keys', lambda _, entries=None: {'allowed'}
+    )
     monkeypatch.setattr(
         api,
         'library_context',
@@ -30,22 +32,25 @@ def test_catalog_reads_native_feed_without_scan_and_keeps_visibility(
 
     monkeypatch.setattr(mobile_routes, '_refresh', forbidden)
 
-    def changes(since, allowed_keys):
-        assert since == 0
-        assert allowed_keys == {'allowed'}
-        return {
-            'tracks': [
-                {'id': 'visible', 'file': 'visible.mp3'},
-                {'id': 'hidden', 'file': 'hidden.mp3'},
-            ]
-        }
+    database.observe([
+        {'id': 'visible', 'file': 'visible.mp3', 'fingerprint': 'v'},
+        {'id': 'hidden', 'file': 'hidden.mp3', 'fingerprint': 'h'},
+    ])
+    from downtify import library_catalog
+
+    monkeypatch.setattr(
+        library_catalog, 'entry_content_key', lambda _: 'allowed'
+    )
+
+    def changes(*args, **kwargs):
+        pytest.fail('Interactive reads must not consume the native full feed')
 
     monkeypatch.setattr(
         mobile_routes, '_sync', lambda: SimpleNamespace(changes=changes)
     )
     assert [row['id'] for row in routes.catalog(None)] == ['visible']
     with database.connect() as db:
-        assert db.execute('SELECT count(*) FROM tracks').fetchone()[0] == 1
+        assert db.execute('SELECT count(*) FROM tracks').fetchone()[0] == 2
 
 
 @pytest.fixture
@@ -76,6 +81,13 @@ def client(tmp_path, monkeypatch):
         routes,
         'catalog',
         lambda request: rows if routes.owner(request) else [],
+    )
+    monkeypatch.setattr(
+        routes,
+        'visible_rows',
+        lambda request, ids: [
+            row for row in routes.catalog(request) if row['id'] in ids
+        ],
     )
     app = FastAPI()
 
@@ -131,7 +143,7 @@ def test_playlist_cards_are_current_owned_and_visibility_filtered(
                 (owner, cadence, mood, key, json.dumps(ids), 1),
             )
     monkeypatch.setattr(
-        routes,
+        playlists,
         'generate',
         lambda *a, **k: pytest.fail('Index must not generate a mix'),
     )
