@@ -1,0 +1,37 @@
+FROM python@sha256:935c3c5b12357a7e10caa9c1e6ca5692344d97cf229832ef584be2cec9fc03df AS sqlite_build
+RUN apt-get update && apt-get install -y --no-install-recommends gcc libc6-dev \
+    && rm -rf /var/lib/apt/lists/*
+COPY --from=sqlite_source /sqlite3.c /sqlite3.h /build/
+RUN python -c "import hashlib; from pathlib import Path; assert hashlib.sha3_256(Path('/build/sqlite3.c').read_bytes()).hexdigest() == '67f423e9ebbbdc473cbc4772c872ee6b89f31fde4ed0279a5c25d5f65c043a16'" \
+    && mkdir -p /out \
+    && gcc -O2 -fPIC -shared -DSQLITE_THREADSAFE=1 -DSQLITE_ENABLE_FTS5 -DSQLITE_ENABLE_RTREE \
+       -DSQLITE_ENABLE_COLUMN_METADATA -DSQLITE_ENABLE_MATH_FUNCTIONS -DSQLITE_ENABLE_DBSTAT_VTAB \
+       -Wl,-soname,libsqlite3.so.0 -o /out/libsqlite3.so.0 /build/sqlite3.c -ldl -lm -lpthread
+FROM python@sha256:935c3c5b12357a7e10caa9c1e6ca5692344d97cf229832ef584be2cec9fc03df
+ENV PYTHONDONTWRITEBYTECODE=1 OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 \
+    TORCH_HOME=/tmp/torch XDG_CACHE_HOME=/tmp/cache
+RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg=7:5.1.9-0+deb12u1 ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+RUN python -m pip install --no-cache-dir --only-binary=:all: \
+    --index-url https://download.pytorch.org/whl/cpu torch==2.15.0 torchaudio==2.11.1
+COPY requirements-music-dj.txt /requirements-music-dj.txt
+RUN python -m pip install --no-cache-dir -r /requirements-music-dj.txt \
+    && mkdir -p /usr/share/doc/music-dj \
+    && python -m pip freeze > /usr/share/doc/music-dj/python-lock.txt \
+    && dpkg-query -W > /usr/share/doc/music-dj/debian-packages.txt \
+    && python -m pip uninstall -y pip
+COPY --from=dj_models --chmod=444 /small0.ckpt /final0.ckpt /manifest.json /models/
+RUN chmod 755 /models
+ENV PYTHONUNBUFFERED=1 HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 MKL_NUM_THREADS=1
+WORKDIR /app
+RUN mkdir -p /app/downtify && touch /app/downtify/__init__.py
+COPY downtify/music_ai/ /app/downtify/music_ai/
+COPY LICENSE docs/music-ai.md docs/beat-this-LICENSE.txt /usr/share/doc/music-dj/
+COPY docs/sqlite-runtime.md /usr/share/doc/music-dj/sqlite-runtime.md
+COPY Dockerfile.music-dj requirements-music-dj.txt /usr/share/doc/music-dj/
+COPY --from=sqlite_build --chmod=555 /out/libsqlite3.so.0 /opt/sqlite/lib/libsqlite3.so.0
+ENV LD_LIBRARY_PATH=/opt/sqlite/lib
+RUN python -c "import sqlite3; assert sqlite3.sqlite_version == '3.53.4'"
+USER 1000:1000
+ENTRYPOINT ["python", "-m", "downtify.music_ai.dj_worker", "work"]
+CMD ["--database", "/state/derived.db", "--models", "/models", "--root", "/downloads", "--root", "/slskd", "--root", "/music/existing", "--cache-bytes", "5368709120"]

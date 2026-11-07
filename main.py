@@ -617,6 +617,10 @@ def build_app() -> FastAPI:
             api.state.settings.get('download_retry_budget_minutes', 0)
         )
         _open_library_stores(db_path)
+        if os.getenv('DOWNTIFY_MUSIC_AI_ENABLED', '0') == '1':
+            from downtify.music_ai.indexer import loop as music_ai_index_loop  # noqa: PLC0415
+
+            api.spawn_task(music_ai_index_loop(), name='music-ai-index')
         if api.state.library_trash is not None:
             api.spawn_task(
                 trash_routes.watch_trash(), name='library-trash-events'
@@ -859,6 +863,10 @@ def build_app() -> FastAPI:
     app.include_router(mobile_routes.router)
     app.include_router(trash_routes.router)
     app.include_router(download_policy_routes.router)
+    if os.getenv('DOWNTIFY_MUSIC_AI_ENABLED', '0') == '1':
+        from downtify.music_ai.routes import router as music_ai_router  # noqa: PLC0415
+
+        app.include_router(music_ai_router)
 
     @app.get('/list')
     def list_downloads(request: Request, refresh: bool = False) -> list[str]:

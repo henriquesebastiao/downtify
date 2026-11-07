@@ -71,6 +71,8 @@ import { usePlayer } from '/src/model/player'
 import { usePlayerPrefs } from '/src/model/playerPrefs'
 import { useLibrary } from '/src/model/library'
 import { useDiscover } from '/src/model/discover'
+import { musicAI } from '/src/model/musicAI'
+import { attachMusicAiListening } from '/src/model/musicAiListening'
 import { useNowPlaying, useUi } from '/src/model/ui'
 import { useShortcuts } from './shortcuts'
 
@@ -85,10 +87,22 @@ const ui = useUi()
 const nowPlaying = useNowPlaying()
 const shortcutsOpen = ref(false)
 let stopPolicy
+let stopAiTracking
+let aiRefreshTimer
 onMounted(() => {
   stopPolicy = startMusicPolicy()
+  stopAiTracking = player.observeAudio((audio) =>
+    attachMusicAiListening(audio, () => player.currentTrack.value)
+  )
+  aiRefreshTimer = setInterval(() => {
+    void musicAI.refresh()
+  }, 15000)
 })
-onUnmounted(() => stopPolicy?.())
+onUnmounted(() => {
+  stopPolicy?.()
+  stopAiTracking?.()
+  clearInterval(aiRefreshTimer)
+})
 
 // The Now playing overlay lives in the query string (?np=1); it must not
 // remount the page underneath it.
@@ -102,7 +116,9 @@ useLibrary().load()
 watch(
   () => auth.user.value?.id,
   (id) => {
+    musicAI.setAccount(id)
     if (!id) return
+    void musicAI.refresh()
     account.start()
     account.startPlaybackReports()
   },

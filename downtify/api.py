@@ -377,6 +377,7 @@ import contextlib
 import hashlib
 import json
 import mimetypes
+import os
 import re
 import shutil
 import threading
@@ -1387,7 +1388,7 @@ def admin_hidden_rules(request: Optional[Request]) -> Optional[HiddenRules]:
     return rules if rules else None
 
 
-def allowed_entry_keys(request: Optional[Request]) -> Optional[set[str]]:
+def allowed_entry_keys(request: Optional[Request], *, entries=None) -> Optional[set[str]]:
     """Content keys *request* may browse (``None``: everything).
 
     The library is shared: an admin sees all of it, and so does everyone
@@ -1404,7 +1405,7 @@ def allowed_entry_keys(request: Optional[Request]) -> Optional[set[str]]:
         return None
     return {
         entry_content_key(entry)
-        for entry in listing_for_request(library_context())
+        for entry in (entries if entries is not None else listing_for_request(library_context()))
         if not rules.hides(entry)
     }
 
@@ -9382,6 +9383,21 @@ async def similar_tracks_endpoint(
     rows plus ``match``. ``502`` when YouTube Music can't be used.
     """
 
+    if os.environ.get('DOWNTIFY_MUSIC_AI_ENABLED') == '1':
+        from .music_ai.routes import similar  # noqa: PLC0415
+
+        return await similar(
+            request=request,
+            artist=artist,
+            track=track,
+            limit=limit,
+            seed='',
+            library_file='',
+        )
+    return await _external_similar_tracks(artist, track, limit, request)
+
+
+async def _external_similar_tracks(artist, track, limit, request):
     if library_only.enabled(state.settings):
         return library_only.similar(
             entries_for_request(request), artist, track, limit
@@ -9535,6 +9551,14 @@ async def record_listen_endpoint(request: Request) -> dict[str, Any]:
     after being offline; a future time counts as now) and ``play_id``
     (the same play reported twice counts once).
     """
+
+    if os.environ.get('DOWNTIFY_MUSIC_AI_ENABLED') == '1':
+        from .music_ai.routes import store as music_ai_store  # noqa: PLC0415
+
+        if not music_ai_store().effective(request_user_id(request))[
+            'personalization'
+        ]:
+            return {'recorded': False}
 
     store = _require_discover()
     payload = await _json_object(request)
