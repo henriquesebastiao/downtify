@@ -1803,7 +1803,8 @@ export default {
       'No version has been published yet: the app is still in development, so there is nothing to install for now.',
     androidRepo: 'See the repository',
     iosGroup: 'Downtify for iOS',
-    iosHint: 'An iPhone and iPad app that browses and plays your library straight from this server.',
+    iosHint:
+      'An iPhone and iPad app that browses and plays your library straight from this server.',
     iosBody:
       'Sign in with your account or pair the app with a code from this page. Then browse and play your library, keep songs on the device for offline listening, and control playback from the lock screen.',
     iosRepo: 'See the repository',

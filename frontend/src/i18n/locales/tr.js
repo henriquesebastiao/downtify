@@ -1829,6 +1829,12 @@ export default {
     androidUnreleased:
       'Henüz hiçbir sürüm yayımlanmadı: uygulama hâlâ geliştirme aşamasında, dolayısıyla şimdilik kurulacak bir şey yok.',
     androidRepo: 'Depoyu görüntüle',
+    iosGroup: 'iOS için Downtify',
+    iosHint:
+      'Bu sunucudaki kitaplığınıza göz atmanızı ve müzik çalmanızı sağlayan iPhone ve iPad uygulaması.',
+    iosBody:
+      'Hesabınızla giriş yapın veya uygulamayı bu sayfadaki bir kodla eşleştirin. Kitaplığınıza göz atın, müzik çalın, çevrimdışı dinlemek için şarkıları kaydedin ve kilit ekranından oynatmayı kontrol edin.',
+    iosRepo: 'Depoyu görüntüle',
   },
   replace: {
     menu: 'Sesi değiştir…',

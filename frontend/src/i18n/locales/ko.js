@@ -1831,6 +1831,12 @@ export default {
     androidUnreleased:
       '아직 정식 버전이 출시되지 않았습니다. 현재 활발히 개발 중이므로 설치 가능한 파일이 아직 없습니다.',
     androidRepo: '저장소 보기',
+    iosGroup: 'iOS용 Downtify',
+    iosHint:
+      '이 서버의 라이브러리를 탐색하고 재생하는 iPhone 및 iPad 앱입니다.',
+    iosBody:
+      '계정으로 로그인하거나 이 페이지의 코드로 앱을 연결하세요. 라이브러리를 탐색하고 재생하며, 오프라인 감상을 위해 곡을 저장하고 잠금 화면에서 재생을 제어할 수 있습니다.',
+    iosRepo: '저장소 보기',
   },
   replace: {
     menu: '음원 교체…',
