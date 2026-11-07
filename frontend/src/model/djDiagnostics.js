@@ -4,6 +4,7 @@ export function createDjDiagnostics({
   media,
   position,
   now = () => performance.now(),
+  wall = () => Date.now(),
   report = (value) => console.warn('DJ validation ' + JSON.stringify(value)),
 }) {
   let lastReceipt = -Infinity,
@@ -17,12 +18,16 @@ export function createDjDiagnostics({
     /^[a-zA-Z][a-zA-Z0-9]{0,47}$/.test(value) ? value : 'unknown'
   function emit(kind, extra) {
     let buffered = 0
+    const monotonic = now()
+    const wallTime = wall()
     const time = media.currentTime
     for (let i = 0; i < (media.buffered?.length || 0); i++)
       if (media.buffered.start(i) <= time && time <= media.buffered.end(i))
         buffered = media.buffered.end(i) - time
     report({
       kind,
+      monotonic_ms: number(monotonic),
+      wall_ms: number(wallTime),
       audio_seconds: number(time),
       mix_seconds: number(position()),
       playback_rate: number(media.playbackRate),

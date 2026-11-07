@@ -3,7 +3,10 @@ import { createDjDiagnostics } from '../model/djDiagnostics'
 
 function fixture() {
   let active = true,
-    clock = 1000
+    clock = 1000,
+    wallClock = 1700000000000
+  const now = vi.fn(() => clock)
+  const wall = vi.fn(() => wallClock)
   const report = vi.fn()
   const position = vi.fn(() => 123)
   const media = {
@@ -19,7 +22,8 @@ function fixture() {
     enabled: () => active,
     media,
     position,
-    now: () => clock,
+    now,
+    wall,
     report,
   })
   return {
@@ -27,11 +31,17 @@ function fixture() {
     report,
     position,
     media,
+    now,
+    wall,
     retire: () => {
       active = false
     },
     advance: (ms) => {
       clock += ms
+      wallClock += ms
+    },
+    slewWall: (ms) => {
+      wallClock += ms
     },
   }
 }
@@ -73,7 +83,34 @@ describe('admin DJ validation diagnostics', () => {
     f.diagnostic.stream({ kind: 'error' })
     f.diagnostic.receipt({}, 0)
     expect(f.position).not.toHaveBeenCalled()
+    expect(f.now).not.toHaveBeenCalled()
+    expect(f.wall).not.toHaveBeenCalled()
     expect(f.report).not.toHaveBeenCalled()
+  })
+  it('samples independent clocks without letting wall-clock slew affect cadence or RTT', () => {
+    const f = fixture()
+    const receipt = { total_interruptions: 0 }
+    f.diagnostic.receipt(receipt, 900)
+    expect(f.report.mock.calls[0][0]).toMatchObject({
+      monotonic_ms: 1000,
+      wall_ms: 1700000000000,
+      audio_seconds: 12,
+      rtt_ms: 100,
+    })
+    f.slewWall(60000)
+    f.diagnostic.receipt(receipt, 900)
+    expect(f.report).toHaveBeenCalledTimes(1)
+    expect(f.wall).toHaveBeenCalledTimes(1)
+    f.advance(30000)
+    f.media.currentTime = 42
+    f.diagnostic.receipt(receipt, 30900)
+    expect(f.report).toHaveBeenCalledTimes(2)
+    expect(f.report.mock.calls[1][0]).toMatchObject({
+      monotonic_ms: 31000,
+      wall_ms: 1700000090000,
+      audio_seconds: 42,
+      rtt_ms: 100,
+    })
   })
   it('filters raw errors and URLs, and bounds repetitive errors', () => {
     const f = fixture()

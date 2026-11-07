@@ -66,7 +66,11 @@
         continu</label
       >
       <UiButton
-        v-if="isAdmin && mode === 'interactive' && !ready"
+        v-if="
+          isAdmin &&
+          mode === 'interactive' &&
+          musicAI.capabilities.value?.dj?.interactive_ready !== true
+        "
         type="button"
         :disabled="busy"
         @click="create(true)"

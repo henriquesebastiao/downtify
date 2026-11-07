@@ -95,6 +95,13 @@ The current deck and three following occurrences are retained; a single staged
 plan change waits for its audio before taking effect. These synthetic checks
 do not replace an uninterrupted real playback trial or physical Android tests.
 
+The final candidate passed 100 Linux checks, including two cache-identity
+regressions. Its subsequent real trial still failed continuity on clock drift
+and reader events; long segment loads and an unresponsive test browser were
+observed without establishing one cause. It remains unqualified. Administrator
+diagnostics include simultaneous monotonic/wall timestamps to distinguish clock
+effects in the next trial; trial opt-in no longer hides the validation action.
+
 The real uninterrupted one-hour DJ qualification, comparative listening,
 physical Android/background acceptance and phone thermal/battery measurements
 remain pending. A separate **voluntary unqualified-engine trial** allows testing

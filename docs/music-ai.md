@@ -344,6 +344,21 @@ Windows AI suite collected before the last additions passed 213 checks with
 20 explicit skips. These groups overlap. No Pixel latency, battery, temperature,
 subjective transition quality or successful one-hour qualification is inferred.
 
+The final candidate passed 100 Linux checks after the precise import-formatting
+identity regression was added. Its real playback trial subsequently reset on
+clock drift and reader interruptions. Segment loads reached several seconds;
+the test browser also stopped responding to control. These observations do not
+establish a single cause and the candidate remains unqualified. The failed
+trial is stopped, and its temporary user trial preference is restored without
+changing global modules or unrelated preferences.
+
+Validation-only browser diagnostics now capture monotonic and wall timestamps
+with each audio-position sample. This permits comparison of media progress,
+monotonic elapsed time and wall-clock changes without treating console capture
+timestamps as an independent playback clock. No transport or threshold changes
+are made. The administrator validation action remains visible when trial mode
+makes an unqualified engine usable, avoiding a preference change just to test it.
+
 Official references rechecked 6 November 2026:
 - https://developer.android.com/media/media3/session/player
 - https://developer.android.com/topic/performance/benchmarking/macrobenchmark-overview
