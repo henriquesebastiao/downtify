@@ -74,7 +74,9 @@ export function createDjDiagnostics({
       emit('receipt', {
         rtt_ms: number(now() - sentAt),
         continuous_seconds: number(value.continuous_seconds),
-        phase_error_seconds: number(value.clock_delta_seconds),
+        phase_error_seconds: Number.isFinite(value.clock_delta_seconds)
+          ? number(value.clock_delta_seconds)
+          : null,
         reset_counts: counts,
       })
     },

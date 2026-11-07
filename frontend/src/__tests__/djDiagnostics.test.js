@@ -37,6 +37,17 @@ function fixture() {
 }
 
 describe('admin DJ validation diagnostics', () => {
+  it('does not turn a phase measurement omitted by an older API into a measured zero', () => {
+    const f = fixture()
+    f.diagnostic.receipt(
+      { total_interruptions: 0, continuous_seconds: 30 },
+      900
+    )
+    expect(f.report.mock.calls[0][0]).toMatchObject({
+      phase_error_seconds: null,
+      continuous_seconds: 30,
+    })
+  })
   it('reports actual buffer, speed and interruption type without source data', () => {
     const f = fixture()
     f.diagnostic.interruption('waiting')
