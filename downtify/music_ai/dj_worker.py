@@ -33,6 +33,21 @@ def identity(names):
     return hashlib.sha256(content).hexdigest()
 
 
+def analysis_source(function):
+    source = inspect.getsource(function)
+    if function is analyze_child:
+        # Preserve pre-formatting profile identities for this exact import gap.
+        # Every other byte (including analysis logic and model pins) is hashed.
+        source = source.replace(
+            '    from beat_this.inference import Audio2Beats\n\n'
+            '    from .dj_evidence import profile_from_signal\n',
+            '    from beat_this.inference import Audio2Beats\n'
+            '    from .dj_evidence import profile_from_signal\n',
+            1,
+        )
+    return source.encode()
+
+
 def analysis_identity():
     # Fingerprint the analysis pipeline, independent of rendering and controls.
     # Model pins and audio-analysis changes still invalidate derived profiles.
@@ -47,7 +62,7 @@ def analysis_identity():
         AudioIO.loudness,
         run_audio,
     ):
-        content += inspect.getsource(function).encode()
+        content += analysis_source(function)
     for package in (
         'torch',
         'torchaudio',
@@ -74,6 +89,8 @@ def engine_identity():
         'dj_worker',
         'dj_live',
         'dj_live_plan',
+        'dj_preparation',
+        'dj_prepared_deck',
         'dj_hls',
         'dj_validation',
     ))
@@ -260,7 +277,9 @@ class DjWorker:
         ):
             raise PermissionError('dj_session_stopped')
 
-    def analyze(self, track, source, io, generation):
+    def analyze(self, track, source, io, generation, *, checkpoint=None):
+        checkpoint = checkpoint or self.checkpoint
+        checkpoint()
         audio = source.get('snapshot', source)
         original, _ = io.original(audio['path'], audio['source_version'])
         cached = self.dj.profile(
@@ -298,13 +317,14 @@ class DjWorker:
         }
         output, _ = run_audio(
             arguments,
-            self.checkpoint,
+            checkpoint,
             timeout=900,
             input_data=json.dumps(payload).encode(),
             max_output=2 * 1024**2,
             cwd=Path(__file__).resolve().parents[2],
         )
         result = json.loads(output)
+        checkpoint()
         io.original(audio['path'], audio['source_version'])
         result['source_version'] = source['source_version']
         if not self.dj.put_profile(
@@ -333,22 +353,45 @@ class DjWorker:
             )
         return results
 
-    def prepare_deck(self, track, io):
+    def prepare_deck(
+        self,
+        track,
+        io,
+        *,
+        source=None,
+        checkpoint=None,
+        slot=None,
+        report=True,
+    ):
         """Freeze and analyze only a deck entering the short playback window."""
-        source = self.job['sources'][track]
-        if 'snapshot' not in source:
-            self.publish(phase='snapshot')
-            occupied = {Path(value).name for value in io.snapshots}
-            slot = next(
-                index
-                for index in range(40)
-                if f'source-{index}.audio' not in occupied
+        checkpoint = checkpoint or self.checkpoint
+        checkpoint()
+        source = self.job['sources'][track] if source is None else source
+        if 'snapshot' in source:
+            io.allow_snapshot(
+                source['snapshot']['path'],
+                source['snapshot']['source_version'],
             )
+        if 'snapshot' not in source:
+            if report:
+                self.publish(phase='snapshot')
+            occupied = {Path(value).name for value in io.snapshots}
+            if slot is None:
+                slot = next(
+                    index
+                    for index in range(40)
+                    if f'source-{index}.audio' not in occupied
+                    and not (io.workspace / f'source-{index}.audio').exists()
+                )
             source['snapshot'] = io.freeze(
-                source['path'], source['source_version'], slot, self.checkpoint
+                source['path'], source['source_version'], slot, checkpoint
             )
         return self.analyze(
-            track, source, io, self.database.metadata('analysis_generation', 0)
+            track,
+            source,
+            io,
+            self.database.metadata('analysis_generation', 0),
+            checkpoint=checkpoint,
         )
 
     def release_decks(self, io, keep):
@@ -378,6 +421,15 @@ class DjWorker:
             self.compute_ticket = acquire(self.database, 'dj')
             if self.compute_ticket is None:
                 time.sleep(0.25)
+
+    def try_require_compute(self):
+        """Live transport stays responsive while another compute job yields."""
+        from .compute_budget import acquire
+
+        self.checkpoint()
+        if self.compute_ticket is None:
+            self.compute_ticket = acquire(self.database, 'dj')
+        return self.compute_ticket is not None
 
     def prepared(self, io):
         started = time.monotonic()

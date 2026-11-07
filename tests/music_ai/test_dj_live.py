@@ -1,5 +1,6 @@
 import hashlib
 import shutil
+import time
 import wave
 from dataclasses import asdict
 
@@ -76,6 +77,15 @@ def fixture(tmp_path):
                 job['id'], job['lease_token'], self.stage, changes
             )
 
+        def prepare_deck(self, track, io, *, source, slot, checkpoint, report):  # noqa: PLR0913 -- Match the worker preparation protocol.
+            assert report is False
+            checkpoint()
+            if 'snapshot' not in source:
+                source['snapshot'] = io.freeze(
+                    source['path'], source['source_version'], slot, checkpoint
+                )
+            return results[track]
+
     worker = Worker()
     worker.job, worker.dj = job, dj
     return worker, io, results, music, store
@@ -94,6 +104,9 @@ def test_real_hls_encoder_handles_live_controls_without_rewriting_originals(
     renderer = None
 
     def sleep(seconds):
+        time.sleep(0.001)
+        if renderer.preparation.busy:
+            return
         clock[0] += seconds
         commands = [
             (2, 'pause', {}),
@@ -101,10 +114,14 @@ def test_real_hls_encoder_handles_live_controls_without_rewriting_originals(
             (4, 'next', {}),
             (5, 'theme', {'theme': 'calme'}),
         ]
+        receipts = worker.dj.command_results(worker.job['id'])
+        if len(receipts) < len(sent):
+            return
         for deadline, action, payload in commands:
             if clock[0] >= deadline and action not in sent:
                 worker.dj.command(1, worker.job['id'], action, action, payload)
                 sent.add(action)
+                return
         if clock[0] >= 6 and 'replace' not in sent:
             worker.dj.command(
                 1,
@@ -139,6 +156,7 @@ def test_live_module_disable_stops_encoder_and_cleans_decoded_audio(tmp_path):
     clock = [0.0]
 
     def sleep(seconds):
+        time.sleep(0.001)
         clock[0] += seconds
         if clock[0] > 0.2:
             store.set_preferences(1, {'dj_interactive': False})
@@ -163,6 +181,9 @@ def test_continuous_hls_renews_without_restarting_encoder_and_bounds_history(
     clock = [0.0]
 
     def sleep(seconds):
+        time.sleep(0.001)
+        if renderer.preparation.busy:
+            return
         clock[0] += seconds
         if clock[0] >= 250:
             worker.dj.stop(1, worker.job['id'])

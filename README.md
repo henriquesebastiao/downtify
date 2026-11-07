@@ -87,6 +87,14 @@ they are not a subjective music-quality score. The broad server harness needs
 a writable temporary workspace for its trash fixtures, while production can
 remain read-only.
 
+The 7 November live-pipeline correction passed 98 isolated Linux DJ checks
+(real FFmpeg/Beat This! runtime) and 25 targeted Windows checks (one explicit
+symlink-privilege skip). Deck analysis and decoding now run in one cancellable
+preparation slot while HLS production and transport commands remain responsive.
+The current deck and three following occurrences are retained; a single staged
+plan change waits for its audio before taking effect. These synthetic checks
+do not replace an uninterrupted real playback trial or physical Android tests.
+
 The real uninterrupted one-hour DJ qualification, comparative listening,
 physical Android/background acceptance and phone thermal/battery measurements
 remain pending. A separate **voluntary unqualified-engine trial** allows testing

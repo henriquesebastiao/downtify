@@ -130,10 +130,15 @@ class AudioIO:
     def check_space(self, requested):
         used = 0
         for path in self.cache.rglob('*'):
-            if path.is_symlink():
-                raise AudioError('unsafe_cache_entry')
-            if path.is_file():
-                used += path.stat().st_size
+            try:
+                if path.is_symlink():
+                    raise AudioError('unsafe_cache_entry')
+                if path.is_file():
+                    used += path.stat().st_size
+            except FileNotFoundError:
+                # The encoder and one preparation task atomically rotate
+                # private temporary files. All other filesystem errors fail.
+                continue
         if requested < 0 or used + requested > self.budget:
             raise AudioError('dj_cache_full')
         if shutil.disk_usage(self.cache).free < requested + self.min_free:

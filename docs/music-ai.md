@@ -137,7 +137,7 @@ follows the active HLS window. There is no promise of instantaneous changes.
 
 Live inputs are frozen and analyzed progressively in a window of four decks,
 within the same 5 GiB DJ budget and disk reserve. This prevents a concurrent
-concurrent library replacement from breaking an ongoing live set. File versions
+library replacement from breaking an ongoing live set. File versions
 are checked during the copy, originals stay read-only, and temporary copies
 are removed when the session ends or fails. There is no application backup.
 Derived rhythm profiles remain fenced by their original fingerprints, model
@@ -301,6 +301,48 @@ HLS error codes, buffer depth, playback rate, interruption type and continuity
 request latency. They are disabled outside an active administrator validation,
 stop on account/generation changes and omit URLs, session/track identifiers,
 titles and raw errors. They explain a failed trial; they cannot qualify one.
+
+## Live preparation correction — 7 November 2026
+
+A real validation of the earlier engine exhausted the audio buffer after about
+12 minutes while a deck was being prepared. Fast segment requests did not
+prevent this renderer-side starvation. That trial failed and remains failed.
+
+The corrected renderer owns one cancellable preparation slot. An isolated
+AudioIO instance freezes/analyzes or decodes a deck without changing the owner's
+plan, snapshot map, mixer or playback state. The owner reaps results after checking
+source identity and current plan needs. It renews the compute lease, handles
+transport commands and feeds HLS throughout preparation, including while paused
+or at the 24-second render horizon. The shared heavy-compute lease is retained
+until work is reaped. Shutdown cancels and joins preparation before removing
+its files; old or cancelled results cannot attach to a new plan.
+
+PCM lookup never decodes. The entire next one-second block is checked before
+the mixer's cursor or EQ state can advance. The current occurrence and up to
+three following occurrences retain their derived audio. A single pending plan
+edit is rebased against the actual rendered cursor and commits only when its
+audio is ready; pause/resume do not wait for that edit. Additional simultaneous
+plan edits report busy rather than building a queue of background tasks.
+
+A staged change temporarily retains the union of two four-occurrence PCM
+windows, plus the single in-flight task until it completes or cancels. These
+files remain inside the same 5 GiB cache and reserve checks; they are memory
+mapped, not loaded as complete audio arrays. Superseded variants are removed
+after commit. Cache accounting tolerates only files that disappear during
+atomic rotation, retaining other filesystem and budget failures.
+
+Reported live render speed now conservatively includes preparation wall time
+as well as encoding/mixing time; overlapping work can be counted twice.
+The engine identity includes the preparation helpers, so old qualification
+cannot silently apply. The audio-analysis identity is unchanged, allowing
+unchanged cached profiles to be reused without a library-wide reanalysis.
+
+Evidence for this correction: 98 synthetic Linux checks passed with the real
+encoder and model runtime, including live controls and continuous renewal;
+25 targeted Windows checks passed with one symlink-privilege skip. The broader
+Windows AI suite collected before the last additions passed 213 checks with
+20 explicit skips. These groups overlap. No Pixel latency, battery, temperature,
+subjective transition quality or successful one-hour qualification is inferred.
 
 Official references rechecked 6 November 2026:
 - https://developer.android.com/media/media3/session/player
