@@ -3,6 +3,7 @@ import { v4 as uuid } from 'uuid'
 import { musicAI } from './musicAI'
 import { usePlayer } from './player'
 import { createDjStream } from './djStream'
+import { createDjDiagnostics } from './djDiagnostics'
 import { djPresentation, djResumePoint } from './djPresentation'
 import { normalizeTrack } from '/src/lib/library'
 import { useUi } from './ui'
@@ -227,8 +228,20 @@ async function listen(value, options = {}) {
       (row, index) => row.occurrence ?? index
     ),
   })
-  const onInterruption = () => {
-    if (reporting) interruptions++
+  const diagnostics = createDjDiagnostics({
+    enabled: () =>
+      value.validation === true &&
+      mine === serial &&
+      owner === musicAI.account.value &&
+      musicAI.capabilities.value?.administrator === true,
+    media: node,
+    position: transport.position,
+  })
+  const onInterruption = (event) => {
+    if (reporting) {
+      interruptions++
+      diagnostics.interruption(event.type)
+    }
   }
   for (const event of ['waiting', 'seeking', 'pause'])
     node.addEventListener(event, onInterruption)
@@ -243,6 +256,7 @@ async function listen(value, options = {}) {
           media: node,
           url: musicAI.mediaUrl(value.media_url),
           current: () => mine === serial && owner === musicAI.account.value,
+          onDiagnostic: diagnostics.stream,
           onFatal: () => error(new Error('Le direct a été interrompu.')),
         })
       : {
@@ -285,12 +299,16 @@ async function listen(value, options = {}) {
         node.readyState >= 3
       ) {
         reporting = true
+        const sentAt = performance.now()
         const receipt = await musicAI.continuityDj(value.id, {
           position: transport.position(),
           sequence: sequence++,
           interruptions,
         })
-        if (mine === serial) proof.value = receipt
+        if (mine === serial) {
+          proof.value = receipt
+          diagnostics.receipt(receipt, sentAt)
+        }
       }
     } catch (reason) {
       if (

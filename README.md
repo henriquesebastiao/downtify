@@ -80,9 +80,9 @@ This is a **single uncontrolled snapshot**: model warm-up, concurrent work and
 playback load were not controlled. It establishes neither active-mix/inference
 throughput nor a controlled before/after improvement, minimum RAM or phone cost.
 
-Latest corrective-candidate checks: 771 web tests passed (one skipped), a
-production web build, 116 focused Python checks, 75 Linux DJ checks with local
-models, and 3,375 native/server checks plus ten subtests. Test groups overlap;
+Latest web checks: 777 tests passed (one existing skipped) and the production
+build passed. Earlier backend checks passed 116 focused Python checks, 75 Linux
+DJ checks with local models, and 3,375 native/server checks plus ten subtests. Test groups overlap;
 they are not a subjective music-quality score. The broad server harness needs
 a writable temporary workspace for its trash fixtures, while production can
 remain read-only.
@@ -91,8 +91,9 @@ The real uninterrupted one-hour DJ qualification, comparative listening,
 physical Android/background acceptance and phone thermal/battery measurements
 remain pending. A separate **voluntary unqualified-engine trial** allows testing
 an available server engine without pretending it is qualified. It requires both
-administrator and user opt-in and can be disabled independently. On-device DJ
-is not qualified and is not advertised as a working engine.
+administrator and user opt-in and can be disabled independently. The Android
+companion offers an optional short-fade device prototype; on-device beat-model
+inference and physical qualification are still pending.
 
 See [builds, licenses, API behavior and beta limits](docs/music-ai.md).
 The matching Android contribution is [downtify-android#49](https://github.com/henriquesebastiao/downtify-android/pull/49).
