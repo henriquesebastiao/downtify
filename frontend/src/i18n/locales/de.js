@@ -1893,6 +1893,12 @@ export default {
     androidUnreleased:
       'Es wurde noch keine Version veröffentlicht: Die App befindet sich noch in Entwicklung und kann derzeit nicht installiert werden.',
     androidRepo: 'Repository ansehen',
+    iosGroup: 'Downtify für iOS',
+    iosHint:
+      'Eine iPhone- und iPad-App zum Durchsuchen und Abspielen deiner Bibliothek auf diesem Server.',
+    iosBody:
+      'Melde dich mit deinem Konto an oder kopple die App mit einem Code von dieser Seite. Durchsuche und spiele deine Bibliothek, speichere Titel für die Offline-Wiedergabe und steuere die Wiedergabe auf dem Sperrbildschirm.',
+    iosRepo: 'Repository ansehen',
   },
   replace: {
     menu: 'Audio ersetzen …',

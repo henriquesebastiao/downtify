@@ -1886,6 +1886,12 @@ export default {
     androidUnreleased:
       'Aucune version n’a encore été publiée : l’appli est toujours en développement, il n’y a donc rien à installer pour l’instant.',
     androidRepo: 'Voir le dépôt',
+    iosGroup: 'Downtify pour iOS',
+    iosHint:
+      'Une application iPhone et iPad pour parcourir et écouter votre bibliothèque depuis ce serveur.',
+    iosBody:
+      'Connectez-vous avec votre compte ou associez l’application avec un code de cette page. Parcourez et écoutez votre bibliothèque, gardez des titres hors ligne et contrôlez la lecture depuis l’écran verrouillé.',
+    iosRepo: 'Voir le dépôt',
   },
   replace: {
     menu: 'Remplacer l’audio…',
