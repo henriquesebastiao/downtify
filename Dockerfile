@@ -19,12 +19,6 @@ FROM node:26-alpine AS frontend-builder
 
 WORKDIR /frontend
 
-ARG DOWNTIFY_OIDC_ISSUER
-ARG DOWNTIFY_OIDC_CLIENT_ID
-ARG DOWNTIFY_OIDC_CLIENT_SECRET
-ARG DOWNTIFY_OIDC_REDIRECT_URI
-ARG DOWNTIFY_OIDC_ADMIN_GROUPS
-
 COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci
 
@@ -56,11 +50,6 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     UID=1000 \
     GID=1000 \
     UMASK=022 \
-    DOWNTIFY_OIDC_ISSUER="https://apps.oplay.id" \
-    DOWNTIFY_OIDC_CLIENT_ID="a39d620f-d8f6-4559-892f-73bf739820a6" \
-    DOWNTIFY_OIDC_CLIENT_SECRET="UCt6GovfIZ0HbIhn1o3mOCyXg3asfJs2" \
-    DOWNTIFY_OIDC_REDIRECT_URI="https://music.oplay.id/api/auth/oidc/callback" \
-    DOWNTIFY_OIDC_ADMIN_GROUPS="admin"
 
 WORKDIR /downtify
 
