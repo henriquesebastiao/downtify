@@ -37,3 +37,9 @@ jobs:
           push: true
           tags: |
             ghcr.io/${{ env.IMAGE_NAME }}:latest
+          build-args: |
+            DOWNTIFY_OIDC_ISSUER=${{ secrets.DOWNTIFY_OIDC_ISSUER }}
+            DOWNTIFY_OIDC_CLIENT_ID=${{ secrets.DOWNTIFY_OIDC_CLIENT_ID }}
+            DOWNTIFY_OIDC_CLIENT_SECRET=${{ secrets.DOWNTIFY_OIDC_CLIENT_SECRET }}
+            DOWNTIFY_OIDC_REDIRECT_URI=${{ secrets.DOWNTIFY_OIDC_REDIRECT_URI }}
+            DOWNTIFY_OIDC_ADMIN_GROUPS=${{ secrets.DOWNTIFY_OIDC_ADMIN_GROUPS }}
