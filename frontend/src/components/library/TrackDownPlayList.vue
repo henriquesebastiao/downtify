@@ -42,11 +42,13 @@
         :song="song"
         :index="i"
         :queue="queue"
+        :songs="songs"
         :context="context"
         :selectable="selectable"
         :selected="selected.has(keyOf(song, i))"
         :marked="!!markedKey && keyOf(song, i) === markedKey"
         :hide-album="hideAlbum"
+        :search-links="searchLinks"
         @toggle="toggleSelected(keyOf(song, i))"
       />
     </div>
@@ -65,7 +67,7 @@ export const TOOLBAR_LAZY = 'lazy'
 </script>
 
 <script setup>
-// A list of TrackDownPlay rows (download + library-play + preview), with
+// A list of TrackDownPlay rows (download + library/stream play), with
 // optional multi-select: a checkbox per row and, above the grid, "All"/
 // "New" quick-select chips plus a right-aligned "Download selected" once
 // something is checked. "New" (not yet in the library) only shows up when
@@ -151,6 +153,8 @@ const props = defineProps({
   collectionName: { type: String, default: '' },
   markedKey: { type: String, default: '' },
   hideAlbum: { type: Boolean, default: false },
+  // Forwarded to every TrackDownPlay as-is (see its own `searchLinks`).
+  searchLinks: { type: Boolean, default: true },
 })
 
 const emit = defineEmits(['download'])

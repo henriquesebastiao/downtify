@@ -14,7 +14,7 @@
         ref="panel"
         role="dialog"
         aria-modal="true"
-        aria-label="Navigation"
+        :aria-label="ui.navigation"
         class="fixed inset-y-0 left-0 z-50 flex w-[min(320px,86vw)] flex-col border-r border-line-3 bg-side shadow-float lg:hidden"
         @keydown="onKeydown"
       >
@@ -25,7 +25,7 @@
             ref="closeButton"
             type="button"
             class="-mr-2 ml-auto flex size-10 items-center justify-center rounded-control text-fg-3 hover:bg-surface-2"
-            aria-label="Close navigation"
+            :aria-label="ui.closeNav"
             @click="$emit('close')"
           >
             <Icon name="x" :size="20" />
@@ -53,9 +53,11 @@ import NavList from './NavList.vue'
 import SocialLinks from './SocialLinks.vue'
 import ThemeSwitch from './ThemeSwitch.vue'
 import { trapTab } from '../focus'
+import { useUi } from '../composables/ui'
 
 const props = defineProps({ open: { type: Boolean, default: false } })
 const emit = defineEmits(['close'])
+const { ui } = useUi()
 const panel = ref(null)
 const closeButton = ref(null)
 

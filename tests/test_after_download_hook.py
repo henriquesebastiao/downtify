@@ -155,7 +155,9 @@ def test_a_file_a_provider_downloaded_calls_the_hook(tmp_path, monkeypatch):
         downloader_mod, 'enrich_from_match', lambda song, match: song
     )
     monkeypatch.setattr(
-        Downloader, '_finalize_local_source', lambda self, *a: 'slskd/x.flac'
+        Downloader,
+        '_finalize_local_source',
+        lambda self, *a: ('slskd/x.flac', None),
     )
     heard: list[str] = []
     dl.on_downloaded = lambda song, filename: heard.append(filename)
@@ -173,6 +175,68 @@ def test_a_download_that_fails_never_calls_the_hook(downloader, monkeypatch):
     )
     with pytest.raises(RuntimeError, match='yt-dlp said no'):
         downloader.download(SONG)
+
+
+# ── Downloader.on_outcome ───────────────────────────────────────────────────
+
+
+def test_the_outcome_hook_hears_a_finished_download(downloader):
+    heard: list[tuple] = []
+    downloader.on_outcome = lambda song, outcome, filename: heard.append((
+        song['name'],
+        outcome,
+        filename,
+    ))
+
+    downloader.download(SONG)
+
+    assert heard == [
+        ('Thunderstruck', 'completed', 'AC-DC - Thunderstruck.mp3')
+    ]
+
+
+def test_the_outcome_hook_hears_a_song_already_in_the_library(
+    tmp_path, monkeypatch
+):
+    dl = Downloader(tmp_path, overwrite_existing_files=False)
+    monkeypatch.setattr(Downloader, '_can_resolve_path_early', lambda *a: True)
+    monkeypatch.setattr(
+        Downloader, 'find_existing_download', lambda *a: 'Old.mp3'
+    )
+    heard: list[tuple] = []
+    dl.on_outcome = lambda song, outcome, filename: heard.append((
+        outcome,
+        filename,
+    ))
+
+    assert dl.download(SONG) == 'Old.mp3'
+    assert heard == [('skipped', 'Old.mp3')]
+
+
+def test_the_outcome_hook_hears_a_failure_and_the_error_still_raises(
+    downloader, monkeypatch
+):
+    def fail(self, *a):
+        raise RuntimeError('yt-dlp said no')
+
+    monkeypatch.setattr(Downloader, '_fetch_and_tag', fail)
+    heard: list[tuple] = []
+    downloader.on_outcome = lambda song, outcome, filename: heard.append((
+        outcome,
+        filename,
+    ))
+
+    with pytest.raises(RuntimeError, match='yt-dlp said no'):
+        downloader.download(SONG)
+    assert heard == [('failed', '')]
+
+
+def test_an_outcome_hook_that_fails_never_fails_the_download(downloader):
+    def boom(song, outcome, filename):
+        raise RuntimeError('log exploded')
+
+    downloader.on_outcome = boom
+    assert downloader.download(SONG) == 'AC-DC - Thunderstruck.mp3'
 
 
 # ── api.enrich_artist_after_download ────────────────────────────────────────

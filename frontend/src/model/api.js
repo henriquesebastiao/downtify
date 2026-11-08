@@ -175,6 +175,25 @@ function finderAlbum(albumId) {
   return API.get('/api/finder/album', { params: { album_id: albumId } })
 }
 
+// ── Similar tracks (YouTube Music) ───────────────────────────────
+// Tracks similar to one track, by artist + title - see
+// downtify/providers.py. Needs no key.
+function getSimilarTracks(artist, track, limit = 20) {
+  return API.get('/api/similar/tracks', { params: { artist, track, limit } })
+}
+
+// A track's full audio as a fresh direct URL - the player behind a song
+// that isn't downloaded yet. Short-lived: fetched on demand, never stored.
+function getStreamUrl(videoId) {
+  return API.get('/api/stream', { params: { video_id: videoId } })
+}
+
+// Start caching a video's audio on the server without waiting for it -
+// how the player warms the next track up. Never fails the caller.
+function prefetchStream(videoId) {
+  return API.post('/api/stream/prefetch', { video_id: videoId })
+}
+
 // ── Artist photo & banner ───────────────────────────────────────────
 function getArtistArt(name) {
   return API.get('/api/artists/art', { params: { name } })
@@ -355,6 +374,15 @@ function getLibraryArtists() {
   return API.get('/api/library/artists')
 }
 
+// What admins hid from users (downtify/library_visibility.py).
+function getLibraryVisibility() {
+  return API.get('/api/library/visibility')
+}
+
+function updateLibraryVisibility(action, items) {
+  return API.post('/api/library/visibility', { action, items })
+}
+
 function lookupLibrarySongs(songs) {
   return API.post('/api/library/lookup', { songs })
 }
@@ -365,6 +393,59 @@ function getLyrics(file) {
 
 function deleteDownload(file) {
   return API.delete('/delete', { params: { file } })
+}
+
+function downloadExclusions() {
+  return API.get('/api/v1/download-policy/exclusions')
+}
+function excludeDownload(song) {
+  return API.post('/api/v1/download-policy/exclusions', song)
+}
+function resumeDownload(id) {
+  return API.delete(
+    '/api/v1/download-policy/exclusions/' + encodeURIComponent(id)
+  )
+}
+
+function trashCapabilities() {
+  return API.get('/api/v1/library/trash/capabilities')
+}
+async function trashPreview(files) {
+  const started = await API.post('/api/v1/library/trash/preview', { files })
+  for (let attempt = 0; attempt < 1800; attempt++) {
+    const result = await API.get(
+      '/api/v1/library/trash/preview/' +
+        encodeURIComponent(started.data.request_id)
+    )
+    if (result.data.state === 'ready') return { data: result.data.preview }
+    if (result.data.state === 'failed') {
+      const error = new Error('preview_unavailable')
+      error.response = {
+        data: { detail: { code: result.data.error || 'preview_unavailable' } },
+      }
+      throw error
+    }
+    await new Promise((resolve) => setTimeout(resolve, 1000))
+  }
+  throw new Error('preview_unavailable')
+}
+function trashConfirm(confirmation) {
+  return API.post('/api/v1/library/trash/confirm', { confirmation })
+}
+function trashList(params) {
+  return API.get('/api/v1/library/trash', { params })
+}
+function trashRestore(ids) {
+  return API.post('/api/v1/library/trash/restore', { ids })
+}
+function trashRetry(ids) {
+  return API.post('/api/v1/library/trash/retry', { ids })
+}
+function trashExclusions() {
+  return API.get('/api/v1/library/trash/exclusions')
+}
+function trashAllowDownload(ids) {
+  return API.post('/api/v1/library/trash/allow-download', { ids })
 }
 
 function deleteDownloadsBatch(files) {
@@ -392,15 +473,137 @@ function createLibraryPlaylist(name) {
   return API.post('/api/library/playlists', { name })
 }
 
-function editLibraryPlaylistTracks(name, { add = [], remove = [] } = {}) {
-  return API.post('/api/library/playlists/tracks', { name, add, remove })
+function uploadLibraryPlaylistCover(name, file, contentType) {
+  return API.put('/api/library/playlists/cover', file, {
+    params: { name },
+    headers: { 'Content-Type': contentType },
+  })
 }
 
-function renameLibraryPlaylist(name, newName) {
+function removeLibraryPlaylistCover(name) {
+  return API.delete('/api/library/playlists/cover', { params: { name } })
+}
+
+function discoverExternalPlaylists() {
+  return API.get('/api/library/playlists/external')
+}
+
+function importExternalPlaylists(selected) {
+  return API.post('/api/library/playlists/external', { selected })
+}
+
+function getTrackLoudness(file) {
+  return API.get('/api/library/loudness', {
+    params: { file },
+    timeout: 1500,
+    quiet: true,
+  })
+}
+
+function getLoudnessStatus() {
+  return API.get('/api/library/loudness/status', { quiet: true })
+}
+
+function controlLoudness(action) {
+  return API.post(`/api/library/loudness/${action}`)
+}
+
+// `removeEntries`: [{file, occurrence}], one copy each of a song the
+// playlist repeats (`remove` takes every copy). `allowDuplicates` adds
+// a song the playlist already has again.
+function editLibraryPlaylistTracks(
+  name,
+  {
+    add = [],
+    remove = [],
+    removeEntries = [],
+    allowDuplicates = false,
+    sourcePlaylistUrl = '',
+  } = {}
+) {
+  return API.post('/api/library/playlists/tracks', {
+    name,
+    add,
+    remove,
+    ...(removeEntries.length ? { remove_entries: removeEntries } : {}),
+    ...(allowDuplicates ? { allow_duplicates: true } : {}),
+    ...(sourcePlaylistUrl ? { source_playlist_url: sourcePlaylistUrl } : {}),
+  })
+}
+
+// Every song of the playlist, repeats included, in its new place.
+function reorderLibraryPlaylist(name, files) {
+  return API.put('/api/library/playlists/order', { name, files })
+}
+
+function renameLibraryPlaylist(name, newName, resetDisplayName = false) {
   return API.post('/api/library/playlists/rename', {
     name,
     new_name: newName,
+    reset_display_name: resetDisplayName,
   })
+}
+
+// `editors`: who of `sharedWith` may also add and remove songs (Library
+// playlists only); left out, the current editors still listed stay.
+function setPlaylistVisibility(name, visibility, sharedWith = [], editors) {
+  return API.put('/api/library/playlists/visibility', {
+    name,
+    visibility,
+    shared_with: sharedWith,
+    ...(editors ? { editors } : {}),
+  })
+}
+
+function setPlaylistFavorite(name, favorite) {
+  return API.put('/api/library/playlists/favorite', { name, favorite })
+}
+
+function copyLibraryPlaylist(name, newName = '') {
+  return API.post('/api/library/playlists/copy', {
+    name,
+    new_name: newName,
+  })
+}
+
+function detachLibraryPlaylist(name) {
+  return API.post('/api/library/playlists/detach', { name })
+}
+
+// What the playlist page filters by: who fetched each song and which ones
+// Navidrome hasn't matched - see downtify/file_providers.py.
+function getPlaylistDetails(name) {
+  return API.get('/api/library/playlists/details', { params: { name } })
+}
+
+function getPlaylistDiagnostics(name) {
+  return API.get('/api/library/playlists/diagnostics', { params: { name } })
+}
+
+// Songs hidden from an imported playlist (they stay out when its watch
+// or link brings them back).
+function getHiddenPlaylistSongs(name) {
+  return API.get('/api/library/playlists/hidden', { params: { name } })
+}
+
+function changeHiddenPlaylistSongs(name, { hide = [], show = [] } = {}) {
+  return API.post('/api/library/playlists/hidden', { name, hide, show })
+}
+
+function followPlaylist(name) {
+  return API.post('/api/v1/playlists/follow', { name })
+}
+
+function unfollowPlaylist(name) {
+  return API.delete('/api/v1/playlists/follow', { params: { name } })
+}
+
+function markPlaylistSeen(name) {
+  return API.post('/api/v1/playlists/seen', { name })
+}
+
+function listShareableUsernames() {
+  return API.get('/api/v1/usernames')
 }
 
 function reconcileLibrary() {
@@ -487,6 +690,10 @@ function deleteUser(id) {
   return API.delete(`/api/users/${encodeURIComponent(id)}`)
 }
 
+function getUserStats() {
+  return API.get('/api/users/stats')
+}
+
 function getActivity(params = {}) {
   return API.get('/api/activity', { params })
 }
@@ -547,6 +754,12 @@ function replaceAudio(file, videoId) {
   return API.post('/api/library/replace', { file, video_id: videoId })
 }
 
+// Mark (or unmark) an album's tracks as a Various Artists compilation:
+// rewrites their album-artist tag and compilation flag in place.
+function setAlbumCompilation(files, compilation) {
+  return API.post('/api/library/compilation', { files, compilation })
+}
+
 function getServerPort() {
   return API.get('/api/server/port')
 }
@@ -565,6 +778,12 @@ function getDiscover(library) {
 // A 30 s clip from Deezer for a song with no `preview_url` of its own.
 function findPreview({ artist, title, duration }) {
   return API.get('/api/preview', { params: { artist, title, duration } })
+}
+
+// Where to buy a song (`title`), an album or an artist's music, in the
+// `country` store - see downtify/buy_links.py.
+function getBuyLinks({ artist, title = '', album = '', country = '' }) {
+  return API.get('/api/buy', { params: { artist, title, album, country } })
 }
 
 // Albums and playlists in two answers: Deezer's first (quick), then what
@@ -676,6 +895,18 @@ function cancelLibraryUpgrade() {
   return API.post('/api/library/upgrade/cancel')
 }
 
+// ── Library storage and usage (admins) ───────────────────────────────
+// Size, growth, downloads, duplicates and working copies over `days`.
+function getLibraryUsage(days = 30) {
+  return API.get('/api/library/usage', { params: { days } })
+}
+
+// What the folders hold besides songs: leftovers and orphaned sidecars.
+// Kept by the server for a few minutes unless `refresh`.
+function scanLibraryUsage(refresh = false) {
+  return API.get('/api/library/usage/scan', { params: { refresh } })
+}
+
 function writePlaylistM3u(payload) {
   return API.post('/api/playlist/m3u', payload)
 }
@@ -695,6 +926,18 @@ function clearQueue() {
 
 function clearCompletedQueue() {
   return API.delete('/api/queue/completed')
+}
+
+function getQueueState() {
+  return API.get('/api/queue/state')
+}
+
+function pauseQueue() {
+  return API.post('/api/queue/pause')
+}
+
+function resumeQueue() {
+  return API.post('/api/queue/resume')
 }
 
 // ── Settings ─────────────────────────────────────────────────────────
@@ -726,6 +969,10 @@ function suggestDirs(path) {
 
 // Try an integration with the values as they are in the form, saved or
 // not. A failed test is still a 200: the answer says what's wrong.
+function testDeemix(config) {
+  return API.post('/api/deemix/test', config)
+}
+
 function testSlskd(config) {
   return API.post('/api/slskd/test', config)
 }
@@ -741,6 +988,17 @@ function setSettings(settings) {
 }
 
 export default {
+  trashCapabilities,
+  trashPreview,
+  trashConfirm,
+  trashList,
+  trashRestore,
+  trashRetry,
+  trashExclusions,
+  trashAllowDownload,
+  downloadExclusions,
+  excludeDownload,
+  resumeDownload,
   search,
   searchAlbums,
   searchArtists,
@@ -751,6 +1009,9 @@ export default {
   finderArtistAlbums,
   finderTrackCounts,
   finderAlbum,
+  getSimilarTracks,
+  getStreamUrl,
+  prefetchStream,
   getArtistArt,
   getArtistArtBulk,
   searchArtistArt,
@@ -786,14 +1047,36 @@ export default {
   getLibrarySummary,
   getLibraryAlbums,
   getLibraryArtists,
+  getLibraryVisibility,
+  updateLibraryVisibility,
   lookupLibrarySongs,
   getLyrics,
   deleteDownload,
   deleteDownloadsBatch,
   deleteLibraryPlaylist,
   createLibraryPlaylist,
+  uploadLibraryPlaylistCover,
+  removeLibraryPlaylistCover,
+  discoverExternalPlaylists,
+  importExternalPlaylists,
+  getTrackLoudness,
+  getLoudnessStatus,
+  controlLoudness,
   editLibraryPlaylistTracks,
+  reorderLibraryPlaylist,
   renameLibraryPlaylist,
+  setPlaylistVisibility,
+  setPlaylistFavorite,
+  copyLibraryPlaylist,
+  detachLibraryPlaylist,
+  getPlaylistDetails,
+  getPlaylistDiagnostics,
+  getHiddenPlaylistSongs,
+  changeHiddenPlaylistSongs,
+  followPlaylist,
+  unfollowPlaylist,
+  markPlaylistSeen,
+  listShareableUsernames,
   prepareLibraryArchive,
   libraryArchiveURL,
   reconcileLibrary,
@@ -818,6 +1101,7 @@ export default {
   createUser,
   updateUser,
   deleteUser,
+  getUserStats,
   getActivity,
   getNowPlaying,
   reportPlayback,
@@ -834,10 +1118,12 @@ export default {
   setServerPort,
   getReplaceCandidates,
   replaceAudio,
+  setAlbumCompilation,
   getDiscover,
   getDiscoverDeezerCollections,
   getDiscoverSpotifyCollections,
   findPreview,
+  getBuyLinks,
   recordListen,
   clearListens,
   getBlockedArtists,
@@ -861,15 +1147,21 @@ export default {
   pauseLibraryUpgrade,
   resumeLibraryUpgrade,
   cancelLibraryUpgrade,
+  getLibraryUsage,
+  scanLibraryUsage,
   writePlaylistM3u,
   getQueue,
   removeQueueItem,
   clearQueue,
   clearCompletedQueue,
+  getQueueState,
+  pauseQueue,
+  resumeQueue,
   getSettings,
   suggestDirs,
   setSettings,
   testSlskd,
+  testDeemix,
   testNavidrome,
   getCookiesStatus,
   uploadCookies,

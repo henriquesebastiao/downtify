@@ -1,13 +1,18 @@
 // The player's equalizer: a Web Audio filter bank between the shared
 // <audio> element and the speakers, plus its saved settings.
 //
-// The audio graph is only built once the equalizer is on and the user
-// switches it on or presses play (a gesture, so the browser lets the
-// AudioContext run). Until then
+// The audio graph is only built once the equalizer (or volume
+// normalization, which uses its output gain) is on and the user switches
+// it on or presses play (a gesture, so the browser lets the AudioContext
+// run). Until then
 // playback is a plain <audio> element, exactly as before. Once built it
 // stays for the life of the page — an element can only be routed into
 // Web Audio once — and switching off just flattens every filter.
 import { computed, ref, watch } from 'vue'
+import {
+  normalizationEnabled,
+  normalizationGain,
+} from '/src/model/normalization'
 import {
   BAND_Q,
   BANDS,
@@ -81,11 +86,16 @@ function set(param, value) {
   param.setTargetAtTime(value, context.currentTime, RAMP)
 }
 
-function apply() {
+function apply(immediate = false) {
   if (!context) return
   const on = enabled.value
   filters.forEach((filter, i) => set(filter.gain, on ? gains.value[i] : 0))
-  set(output.gain, on ? dbToGain(preamp.value + headroom.value) : 1)
+  const normalDb = normalizationEnabled.value ? normalizationGain.value : 0
+  const target = dbToGain((on ? preamp.value + headroom.value : 0) + normalDb)
+  if (immediate && typeof output.gain.setValueAtTime === 'function') {
+    output.gain.cancelScheduledValues(context.currentTime)
+    output.gain.setValueAtTime(target, context.currentTime)
+  } else set(output.gain, target)
 }
 
 function build() {
@@ -136,7 +146,7 @@ export function attachEqualizer(audio) {
  * element would play in silence.
  */
 export function resumeEqualizer() {
-  if (enabled.value && !context) build()
+  if ((enabled.value || normalizationEnabled.value) && !context) build()
   if (context && context.state !== 'running') {
     context.resume().catch(() => {})
   }
@@ -205,7 +215,21 @@ if (
   })
 }
 
-watch(headroom, apply)
+watch(headroom, () => apply())
+// A new song's gain is set before its first sample (the element is
+// paused while it loads); a change during playback ramps like the rest.
+watch(normalizationGain, () => apply(!element || element.paused), {
+  flush: 'sync',
+})
+watch(normalizationEnabled, (on) => {
+  // Switched on here, while a song plays: route it now so it can be
+  // leveled. Switched on from another tab or the account (no gesture, so
+  // the context couldn't start and the song would go silent): on the
+  // next play.
+  const gesture = globalThis.navigator?.userActivation?.isActive === true
+  if (on && gesture && element && !element.paused) resumeEqualizer()
+  apply()
+})
 
 export function useEqualizer() {
   return {

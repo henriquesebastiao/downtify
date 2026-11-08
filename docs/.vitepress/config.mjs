@@ -6,8 +6,21 @@ import matter from 'gray-matter'
 import { defineConfig } from 'vitepress'
 import { checkAnchors } from './lib/check-anchors.mjs'
 import { iconName, resolveIcons } from './lib/icons.mjs'
-import { pageRoute, rewritePage, sourceLinksPlugin } from './lib/routes.mjs'
+import { redirectToLocale } from './lib/locale-redirect.mjs'
+import { localeMarkdownPlugin } from './lib/locale-markdown.mjs'
+import {
+  pageRoute,
+  rewritePage,
+  sourceLinksPlugin,
+  splitLocale,
+} from './lib/routes.mjs'
 import { slugifyWithState } from './lib/slug.mjs'
+import {
+  LOCALES,
+  SOURCE_LOCALE,
+  TRANSLATED,
+  localePrefix,
+} from './locales/index.mjs'
 import { NAV } from './nav.mjs'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
@@ -20,25 +33,55 @@ const repoRoot = path.resolve(srcDir, '..')
 const SITE_URL = 'https://downtify.henriquesebastiao.com/'
 const BASE = '/'
 const REPO = 'https://github.com/henriquesebastiao/downtify'
-const DESCRIPTION =
-  'Self-hosted music downloader. Paste a Spotify link, get a perfectly tagged audio file — no API keys, no account, no hassle.'
+const DESCRIPTION = LOCALES[SOURCE_LOCALE].description
 
 function frontmatterOf(page) {
   return matter(fs.readFileSync(path.join(srcDir, page), 'utf8')).data
 }
 
-// Sidebar entries carry the route and the page's front-matter icon.
+/** Where a page lives in a locale: `features/x.md` → `pt-BR/features/x.md`. */
+const localePage = (code, page) =>
+  code === SOURCE_LOCALE ? page : `${code}/${page}`
+
+// Sidebar entries carry the route and the (English) page's front-matter
+// icon, with their titles in the locale's language.
 const iconRefs = []
-function navItem({ title, page }) {
-  const ref = frontmatterOf(page).icon || 'lucide/file-text'
-  iconRefs.push(ref)
-  return { title, page, link: pageRoute(page), icon: iconName(ref) }
+function sidebarFor(code) {
+  const { nav } = LOCALES[code]
+  function navItem({ title, page }) {
+    const ref = frontmatterOf(page).icon || 'lucide/file-text'
+    iconRefs.push(ref)
+    const localized = localePage(code, page)
+    return {
+      title: nav.pages[page] || title,
+      page: localized,
+      link: pageRoute(localized),
+      icon: iconName(ref),
+    }
+  }
+  return NAV.map((entry) =>
+    entry.items
+      ? {
+          title: nav.groups[entry.title] || entry.title,
+          items: entry.items.map(navItem),
+        }
+      : navItem(entry)
+  )
 }
-const sidebar = NAV.map((entry) =>
-  entry.items
-    ? { title: entry.title, items: entry.items.map(navItem) }
-    : navItem(entry)
-)
+
+/** One locale's share of the VitePress `locales` option. */
+function localeConfig(code) {
+  const data = LOCALES[code]
+  return {
+    label: data.name,
+    lang: data.lang,
+    link: localePrefix(code),
+    title: 'Downtify',
+    titleTemplate: `:title · ${data.titleSuffix}`,
+    description: data.description,
+    themeConfig: { sidebar: sidebarFor(code), ui: data.ui },
+  }
+}
 
 const UI_ICONS = [
   'search',
@@ -62,6 +105,8 @@ const UI_ICONS = [
   'corner-down-left',
   'file-text',
   // Page content (docs/getting-started/index.md, docs/index.md)
+  'globe',
+  'check',
   'file-code',
   'house',
   'eye',
@@ -76,7 +121,17 @@ const UI_ICONS = [
 
 /** First prose paragraph of a page, for <meta name="description">. */
 function describe(file) {
-  const { content } = matter(fs.readFileSync(file, 'utf8'))
+  let { content } = matter(fs.readFileSync(file, 'utf8'))
+  // A page only available in English includes the English page.
+  const include = /<!--@include: ([^>]+?)-->/.exec(content)
+  if (include) {
+    content = matter(
+      fs.readFileSync(
+        path.resolve(path.dirname(file), include[1].trim()),
+        'utf8'
+      )
+    ).content
+  }
   const paragraph = content
     .split(/\n\s*\n/)
     .map((block) => block.trim())
@@ -90,16 +145,24 @@ function describe(file) {
 }
 
 // Applied before the first paint, so the page never flashes the wrong theme.
+// A reader who never picked a language is sent to the translation their
+// browser prefers (English when there is none). See lib/locale-redirect.mjs.
+const LOCALE_SCRIPT = `(${redirectToLocale.toString()})(${JSON.stringify(TRANSLATED)},${JSON.stringify(BASE)})`
+
 const THEME_SCRIPT = `(function(){try{var m=localStorage.getItem('downtify-theme');if(m!=='dark'&&m!=='light')m=matchMedia('(prefers-color-scheme: light)').matches?'light':'dark';document.documentElement.setAttribute('data-theme',m);var c=document.querySelector('meta[name=theme-color]');if(c)c.setAttribute('content',m==='light'?'#f6f7f8':'#0b0c0e')}catch(e){}})()`
 
 export default defineConfig({
   // Leftover zensical sample page, not part of the docs.
   srcExclude: ['markdown.md'],
   base: BASE,
-  lang: 'en-US',
+  lang: LOCALES[SOURCE_LOCALE].lang,
   title: 'Downtify',
-  titleTemplate: ':title · Downtify docs',
+  titleTemplate: `:title · ${LOCALES[SOURCE_LOCALE].titleSuffix}`,
   description: DESCRIPTION,
+  locales: {
+    root: localeConfig(SOURCE_LOCALE),
+    ...Object.fromEntries(TRANSLATED.map((code) => [code, localeConfig(code)])),
+  },
   appearance: false,
   lastUpdated: true,
   rewrites: rewritePage,
@@ -115,6 +178,7 @@ export default defineConfig({
     ],
     ['meta', { name: 'theme-color', content: '#0b0c0e' }],
     ['script', {}, THEME_SCRIPT],
+    ['script', {}, LOCALE_SCRIPT],
     ['meta', { property: 'og:site_name', content: 'Downtify' }],
     ['meta', { property: 'og:type', content: 'website' }],
     [
@@ -153,8 +217,27 @@ export default defineConfig({
     ]
     if (pageData.isNotFound) return tags
     const url = SITE_URL + pageRoute(pageData.filePath).slice(1)
+    // The same page in every language, for search engines.
+    const { page } = splitLocale(pageData.filePath, TRANSLATED)
+    const alternates = Object.keys(LOCALES).map((code) => [
+      'link',
+      {
+        rel: 'alternate',
+        hreflang: code,
+        href: SITE_URL + pageRoute(localePage(code, page)).slice(1),
+      },
+    ])
     return [
       ['link', { rel: 'canonical', href: url }],
+      ...alternates,
+      [
+        'link',
+        {
+          rel: 'alternate',
+          hreflang: 'x-default',
+          href: SITE_URL + pageRoute(page).slice(1),
+        },
+      ],
       ['meta', { property: 'og:url', content: url }],
       ...tags,
     ]
@@ -172,6 +255,13 @@ export default defineConfig({
     },
     config(md) {
       sourceLinksPlugin(md, srcDir)
+      localeMarkdownPlugin(md, {
+        srcDir,
+        codes: TRANSLATED,
+        labels: Object.fromEntries(
+          TRANSLATED.map((code) => [code, LOCALES[code].containers])
+        ),
+      })
       // Wide tables scroll inside their own box on small screens.
       md.renderer.rules.table_open = () =>
         '<div class="table-wrap" tabindex="0"><table>\n'
@@ -180,7 +270,6 @@ export default defineConfig({
   },
 
   themeConfig: {
-    sidebar,
     icons: resolveIcons([...iconRefs, ...UI_ICONS]),
     search: {
       provider: 'local',

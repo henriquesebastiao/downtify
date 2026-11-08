@@ -34,11 +34,13 @@ import hashlib
 import json
 import secrets
 import threading
-from collections.abc import Iterable
+from collections.abc import Collection, Iterable
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Optional
 
+from . import library_metadata
+from .deemix_upgrade_store import replacement_for_id
 from .library_cache_keys import file_content_key_from_name_and_size
 from .sqlite_utils import connect_sqlite
 
@@ -73,18 +75,28 @@ def _now() -> datetime:
     return datetime.now(timezone.utc)
 
 
-def split_artists(artist: str) -> list[str]:
+def split_artists(artist: str, album_artist: str = '') -> list[str]:
     """The artists in a tag's artist string - the web app's own rule
     (``frontend/src/lib/library.js``): split on the first of ``;``,
-    `` / `` or ``, `` it contains."""
+    `` / `` or ``, `` it contains, unless it is the album artist too (see
+    :func:`downtify.library_metadata.split_artists`)."""
 
-    text = str(artist or '').strip()
-    if not text:
-        return []
-    for sep in (';', ' / ', ', '):
-        if sep in text:
-            return [part.strip() for part in text.split(sep) if part.strip()]
-    return [text]
+    return library_metadata.split_artists(artist, album_artist)
+
+
+def row_artists(row: dict[str, Any]) -> list[str]:
+    """Every credited artist of a ``/tracks`` row: its ``artists`` (read
+    from the ARTISTS tag when the file has one), else its artist text
+    split by :func:`split_artists`."""
+
+    artists = row.get('artists')
+    if isinstance(artists, list):
+        names = [str(name).strip() for name in artists if str(name).strip()]
+        if names:
+            return names
+    return split_artists(
+        row.get('artist', ''), str(row.get('album_artist') or '')
+    )
 
 
 def _short_hash(text: str) -> str:
@@ -97,7 +109,7 @@ def grouping_keys(row: dict[str, Any]) -> dict[str, str]:
     (album artist + album title, case-insensitive; ``''`` when the track
     has no album) and ``artist_id`` (the album artist)."""
 
-    artists = split_artists(row.get('artist', ''))
+    artists = row_artists(row)
     album_artist = str(row.get('album_artist') or '').strip() or (
         artists[0] if artists else ''
     )
@@ -120,7 +132,7 @@ def public_row(entry: dict[str, Any]) -> dict[str, Any]:
         'file': str(entry.get('file') or ''),
         'title': str(entry.get('title') or ''),
         'artist': str(entry.get('artist') or ''),
-        'artists': split_artists(entry.get('artist', '')),
+        'artists': row_artists(entry),
         'album': str(entry.get('album') or ''),
         'track_number': int(entry.get('track_number') or 0),
         'year': str(entry.get('year') or ''),
@@ -135,7 +147,12 @@ def public_row(entry: dict[str, Any]) -> dict[str, Any]:
         'playlists': sorted(entry.get('playlists') or []),
     }
     row.update(grouping_keys(entry))
-    return {key: row[key] for key in ROW_FIELDS}
+    public = {key: row[key] for key in ROW_FIELDS}
+    # Present (true) only on explicit tracks: absent means "not explicit",
+    # and the rows of every other track - hash included - stay as they were.
+    if entry.get('explicit'):
+        public['explicit'] = True
+    return public
 
 
 def _row_hash(row: dict[str, Any]) -> str:
@@ -239,13 +256,39 @@ class LibrarySync:
                 rows[row['file']] = row
         with self._lock, self._connect() as conn:
             seq = self._meta(conn, 'seq')
+            reserved = set()
+            restored = set()
+            if (
+                conn.execute(
+                    "SELECT 1 FROM sqlite_master WHERE type='table' AND name='library_trash'"
+                ).fetchone()
+                is not None
+            ):
+                reserved = {
+                    r[0]
+                    for r in conn.execute(
+                        "SELECT track_id FROM library_trash WHERE state NOT IN ('preview','restored') AND track_id<>''"
+                    )
+                }
+                restored = {
+                    r[0]
+                    for r in conn.execute(
+                        "SELECT track_id FROM library_trash WHERE (state='restored' OR blocked=0) AND track_id<>''"
+                    )
+                }
             live = {
                 r['path']: r
                 for r in conn.execute(
-                    'SELECT track_id, path, content_key, tag_key, row_hash '
+                    'SELECT track_id, path, content_key, tag_key, row_hash, deleted_at '
                     'FROM sync_tracks WHERE deleted_at IS NULL'
                 ).fetchall()
             }
+            if restored:
+                for r in conn.execute(
+                    'SELECT track_id,path,content_key,tag_key,row_hash,deleted_at FROM sync_tracks WHERE deleted_at IS NOT NULL AND path IS NOT NULL'
+                ):
+                    if r['track_id'] in restored and r['path'] in rows:
+                        live[r['path']] = r
             vanished = {
                 path: r for path, r in live.items() if path not in rows
             }
@@ -269,12 +312,12 @@ class LibrarySync:
                 digest = _row_hash(row)
                 known = live.get(path)
                 if known is not None:
-                    if known['row_hash'] == digest:
+                    if known['row_hash'] == digest and not known['deleted_at']:
                         continue
                     seq += 1
                     conn.execute(
                         'UPDATE sync_tracks SET content_key = ?, tag_key = ?, '
-                        'row_json = ?, row_hash = ?, seq = ? '
+                        'row_json = ?, row_hash = ?, seq = ?, deleted_at = NULL '
                         'WHERE track_id = ?',
                         (
                             content_key,
@@ -324,6 +367,12 @@ class LibrarySync:
 
             for gone in vanished.values():
                 seq += 1
+                if gone['track_id'] in reserved:
+                    conn.execute(
+                        'UPDATE sync_tracks SET deleted_at=?,seq=? WHERE track_id=?',
+                        (now.isoformat(), seq, gone['track_id']),
+                    )
+                    continue
                 conn.execute(
                     'UPDATE sync_tracks SET path = NULL, deleted_at = ?, '
                     "seq = ?, row_json = '{}' WHERE track_id = ?",
@@ -339,19 +388,66 @@ class LibrarySync:
         client whose cursor predates them then needs a full sync."""
 
         cutoff = (now - timedelta(days=TOMBSTONE_DAYS)).isoformat()
+        protected = ''
+        if conn.execute(
+            "SELECT 1 FROM sqlite_master WHERE name='library_trash'"
+        ).fetchone():
+            protected = " AND track_id NOT IN (SELECT track_id FROM library_trash WHERE state NOT IN ('preview','restored','purged'))"
         rows = conn.execute(
             'SELECT MAX(seq) AS seq FROM sync_tracks '
-            'WHERE deleted_at IS NOT NULL AND deleted_at < ?',
+            'WHERE deleted_at IS NOT NULL AND deleted_at < ?' + protected,
             (cutoff,),
         ).fetchone()
         if rows and rows['seq'] is not None:
             conn.execute(
                 'DELETE FROM sync_tracks '
-                'WHERE deleted_at IS NOT NULL AND deleted_at < ?',
+                'WHERE deleted_at IS NOT NULL AND deleted_at < ?' + protected,
                 (cutoff,),
             )
             floor = max(self._meta(conn, 'floor'), int(rows['seq']))
             self._set_meta(conn, 'floor', floor)
+
+    def touch(self, path: str) -> bool:
+        """Poke a live row so the next feed carries it, without changing it.
+
+        Ownership (who may see the track) lives outside this table, so
+        gaining or losing it doesn't bump ``seq`` by itself - and the
+        owner's next incremental sync would then miss the change. Returns
+        whether a row was poked.
+        """
+
+        if not path:
+            return False
+        with self._lock, self._connect() as conn:
+            seq = self._meta(conn, 'seq') + 1
+            cur = conn.execute(
+                'UPDATE sync_tracks SET seq = ? WHERE path = ? '
+                'AND deleted_at IS NULL',
+                (seq, path),
+            )
+            if cur.rowcount == 0:
+                return False
+            self._set_meta(conn, 'seq', seq)
+            return True
+
+    def touch_all(self) -> int:
+        """Poke every live row so the next feed re-emits the library.
+
+        The ownership backfill doesn't change files, so without this a
+        phone that synced before it would keep tracks it may no longer
+        see. Returns how many rows were poked.
+        """
+
+        with self._lock, self._connect() as conn:
+            seq = self._meta(conn, 'seq') + 1
+            cur = conn.execute(
+                'UPDATE sync_tracks SET seq = ? WHERE deleted_at IS NULL',
+                (seq,),
+            )
+            if cur.rowcount == 0:
+                return 0
+            self._set_meta(conn, 'seq', seq)
+            return cur.rowcount
 
     # Reading the feed
 
@@ -359,27 +455,36 @@ class LibrarySync:
         with self._connect() as conn:
             return self._meta(conn, 'seq')
 
-    def changes(self, since: int = 0) -> dict[str, Any]:
+    def changes(
+        self,
+        since: int = 0,
+        *,
+        allowed_keys: Optional[Collection[str]] = None,
+    ) -> dict[str, Any]:
         """``{cursor, full, tracks, deleted}`` after *since*.
 
         ``full`` is ``True`` for *since* ``0`` (or older than what's
         remembered): ``tracks`` is then the whole library and the client
-        should drop anything it has that isn't in it.
+        should drop anything it has that isn't in it. ``allowed_keys``
+        keeps only a non-admin's own rows (by content key); live rows
+        outside it join ``deleted`` on incremental syncs, so a client
+        that loses a track (ownership released) drops it too.
         """
 
+        allowed = None if allowed_keys is None else set(allowed_keys)
         with self._connect() as conn:
             cursor = self._meta(conn, 'seq')
             floor = self._meta(conn, 'floor')
             full = since <= 0 or since < floor or since > cursor
             if full:
                 live = conn.execute(
-                    'SELECT track_id, row_json FROM sync_tracks '
+                    'SELECT track_id, content_key, row_json FROM sync_tracks '
                     'WHERE deleted_at IS NULL ORDER BY path'
                 ).fetchall()
                 deleted: list[str] = []
             else:
                 live = conn.execute(
-                    'SELECT track_id, row_json FROM sync_tracks '
+                    'SELECT track_id, content_key, row_json FROM sync_tracks '
                     'WHERE deleted_at IS NULL AND seq > ? ORDER BY seq',
                     (since,),
                 ).fetchall()
@@ -392,9 +497,16 @@ class LibrarySync:
                         (since,),
                     ).fetchall()
                 ]
-        tracks = [
-            {'id': r['track_id'], **json.loads(r['row_json'])} for r in live
-        ]
+        tracks = []
+        for row in live:
+            key = str(row['content_key'] or '')
+            if allowed is None or key in allowed:
+                tracks.append({
+                    'id': row['track_id'],
+                    **json.loads(row['row_json']),
+                })
+            elif not full:
+                deleted.append(row['track_id'])
         return {
             'cursor': cursor,
             'full': full,
@@ -406,6 +518,9 @@ class LibrarySync:
 
     def path_for(self, track_id: str) -> Optional[str]:
         with self._connect() as conn:
+            replacement = replacement_for_id(conn, track_id)
+            if replacement is not None:
+                return replacement['file']
             row = conn.execute(
                 'SELECT path FROM sync_tracks WHERE track_id = ? '
                 'AND deleted_at IS NULL',
@@ -415,6 +530,15 @@ class LibrarySync:
 
     def row_for(self, track_id: str) -> Optional[dict[str, Any]]:
         with self._connect() as conn:
+            replacement = replacement_for_id(conn, track_id)
+            if replacement is not None:
+                current = conn.execute(
+                    'SELECT row_json FROM sync_tracks WHERE path=? AND deleted_at IS NULL',
+                    (replacement['file'],),
+                ).fetchone()
+                if current is not None:
+                    return {'id': track_id, **json.loads(current['row_json'])}
+                return {'id': track_id, **public_row(replacement)}
             row = conn.execute(
                 'SELECT track_id, row_json FROM sync_tracks '
                 'WHERE track_id = ? AND deleted_at IS NULL',

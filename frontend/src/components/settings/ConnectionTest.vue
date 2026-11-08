@@ -102,7 +102,11 @@ async function run() {
   failed.value = false
   result.value = null
   try {
-    const call = props.kind === 'slskd' ? API.testSlskd : API.testNavidrome
+    const call = {
+      slskd: API.testSlskd,
+      navidrome: API.testNavidrome,
+      deemix: API.testDeemix,
+    }[props.kind]
     const res = await call(props.config)
     if (mine === serial) result.value = res.data
   } catch {

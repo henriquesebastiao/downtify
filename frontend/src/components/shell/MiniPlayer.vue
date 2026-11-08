@@ -36,6 +36,7 @@
           @click="nowPlaying.open()"
         >
           <CoverArt
+            :thumb="150"
             :src="track.hasCover ? track.cover : ''"
             :name="track.album || track.title"
             rounded="rounded-[10px]"
@@ -48,6 +49,7 @@
               <span class="truncate text-sm font-semibold">{{
                 track.title
               }}</span>
+              <ExplicitBadge v-if="track.explicit" />
               <EqBars
                 v-if="player.isPlaying.value"
                 :size="10"
@@ -61,12 +63,20 @@
         </button>
         <!-- Phones have no room for it beside the transport buttons;
              the rows and the full player carry the heart there. -->
-        <span v-if="!track?.isPodcast" class="hidden sm:contents"
+        <span
+          v-if="!track?.isPodcast && !track?.stream"
+          class="hidden sm:contents"
           ><LikeButton :file="track.file"
         /></span>
       </div>
 
       <div class="flex items-center justify-center gap-1 md:flex-1 md:gap-3">
+        <UiIconButton
+          v-if="canSimilar"
+          icon="wand"
+          :label="t('similar.findSimilar')"
+          @click="goSimilar"
+        />
         <UiIconButton
           icon="shuffle"
           :label="t('player.shuffle')"
@@ -112,6 +122,25 @@
           class="hidden md:inline-flex"
           @click="player.cycleRepeat()"
         />
+        <UiIconButton
+          v-if="showMiniDownload"
+          :icon="downloadBusy ? 'refresh' : 'download'"
+          :label="t('actions.downloadItem', { name: trackTitle })"
+          :disabled="downloadBusy"
+          :class="downloadBusy ? '[&_svg]:animate-spin' : ''"
+          @click="downloadCurrent"
+        />
+        <!-- Downloaded tracks show a static check in the download
+             button's slot: it does nothing, deleting happens from the
+             library rows. -->
+        <span
+          v-if="showDownloadedCheck"
+          class="inline-flex size-10 shrink-0 items-center justify-center text-accent"
+          :title="t('search.inLibrary')"
+          aria-hidden="true"
+        >
+          <AppIcon name="check" :size="18" />
+        </span>
       </div>
 
       <div class="hidden items-center justify-end gap-1 md:flex md:w-[300px]">
@@ -159,17 +188,21 @@
 <script setup>
 import { computed, ref } from 'vue'
 import { useMediaQuery } from '@vueuse/core'
+import { useRouter } from 'vue-router'
 import AppIcon from '../ui/AppIcon.vue'
 import CoverArt from '../ui/CoverArt.vue'
 import EqBars from '../ui/EqBars.vue'
+import ExplicitBadge from '../ui/ExplicitBadge.vue'
 import UiIconButton from '../ui/UiIconButton.vue'
 import LikeButton from '../player/LikeButton.vue'
 import SliderBar from '../player/SliderBar.vue'
 import { useSmoothTime } from '../player/useSmoothTime'
 import VolumeControl from '../player/VolumeControl.vue'
 import { usePlayer } from '/src/model/player'
+import { useDownloadManager, useProgressTracker } from '/src/model/download'
+import { useLibrary } from '/src/model/library'
 import { usePlayerPrefs } from '/src/model/playerPrefs'
-import { useNowPlaying } from '/src/model/ui'
+import { useNowPlaying, useUi } from '/src/model/ui'
 import { formatDuration, widestClock } from '/src/lib/format'
 import { useI18n } from '/src/i18n'
 
@@ -177,9 +210,90 @@ const player = usePlayer()
 const { showLyrics } = usePlayerPrefs()
 const nowPlaying = useNowPlaying()
 const { t } = useI18n()
+const router = useRouter()
+const library = useLibrary()
+const dm = useDownloadManager()
+const tracker = useProgressTracker()
+const ui = useUi()
 const scrub = ref(null)
 
 const track = computed(() => player.currentTrack.value)
+
+const trackArtist = computed(
+  () =>
+    (track.value?.artists || [])[0] ||
+    track.value?.artist ||
+    t('common.unknownArtist')
+)
+const trackTitle = computed(() => track.value?.name || track.value?.title || '')
+
+const canSimilar = computed(() => {
+  if (track.value?.isPodcast) return false
+  const artist = (track.value?.artists || [])[0] || track.value?.artist || ''
+  const title = track.value?.name || track.value?.title || ''
+  return !!artist.trim() && !!title.trim()
+})
+
+function goSimilar() {
+  const artist = (track.value?.artists || [])[0] || track.value?.artist || ''
+  const title = track.value?.name || track.value?.title || ''
+  if (!artist.trim() || !title.trim()) return
+  router.push({ name: 'Similar', query: { artist, track: title } })
+}
+
+// A stream that isn't in the library yet can be queued from here; while
+// queued it spins instead of queueing a duplicate.
+const streamDownloadable = computed(
+  () =>
+    !!track.value?.stream &&
+    !!track.value.video_id &&
+    !library.hasSong(trackArtist.value, trackTitle.value)
+)
+const pendingSong = computed(() => {
+  if (!streamDownloadable.value) return null
+  const tr = track.value
+  return {
+    name: trackTitle.value,
+    artists: tr.artist ? [tr.artist] : [],
+    artist: tr.artist || '',
+    album_name: tr.album || '',
+    cover_url: tr.cover && String(tr.cover).startsWith('http') ? tr.cover : '',
+    duration: tr.duration || 0,
+    url: `https://music.youtube.com/watch?v=${tr.video_id}`,
+    youtube_id: tr.video_id,
+  }
+})
+const downloadJob = computed(() => {
+  tracker.queueVersion.value
+  return pendingSong.value ? tracker.getBySong(pendingSong.value) : null
+})
+const downloadBusy = computed(() => {
+  const state = downloadJob.value?.state
+  return state === 'queued' || state === 'active'
+})
+const showMiniDownload = computed(() => !!streamDownloadable.value)
+
+function downloadCurrent() {
+  const song = pendingSong.value
+  if (!song || downloadBusy.value) return
+  if (downloadJob.value?.state === 'failed') dm.retry(song)
+  else {
+    dm.queue(song)
+    ui.toast(t('toast.queuedTracks', { count: 1, name: song.name }), {
+      kind: 'success',
+    })
+  }
+}
+
+// A downloaded track (or a stream that landed in the library while
+// playing) shows a static check where the download button was.
+const showDownloadedCheck = computed(
+  () =>
+    !!track.value &&
+    !track.value.isPodcast &&
+    (!track.value.stream ||
+      library.hasSong(trackArtist.value, trackTitle.value))
+)
 
 // The phone hairline glides like the desktop scrubber (only animated
 // while it's the one on screen).

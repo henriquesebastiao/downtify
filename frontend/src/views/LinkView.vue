@@ -35,7 +35,8 @@
       <CollectionHero
         :title="details.name || t('link.untitled')"
         :kicker="kicker"
-        :cover="details.cover_url"
+        :cover="heroCover.cover"
+        :cover-fallback="heroCover.fallback"
         :covers="details.cover_url ? [] : mosaic"
         :name="details.name"
         :icon="
@@ -86,9 +87,10 @@
               v-else
               class="inline-flex h-12 items-center gap-2 rounded-control bg-accent/12 px-5 text-[15px] font-semibold text-accent"
             >
-              <AppIcon name="check-circle" :size="18" />{{
-                t('link.allInLibrary')
-              }}
+              <AppIcon
+                :name="allInLibrary ? 'check-circle' : 'queue'"
+                :size="18"
+              />{{ t(allInLibrary ? 'link.allInLibrary' : 'link.allHandled') }}
             </span>
             <UiButton
               v-if="newSongs.length && newSongs.length < details.tracks.length"
@@ -99,6 +101,16 @@
               {{ t('link.redownloadAll') }}
             </UiButton>
           </template>
+          <UiButton
+            v-if="details.kind === 'playlist' && details.tracks.length"
+            variant="primary"
+            size="lg"
+            icon="playlist"
+            :loading="savingPlaylist"
+            @click="savePlaylist"
+          >
+            {{ t('link.addPlaylist') }}
+          </UiButton>
           <UiButton
             v-if="watchable"
             variant="ghost"
@@ -187,6 +199,7 @@
                 :index="row.index"
                 :queue="playQueue"
                 :context="playContext"
+                :songs="playSongs"
               />
               <CoverArt
                 :src="row.song.cover_url"
@@ -212,6 +225,10 @@
               >
                 {{ row.song.duration ? formatDuration(row.song.duration) : '' }}
               </span>
+              <SimilarButton
+                :artist="(row.song.artists || [])[0] || row.song.artist || ''"
+                :title="row.song.name"
+              />
               <div class="flex w-28 shrink-0 justify-end">
                 <DownloadState :song="row.song" />
               </div>
@@ -254,7 +271,9 @@ import UiEmpty from '/src/components/ui/UiEmpty.vue'
 import UiIconButton from '/src/components/ui/UiIconButton.vue'
 import UiSkeleton from '/src/components/ui/UiSkeleton.vue'
 import CollectionHero from '/src/components/library/CollectionHero.vue'
+import { knownArtistPhoto } from '/src/lib/artistPhotoProxy'
 import DownloadState from '/src/components/search/DownloadState.vue'
+import SimilarButton from '/src/components/similar/SimilarButton.vue'
 import ReleaseCard from '/src/components/search/ReleaseCard.vue'
 import SongPlayCell from '/src/components/library/SongPlayCell.vue'
 import API from '/src/model/api'
@@ -265,6 +284,8 @@ import {
   useProgressTracker,
 } from '/src/model/download'
 import { useLibrary } from '/src/model/library'
+import { usePlaylistActions } from '/src/model/playlistActions'
+import { songDownloadState } from '/src/lib/downloadState'
 import { useUi } from '/src/model/ui'
 import { classifyInput } from '/src/lib/input'
 import { playableQueue } from '/src/lib/topSongs'
@@ -277,13 +298,24 @@ const router = useRouter()
 const dm = useDownloadManager()
 const tracker = useProgressTracker()
 const library = useLibrary()
+const playlistActions = usePlaylistActions()
 const ui = useUi()
 
 const details = ref(null)
+// An artist link's photo: the one saved in the library when there is one,
+// else the platform's own (Spotify, Deezer or YouTube Music) relayed by the
+// photo proxy - and that picture straight from the platform if the proxy
+// can't answer. Any other link keeps its cover as it is.
+const heroCover = computed(() => {
+  const d = details.value
+  if (d?.kind !== 'artist') return { cover: d?.cover_url || '', fallback: '' }
+  return knownArtistPhoto(d.name, d.cover_url)
+})
 const loading = ref(false)
 const error = ref('')
 const submitting = ref(false)
 const watching = ref(false)
+const savingPlaylist = ref(false)
 const filter = ref('all')
 const selected = ref(new Set())
 
@@ -314,6 +346,7 @@ const SOURCE_LABELS = {
   spotify: () => t('link.openSpotify'),
   youtube: () => t('link.openYoutube'),
   deezer: () => t('link.openDeezer'),
+  soundcloud: () => t('link.openSoundcloud'),
 }
 const sourceLabel = computed(() =>
   (SOURCE_LABELS[kind.value.source] || SOURCE_LABELS.youtube)()
@@ -324,16 +357,20 @@ const kicker = computed(() => {
     spotify: 'Spotify',
     youtube: 'YouTube Music',
     deezer: 'Deezer',
+    soundcloud: 'SoundCloud',
   }
   const source = names[kind.value.source] || kind.value.source
   return `${source} · ${t(`link.kind.${details.value?.kind || 'track'}`)}`
 })
 
 // Playing a downloaded song from here queues the list's other downloaded
-// songs after it, in the list's order; the rest play their preview clip.
+// songs after it, in the list's order; the rest stream in full.
 const playQueue = computed(() =>
   playableQueue(details.value?.tracks || [], library.findTrack)
 )
+// The whole list for a mixed queue: downloaded rows from the library,
+// the rest streamed, played through to the end.
+const playSongs = computed(() => visibleRows.value.map((row) => row.song))
 const playContext = computed(() =>
   details.value
     ? {
@@ -346,12 +383,13 @@ const playContext = computed(() =>
     : null
 )
 
-// Playlist Monitor has no Deezer support: watching a Deezer playlist or
-// artist for updates isn't offered, only downloading what's there now.
+// A Deezer playlist can be watched, a Deezer artist can't: an artist
+// watch follows a YouTube Music artist, found from a Spotify or YouTube
+// Music link.
 const watchable = computed(
   () =>
     (details.value?.kind === 'playlist' || details.value?.kind === 'artist') &&
-    kind.value.source !== 'deezer'
+    (kind.value.source !== 'deezer' || details.value?.kind === 'playlist')
 )
 
 const mosaic = computed(() =>
@@ -382,9 +420,14 @@ function keyOf(song, index) {
 
 function statusOf(song) {
   tracker.queueVersion.value
-  if (tracker.getBySong(song)) return 'queue'
   const artist = (song.artists || [])[0] || song.artist
-  return library.hasSong(artist, song.name) ? 'library' : 'new'
+  const state = songDownloadState(
+    tracker.getBySong(song),
+    library.hasSong(artist, song.name)
+  )
+  // Every queue state shows the same neutral chip here; a song that is
+  // neither queued nor in the library is downloadable.
+  return state === 'library' || state === 'new' ? state : 'queue'
 }
 
 const rows = computed(() =>
@@ -399,6 +442,40 @@ const rows = computed(() =>
 const newSongs = computed(() =>
   rows.value.filter((row) => row.status === 'new').map((row) => row.song)
 )
+const allInLibrary = computed(
+  () =>
+    rows.value.length > 0 && rows.value.every((row) => row.status === 'library')
+)
+
+async function savePlaylist() {
+  if (savingPlaylist.value) return
+  savingPlaylist.value = true
+  const requestedUrl = url.value
+  const collection = details.value
+  try {
+    await library.lookupSongs(collection.tracks)
+    if (url.value !== requestedUrl || details.value !== collection) return
+    const files = playableQueue(collection.tracks, library.findTrack)
+    if (!files.length) {
+      ui.toast(t('link.noAvailableTracks'), { kind: 'error' })
+      return
+    }
+    playlistActions.openCreate(files, {
+      name: collection.name || '',
+      sourcePlaylistUrl: requestedUrl,
+      description: t('link.saveAvailableHint', {
+        count: files.length,
+        total: collection.tracks.length,
+      }),
+    })
+  } catch (err) {
+    ui.toast(err?.response?.data?.detail || t('toast.actionFailed'), {
+      kind: 'error',
+    })
+  } finally {
+    savingPlaylist.value = false
+  }
+}
 
 const filters = computed(() => {
   const count = (status) =>

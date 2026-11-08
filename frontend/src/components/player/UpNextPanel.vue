@@ -25,6 +25,7 @@
         class="mb-1 flex h-14 items-center gap-3 rounded-[10px] bg-white/10 px-2.5"
       >
         <CoverArt
+          :thumb="150"
           :src="current.hasCover ? current.cover : ''"
           :name="current.album || current.title"
           rounded="rounded-[6px]"
@@ -33,8 +34,11 @@
           class="size-10"
         />
         <div class="min-w-0 flex-1">
-          <p class="truncate text-sm font-semibold text-accent">
-            {{ current.title }}
+          <p class="flex items-center gap-1.5">
+            <span class="truncate text-sm font-semibold text-accent">{{
+              current.title
+            }}</span>
+            <ExplicitBadge v-if="current.explicit" tone="onDark" />
           </p>
           <p class="truncate text-xs text-white/55">{{ current.artist }}</p>
         </div>
@@ -60,6 +64,7 @@
             @click="player.playAt(item.index)"
           >
             <CoverArt
+              :thumb="150"
               :src="item.track.hasCover ? item.track.cover : ''"
               :name="item.track.album || item.track.title"
               rounded="rounded-[6px]"
@@ -68,9 +73,12 @@
               class="size-10"
             />
             <span class="min-w-0 flex-1">
-              <span class="block truncate text-sm font-medium text-white">{{
-                item.track.title
-              }}</span>
+              <span class="flex items-center gap-1.5">
+                <span class="truncate text-sm font-medium text-white">{{
+                  item.track.title
+                }}</span>
+                <ExplicitBadge v-if="item.track.explicit" tone="onDark" />
+              </span>
               <span class="block truncate text-xs text-white/55">{{
                 item.track.artist
               }}</span>
@@ -111,6 +119,7 @@ import { computed, ref } from 'vue'
 import AppIcon from '../ui/AppIcon.vue'
 import CoverArt from '../ui/CoverArt.vue'
 import EqBars from '../ui/EqBars.vue'
+import ExplicitBadge from '../ui/ExplicitBadge.vue'
 import { usePlayer } from '/src/model/player'
 import { formatDuration, splitLength } from '/src/lib/format'
 import { useI18n } from '/src/i18n'

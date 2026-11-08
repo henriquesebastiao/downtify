@@ -8,8 +8,12 @@
         aria-modal="true"
         :aria-label="t('player.nowPlaying')"
       >
-        <!-- Backdrop: the artwork, blown up and blurred. -->
-        <div class="pointer-events-none absolute inset-0" aria-hidden="true">
+        <!-- Backdrop: the artwork, blown up and blurred. Clipped, or what
+             sticks out lets the whole view scroll. -->
+        <div
+          class="pointer-events-none absolute inset-0 overflow-hidden"
+          aria-hidden="true"
+        >
           <div
             class="absolute inset-0 transition-colors duration-700"
             :style="{ backgroundColor: tint }"
@@ -42,13 +46,28 @@
             <component
               :is="contextRoute ? RouterLink : 'div'"
               :to="contextRoute || undefined"
-              class="flex min-w-0 flex-col max-lg:flex-1 max-lg:items-center"
+              class="flex min-w-0 items-center gap-2 max-lg:flex-1 max-lg:justify-center"
               @click="contextRoute && nowPlaying.close()"
             >
-              <span class="eyebrow !text-white/55">{{ contextLabel }}</span>
-              <span class="max-w-full truncate text-sm font-semibold">{{
-                contextTitle
-              }}</span>
+              <CoverArt
+                v-if="
+                  context?.type === 'playlist' &&
+                  (context.cover || context.covers?.length)
+                "
+                :src="context.cover || ''"
+                :covers="context.covers || []"
+                :name="context.title"
+                rounded="rounded-[5px]"
+                :letter-size="10"
+                :icon-size="12"
+                class="size-8 shrink-0"
+              />
+              <span class="flex min-w-0 flex-col">
+                <span class="eyebrow !text-white/55">{{ contextLabel }}</span>
+                <span class="max-w-full truncate text-sm font-semibold">{{
+                  contextTitle
+                }}</span>
+              </span>
             </component>
             <div
               class="ml-auto hidden gap-1 rounded-[12px] bg-white/8 p-1 lg:flex"
@@ -112,23 +131,33 @@
                 class="flex w-full min-w-0 shrink-0 items-end justify-between gap-4"
               >
                 <div class="min-w-0 flex-1">
-                  <h2 class="now-playing-title text-display truncate font-bold">
-                    {{ track.title }}
-                  </h2>
-                  <RouterLink
-                    v-if="track.albumArtist && !track.isPodcast"
-                    :to="{ name: 'Artist', query: { name: track.albumArtist } }"
-                    class="mt-1 block truncate text-base text-white/70 hover:text-white hover:underline"
-                    @click="nowPlaying.close()"
-                    >{{ track.artist }}</RouterLink
+                  <div class="flex min-w-0 items-center gap-2.5">
+                    <h2
+                      class="now-playing-title text-display truncate font-bold"
+                    >
+                      {{ track.title }}
+                    </h2>
+                    <ExplicitBadge v-if="track.explicit" tone="onDark" />
+                  </div>
+                  <p
+                    v-if="track.artists?.length && !track.isPodcast"
+                    class="mt-1 truncate text-base text-white/70"
                   >
+                    <TrackArtistLinks
+                      :artists="track.artists"
+                      only-known
+                      search-missing
+                      link-class="hover:text-white hover:underline"
+                      @navigate="nowPlaying.close()"
+                    />
+                  </p>
                   <p v-else class="mt-1 truncate text-base text-white/70">
                     {{ track.artist }}
                   </p>
                 </div>
                 <div class="flex shrink-0 items-center gap-1">
                   <LikeButton
-                    v-if="!track?.isPodcast"
+                    v-if="!track?.isPodcast && !track?.stream"
                     :file="track.file"
                     size="lg"
                   />
@@ -226,8 +255,18 @@
                 >
                   <AppIcon name="skip-back" :size="22" />
                 </button>
+                <!-- Left of shuffle: tracks like this one
+                     (podcasts have none). -->
                 <button
-                  v-else
+                  v-if="similarArtist && similarTitle"
+                  type="button"
+                  class="flex size-11 items-center justify-center rounded-full text-white/80 transition-colors hover:bg-white/10"
+                  :aria-label="t('similar.findSimilar')"
+                  @click="goSimilar"
+                >
+                  <AppIcon name="wand" :size="22" />
+                </button>
+                <button
                   type="button"
                   class="flex size-11 items-center justify-center rounded-full transition-colors hover:bg-white/10"
                   :class="
@@ -300,6 +339,31 @@
                     :size="22"
                   />
                 </button>
+                <!-- Right of repeat: a stream queues its download (once -
+                     while queued it spins instead), a downloaded track
+                     shows a static check that does nothing. -->
+                <button
+                  v-if="showPlayerDownload"
+                  type="button"
+                  class="flex size-11 items-center justify-center rounded-full text-white/80 transition-colors hover:bg-white/10 disabled:opacity-50"
+                  :aria-label="t('actions.downloadItem', { name: track.title })"
+                  :disabled="downloadBusy"
+                  @click="downloadCurrent"
+                >
+                  <AppIcon
+                    :name="downloadBusy ? 'refresh' : 'download'"
+                    :size="22"
+                    :class="downloadBusy ? 'animate-spin' : ''"
+                  />
+                </button>
+                <span
+                  v-else-if="showDownloadedCheck"
+                  class="flex size-11 items-center justify-center rounded-full text-accent"
+                  :title="t('search.inLibrary')"
+                  aria-hidden="true"
+                >
+                  <AppIcon name="check" :size="22" />
+                </span>
               </div>
 
               <div class="hidden flex-1 items-center justify-end gap-2 lg:flex">
@@ -420,6 +484,7 @@ import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { useMediaQuery, useNow } from '@vueuse/core'
 import AppIcon from '../ui/AppIcon.vue'
 import CoverArt from '../ui/CoverArt.vue'
+import ExplicitBadge from '../ui/ExplicitBadge.vue'
 import UiMenu from '../ui/UiMenu.vue'
 import WaveSeekBar from '../player/WaveSeekBar.vue'
 import VolumeControl from '../player/VolumeControl.vue'
@@ -427,19 +492,31 @@ import LikeButton from '../player/LikeButton.vue'
 import LyricsPanel from '../player/LyricsPanel.vue'
 import UpNextPanel from '../player/UpNextPanel.vue'
 import TrackDetails from '../player/TrackDetails.vue'
+import TrackArtistLinks from '../library/TrackArtistLinks.vue'
 import EqualizerPanel from '../player/EqualizerPanel.vue'
 import { usePlayer } from '/src/model/player'
+import { useDownloadManager, useProgressTracker } from '/src/model/download'
+import { useLibrary } from '/src/model/library'
+import { useUi } from '/src/model/ui'
 import { usePlayerPrefs } from '/src/model/playerPrefs'
 import { useNowPlaying } from '/src/model/ui'
 import { formatBytes, formatDuration, hueFor } from '/src/lib/format'
 import { availablePanels, defaultPanel, requestedPanel } from '/src/lib/panels'
 import { useCoverPalette } from '/src/model/coverPalette'
+import { groupingArtistName } from '/src/lib/library'
 import { saveName } from '/src/lib/paths'
+import { useBuyLinks } from '/src/model/buyLinks'
+import { buyTargetForTrack } from '/src/lib/buyLinks'
 import { useI18n } from '/src/i18n'
 
 const player = usePlayer()
+const library = useLibrary()
+const dm = useDownloadManager()
+const tracker = useProgressTracker()
+const ui = useUi()
 const { showLyrics } = usePlayerPrefs()
 const nowPlaying = useNowPlaying()
+const buyLinks = useBuyLinks()
 const route = useRoute()
 const router = useRouter()
 const { t } = useI18n()
@@ -449,6 +526,26 @@ const scrub = ref(null)
 const closeButton = ref(null)
 
 const track = computed(() => player.currentTrack.value)
+
+// Tracks like this one (podcasts have none): left of shuffle.
+const similarArtist = computed(() => {
+  if (track.value?.isPodcast) return ''
+  return (track.value?.artists || [])[0] || track.value?.artist || ''
+})
+const similarTitle = computed(
+  () => track.value?.name || track.value?.title || ''
+)
+
+function goSimilar() {
+  const artist = (
+    (track.value?.artists || [])[0] ||
+    track.value?.artist ||
+    ''
+  ).trim()
+  const title = (track.value?.name || track.value?.title || '').trim()
+  if (!artist || !title) return
+  router.push({ name: 'Similar', query: { artist, track: title } })
+}
 const palette = useCoverPalette(track)
 const tint = computed(
   () =>
@@ -467,6 +564,7 @@ const panels = computed(() =>
   availablePanels({
     lyrics: showLyrics.value,
     isPodcast: track.value?.isPodcast,
+    isStream: track.value?.stream,
   }).map((id) => ({
     id,
     icon: PANEL_TABS[id].icon,
@@ -487,6 +585,7 @@ const panel = computed(
     defaultPanel({
       lyrics: showLyrics.value,
       isPodcast: track.value?.isPodcast,
+      isStream: track.value?.stream,
     })
 )
 const mobilePanel = computed(() => isMobile.value && !!requested.value)
@@ -578,13 +677,20 @@ const trackMenu = computed(() => {
     {
       label: t('player.goToArtist'),
       icon: 'user',
-      hidden: !tr.albumArtist || tr.isPodcast,
+      hidden: !groupingArtistName(tr) || tr.isPodcast,
       action: () =>
-        navigate({ name: 'Artist', query: { name: tr.albumArtist } }),
+        navigate({ name: 'Artist', query: { name: groupingArtistName(tr) } }),
+    },
+    {
+      label: t('buy.menu'),
+      icon: 'tag',
+      hidden: !tr.artist || tr.isPodcast,
+      action: () => buyLinks.open(buyTargetForTrack(tr)),
     },
     {
       label: t('library.saveToDevice'),
       icon: 'download',
+      hidden: !!tr.stream,
       action: () => saveFile(tr),
     },
     { divider: true },
@@ -609,6 +715,68 @@ function saveFile(tr) {
   document.body.appendChild(a)
   a.click()
   a.remove()
+}
+
+// A stream that landed in the library while playing (downloaded from
+// anywhere) offers deletion instead of another download.
+const streamDownloaded = computed(
+  () =>
+    !!track.value?.stream &&
+    library.hasSong(track.value.artist, track.value.title)
+)
+
+const showPlayerDownload = computed(
+  () => !!track.value?.stream && !streamDownloaded.value
+)
+// A downloaded track shows a static check where the download button
+// was; deleting happens from the library rows.
+const showDownloadedCheck = computed(
+  () =>
+    !!track.value &&
+    !track.value.isPodcast &&
+    (!track.value.stream || streamDownloaded.value)
+)
+
+// The playing stream as a downloadable song: the watch URL is the
+// download key (so it can't be queued twice) and the known video id
+// pins the exact version, like a resolved search row.
+const pendingSong = computed(() => {
+  const tr = track.value
+  if (!tr?.stream || !tr.video_id) return null
+  return {
+    name: tr.title,
+    artists: tr.artist ? [tr.artist] : [],
+    artist: tr.artist || '',
+    album_name: tr.album || '',
+    cover_url: tr.cover && String(tr.cover).startsWith('http') ? tr.cover : '',
+    duration: tr.duration || 0,
+    url: `https://music.youtube.com/watch?v=${tr.video_id}`,
+    youtube_id: tr.video_id,
+  }
+})
+
+// The queued/finished job behind the button, if any - while one exists
+// the button spins instead of queueing a duplicate.
+const downloadJob = computed(() => {
+  tracker.queueVersion.value
+  return pendingSong.value ? tracker.getBySong(pendingSong.value) : null
+})
+const downloadBusy = computed(() => {
+  const state = downloadJob.value?.state
+  return state === 'queued' || state === 'active'
+})
+
+/** Queue the playing stream as a download (it keeps streaming). */
+function downloadCurrent() {
+  const song = pendingSong.value
+  if (!song || downloadBusy.value) return
+  if (downloadJob.value?.state === 'failed') dm.retry(song)
+  else {
+    dm.queue(song)
+    ui.toast(t('toast.queuedTracks', { count: 1, name: song.name }), {
+      kind: 'success',
+    })
+  }
 }
 
 function commitSeek(value) {

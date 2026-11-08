@@ -15,7 +15,7 @@
     <span role="columnheader" class="w-12 text-right">
       <AppIcon name="clock" :size="14" class="inline" />
     </span>
-    <span class="w-28 shrink-0" aria-hidden="true" />
+    <span class="w-40 shrink-0" aria-hidden="true" />
   </div>
 </template>
 

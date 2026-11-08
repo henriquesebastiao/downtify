@@ -1,5 +1,5 @@
 <template>
-  <nav aria-label="Documentation" class="flex flex-col gap-0.5">
+  <nav :aria-label="ui.documentation" class="flex flex-col gap-0.5">
     <template v-for="(entry, index) in sidebar" :key="entry.title">
       <div v-if="entry.items" class="mt-5 mb-1 first:mt-0">
         <p class="eyebrow px-3 pb-1.5">{{ entry.title }}</p>
@@ -23,8 +23,10 @@ import { defineComponent, h } from 'vue'
 import { withBase } from 'vitepress'
 import Icon from './Icon.vue'
 import { useNav } from '../composables/nav'
+import { useUi } from '../composables/ui'
 
 const { sidebar, isActive } = useNav()
+const { ui } = useUi()
 
 const NavLink = defineComponent({
   props: { item: { type: Object, required: true } },

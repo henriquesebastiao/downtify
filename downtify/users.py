@@ -36,7 +36,7 @@ import sqlite3
 import threading
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Callable, Optional
 
 from .sqlite_utils import connect_sqlite
 
@@ -64,7 +64,9 @@ PREFERENCES: dict[str, type] = {
     'theme': str,
     'locale': str,
     'show_lyrics': bool,
+    'normalize_volume': bool,
     'search_albums': bool,
+    'show_public_playlists': bool,
 }
 
 
@@ -182,8 +184,20 @@ class UserStore:
     def __init__(self, db_path: Path) -> None:
         self._path = str(db_path)
         self._lock = threading.Lock()
+        self._listeners: list[Callable[[], None]] = []
         self._init_db()
         self._dummy: Optional[str] = None
+
+    def add_change_listener(self, fn: Callable[[], None]) -> None:
+        """Call *fn* after an account's name, role or password changes,
+        or it is deleted - e.g. to drop cached sign-ins."""
+
+        if fn not in self._listeners:
+            self._listeners.append(fn)
+
+    def _changed(self) -> None:
+        for fn in list(self._listeners):
+            fn()
 
     def _connect(self) -> sqlite3.Connection:
         return connect_sqlite(self._path, row_factory=True)
@@ -216,6 +230,15 @@ class UserStore:
                 CREATE TABLE IF NOT EXISTS auth_config (
                     key TEXT PRIMARY KEY,
                     value TEXT NOT NULL
+                )
+            """)
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS auth_oidc_identities (
+                    issuer TEXT NOT NULL,
+                    subject TEXT NOT NULL,
+                    user_id INTEGER NOT NULL,
+                    PRIMARY KEY (issuer, subject),
+                    UNIQUE (user_id)
                 )
             """)
 
@@ -334,6 +357,7 @@ class UserStore:
                     'default_password = 1 WHERE id = ?',
                     (hash_password(DEFAULT_PASSWORD), ROLE_ADMIN, row['id']),
                 )
+        self._changed()
         return self.by_username(DEFAULT_USERNAME) or {}
 
     # Signing in
@@ -396,6 +420,83 @@ class UserStore:
                 (ROLE_ADMIN,),
             ).fetchone()
         return public_user(row) if row else None
+
+    def _get_or_create_oidc_user(
+        self, issuer: str, subject: str, username: str, role: str
+    ) -> dict[str, Any]:
+        """Find an external identity or provision its first local account.
+
+        The issuer and subject are the identity key; usernames are only a
+        display name and are never used to link an existing local account.
+        The role follows the configured OIDC group mapping on each login.
+        """
+
+        if not issuer or not subject:
+            raise UserError('OIDC issuer and subject are required')
+        if role not in ROLES:
+            raise UserError('Unknown role')
+        name = clean_username(username)
+        changed = False
+        with self._lock, self._connect() as conn:
+            row = conn.execute(
+                'SELECT users.* FROM auth_oidc_identities '
+                'JOIN users ON users.id = auth_oidc_identities.user_id '
+                'WHERE issuer = ? AND subject = ?',
+                (issuer, subject),
+            ).fetchone()
+            if row:
+                if row['role'] != role:
+                    if (
+                        row['role'] == ROLE_ADMIN
+                        and role != ROLE_ADMIN
+                        and conn.execute(
+                            'SELECT COUNT(*) AS n FROM users WHERE role = ?',
+                            (ROLE_ADMIN,),
+                        ).fetchone()['n']
+                        <= 1
+                    ):
+                        raise UserError('The last admin must stay an admin')
+                    conn.execute(
+                        'UPDATE users SET role = ? WHERE id = ?',
+                        (role, row['id']),
+                    )
+                    changed = True
+                user_id = row['id']
+            else:
+                suffix = hashlib.sha256(
+                    f'{issuer}\0{subject}'.encode()
+                ).hexdigest()[:8]
+                candidate = name
+                index = 0
+                while conn.execute(
+                    'SELECT 1 FROM users WHERE username = ?', (candidate,)
+                ).fetchone():
+                    extra = suffix if index == 0 else f'{suffix}{index}'
+                    candidate = f'{name[: 32 - len(extra) - 1]}_{extra}'
+                    index += 1
+                cursor = conn.execute(
+                    'INSERT INTO users (username, password_hash, role, '
+                    'created_at) VALUES (?, ?, ?, ?)',
+                    (
+                        candidate,
+                        hash_password(secrets.token_urlsafe(48)),
+                        role,
+                        _now(),
+                    ),
+                )
+                user_id = cursor.lastrowid
+                conn.execute(
+                    'INSERT INTO auth_oidc_identities '
+                    '(issuer, subject, user_id) VALUES (?, ?, ?)',
+                    (issuer, subject, user_id),
+                )
+                changed = True
+            row = conn.execute(
+                'SELECT * FROM users WHERE id = ?', (user_id,)
+            ).fetchone()
+        if changed:
+            self._changed()
+        return public_user(row)
 
     def admin_count(self) -> int:
         with self._connect() as conn:
@@ -461,6 +562,7 @@ class UserStore:
                         )
                 except sqlite3.IntegrityError as exc:
                     raise UserError('That username is taken') from exc
+                self._changed()
         return self.get(user_id) or {}
 
     def set_password(self, user_id: int, password: Any) -> None:
@@ -473,6 +575,7 @@ class UserStore:
             )
             if cur.rowcount == 0:
                 raise UserError('User not found')
+        self._changed()
 
     def check_password(self, user_id: int, password: str) -> bool:
         with self._connect() as conn:
@@ -490,7 +593,12 @@ class UserStore:
             if current['role'] == ROLE_ADMIN and self.admin_count() <= 1:
                 raise UserError('The last admin cannot be deleted')
             with self._connect() as conn:
+                conn.execute(
+                    'DELETE FROM auth_oidc_identities WHERE user_id = ?',
+                    (user_id,),
+                )
                 conn.execute('DELETE FROM users WHERE id = ?', (user_id,))
+        self._changed()
         return current
 
     # Preferences

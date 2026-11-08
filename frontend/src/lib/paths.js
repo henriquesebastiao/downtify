@@ -32,6 +32,23 @@ export function coverURL(fileName) {
   return `/cover?file=${encodeURIComponent(fileName)}`
 }
 
+/** The cover sizes the server keeps scaled copies of (`/cover?size=`). */
+export const COVER_SIZES = [150, 300, 600]
+
+/**
+ * A library cover URL (see `coverURL`) at a smaller size, for grids and
+ * lists that show it small: a full picture is ~640 px and ~1.6 MB once
+ * decoded, and a Library grid shows thousands. Any other URL (playlist
+ * sidecars, remote images) comes back unchanged.
+ */
+export function sizedCoverURL(url, size) {
+  const text = String(url || '')
+  if (!size || !text.startsWith('/cover?') || /[?&]size=/.test(text)) {
+    return text
+  }
+  return `${text}&size=${size}`
+}
+
 /**
  * A playlist's own cover image — the sidecar saved next to its M3U,
  * not a cover read out of a track's tags, so it has its own endpoint.

@@ -1,31 +1,35 @@
 <template>
   <div
+    ref="root"
     class="relative isolate shrink-0 overflow-hidden"
     :class="[round ? 'rounded-full' : rounded, shadow ? 'shadow-cover' : '']"
     :style="{ background: placeholder }"
   >
     <div
-      v-if="mosaic.length >= 2"
+      v-if="mosaic.length >= 2 && mayLoad"
       class="grid size-full"
       :class="mosaic.length === 2 ? 'grid-cols-2' : 'grid-cols-2 grid-rows-2'"
     >
       <img
         v-for="(url, i) in mosaic.slice(0, 4)"
         :key="i"
-        :src="url"
+        :src="sizedCoverURL(url, thumb)"
         alt=""
         loading="lazy"
         decoding="async"
+        referrerpolicy="no-referrer"
         class="size-full min-h-0 min-w-0 object-cover"
         :class="i === 0 && mosaic.length === 3 ? 'row-span-2' : ''"
       />
     </div>
     <img
-      v-else-if="imageSrc && !failed"
-      :src="imageSrc"
+      v-else-if="imageSrc && !failed && mayLoad"
+      :src="displaySrc"
+      :srcset="displaySrcset"
       :alt="alt"
       loading="lazy"
       decoding="async"
+      referrerpolicy="no-referrer"
       class="size-full object-cover transition-opacity duration-300"
       :class="ready ? 'opacity-100' : 'opacity-0'"
       @load="ready = true"
@@ -54,9 +58,17 @@
 </template>
 
 <script setup>
-import { computed, ref, watch } from 'vue'
+// Every <img> here is sent without a Referer: Google's image CDN (YouTube
+// Music thumbnails and artist photos, yt3/lh3.googleusercontent.com)
+// answers a burst of hotlinked images that name this page with 429 Too
+// Many Requests, and serves the same burst fine without one. Only images
+// - the API's own requests keep their Origin/Referer, which the backend's
+// same-site check needs.
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import AppIcon from './AppIcon.vue'
+import { cancelUnfinishedImages, coverDelay } from '/src/lib/coverGate'
 import { hueFor, initials } from '/src/lib/format'
+import { COVER_SIZES, sizedCoverURL } from '/src/lib/paths'
 
 const props = defineProps({
   src: { type: String, default: '' },
@@ -76,17 +88,44 @@ const props = defineProps({
   // on the initials: for a `src` that may simply not exist (an artist photo
   // from a proxy), with a picture known to. Unset = today's behaviour.
   fallback: { type: String, default: '' },
+  // Display size (px) for a library cover: a scaled copy is asked for
+  // (and twice that for high-density screens) instead of the full
+  // picture. 0 = full size, as before; other URLs are left alone.
+  thumb: { type: Number, default: 0 },
 })
 
+const root = ref(null)
 const failed = ref(false)
 const ready = ref(false)
 const usingFallback = ref(false)
+
+// See lib/coverGate.js: a tile that scrolls by never asks for its picture.
+const mayLoad = ref(false)
+let gate = null
+function openGate() {
+  clearTimeout(gate)
+  const delay = coverDelay(performance.now())
+  mayLoad.value = delay === 0
+  if (delay) {
+    gate = setTimeout(() => {
+      mayLoad.value = true
+    }, delay)
+  }
+}
+openGate()
+
+onBeforeUnmount(() => {
+  clearTimeout(gate)
+  cancelUnfinishedImages(root.value)
+})
+
 watch(
   () => props.src,
   () => {
     failed.value = false
     ready.value = false
     usingFallback.value = false
+    openGate()
   }
 )
 
@@ -108,6 +147,14 @@ const imageSrc = computed(() => {
   if (props.symbol) return ''
   if (usingFallback.value) return props.fallback
   return props.src || mosaic.value[0] || ''
+})
+const displaySrc = computed(() => sizedCoverURL(imageSrc.value, props.thumb))
+const displaySrcset = computed(() => {
+  const double = props.thumb * 2
+  const sized = sizedCoverURL(imageSrc.value, double)
+  if (!props.thumb || !COVER_SIZES.includes(double) || sized === imageSrc.value)
+    return undefined
+  return `${displaySrc.value} 1x, ${sized} 2x`
 })
 const letters = computed(() => (props.symbol ? '' : initials(props.name)))
 const showFallback = computed(

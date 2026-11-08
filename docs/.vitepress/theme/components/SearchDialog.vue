@@ -10,7 +10,7 @@
           ref="panel"
           role="dialog"
           aria-modal="true"
-          aria-label="Search the docs"
+          :aria-label="ui.searchDocs"
           class="flex max-h-[80vh] w-full max-w-[640px] animate-rise flex-col overflow-hidden rounded-panel border border-line-3 bg-surface shadow-float"
           @keydown="onKeydown"
         >
@@ -18,7 +18,7 @@
             class="flex h-14 shrink-0 items-center gap-3 border-b border-line-2 px-4"
           >
             <Icon name="search" :size="19" class="text-muted" />
-            <span class="sr-only">Search</span>
+            <span class="sr-only">{{ ui.search }}</span>
             <input
               ref="input"
               v-model="query"
@@ -31,7 +31,7 @@
               "
               autocomplete="off"
               spellcheck="false"
-              placeholder="Search the docs"
+              :placeholder="ui.searchDocs"
               class="h-full min-w-0 flex-1 bg-transparent text-[15px] text-fg outline-none placeholder:text-faint [&::-webkit-search-cancel-button]:hidden"
             />
             <button
@@ -45,21 +45,26 @@
 
           <div class="min-h-0 flex-1 overflow-y-auto p-2">
             <p v-if="loading" class="px-3 py-8 text-center text-sm text-muted">
-              Loading the index…
+              {{ ui.searchLoading }}
             </p>
             <p
               v-else-if="!query.trim()"
               class="px-3 py-8 text-center text-sm text-muted"
             >
-              Search every page — settings, endpoints, environment variables…
+              {{ ui.searchHint }}
             </p>
             <p
               v-else-if="!results.length"
               class="px-3 py-8 text-center text-sm text-muted"
             >
-              Nothing matches “{{ query.trim() }}”.
+              {{ t('searchNothing', { query: query.trim() }) }}
             </p>
-            <ul v-else id="search-results" role="listbox" aria-label="Results">
+            <ul
+              v-else
+              id="search-results"
+              role="listbox"
+              :aria-label="ui.searchResults"
+            >
               <li
                 v-for="(result, i) in results"
                 :id="`search-result-${i}`"
@@ -115,10 +120,11 @@
             class="hidden shrink-0 items-center gap-4 border-t border-line-2 px-4 py-2.5 text-[11px] text-faint sm:flex"
           >
             <span
-              ><kbd class="kbd">↑</kbd> <kbd class="kbd">↓</kbd> to move</span
+              ><kbd class="kbd">↑</kbd> <kbd class="kbd">↓</kbd>
+              {{ ui.searchToMove }}</span
             >
-            <span><kbd class="kbd">Enter</kbd> to open</span>
-            <span><kbd class="kbd">Esc</kbd> to close</span>
+            <span><kbd class="kbd">Enter</kbd> {{ ui.searchToOpen }}</span>
+            <span><kbd class="kbd">Esc</kbd> {{ ui.searchToClose }}</span>
           </div>
         </div>
       </div>
@@ -134,8 +140,10 @@ import { useData, useRouter, withBase } from 'vitepress'
 import Icon from './Icon.vue'
 import { useSearch } from '../composables/search'
 import { trapTab } from '../focus'
+import { useUi } from '../composables/ui'
 
 const search = useSearch()
+const { ui, t } = useUi()
 const router = useRouter()
 const { localeIndex, theme } = useData()
 
@@ -182,6 +190,8 @@ watch(search.open, async (open) => {
 })
 
 watch(query, () => (selected.value = 0))
+// Each language has its own index.
+watch(localeIndex, () => (index.value = null))
 
 const escapeHtml = (text) =>
   text.replace(

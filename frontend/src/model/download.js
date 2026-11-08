@@ -1,6 +1,6 @@
 // Download queue: mirrors the backend's jobs (`GET /api/queue`) and the
 // progress events it pushes over the WebSocket.
-import { ref } from 'vue'
+import { reactive, ref } from 'vue'
 import { isYouTubePlaylistURL, normalizeSpotifyURL } from '/src/model/url'
 
 import API from '/src/model/api'
@@ -16,13 +16,38 @@ const STATUS = {
 const downloadQueue = ref([])
 // Bumped on every in-place item change so computed counts refresh.
 const queueVersion = ref(0)
-// Set while a loop applies many jobs, so the queue repaints once.
-let queueNotifyPaused = false
+// Keep the same reactive objects in the public array and the lookup index.
+const itemsByKey = new Map()
+let queueBatchDepth = 0
+let queueDirty = false
 
 function touchQueue() {
-  if (queueNotifyPaused) return
+  queueDirty = true
+  if (queueBatchDepth) return
+  queueDirty = false
   downloadQueue.value = downloadQueue.value.slice()
   queueVersion.value += 1
+}
+
+function batchQueueChanges(change) {
+  queueBatchDepth += 1
+  try {
+    return change()
+  } finally {
+    queueBatchDepth -= 1
+    if (!queueBatchDepth && queueDirty) touchQueue()
+  }
+}
+
+function removeItems(matches) {
+  const kept = downloadQueue.value.filter((item) => !matches(item))
+  if (kept.length === downloadQueue.value.length) return
+  itemsByKey.clear()
+  for (const item of kept) {
+    if (item.key && !itemsByKey.has(item.key)) itemsByKey.set(item.key, item)
+  }
+  downloadQueue.value = kept
+  touchQueue()
 }
 
 /** Match backend ``_register_job`` / queue keys. */
@@ -40,47 +65,59 @@ class DownloadItem {
     this.provider = ''
     this.web_download_url = null
     this.filename = null
+    // 1-based place among the waiting jobs (`GET /api/queue`), or null.
+    this.position = null
     this.updatedAt = Date.now()
   }
   get key() {
     return jobSongKey(this.song)
   }
+  patch(values) {
+    let changed = false
+    for (const [name, value] of Object.entries(values)) {
+      if (this[name] === value) continue
+      this[name] = value
+      changed = true
+    }
+    if (changed) touchQueue()
+  }
   setStatus(status) {
     if (this.web_status === status) return
-    this.web_status = status
-    this.updatedAt = Date.now()
-    touchQueue()
+    this.patch({ web_status: status, updatedAt: Date.now() })
   }
   setDownloading() {
     this.setStatus(STATUS.DOWNLOADING)
   }
   setDownloaded() {
-    this.progress = 100
-    this.setStatus(STATUS.DOWNLOADED)
+    batchQueueChanges(() => {
+      this.patch({ progress: 100 })
+      this.setStatus(STATUS.DOWNLOADED)
+    })
   }
   setError() {
     this.setStatus(STATUS.ERROR)
   }
   resetForRetry() {
-    this.web_status = STATUS.QUEUED
-    this.progress = 0
-    this.message = ''
-    this.provider = ''
-    this.web_download_url = null
-    this.filename = null
-    this.updatedAt = Date.now()
-    touchQueue()
+    this.patch({
+      web_status: STATUS.QUEUED,
+      progress: 0,
+      message: '',
+      provider: '',
+      web_download_url: null,
+      filename: null,
+      position: null,
+      updatedAt: Date.now(),
+    })
   }
   setFile(filename) {
     if (!filename) return
-    this.filename = filename
-    this.web_download_url = API.downloadFileURL(filename)
+    this.patch({ filename, web_download_url: API.downloadFileURL(filename) })
   }
   setWebURL(url) {
-    this.web_download_url = url
+    this.patch({ web_download_url: url })
   }
   setFilename(name) {
-    this.filename = name
+    this.patch({ filename: name })
   }
   isQueued() {
     return this.web_status === STATUS.QUEUED
@@ -102,27 +139,22 @@ class DownloadItem {
     return 'active'
   }
   wsUpdate(message) {
-    let changed = false
-    if (message.progress !== undefined && message.progress !== this.progress) {
-      this.progress = message.progress
-      changed = true
-    }
-    if (message.message !== undefined && message.message !== this.message) {
-      this.message = message.message
-      changed = true
-    }
-    if (message.provider && message.provider !== this.provider) {
-      this.provider = message.provider
-      changed = true
-    }
-    if (changed) touchQueue()
+    const values = {}
+    if (message.progress !== undefined) values.progress = message.progress
+    if (message.message !== undefined) values.message = message.message
+    if (message.provider) values.provider = message.provider
+    if (message.reused) values.provider = ''
+    this.patch(values)
   }
 }
 
 function applyServerJob(item, job) {
-  if (job.provider) item.provider = job.provider
-  item.message = job.message || ''
-  item.progress = job.progress || 0
+  item.patch({
+    ...(job.provider ? { provider: job.provider } : {}),
+    message: job.message || '',
+    progress: job.status === 'done' ? 100 : job.progress || 0,
+    position: job.position ?? null,
+  })
   if (job.status === 'done') {
     item.setFile(job.filename)
     item.setDownloaded()
@@ -133,18 +165,19 @@ function applyServerJob(item, job) {
   } else {
     item.setStatus(STATUS.QUEUED)
   }
-  touchQueue()
 }
 
 function findItem(song) {
   const key = jobSongKey(song)
   if (!key) return null
-  return downloadQueue.value.find((item) => item.key === key) || null
+  return itemsByKey.get(key) || null
 }
 
 function appendSong(song) {
-  const item = new DownloadItem(song)
+  const item = reactive(new DownloadItem(song))
   downloadQueue.value.push(item)
+  // appendSong is also public: preserve first-match behavior for duplicates.
+  if (item.key && !itemsByKey.has(item.key)) itemsByKey.set(item.key, item)
   touchQueue()
   return item
 }
@@ -162,8 +195,7 @@ function upsertSong(song) {
 export function useProgressTracker() {
   function removeSong(song) {
     const key = jobSongKey(song)
-    downloadQueue.value = downloadQueue.value.filter((item) => item.key !== key)
-    touchQueue()
+    removeItems((item) => item.key === key)
   }
   return {
     appendSong,
@@ -203,17 +235,13 @@ function ensureQueuePoll() {
 
 export async function syncQueueFromServer() {
   const res = await API.getQueue()
-  queueNotifyPaused = true
-  try {
+  batchQueueChanges(() => {
     for (const job of res.data || []) {
       if (!job.song) continue
       const item = findItem(job.song) || appendSong(job.song)
       applyServerJob(item, job)
     }
-  } finally {
-    queueNotifyPaused = false
-  }
-  touchQueue()
+  })
   if (queueHasActiveItems()) ensureQueuePoll()
   else stopQueuePoll()
 }
@@ -225,21 +253,20 @@ API.onMessage((data) => {
     return
   }
   if (!data.song) return
-  const item = findItem(data.song) || appendSong(data.song)
-  if (data.status === 'done') {
-    item.wsUpdate(data)
-    item.setFile(data.filename)
-    item.setDownloaded()
-  } else if (data.status === 'error') {
-    item.wsUpdate(data)
-    item.setError()
-  } else if (data.status === 'queued') {
-    item.wsUpdate(data)
-    item.setStatus(STATUS.QUEUED)
-  } else {
-    item.wsUpdate(data)
-    item.setDownloading()
-  }
+  batchQueueChanges(() => {
+    const item = findItem(data.song) || appendSong(data.song)
+    item.wsUpdate(data.status === 'done' ? { ...data, progress: 100 } : data)
+    if (data.status === 'done') {
+      item.setFile(data.filename)
+      item.setDownloaded()
+    } else if (data.status === 'error') {
+      item.setError()
+    } else if (data.status === 'queued') {
+      item.setStatus(STATUS.QUEUED)
+    } else {
+      item.setDownloading()
+    }
+  })
   // Progress messages can arrive many times a second across parallel
   // downloads; the poll (not every message) reconciles with /api/queue.
   ensureQueuePoll()
@@ -281,13 +308,9 @@ export function useDownloadManager() {
       ...hints,
       downtify_track_order: song.downtify_track_order ?? i,
     }))
-    queueNotifyPaused = true
-    try {
+    batchQueueChanges(() => {
       for (const song of songs) upsertSong(song)
-    } finally {
-      queueNotifyPaused = false
-    }
-    touchQueue()
+    })
     ensureQueuePoll()
     await API.downloadBatch({
       songs,
@@ -379,37 +402,37 @@ export function useDownloadManager() {
     }
   }
 
-  function retryWithAudio(song, youtubeVideoId) {
-    if (song.replace) return replaceAgain(song, youtubeVideoId)
+  // `audio` is a YouTube video id, or a SoundCloud track URL when `source`
+  // is 'soundcloud'. Setting one clears the other, so a link pasted on an
+  // earlier retry can't win over this one.
+  function retryWithAudio(song, audio, source = 'youtube') {
+    if (song.replace) return replaceAgain(song, audio)
+    const audioOverride =
+      source === 'soundcloud'
+        ? { soundcloud_url: audio, youtube_id: undefined }
+        : { youtube_id: audio, soundcloud_url: undefined }
     const item = findItem(song)
     if (item) {
-      item.song = { ...item.song, youtube_id: youtubeVideoId }
+      item.song = { ...item.song, ...audioOverride }
       item.resetForRetry()
     }
-    return download({ ...song, youtube_id: youtubeVideoId })
+    return download({ ...song, ...audioOverride })
   }
 
   function remove(song) {
     const songId = jobSongKey(song)
-    downloadQueue.value = downloadQueue.value.filter(
-      (item) => item.key !== songId
-    )
-    touchQueue()
+    removeItems((item) => item.key === songId)
     if (songId) API.removeQueueItem(songId).catch(() => {})
   }
 
   async function clearAll() {
     await API.clearQueue()
-    downloadQueue.value = []
-    touchQueue()
+    removeItems(() => true)
   }
 
   async function clearCompleted() {
     await API.clearCompletedQueue()
-    downloadQueue.value = downloadQueue.value.filter(
-      (item) => !item.isDownloaded()
-    )
-    touchQueue()
+    removeItems((item) => item.isDownloaded())
   }
 
   function retry(song) {

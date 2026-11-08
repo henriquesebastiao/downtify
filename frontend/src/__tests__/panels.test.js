@@ -29,6 +29,13 @@ describe('availablePanels', () => {
       'equalizer',
     ])
   })
+
+  it('offers neither lyrics nor details for a streamed track', () => {
+    expect(availablePanels({ lyrics: true, isStream: true })).toEqual([
+      'queue',
+      'equalizer',
+    ])
+  })
 })
 
 describe('requestedPanel', () => {
@@ -69,5 +76,10 @@ describe('defaultPanel', () => {
 
   it('falls back to the queue for a podcast episode even with lyrics on', () => {
     expect(defaultPanel({ lyrics: true, isPodcast: true })).toBe('queue')
+  })
+
+  it('falls back to the queue for a streamed track', () => {
+    expect(defaultPanel({ lyrics: true, isStream: true })).toBe('queue')
+    expect(availablePanels({ lyrics: true, isStream: true })).toContain('queue')
   })
 })

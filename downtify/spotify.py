@@ -18,6 +18,7 @@ from urllib.parse import urlsplit
 import httpx
 from loguru import logger
 
+from .album_artist import album_artist_fields
 from .file_naming import file_name_key
 from .telemetry import json_log_blob, redact_sensitive_mapping
 
@@ -289,6 +290,32 @@ def _artist_names(entity: dict[str, Any]) -> list[str]:
     ]
 
 
+def _artists_unverified(entity: dict[str, Any]) -> bool:
+    """Whether :func:`_artist_names` had to read *entity*'s artists from an
+    ambiguous ``subtitle`` (see :func:`_ambiguous_subtitle`) rather than a
+    structured list - so they're re-read from the per-track embed before
+    the track is downloaded (:func:`enrich_track_from_spotify_if_sparse`).
+    """
+
+    raw = entity.get('artists')
+    if isinstance(raw, list) and any(
+        (isinstance(a, str) and a.strip())
+        or (isinstance(a, dict) and a.get('name'))
+        for a in raw
+    ):
+        return False
+    return _ambiguous_subtitle(entity.get('subtitle'))
+
+
+def _album_artist_from_subtitle(subtitle: Any) -> dict[str, Any]:
+    """``album_artist`` (and ``compilation``) fields from an album embed's
+    ``subtitle`` - the album's own primary artist (``'Various Artists'``
+    for a compilation), not its tracks' artists."""
+
+    names = _artists_from_subtitle(subtitle)
+    return album_artist_fields(names[0]['name'] if names else '')
+
+
 def _normalize_release_date_text(raw: Any) -> str:
     """Normalize Spotify ``isoString`` (or similar) to ``YYYY-MM-DD`` or year."""
 
@@ -505,6 +532,8 @@ def _track_dict(
         'year': year,
         'source': 'spotify',
     }
+    if _artists_unverified(entity):
+        row['artists_unverified'] = True
     raw_tn = entity.get('trackNumber')
     if raw_tn is None:
         raw_tn = entity.get('track_number')
@@ -560,12 +589,22 @@ def _merge_full_track_metadata(
             merged[key] = iv
             continue
         if key == 'artists':
-            if merged.get('artists'):
+            # The row's own artists win, unless they were only read from
+            # an ambiguous subtitle: the per-track embed's list is exact.
+            if merged.get('artists') and not merged.get('artists_unverified'):
                 continue
             merged['artists'] = value
             merged['artist'] = full.get('artist') or ', '.join(value)
+            if not full.get('artists_unverified'):
+                merged.pop('artists_unverified', None)
             continue
         merged[key] = value
+    if not str(merged.get('album_artist') or '').strip() and full.get(
+        'album_artist'
+    ):
+        merged['album_artist'] = full['album_artist']
+        if full.get('compilation'):
+            merged['compilation'] = True
     return merged
 
 
@@ -595,7 +634,8 @@ def enrich_track_from_spotify_if_sparse(
     )
     has_track = song.get('track_number') is not None
     need_album = with_album and not str(song.get('album_name') or '').strip()
-    if has_date and has_track and not need_album:
+    unverified = bool(song.get('artists_unverified'))
+    if has_date and has_track and not need_album and not unverified:
         return song
     try:
         full = (
@@ -685,6 +725,8 @@ def _fill_album_from_open_page(song: dict[str, Any], track_id: str) -> None:
     if not name:
         return
     song['album_name'] = name
+    if not song.get('album_artist'):
+        song.update(_album_artist_from_subtitle(entity.get('subtitle')))
     if track_number and not song.get('track_number'):
         song['track_number'] = track_number
     track_items = (
@@ -710,6 +752,10 @@ def album_tracks_from_id(album_id: str) -> list[dict[str, Any]]:
     album_release_date = _release_date_str(entity)
     if not album_release_date:
         album_release_date = _album_release_date_from_open_page(album_id)
+    # The album's own artist, the same on every track - never worked out
+    # from the tracks' artists (a guest on one track doesn't make the
+    # album a compilation).
+    album_fields = _album_artist_from_subtitle(entity.get('subtitle'))
     songs: list[dict[str, Any]] = []
     for tracklist_slot, item in enumerate(track_items, start=1):
         if not isinstance(item, dict):
@@ -737,6 +783,7 @@ def album_tracks_from_id(album_id: str) -> list[dict[str, Any]]:
         row['track_number'] = tracklist_slot
         row['album_track_total'] = album_track_total
         row['preview_url'] = _track_preview_url(track)
+        row.update(album_fields)
         songs.append(row)
     return songs
 
@@ -785,14 +832,31 @@ def _with_embed_previews(
 
 
 def _artists_from_subtitle(subtitle: Any) -> list[dict[str, str]]:
+    """The artists in an embed row's joined ``subtitle``.
+
+    Spotify joins them with a comma and a NO-BREAK space
+    (``"Earth, Wind & Fire,\\xa0The Emotions"``) or a full-width comma,
+    while a comma inside one name is followed by an ordinary space - so
+    only those separators split. A subtitle with no such separator is one
+    artist, commas and all; whether it truly is gets checked against the
+    per-track embed before download (see :func:`_ambiguous_subtitle`).
+    """
+
     if not isinstance(subtitle, str) or not subtitle:
         return []
-    normalized = subtitle.replace('\xa0', ' ')
     return [
-        {'name': name.strip()}
-        for name in re.split(r'\s*(?:,|，)\s*', normalized)
+        {'name': ' '.join(name.replace('\xa0', ' ').split())}
+        for name in re.split(r'\s*(?:,\xa0|，)\s*', subtitle)
         if name.strip()
     ]
+
+
+def _ambiguous_subtitle(subtitle: Any) -> bool:
+    """Whether a name read from *subtitle* still holds a comma - one
+    artist ("Earth, Wind & Fire") or, in a format Spotify hasn't been
+    seen to use, several joined with a plain ``", "``."""
+
+    return any(',' in d['name'] for d in _artists_from_subtitle(subtitle))
 
 
 def _token_from_embed_payload(payload: dict[str, Any]) -> Optional[str]:
@@ -870,7 +934,26 @@ def _track_dict_from_graphql_item(
         'release_date': gql_release,
         'year': _year_from_release_date(gql_release),
         'source': 'spotify',
+        **_graphql_album_artist(album),
     }
+
+
+def _graphql_album_artist(album: Any) -> dict[str, Any]:
+    """``album_artist`` (and ``compilation``) fields from a GraphQL
+    ``albumOfTrack``: its first credited artist, matched against Spotify's
+    "Various Artists" by id as well as by name."""
+
+    if not isinstance(album, dict):
+        return {}
+    for item in (album.get('artists') or {}).get('items') or []:
+        if not isinstance(item, dict):
+            continue
+        name = (item.get('profile') or {}).get('name') or ''
+        if name:
+            return album_artist_fields(
+                name, artist_id=_id_from_uri(item.get('uri') or '')
+            )
+    return {}
 
 
 def _graphql_fetch_page(
@@ -1884,6 +1967,30 @@ def primary_artist_id_from_track_id(track_id: str) -> Optional[str]:
     if not isinstance(first, dict):
         return None
     return _id_from_uri(str(first.get('uri') or '')) or None
+
+
+def credited_artist_id_from_track_id(
+    track_id: str, name: str
+) -> Optional[str]:
+    """Spotify id of the artist *name* (compared as
+    :func:`~downtify.file_naming.file_name_key`) among those credited on
+    *track_id*, or ``None`` when the track doesn't credit them.
+
+    Never another artist's id: a guest's page must not get the track's
+    first artist (:func:`primary_artist_id_from_track_id`) - their own
+    entry on the track carries their own ``uri``.
+    """
+
+    wanted = file_name_key(name)
+    if not wanted:
+        return None
+    payload = _fetch_embed_json('track', track_id)
+    for item in _entity_from(payload).get('artists') or []:
+        if not isinstance(item, dict):
+            continue
+        if file_name_key(str(item.get('name') or '')) == wanted:
+            return _id_from_uri(str(item.get('uri') or '')) or None
+    return None
 
 
 def resolve(url: str) -> Any:

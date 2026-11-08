@@ -1,6 +1,6 @@
 <template>
   <nav v-if="headers.length" aria-labelledby="toc-title" class="text-[13px]">
-    <p id="toc-title" class="eyebrow mb-3">On this page</p>
+    <p id="toc-title" class="eyebrow mb-3">{{ ui.onThisPage }}</p>
     <ul class="flex flex-col border-l border-line-2">
       <li v-for="header in headers" :key="header.id">
         <a
@@ -23,6 +23,9 @@
 <script setup>
 import { onBeforeUnmount, onMounted, ref } from 'vue'
 import { onContentUpdated } from 'vitepress'
+import { useUi } from '../composables/ui'
+
+const { ui } = useUi()
 
 const headers = ref([])
 const active = ref('')

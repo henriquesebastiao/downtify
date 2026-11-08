@@ -81,12 +81,20 @@ def _rate_wait() -> None:
         _last_request_time = time.monotonic()
 
 
-def _search_itunes(query: str, limit: int = 5) -> list[dict[str, Any]]:
-    """Call the iTunes Search API and return the ``results`` list."""
+def _search_itunes(
+    query: str, limit: int = 5, *, entity: str = 'song', country: str = ''
+) -> list[dict[str, Any]]:
+    """Call the iTunes Search API and return the ``results`` list.
+
+    *country* picks the store (two letters; Apple's default, ``US``,
+    when empty) - its prices, currency and links.
+    """
     _rate_wait()
-    params = f'term={quote_plus(query)}&entity=song&limit={limit}'
+    params = f'term={quote_plus(query)}&entity={entity}&limit={limit}'
+    if country:
+        params += f'&country={country}'
     url = f'{_ITUNES_SEARCH_URL}?{params}'
-    logger.debug('iTunes genre lookup: {}', url)
+    logger.debug('iTunes lookup: {}', url)
     try:
         resp = httpx.get(url, timeout=_TIMEOUT)
         resp.raise_for_status()
@@ -299,3 +307,97 @@ def fetch_artwork_url(song: dict[str, Any], size: int = 1200) -> str:
         )
         return ''
     return artwork_url_at(base, size)
+
+
+# ── Store links ───────────────────────────────────────────────────
+#: What :func:`store_match` asks iTunes for, per kind of item.
+_STORE_ENTITIES = {'track': 'song', 'album': 'album', 'artist': 'musicArtist'}
+#: Answers kept, negative ones included (the same song is asked about by
+#: every page that shows it); cleared whole once this many pile up.
+_STORE_CACHE_MAX = 2000
+_store_cache: dict[str, Optional[dict[str, Any]]] = {}
+
+
+def _store_item(
+    kind: str, row: dict[str, Any], artist: str, title: str, album: str
+) -> Optional[dict[str, Any]]:
+    """*row* as ``{url, price, currency}`` when it is the item asked for:
+    the artist and the title (album, for an album) must both line up -
+    a buy link to someone else's cover is worse than none."""
+
+    if not _names_match(str(row.get('artistName') or ''), artist):
+        return None
+    if kind == 'track':
+        if row.get('kind') != 'song' or not _names_match(
+            str(row.get('trackName') or ''), title
+        ):
+            return None
+        url, price = row.get('trackViewUrl'), row.get('trackPrice')
+    elif kind == 'album':
+        if row.get('wrapperType') != 'collection' or not _names_match(
+            str(row.get('collectionName') or ''), album
+        ):
+            return None
+        url, price = row.get('collectionViewUrl'), row.get('collectionPrice')
+    else:
+        if row.get('wrapperType') != 'artist':
+            return None
+        url, price = row.get('artistLinkUrl'), None
+    url = str(url or '').strip()
+    if not url.startswith('https://'):
+        return None
+    # -1 (or nothing) when the item isn't sold on its own ("album only").
+    try:
+        amount = float(price) if price is not None else 0.0
+    except (TypeError, ValueError):
+        amount = 0.0
+    return {
+        'url': url,
+        'price': amount if amount > 0 else None,
+        'currency': str(row.get('currency') or '') if amount > 0 else '',
+    }
+
+
+def store_match(
+    kind: str,
+    artist: str,
+    title: str = '',
+    album: str = '',
+    country: str = 'US',
+) -> Optional[dict[str, Any]]:
+    """The iTunes Store page of a song (``kind`` ``track``), an album or
+    an artist in *country*'s store, as ``{url, price, currency}`` -
+    ``price`` is ``None`` for an artist and for something not sold on its
+    own. ``None`` when nothing in the store clearly is it."""
+
+    entity = _STORE_ENTITIES.get(kind)
+    if entity is None or not artist:
+        return None
+    name = {'track': title, 'album': album}.get(kind, '')
+    if kind != 'artist' and not name:
+        return None
+    key = '|'.join((
+        kind,
+        country,
+        _normalise(artist),
+        _normalise(title),
+        _normalise(album),
+    ))
+    with _cache_lock:
+        if key in _store_cache:
+            return _store_cache[key]
+    query = f'{artist} {name}'.strip()
+    rows = _search_itunes(query, limit=10, entity=entity, country=country)
+    if not rows:
+        # Nothing, or the request failed: worth asking again later.
+        return None
+    found = None
+    for row in rows:
+        found = _store_item(kind, row, artist, title, album)
+        if found is not None:
+            break
+    with _cache_lock:
+        if len(_store_cache) >= _STORE_CACHE_MAX:
+            _store_cache.clear()
+        _store_cache[key] = found
+    return found

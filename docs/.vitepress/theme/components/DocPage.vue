@@ -15,7 +15,7 @@
       </div>
       <PageFooter />
     </article>
-    <aside class="hidden xl:block" aria-label="On this page">
+    <aside class="hidden xl:block" :aria-label="ui.onThisPage">
       <div
         class="sticky top-[96px] max-h-[calc(100dvh-120px)] overflow-y-auto pb-4"
       >
@@ -32,8 +32,10 @@ import Icon from './Icon.vue'
 import PageFooter from './PageFooter.vue'
 import Toc from './Toc.vue'
 import { useNav } from '../composables/nav'
+import { useUi } from '../composables/ui'
 
 const route = useRoute()
 const { current } = useNav()
-const section = computed(() => current.value?.group || 'Documentation')
+const { ui } = useUi()
+const section = computed(() => current.value?.group || ui.value.documentation)
 </script>

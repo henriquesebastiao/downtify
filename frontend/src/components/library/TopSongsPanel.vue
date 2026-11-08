@@ -58,7 +58,12 @@
             stroke-width="3"
           />
         </button>
-        <SongPlayCell :song="row.song" :index="row.index" :queue="playQueue" />
+        <SongPlayCell
+          :song="row.song"
+          :index="row.index"
+          :queue="playQueue"
+          :songs="playSongs"
+        />
         <CoverArt
           :src="row.song.cover_url"
           :name="row.song.album_name || row.song.name"
@@ -96,6 +101,10 @@
             {{ formatPlayCount(row.song.play_count, locale) }}
           </UiBadge>
         </div>
+        <SimilarButton
+          :artist="(row.song.artists || [])[0] || row.song.artist || ''"
+          :title="row.song.name"
+        />
         <div class="flex w-28 shrink-0 justify-end">
           <DownloadState :song="row.song" />
         </div>
@@ -116,6 +125,7 @@ import UiButton from '../ui/UiButton.vue'
 import UiChips from '../ui/UiChips.vue'
 import UiSwitch from '../ui/UiSwitch.vue'
 import DownloadState from '../search/DownloadState.vue'
+import SimilarButton from '../similar/SimilarButton.vue'
 import SongPlayCell from './SongPlayCell.vue'
 import { computed } from 'vue'
 import { useLibrary } from '/src/model/library'
@@ -131,11 +141,14 @@ const { t, locale } = useI18n()
 const library = useLibrary()
 
 // A downloaded song plays with the list's other downloaded ones queued
-// after it, in ranking order; the rest play their preview clip.
+// after it, in ranking order; the rest stream in full.
 const playQueue = computed(() =>
   playableQueue(
     props.state.rows.map((row) => row.song),
     library.findTrack
   )
 )
+// The whole list for a mixed queue: downloaded rows from the library,
+// the rest streamed, played through to the end.
+const playSongs = computed(() => props.state.rows.map((row) => row.song))
 </script>

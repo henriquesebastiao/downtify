@@ -57,10 +57,25 @@ A folder that already sits **inside** `/downloads` (or the slskd source folder) 
 
 ## API
 
-| Method | Path | Description |
-|--------|------|-------------|
-| `POST` | `/api/library/external/sync` | Start a background scan. Optional body `{folders: ["/path", …]}` is saved first. |
-| `GET` | `/api/library/external/sync` | Running job, or the last finished log. |
-| `POST` | `/api/library/external/unmap` | Drop one folder from the library without deleting the audio. |
+| Method | Path                          | Description                                                                      |
+| ------ | ----------------------------- | -------------------------------------------------------------------------------- |
+| `POST` | `/api/library/external/sync`  | Start a background scan. Optional body `{folders: ["/path", …]}` is saved first. |
+| `GET`  | `/api/library/external/sync`  | Running job, or the last finished log.                                           |
+| `POST` | `/api/library/external/unmap` | Drop one folder from the library without deleting the audio.                     |
 
 See the [API reference](../api-reference.md#post-apilibraryexternalsync) for the response shape.
+
+## Primary library folder
+
+Choose **Settings → Library → Primary library folder** to prefer one of the
+registered external folders. The default preserves existing behavior.
+Matching artist, full title (including version) and album are required;
+unknown metadata does not hide another file. A selected source can represent
+a recording whose other copy includes clip intros or outros.
+
+This is a listing preference, not a migration. Source files, stored playlist
+paths, ownership, likes and visibility rules are not rewritten or deleted.
+Playlist badges are combined on the displayed representative; explicit saved
+playlists still play their original paths. Different albums and versions in
+the chosen folder stay separate. An empty or unavailable folder falls back
+to the remaining library. Removing it resets the preference.

@@ -2,7 +2,10 @@
   <div
     class="mx-auto flex max-w-[1680px] flex-col gap-8 px-4 pt-6 pb-10 sm:px-6 md:pt-8 lg:px-10"
   >
-    <PageHeader :title="t('discover.title')" :subtitle="t('discover.subtitle')">
+    <PageHeader
+      :title="t('discover.title')"
+      :subtitle="libraryOnly ? t('libraryOnly.active') : t('discover.subtitle')"
+    >
       <UiButton variant="ghost" icon="eye" @click="hiddenOpen = true">
         {{
           t('discover.hiddenButton', { count: discover.blocked.value.length })
@@ -126,7 +129,9 @@
       >
         <div>
           <h2 class="text-display text-xl font-semibold">{{ shelf.title }}</h2>
-          <p class="mt-1 text-[13px] text-muted">{{ shelf.body }}</p>
+          <p class="mt-1 text-[13px] text-muted">
+            {{ libraryOnly ? t('libraryOnly.active') : shelf.body }}
+          </p>
         </div>
         <div
           v-if="shelf.loading && !shelf.items.length"
@@ -153,7 +158,10 @@
             <!-- Which service it's from. A Deezer album opens in the
                  Finder, a Spotify one - and any playlist - on its Link
                  page. -->
-            <template v-if="shelf.badge && item.source" #badge>
+            <template
+              v-if="shelf.badge && item.source && item.source !== 'library'"
+              #badge
+            >
               <span
                 class="absolute bottom-2.5 left-2.5 flex size-7 items-center justify-center rounded-full bg-black/60 backdrop-blur"
                 :class="
@@ -191,7 +199,9 @@
         <AppIcon name="info" :size="16" />
         {{ t('discover.collectionsFailed') }}
       </p>
-      <p class="text-[13px] text-faint">{{ t('discover.poweredBy') }}</p>
+      <p class="text-[13px] text-faint">
+        {{ libraryOnly ? t('libraryOnly.active') : t('discover.poweredBy') }}
+      </p>
     </template>
 
     <UiModal
@@ -256,6 +266,7 @@
 </template>
 
 <script setup>
+import { libraryOnly } from '/src/model/musicPolicy'
 import { computed, onMounted, ref, watch } from 'vue'
 import AppIcon from '/src/components/ui/AppIcon.vue'
 import CoverArt from '/src/components/ui/CoverArt.vue'
@@ -314,6 +325,8 @@ const PLATFORMS = { deezer: 'Deezer', spotify: 'Spotify' }
 // the photo proxy without a search by name, and loaded directly if the
 // proxy can't answer. As MediaTile's `cover`/`fallback`.
 function artistPhoto(item) {
+  if (item.source === 'library')
+    return { cover: item.picture_url || '', fallback: '' }
   return knownArtistPhoto(item.name, deezerImage(item.picture_url))
 }
 
@@ -383,7 +396,7 @@ async function refresh() {
     collectionsPayload(
       library.artists.value,
       library.albums.value,
-      library.playlists.value,
+      library.ownPlaylists.value,
       likes.liked.value
     )
   )

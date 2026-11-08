@@ -4,16 +4,21 @@ themselves are tests/test_users.py."""
 
 from __future__ import annotations
 
+import base64
+import hashlib
 import re
 import time
 from ipaddress import ip_network
 from pathlib import Path
 from typing import Any
-from urllib.parse import urlsplit
+from urllib.parse import parse_qs, urlsplit
 
+import httpx
 import pytest
 from fastapi import FastAPI
 from fastapi.routing import APIRoute, APIWebSocketRoute
+from joserfc import jwt
+from joserfc.jwk import RSAKey
 from starlette.routing import Mount, Route
 from starlette.testclient import TestClient
 from starlette.websockets import WebSocketDisconnect
@@ -37,6 +42,7 @@ from downtify.auth import (
     normalize_pairing_code,
     rule_for,
 )
+from downtify.oidc import OIDCConfig, OIDCProvider
 from downtify.server_identity import ServerIdentity
 from downtify.users import hash_password, verify_password
 
@@ -392,6 +398,7 @@ def test_the_signing_key_is_private_and_kept(tmp_path):
         ('GET', '/assets/index.js', PUBLIC),
         ('GET', '/api/server/info', PUBLIC),
         ('POST', '/api/auth/pair', PUBLIC),
+        ('POST', '/api/auth/token', PUBLIC),
         ('POST', '/api/auth/pairing', USER),
         ('GET', '/api/auth/devices', USER),
         ('DELETE', '/api/auth/devices/abc', USER),
@@ -408,7 +415,20 @@ def test_the_signing_key_is_private_and_kept(tmp_path):
         ('GET', '/api/settings', ADMIN),
         ('GET', '/api/fs/dirs', ADMIN),
         ('POST', '/api/cookies', ADMIN),
-        ('DELETE', '/delete', ADMIN),
+        ('POST', '/api/proxy/test', ADMIN),
+        ('DELETE', '/delete', USER),
+        ('DELETE', '/delete/batch', USER),
+        ('DELETE', '/api/queue', USER),
+        ('DELETE', '/api/queue/item', USER),
+        ('POST', '/api/likes/clear', USER),
+        ('POST', '/api/download/csv', USER),
+        ('POST', '/api/playlist/m3u', USER),
+        ('POST', '/api/playlists/incomplete/download-missing', USER),
+        ('DELETE', '/api/playlists/batches/abc', USER),
+        ('DELETE', '/api/library/playlist', USER),
+        ('POST', '/api/library/playlists', USER),
+        ('POST', '/api/library/archive', USER),
+        ('DELETE', '/api/discover/listens', USER),
         ('GET', '/openapi.json', ADMIN),
         ('GET', '/tracks', CLIENT),
         ('GET', '/downloads/Artist - Song.mp3', CLIENT),
@@ -421,15 +441,32 @@ def test_the_signing_key_is_private_and_kept(tmp_path):
         ('GET', '/api/finder/search', CLIENT),
         ('GET', '/api/finder/albums/track_counts', CLIENT),
         ('GET', '/api/finder/artist/songs', CLIENT),
+        ('GET', '/api/similar/tracks', CLIENT),
+        ('GET', '/api/stream', CLIENT),
+        ('GET', '/api/stream/file', CLIENT),
+        ('POST', '/api/stream/prefetch', CLIENT),
         ('POST', '/api/finder/search', ADMIN),
         ('PUT', '/api/likes', CLIENT),
         ('PUT', '/api/podcasts/episodes/12/playback', CLIENT),
-        ('DELETE', '/api/podcasts/episodes/12', ADMIN),
-        ('POST', '/api/monitor/playlists', ADMIN),
+        ('DELETE', '/api/podcasts/episodes/12', USER),
+        ('POST', '/api/podcasts/subscribe', USER),
+        ('PATCH', '/api/podcasts/shows/3', USER),
+        ('DELETE', '/api/podcasts/shows/3', USER),
+        ('POST', '/api/monitor/playlists', USER),
+        ('PATCH', '/api/monitor/playlists/3', USER),
+        ('DELETE', '/api/monitor/playlists/3', USER),
+        ('POST', '/api/monitor/playlists/3/check', USER),
+        ('GET', '/api/monitor/stats', USER),
+        ('GET', '/api/monitor/provenance', USER),
+        ('GET', '/api/monitor/playlists/3/tracks', USER),
+        ('GET', '/api/monitor/artist-suggestions', USER),
+        ('GET', '/api/monitor/artist-suggestions/resolve', USER),
         ('GET', '/api/library/summary', CLIENT),
         ('GET', '/api/library/albums', CLIENT),
         ('GET', '/api/library/artists', CLIENT),
         ('POST', '/api/library/lookup', CLIENT),
+        ('GET', '/api/library/usage', ADMIN),
+        ('GET', '/api/library/usage/scan', ADMIN),
         ('GET', '/api/v1/library', CLIENT),
         ('GET', '/api/something-new', ADMIN),
     ],
@@ -564,6 +601,106 @@ def test_login_with_the_default_admin(client):
     assert client.get('/api/settings').status_code == 401
 
 
+def test_oidc_callback_creates_a_local_session(client, monkeypatch):
+    issuer = 'https://id.example.test'
+    client_id = 'downtify'
+    key = RSAKey.generate_key(2048)
+    jwks = {'keys': [key.as_dict(private=False)]}
+    transaction = {}
+
+    def provider_response(request):
+        if request.url.path == '/.well-known/openid-configuration':
+            return httpx.Response(
+                200,
+                json={
+                    'issuer': issuer,
+                    'authorization_endpoint': issuer + '/authorize',
+                    'token_endpoint': issuer + '/token',
+                    'jwks_uri': issuer + '/jwks',
+                },
+            )
+        if request.url.path == '/jwks':
+            return httpx.Response(200, json=jwks)
+        if request.url.path == '/token':
+            form = parse_qs(request.content.decode())
+            assert request.headers['authorization'].startswith('Basic ')
+            assert form['grant_type'] == ['authorization_code']
+            verifier = form['code_verifier'][0]
+            challenge = (
+                base64
+                .urlsafe_b64encode(hashlib.sha256(verifier.encode()).digest())
+                .rstrip(b'=')
+                .decode()
+            )
+            assert challenge == transaction['challenge']
+            now = int(time.time())
+            id_token = jwt.encode(
+                {'alg': 'RS256'},
+                {
+                    'iss': issuer,
+                    'sub': 'oidc-subject',
+                    'aud': client_id,
+                    'exp': now + 300,
+                    'iat': now,
+                    'nonce': transaction['nonce'],
+                    'preferred_username': 'maria',
+                    'groups': ['downtify-admins'],
+                },
+                key,
+            )
+            return httpx.Response(200, json={'id_token': id_token})
+        return httpx.Response(404)
+
+    config = OIDCConfig(
+        issuer=issuer,
+        client_id=client_id,
+        client_secret='client-secret',
+        redirect_uri='http://testserver/api/auth/oidc/callback',
+        admin_groups=('downtify-admins',),
+    )
+    provider = OIDCProvider(
+        config, transport=httpx.MockTransport(provider_response)
+    )
+    monkeypatch.setattr(api.state, 'oidc', provider)
+
+    started = client.get('/api/auth/oidc', follow_redirects=False)
+    assert started.status_code == 303
+    authorization = parse_qs(urlsplit(started.headers['location']).query)
+    transaction['challenge'] = authorization['code_challenge'][0]
+    transaction['nonce'] = authorization['nonce'][0]
+    state = authorization['state'][0]
+
+    callback = client.get(
+        '/api/auth/oidc/callback',
+        params={'code': 'authorization-code', 'state': state},
+        follow_redirects=False,
+    )
+
+    assert callback.status_code == 303
+    assert callback.headers['location'] == '/'
+    assert SESSION_COOKIE in callback.headers['set-cookie']
+    status = client.get('/api/auth/status').json()
+    assert status['signed_in'] is True
+    assert status['user']['username'] == 'maria'
+    assert status['user']['role'] == 'admin'
+    assert status['via'] == 'session'
+
+
+def test_disabling_local_login_keeps_pairing_available(client, monkeypatch):
+    monkeypatch.setattr(api.state, 'local_login_enabled', False)
+
+    assert _sign_in(client).status_code == 409
+    assert _sign_in_app(client).status_code == 409
+    assert (
+        client.post('/api/auth/pair', json={'code': 'invalid'}).status_code
+        == 401
+    )
+    status = client.get('/api/auth/status').json()
+    assert status['local_login_enabled'] is False
+    info = client.get('/api/server/info').json()
+    assert info['capabilities']['password_sign_in'] is False
+
+
 def test_usernames_are_case_insensitive_at_sign_in(client):
     assert _sign_in(client, username='ADMIN').status_code == 200
 
@@ -580,9 +717,13 @@ def test_a_normal_user_is_not_an_admin(client):
     refused = client.get('/api/settings')
     assert refused.status_code == 403
     assert refused.json()['detail'] == 'This needs an admin'
+    assert client.post('/api/proxy/test').status_code == 403
     assert client.get('/api/users').status_code == 403
     assert client.get('/api/activity').status_code == 403
-    assert client.delete('/delete', params={'file': 'x'}).status_code == 403
+    # Their own deletes are allowed (missing files just report so).
+    missing = client.delete('/delete', params={'file': 'x'})
+    assert missing.status_code == 200
+    assert missing.json()['deleted'] is False
     assert client.get('/api/auth/devices').status_code == 200
     assert client.get('/api/me').json()['user']['role'] == 'user'
 
@@ -648,6 +789,65 @@ def test_pairing_end_to_end(client, monkeypatch):
     assert [d['name'] for d in client.get('/api/auth/devices').json()] == [
         'Pixel 8'
     ]
+
+
+def _sign_in_app(client, username='maria', password=PASSWORD):
+    return client.post(
+        '/api/auth/token',
+        json={
+            'username': username,
+            'password': password,
+            'device_name': 'Pixel 8',
+            'platform': 'android',
+        },
+    )
+
+
+def test_an_app_signs_in_with_a_password(client):
+    api.state.auth.users.create('maria', PASSWORD)
+
+    signed_in = _sign_in_app(client, username='MARIA')
+    assert signed_in.status_code == 200
+    # A token, not a browser session.
+    assert 'set-cookie' not in signed_in.headers
+    body = signed_in.json()
+    assert body['token'].startswith('dtfy_')
+    assert body['device']['name'] == 'Pixel 8'
+    assert body['server']['server_id'] == api.state.identity.server_id
+    assert body['user'] == {'username': 'maria', 'role': 'user'}
+    headers = {'Authorization': f'Bearer {body["token"]}'}
+    status = client.get('/api/auth/status', headers=headers).json()
+    assert status['via'] == 'device'
+    assert status['user']['username'] == 'maria'
+    assert client.get('/api/settings', headers=headers).status_code == 403
+    # Listed with Maria's paired apps, like a paired one.
+    _sign_in(client, 'maria', PASSWORD)
+    devices = client.get('/api/auth/devices').json()
+    assert [(d['name'], d['platform']) for d in devices] == [
+        ('Pixel 8', 'android')
+    ]
+
+
+def test_an_app_sign_in_with_a_wrong_password_fails(client):
+    api.state.auth.users.create('maria', PASSWORD)
+
+    wrong = _sign_in_app(client, password='nope nope')
+    assert wrong.status_code == 401
+    assert wrong.json()['detail'] == 'Wrong username or password'
+    assert _sign_in_app(client, username='nobody').status_code == 401
+    assert api.state.auth.list_devices() == []
+
+
+def test_app_and_browser_sign_in_share_the_rate_limit(client, monkeypatch):
+    monkeypatch.setattr(api.state, 'login_limiter', RateLimiter(limit=3))
+    api.state.auth.users.create('maria', PASSWORD)
+    assert _sign_in_app(client, password='x').status_code == 401
+    assert _sign_in(client, password='x').status_code == 401
+    assert _sign_in_app(client, password='x').status_code == 401
+
+    for blocked in (_sign_in_app(client), _sign_in(client)):
+        assert blocked.status_code == 429
+        assert int(blocked.headers['retry-after']) > 0
 
 
 def test_users_manage_only_their_own_devices(client):
@@ -716,9 +916,11 @@ def test_server_info_is_public_and_says_little(client):
         'api_version',
         'require_sign_in',
         'capabilities',
+        'library_only',
     }
     assert info['api_version'] == 1
     assert info['require_sign_in'] is True
+    assert info['capabilities']['password_sign_in'] is True
 
 
 def test_renaming_the_server(client):
@@ -745,12 +947,12 @@ def test_auth_routes_are_served(client):
     [
         ('POST', '/api/podcasts/resolve', CLIENT),
         ('POST', '/api/podcasts/episodes/3/download', CLIENT),
-        ('POST', '/api/podcasts/subscribe', ADMIN),
+        ('POST', '/api/podcasts/subscribe', USER),
         ('POST', '/api/artists/art/bulk', CLIENT),
         ('POST', '/api/artists/profile/ensure', CLIENT),
         ('POST', '/api/artists/art/upload', ADMIN),
         ('PUT', '/api/artists/profile/bio', ADMIN),
-        ('DELETE', '/api/queue/item', ADMIN),
+        ('DELETE', '/api/queue/item', USER),
         ('GET', '/api/queue', CLIENT),
     ],
 )

@@ -68,7 +68,7 @@
       >
         <ChartTile
           v-for="(item, i) in activeReleases"
-          :key="item.album_id || item.artist_id || item.playlist_id"
+          :key="`${tab}:${item.album_id || item.artist_id || item.playlist_id}`"
           :item="item"
           :kind="RELEASE_KIND[tab]"
           :rank="i + 1"
@@ -153,7 +153,7 @@ const tabs = computed(() => [
   },
 ])
 
-// The library tracks a chart track's preview/play button queues once it has
+// The library tracks a chart track's play button queues once it has
 // been downloaded - the chart's own order, downloaded songs only.
 const trackQueue = computed(() =>
   playableQueue(chart.tracks.value, library.findTrack)

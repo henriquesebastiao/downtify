@@ -3,11 +3,15 @@
 from __future__ import annotations
 
 import asyncio
+import json
+from typing import Any
 
 import pytest
 from fastapi import HTTPException
+from starlette.requests import Request
 
 from downtify import api, monitor
+from downtify.auth import Principal
 from downtify.monitor import KIND_ARTIST, KIND_PLAYLIST, PlaylistMonitorDB
 
 PLAYLIST_A = '37i9dQZF1DXcBWIGoYBM5M'
@@ -17,12 +21,34 @@ URL_B = f'https://open.spotify.com/playlist/{PLAYLIST_B}'
 CHANNEL = 'UCabcdefghijklmnopqrstuv'
 
 
+_ADMIN = Principal('device', 'client', '', 1, 'admin', 'admin')
+
+
 class _Req:
+    """A signed-in admin request (the pre-ownership global view)."""
+
     def __init__(self, payload):
-        self._payload = payload
+        body = json.dumps(payload).encode()
+
+        async def receive() -> dict[str, Any]:
+            return {'type': 'http.request', 'body': body, 'more_body': False}
+
+        self._request = Request(
+            {
+                'type': 'http',
+                'method': 'POST',
+                'headers': [],
+                'state': {'principal': _ADMIN},
+            },
+            receive,
+        )
 
     async def json(self):
-        return self._payload
+        return await self._request.json()
+
+    @property
+    def scope(self):
+        return self._request.scope
 
 
 @pytest.fixture

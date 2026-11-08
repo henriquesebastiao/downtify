@@ -73,3 +73,14 @@ def test_register_updates_path_for_same_track(tmp_path):
     index.register(SPOTIFY_ID, 'first/path.mp3', full_path=first)
     index.register(SPOTIFY_ID, 'second/path.mp3', full_path=second)
     assert index.lookup(SPOTIFY_ID) == 'second/path.mp3'
+
+
+def test_filenames_by_spotify_id_reads_the_whole_index(tmp_path):
+    index = TrackIndex(tmp_path / 'lib.db')
+    index.register('4uLU6hMCjMI75M1A2tKUQC', r'A\One.mp3')
+    index.register('1x00000000000000000000', 'Two.flac')
+
+    assert index.filenames_by_spotify_id() == {
+        '4uLU6hMCjMI75M1A2tKUQC': 'A/One.mp3',
+        '1x00000000000000000000': 'Two.flac',
+    }

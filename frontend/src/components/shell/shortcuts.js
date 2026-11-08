@@ -14,6 +14,8 @@ export const SHORTCUTS = [
   { keys: ['Q'], label: 'shortcuts.queue' },
   { keys: ['E'], label: 'shortcuts.equalizer' },
   { keys: ['Ctrl', 'K'], label: 'shortcuts.search' },
+  // Handled by the playlist page itself (PlaylistView).
+  { keys: ['Ctrl', 'F'], label: 'shortcuts.findInPlaylist' },
   { keys: ['G', 'L'], label: 'shortcuts.goLibrary' },
   { keys: ['G', 'D'], label: 'shortcuts.goQueue' },
   { keys: ['Esc'], label: 'shortcuts.close' },

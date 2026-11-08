@@ -1,4 +1,3 @@
-from pathlib import Path
 from typing import Any
 
 from downtify.slskd_provider import (
@@ -11,6 +10,7 @@ from downtify.slskd_provider import (
     _match_min_score,
     _paths_match,
     _rank_slskd_candidates,
+    _select_download_candidates,
     _slskd_search_queries,
     _slskd_transfer_progress_pct,
     _title_in_basename,
@@ -108,6 +108,115 @@ def test_collect_matching_files_skips_wrong_extension_and_keywords():
     assert len(matches) == 1
     assert 'DRAMA KING.mp3' in matches[0]['filename']
     assert matches[0]['match_score'] >= _match_min_score({})
+
+
+def test_select_candidates_keeps_score_first_by_default():
+    candidates = [
+        {'filename': 'Artist - Track.flac', 'match_score': 8},
+        {'filename': 'Artist - Track.m4a', 'match_score': 10},
+        {'filename': 'Artist - Track.mp3', 'match_score': 9},
+    ]
+
+    selected = _select_download_candidates(
+        candidates,
+        {
+            'extensions': ['flac', 'mp3'],
+            'min_bitrate': 0,
+            'download_attempts': 5,
+        },
+    )
+
+    assert [row['filename'] for row in selected] == [
+        'Artist - Track.m4a',
+        'Artist - Track.mp3',
+        'Artist - Track.flac',
+    ]
+
+
+def test_select_candidates_uses_strict_format_tiers_and_per_tier_limit():
+    candidates = [
+        {'filename': 'Artist - Track (1).mp3', 'match_score': 10},
+        {'filename': 'Artist - Track (2).mp3', 'match_score': 9},
+        {'filename': 'Artist - Track (3).mp3', 'match_score': 8},
+        {'filename': 'Artist - Track (1).flac', 'match_score': 7},
+        {'filename': 'Artist - Track (2).flac', 'match_score': 6},
+        {'filename': 'Artist - Track (3).flac', 'match_score': 5},
+    ]
+
+    selected = _select_download_candidates(
+        candidates,
+        {
+            'extensions': ['flac', 'mp3'],
+            'strict_format_priority': True,
+            'download_attempts': 2,
+            'min_bitrate': 0,
+        },
+    )
+
+    assert [row['filename'] for row in selected] == [
+        'Artist - Track (1).flac',
+        'Artist - Track (2).flac',
+        'Artist - Track (1).mp3',
+        'Artist - Track (2).mp3',
+    ]
+
+
+def test_select_candidates_strict_minimum_bitrate_applies_to_lossy_formats():
+    candidates = [
+        {
+            'filename': 'Artist - Track.flac',
+            'match_score': 5,
+            'bitRate': 900,
+        },
+        {
+            'filename': 'Artist - Track (256).mp3',
+            'match_score': 10,
+            'bitRate': 256,
+        },
+        {
+            'filename': 'Artist - Track (320).mp3',
+            'match_score': 9,
+            'bitRate': 320,
+        },
+        {
+            'filename': 'Artist - Track (unknown).mp3',
+            'match_score': 8,
+        },
+    ]
+
+    selected = _select_download_candidates(
+        candidates,
+        {
+            'extensions': ['flac', 'mp3'],
+            'strict_format_priority': True,
+            'download_attempts': 5,
+            'min_bitrate': 320,
+        },
+    )
+
+    assert [row['filename'] for row in selected] == [
+        'Artist - Track.flac',
+        'Artist - Track (320).mp3',
+    ]
+
+
+def test_select_candidates_can_whitelist_extensions():
+    candidates = [
+        {'filename': 'Artist - Track.m4a', 'match_score': 10},
+        {'filename': 'Artist - Track.mp3', 'match_score': 8},
+    ]
+
+    selected = _select_download_candidates(
+        candidates,
+        {
+            'extensions': ['flac', 'mp3'],
+            'extensions_whitelist': True,
+            'min_bitrate': 0,
+            'download_attempts': 5,
+        },
+    )
+
+    assert [row['filename'] for row in selected] == ['Artist - Track.mp3']
 
 
 def test_rank_accepts_title_and_artist_from_parent_folders():
@@ -579,16 +688,6 @@ def test_download_from_slskd_retries_when_tags_mismatch(monkeypatch, tmp_path):
         'downtify.slskd_provider.verify_downloaded_file_matches_spotify',
         fake_verify,
     )
-    removed: list[Path] = []
-
-    def _record_discard(path: Path) -> None:
-        removed.append(path)
-
-    monkeypatch.setattr(
-        'downtify.slskd_provider._discard_mismatched_download',
-        _record_discard,
-    )
-
     settings = {
         'enabled': True,
         'base_url': 'https://slskd.example',
@@ -602,7 +701,7 @@ def test_download_from_slskd_retries_when_tags_mismatch(monkeypatch, tmp_path):
         settings,
     )
     assert result == good
-    assert bad in removed
+    assert bad.is_file()
 
 
 def test_download_from_slskd_tries_next_candidate_on_failure(

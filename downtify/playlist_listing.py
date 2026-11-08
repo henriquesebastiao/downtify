@@ -11,6 +11,7 @@ from . import m3u
 from .library_paths import library_stored_path
 from .library_paths_cache import get_cached_playlists, peek_cached_path_pairs
 from .likes import is_liked_playlist
+from .playlist_mosaic import has_explicit_cover
 
 
 def list_library_playlists(
@@ -102,6 +103,7 @@ def _scan_library_playlists(
             # The playlist of hearted songs, not a downloaded one.
             'liked': is_liked_playlist(m3u_path.stem),
             'manual': manual,
+            'explicit_cover': manual and has_explicit_cover(m3u_path),
         })
     playlists.sort(key=lambda p: (not p['liked'], p['name'].casefold()))
     return playlists

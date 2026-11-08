@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import hashlib
+import os
 import re
-import shutil
 import threading
 import time
 import unicodedata
+from collections import OrderedDict
 from pathlib import Path
 from typing import Any, Callable, Optional
 from urllib.parse import quote
@@ -61,6 +63,97 @@ def _slskd_semaphore(settings: dict[str, Any]) -> threading.Semaphore:
 
 _DEFAULT_DOWNLOAD_TIMEOUT_SECONDS = 600
 _DEFAULT_QUEUED_TIMEOUT_SECONDS = 180
+_TRANSFERS_LOCK = threading.Lock()
+_TRANSFERS_CACHE: OrderedDict[
+    tuple[str, bytes], tuple[float, list[dict[str, Any]]]
+] = OrderedDict()
+_TRANSFERS_CACHE_LIMIT = 32
+
+
+def _poll_env(name: str, default: int, minimum: int, maximum: int) -> int:
+    return _int_setting(
+        {name: os.getenv(name)},
+        name,
+        default,
+        minimum=minimum,
+        maximum=maximum,
+    )
+
+
+def _poll_sleep(
+    seconds: float, cancel_check: Optional[Callable[[], None]]
+) -> None:
+    """Keep cancellation responsive without extra HTTP or filesystem polls."""
+    if cancel_check is None:
+        time.sleep(seconds)
+        return
+    remaining = seconds
+    while remaining > 0:
+        cancel_check()
+        step = min(1.0, remaining)
+        time.sleep(step)
+        remaining -= step
+
+
+class _PollSchedule:
+    """Bound expensive polls while retaining the original wait budget."""
+
+    def __init__(self, settings: dict[str, Any]) -> None:
+        self.interval = _poll_env(
+            'DOWNTIFY_POLL_INTERVAL',
+            _int_setting(
+                settings, 'poll_interval_seconds', 5, minimum=1, maximum=30
+            ),
+            1,
+            30,
+        )
+        self.idle_interval = _poll_env(
+            'DOWNTIFY_POLL_IDLE_INTERVAL', 60, 1, 60
+        )
+        self.deep_scan_every = _poll_env(
+            'DOWNTIFY_POLL_DEEP_SCAN_EVERY', 12, 1, 300
+        )
+        self.attempts = _int_setting(
+            settings, 'poll_max_attempts', 60, minimum=1, maximum=300
+        )
+        self.started = time.monotonic()
+        self.remaining_sleep = float(self.attempts * self.interval)
+        self.last_deep_scan = self.started - 60
+
+    def should_scan(
+        self, attempt: int, transfer: Optional[dict[str, Any]]
+    ) -> bool:
+        now = time.monotonic()
+        scan = (
+            attempt % self.deep_scan_every == 0
+            or bool(transfer)
+            or now - self.last_deep_scan >= 60
+        )
+        if scan:
+            self.last_deep_scan = now
+        return scan
+
+    def sleep(
+        self,
+        transfer: Optional[dict[str, Any]],
+        last_progress: float,
+        queued_timeout: int,
+        deadline: Optional[float],
+        cancel_check: Optional[Callable[[], None]],
+    ) -> None:
+        now = time.monotonic()
+        timeout_at = (
+            last_progress if transfer else self.started
+        ) + queued_timeout
+        seconds = min(
+            self.interval if transfer else self.idle_interval,
+            max(1.0, timeout_at - now),
+            self.remaining_sleep,
+        )
+        if deadline is not None:
+            seconds = min(seconds, max(0.0, deadline - now))
+        _poll_sleep(seconds, cancel_check)
+        self.remaining_sleep -= seconds
 
 
 def _int_setting(
@@ -180,9 +273,12 @@ class SlskdClient:
         *,
         on_poll: Optional[Callable[[float], None]] = None,
         deadline: Optional[float] = None,
+        cancel_check: Optional[Callable[[], None]] = None,
     ) -> bool:
         max_attempts = max(1, self.search_retries)
         for attempt in range(max_attempts):
+            if cancel_check:
+                cancel_check()
             if deadline is not None and _past_deadline(deadline):
                 return False
             if on_poll is not None:
@@ -261,6 +357,8 @@ class SlskdClient:
         body = [{'filename': filename, 'size': max(0, size)}]
         try:
             self._request('POST', endpoint, json_body=body)
+            with _TRANSFERS_LOCK:
+                _TRANSFERS_CACHE.pop(self._transfers_cache_key(), None)
             return True
         except Exception as exc:
             logger.info(
@@ -272,10 +370,34 @@ class SlskdClient:
             return False
 
     def list_download_transfers(self) -> list[dict[str, Any]]:
+        ttl = _poll_env('DOWNTIFY_TRANSFERS_TTL', 3, 0, 60)
+        if ttl == 0:
+            return self._fetch_download_transfers() or []
+        # Single-flight across workers using the same endpoint/credentials.
+        # Never share another API key's snapshot or cache a failed request.
+        with _TRANSFERS_LOCK:
+            key = self._transfers_cache_key()
+            cached = _TRANSFERS_CACHE.get(key)
+            if cached and 0 <= time.monotonic() - cached[0] < ttl:
+                _TRANSFERS_CACHE.move_to_end(key)
+                return cached[1]
+            data = self._fetch_download_transfers()
+            if data is None:
+                return []
+            _TRANSFERS_CACHE[key] = (time.monotonic(), data)
+            _TRANSFERS_CACHE.move_to_end(key)
+            while len(_TRANSFERS_CACHE) > _TRANSFERS_CACHE_LIMIT:
+                _TRANSFERS_CACHE.popitem(last=False)
+            return data
+
+    def _transfers_cache_key(self) -> tuple[str, bytes]:
+        return self.base_url, hashlib.sha256(self.api_key.encode()).digest()
+
+    def _fetch_download_transfers(self) -> Optional[list[dict[str, Any]]]:
         try:
             data = self._request('GET', '/api/v0/transfers/downloads')
         except Exception:
-            return []
+            return None
         if isinstance(data, list):
             return [row for row in data if isinstance(row, dict)]
         return []
@@ -283,8 +405,9 @@ class SlskdClient:
     def find_transfer(
         self, username: str, filename: str
     ) -> Optional[dict[str, Any]]:
+        transfers = self.list_download_transfers()
         for peer_filter in (username, ''):
-            for peer in self.list_download_transfers():
+            for peer in transfers:
                 if (
                     peer_filter
                     and str(peer.get('username') or '') != peer_filter
@@ -384,19 +507,6 @@ def _title_in_basename(filename: str, title_alnum: str) -> bool:
     if len(title_alnum) >= 6 and title_alnum in base_alnum:
         return True
     return False
-
-
-def _discard_mismatched_download(path: Path) -> None:
-    try:
-        if path.is_file():
-            path.unlink()
-            logger.info('slskd: removed mismatched download file={!r}', path)
-    except OSError as exc:
-        logger.warning(
-            'slskd: could not remove mismatched file={!r} err={}',
-            path,
-            exc,
-        )
 
 
 def _slskd_search_queries(song: dict[str, Any]) -> list[str]:
@@ -784,16 +894,75 @@ def _collect_matching_files(
 def _select_download_candidates(
     ranked: list[dict[str, Any]], settings: dict[str, Any]
 ) -> list[dict[str, Any]]:
-    """Pick up to download_attempts files, preferring extension order at equal score."""
+    """Choose candidates by score, or in ordered format tiers when enabled."""
     raw_ext = settings.get('extensions') or ['mp3', 'flac']
-    extensions = [
-        str(e).strip().lower().lstrip('.') for e in raw_ext if str(e).strip()
-    ] or ['mp3', 'flac']
+    extensions = list(
+        dict.fromkeys(
+            str(e).strip().lower().lstrip('.')
+            for e in raw_ext
+            if str(e).strip()
+        )
+    ) or ['mp3', 'flac']
     min_bitrate = int(settings.get('min_bitrate') or 0)
     max_files = int(settings.get('download_attempts') or 5)
+    strict_priority = bool(settings.get('strict_format_priority', False))
+    whitelist = bool(settings.get('extensions_whitelist', False))
+
+    def bitrate_of(file_row: dict[str, Any]) -> int:
+        try:
+            return int(file_row.get('bitRate') or file_row.get('bitrate') or 0)
+        except (TypeError, ValueError):
+            return 0
+
+    candidates = [
+        row
+        for row in ranked
+        if not whitelist
+        or _file_extension(str(row.get('filename') or '')) in extensions
+    ]
+
+    def passes_bitrate(file_row: dict[str, Any]) -> bool:
+        bitrate = bitrate_of(file_row)
+        ext = _file_extension(str(file_row.get('filename') or ''))
+        if strict_priority and ext == 'flac':
+            return True
+        if not min_bitrate:
+            return True
+        if strict_priority:
+            return bitrate >= min_bitrate
+        return not bitrate or bitrate >= min_bitrate
+
+    if strict_priority:
+        selected: list[dict[str, Any]] = []
+        tiers = [
+            [
+                row
+                for row in candidates
+                if _file_extension(str(row.get('filename') or '')) == ext
+            ]
+            for ext in extensions
+        ]
+        if not whitelist:
+            tiers.append([
+                row
+                for row in candidates
+                if _file_extension(str(row.get('filename') or ''))
+                not in extensions
+            ])
+
+        for tier in tiers:
+            accepted = [row for row in tier if passes_bitrate(row)]
+            accepted.sort(
+                key=lambda row: (
+                    -int(row.get('match_score') or 0),
+                    -bitrate_of(row),
+                )
+            )
+            selected.extend(accepted[:max_files])
+        return selected
 
     by_score: dict[int, list[dict[str, Any]]] = {}
-    for row in ranked:
+    for row in candidates:
         by_score.setdefault(int(row.get('match_score') or 0), []).append(row)
 
     selected: list[dict[str, Any]] = []
@@ -803,13 +972,7 @@ def _select_download_candidates(
             for file_row in bucket:
                 if _file_extension(str(file_row.get('filename') or '')) != ext:
                     continue
-                try:
-                    bitrate = int(
-                        file_row.get('bitRate') or file_row.get('bitrate') or 0
-                    )
-                except (TypeError, ValueError):
-                    bitrate = 0
-                if min_bitrate and bitrate and bitrate < min_bitrate:
+                if not passes_bitrate(file_row):
                     continue
                 selected.append(file_row)
                 if len(selected) >= max_files:
@@ -817,13 +980,7 @@ def _select_download_candidates(
         for file_row in bucket:
             if file_row in selected:
                 continue
-            try:
-                bitrate = int(
-                    file_row.get('bitRate') or file_row.get('bitrate') or 0
-                )
-            except (TypeError, ValueError):
-                bitrate = 0
-            if min_bitrate and bitrate and bitrate < min_bitrate:
+            if not passes_bitrate(file_row):
                 continue
             selected.append(file_row)
             if len(selected) >= max_files:
@@ -896,7 +1053,16 @@ def _parse_soulseek_path(filename: str) -> tuple[str, str]:
 
 def _transfer_failed(status: dict[str, Any]) -> bool:
     state = str(status.get('state') or '')
-    return 'Errored' in state or 'Cancelled' in state or 'Aborted' in state
+    return any(
+        failure in state
+        for failure in (
+            'Errored',
+            'Cancelled',
+            'Aborted',
+            'Rejected',
+            'TimedOut',
+        )
+    )
 
 
 def _transfer_succeeded(status: dict[str, Any]) -> bool:
@@ -967,6 +1133,7 @@ def _find_on_disk(
     *,
     username: str = '',
     min_size: int = 1,
+    deep_scan: bool = True,
 ) -> Optional[Path]:
     basename, parent = _parse_soulseek_path(soulseek_filename)
     if not basename:
@@ -987,6 +1154,8 @@ def _find_on_disk(
             if candidate.is_file() and candidate.stat().st_size >= min_size:
                 return candidate
 
+    if not deep_scan:
+        return None
     best: Optional[Path] = None
     best_mtime = 0.0
     for root in roots:
@@ -1020,6 +1189,7 @@ def _find_on_disk_for_song(
     username: str = '',
     expected_size: int = 0,
     extensions: Optional[frozenset[str]] = None,
+    deep_scan: bool = True,
 ) -> Optional[Path]:
     min_size = max(1, int(expected_size * 0.95) if expected_size else 1)
     found = _find_on_disk(
@@ -1027,9 +1197,12 @@ def _find_on_disk_for_song(
         soulseek_filename,
         username=username,
         min_size=min_size,
+        deep_scan=deep_scan,
     )
     if found is not None:
         return found
+    if not deep_scan:
+        return None
 
     title = _normalize_token(str(song.get('name') or ''))
     if len(title) < 3:
@@ -1064,44 +1237,27 @@ def _find_on_disk_for_song(
     return best
 
 
-def _copy_to_output(src: Path, output_dir: Path) -> Path:
-    output_dir.mkdir(parents=True, exist_ok=True)
-    dest = output_dir / src.name
-    if dest.resolve() != src.resolve():
-        shutil.copy2(src, dest)
-    return dest
-
-
 def _resolve_downloaded_file(
     roots: list[Path],
-    output_dir: Path,
     song: dict[str, Any],
     soulseek_filename: str,
     *,
     username: str,
-    leave_in_place: bool,
     expected_size: int = 0,
 ) -> Optional[Path]:
-    found = _find_on_disk_for_song(
+    return _find_on_disk_for_song(
         roots,
         song,
         soulseek_filename,
         username=username,
         expected_size=expected_size,
     )
-    if found is None:
-        return None
-    if leave_in_place:
-        return found
-    return _copy_to_output(found, output_dir)
 
 
-def _finalize_slskd_path(
-    found: Path, output_dir: Path, leave_in_place: bool
-) -> Path:
-    if leave_in_place:
-        return found
-    return _copy_to_output(found, output_dir)
+def _finalize_slskd_path(found: Path) -> Path:
+    """Return the original transfer; Downloader owns import and cleanup."""
+
+    return found
 
 
 def _wait_for_slskd_file(
@@ -1115,14 +1271,10 @@ def _wait_for_slskd_file(
     expected_size: int = 0,
     progress_cb: Optional[ProgressCallback] = None,
     deadline: Optional[float] = None,
+    cancel_check: Optional[Callable[[], None]] = None,
 ) -> Optional[Path]:
     """Wait for slskd to finish, then return the file path on disk (if found)."""
-    interval = _int_setting(
-        settings, 'poll_interval_seconds', 5, minimum=1, maximum=30
-    )
-    attempts = _int_setting(
-        settings, 'poll_max_attempts', 60, minimum=1, maximum=300
-    )
+    poll = _PollSchedule(settings)
     queued_timeout = _int_setting(
         settings,
         'queued_timeout_seconds',
@@ -1130,12 +1282,13 @@ def _wait_for_slskd_file(
         minimum=15,
         maximum=3600,
     )
-    wait_started = time.monotonic()
     last_bytes = -1
-    last_progress = wait_started
+    last_progress = poll.started
     last_reported_pct = -1.0
 
-    for attempt in range(max(1, attempts)):
+    for attempt in range(poll.attempts):
+        if cancel_check:
+            cancel_check()
         if deadline is not None and _past_deadline(deadline):
             logger.info(
                 'slskd: download timeout while waiting for file title={!r} '
@@ -1145,12 +1298,16 @@ def _wait_for_slskd_file(
                 _file_basename(filename)[:120],
             )
             return None
+        if attempt and poll.remaining_sleep <= 0:
+            break
+        transfer = client.find_transfer(username, filename)
         found = _find_on_disk_for_song(
             roots,
             song,
             filename,
             username=username,
             expected_size=expected_size,
+            deep_scan=poll.should_scan(attempt, transfer),
         )
         on_disk_bytes = 0
         if found is not None:
@@ -1163,7 +1320,6 @@ def _wait_for_slskd_file(
                     progress_cb(92.0, 'slskd · downloading', 'slskd')
                 return found
 
-        transfer = client.find_transfer(username, filename)
         if transfer:
             try:
                 expected_size = max(
@@ -1187,7 +1343,7 @@ def _wait_for_slskd_file(
                     transfer.get('state'),
                 )
                 return None
-        elif time.monotonic() - wait_started > queued_timeout:
+        elif time.monotonic() - poll.started > queued_timeout:
             logger.info(
                 'slskd: queued timeout (transfer not started) title={!r} '
                 'user={!r} file={!r}',
@@ -1208,7 +1364,9 @@ def _wait_for_slskd_file(
                 last_reported_pct = pct
                 progress_cb(pct, message, 'slskd')
 
-        time.sleep(max(1, interval))
+        poll.sleep(
+            transfer, last_progress, queued_timeout, deadline, cancel_check
+        )
 
     return _find_on_disk_for_song(
         roots,
@@ -1223,7 +1381,11 @@ def download_from_slskd(  # noqa: PLR0914  # search, rank, enqueue, poll, finali
     song: dict[str, Any],
     settings: dict[str, Any],
     progress_cb: Optional[ProgressCallback] = None,
+    *,
+    cancel_check=None,
 ) -> Optional[Path]:
+    if cancel_check:
+        cancel_check()
     if not bool(settings.get('enabled')):
         return None
     client = SlskdClient(settings)
@@ -1252,7 +1414,6 @@ def download_from_slskd(  # noqa: PLR0914  # search, rank, enqueue, poll, finali
             or output_dir
         )
     )
-    leave_in_place = bool(settings.get('leave_in_place', True))
     spotify_row = snapshot_spotify_metadata(song)
     queries = _slskd_search_queries(spotify_row)
     if not queries:
@@ -1287,6 +1448,8 @@ def download_from_slskd(  # noqa: PLR0914  # search, rank, enqueue, poll, finali
         min_score = _match_min_score(settings)
 
         for query in queries:
+            if cancel_check:
+                cancel_check()
             if _past_deadline(deadline):
                 logger.info(
                     'slskd: download timeout during search title={!r}',
@@ -1302,6 +1465,7 @@ def download_from_slskd(  # noqa: PLR0914  # search, rank, enqueue, poll, finali
                 label,
                 on_poll=lambda pct: report(pct, 'searching'),
                 deadline=deadline,
+                **({'cancel_check': cancel_check} if cancel_check else {}),
             ):
                 client.delete_search(search_id)
                 search_id = ''
@@ -1424,6 +1588,8 @@ def download_from_slskd(  # noqa: PLR0914  # search, rank, enqueue, poll, finali
             roots.append(output_dir)
 
         for attempt_idx, file_row in enumerate(files, start=1):
+            if cancel_check:
+                cancel_check()
             if _past_deadline(deadline):
                 logger.info(
                     'slskd: download timeout before trying candidate {} title={!r}',
@@ -1461,16 +1627,15 @@ def download_from_slskd(  # noqa: PLR0914  # search, rank, enqueue, poll, finali
                 roots,
                 expected_size=queued_size,
                 progress_cb=progress_cb,
+                **({'cancel_check': cancel_check} if cancel_check else {}),
                 deadline=deadline,
             )
             if found is None:
                 found = _resolve_downloaded_file(
                     roots,
-                    output_dir,
                     song,
                     filename,
                     username=username,
-                    leave_in_place=leave_in_place,
                     expected_size=queued_size,
                 )
 
@@ -1487,19 +1652,19 @@ def download_from_slskd(  # noqa: PLR0914  # search, rank, enqueue, poll, finali
                     }
                     logger.info(
                         'slskd: tags mismatch after download {}; '
-                        'trying next candidate ({}/{}) file={!r}',
+                        'retaining source and trying next candidate '
+                        '({}/{}) file={!r}',
                         spotify_file_tag_mismatch_label(mismatch_row),
                         attempt_idx,
                         len(files),
                         _file_basename(filename)[:120],
                     )
-                    _discard_mismatched_download(found)
                     found = None
 
             if found is not None:
                 if search_id:
                     client.delete_search(search_id)
-                return _finalize_slskd_path(found, output_dir, leave_in_place)
+                return _finalize_slskd_path(found)
 
             logger.info(
                 'slskd: candidate failed candidate={}/{} title={!r} user={!r} file={!r}',

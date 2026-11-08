@@ -19,6 +19,7 @@ from loguru import logger
 
 from .cover_art import extract_cover_art
 from .library_catalog import LibraryContext, resolve_library_file
+from .m3u import read_m3u_text
 
 MOSAIC_SIZE = 600
 MAX_TILES = 4
@@ -144,12 +145,74 @@ def _compose(images: list[bytes], dest: Path) -> bool:
         return True
 
 
+MAX_PLAYLIST_COVER_BYTES = 10 * 1024 * 1024
+
+
+def normalize_uploaded_cover(data: bytes, content_type: str) -> bytes:
+    """Validate and convert an uploaded JPEG, PNG or WebP to a sidecar JPEG."""
+
+    if not data or len(data) > MAX_PLAYLIST_COVER_BYTES:
+        raise ValueError('Cover image must be between 1 byte and 10 MiB')
+    signatures = {
+        'image/jpeg': data.startswith(b'\xff\xd8\xff'),
+        'image/png': data.startswith(b'\x89PNG\r\n\x1a\n'),
+        'image/webp': (
+            len(data) >= 12
+            and data.startswith(b'RIFF')
+            and data[8:12] == b'WEBP'
+        ),
+    }
+    if content_type not in signatures or not signatures[content_type]:
+        raise ValueError('Upload a valid JPEG, PNG or WebP image')
+    ffmpeg = _ffmpeg()
+    if not ffmpeg:
+        raise RuntimeError('Image conversion is unavailable')
+    try:
+        result = subprocess.run(
+            [
+                ffmpeg,
+                '-nostdin',
+                '-hide_banner',
+                '-loglevel',
+                'error',
+                '-max_pixels',
+                '40000000',
+                '-f',
+                'image2pipe',
+                '-i',
+                'pipe:0',
+                '-frames:v',
+                '1',
+                '-vf',
+                'scale=1600:1600:force_original_aspect_ratio=decrease',
+                '-q:v',
+                '3',
+                '-f',
+                'image2pipe',
+                '-vcodec',
+                'mjpeg',
+                'pipe:1',
+            ],
+            input=data,
+            capture_output=True,
+            timeout=30,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        raise ValueError('Could not decode cover image') from exc
+    if result.returncode or not result.stdout.startswith(b'\xff\xd8'):
+        raise ValueError('Could not decode cover image')
+    return result.stdout
+
+
 def refresh_manual_playlist_cover(
     ctx: LibraryContext, m3u_path: Path, files: list[str]
 ) -> Optional[Path]:
     """Write or remove ``m3u_path``'s ``.jpg`` from the playlist's tracks."""
 
     dest = m3u_path.with_suffix('.jpg')
+    if has_explicit_cover(m3u_path):
+        return dest
     images = unique_cover_images(ctx, files)
     if not images:
         dest.unlink(missing_ok=True)
@@ -159,3 +222,33 @@ def refresh_manual_playlist_cover(
         return dest
     dest.unlink(missing_ok=True)
     return None
+
+
+EXPLICIT_COVER_MARKER = '#EXTDOWNTIFY:cover=explicit'
+
+
+def has_explicit_cover(m3u_path: Path) -> bool:
+    """A source image takes precedence over a generated manual mosaic."""
+
+    if not m3u_path.with_suffix('.jpg').is_file():
+        return False
+    text = read_m3u_text(m3u_path)
+    if text is None:
+        return False
+    return any(
+        line.strip() == EXPLICIT_COVER_MARKER for line in text.splitlines()[:5]
+    )
+
+
+def keep_explicit_cover(m3u_path: Path) -> None:
+    """Remember a successfully saved source image, without changing tracks."""
+
+    if not m3u_path.with_suffix('.jpg').is_file():
+        return
+    text = read_m3u_text(m3u_path)
+    if text is None:
+        return
+    if EXPLICIT_COVER_MARKER not in text.splitlines()[:5]:
+        lines = text.splitlines()
+        lines.insert(1, EXPLICIT_COVER_MARKER)
+        m3u_path.write_text('\n'.join(lines) + '\n', encoding='utf-8')

@@ -17,6 +17,16 @@ translation:
   - changed-files:
     - any-glob-to-any-file:
       - 'frontend/src/i18n/**'
+      - 'docs/.vitepress/locales/**'
+      - 'docs/bg/**'
+      - 'docs/de/**'
+      - 'docs/el/**'
+      - 'docs/es/**'
+      - 'docs/fr/**'
+      - 'docs/hu/**'
+      - 'docs/ko/**'
+      - 'docs/pt-BR/**'
+      - 'docs/tr/**'
 
 download:
   - changed-files:

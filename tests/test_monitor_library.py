@@ -199,7 +199,7 @@ def _force_new(new_tracks):
     """A `_split_new_tracks` stand-in that reports ``new_tracks`` as new
     and every already-recorded track as resolved."""
 
-    async def _split(*args):
+    async def _split(*args, **_kwargs):
         known, resolved = args[5], args[6]
         for tid, filename in known.items():
             if filename:

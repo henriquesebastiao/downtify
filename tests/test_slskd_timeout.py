@@ -5,6 +5,8 @@ from __future__ import annotations
 from pathlib import Path
 from unittest.mock import MagicMock
 
+import pytest
+
 from downtify.downloader import Downloader
 from downtify.slskd_provider import _wait_for_slskd_file
 
@@ -72,3 +74,37 @@ def test_resolve_video_id_falls_back_after_slskd_timeout(
     assert provider == 'youtube-music'
     assert video_id == 'yt123'
     assert local is None
+
+
+@pytest.mark.parametrize(
+    'state', ['Completed, Rejected', 'Completed, TimedOut']
+)
+def test_wait_for_slskd_file_stops_on_terminal_failed_state(
+    monkeypatch, state
+):
+    client = MagicMock()
+    client.find_transfer.return_value = {
+        'state': state,
+        'bytesTransferred': 0,
+        'size': 1000,
+    }
+    monkeypatch.setattr('downtify.slskd_provider.time.sleep', lambda s: None)
+    monkeypatch.setattr(
+        'downtify.slskd_provider._find_on_disk_for_song', lambda *a, **k: None
+    )
+    # The clock never advances, so only the transfer state can end the wait
+    monkeypatch.setattr(
+        'downtify.slskd_provider.time.monotonic', lambda: 1000.0
+    )
+
+    result = _wait_for_slskd_file(
+        client,
+        {'name': 'Song'},
+        'peer',
+        'file.mp3',
+        {'poll_interval_seconds': 1, 'poll_max_attempts': 10},
+        [Path('/slskd')],
+    )
+
+    assert result is None
+    assert client.find_transfer.call_count == 1

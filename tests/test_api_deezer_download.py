@@ -1,15 +1,15 @@
 """Tests for downloading a pasted Deezer link: the single-track
-``_song_for_download`` branch, and the playlist-batch helpers that name,
-number and cover a Deezer playlist download the same way a Spotify/
-YouTube Music one is (``_playlist_target_for_batch``,
-``_fetch_playlist_for_batch``, ``_download_playlist_cover_for_batch``)."""
+``_song_for_download`` branch, and a Deezer playlist download, named,
+numbered and covered the same way a Spotify/YouTube Music one is (through
+the monitor's ``parse_playlist_url`` / ``fetch_playlist`` and
+``_download_playlist_cover_for_batch``)."""
 
 from __future__ import annotations
 
 import pytest
 from fastapi import HTTPException
 
-from downtify import api
+from downtify import api, monitor
 
 _DEEZER_TRACK = 'https://www.deezer.com/track/111'
 _DEEZER_ALBUM = 'https://www.deezer.com/album/222'
@@ -35,76 +35,36 @@ def test_song_for_download_deezer_album_is_rejected(monkeypatch):
     assert exc.value.status_code == 400
 
 
-# ── _playlist_target_for_batch ───────────────────────────────────────────
+# ── a Deezer playlist batch: parsed, fetched and covered as a watch is ───
 
 
-def test_playlist_target_prefers_spotify_youtube(monkeypatch):
+def test_playlist_url_parser_knows_deezer():
+    assert api.parse_playlist_url(_DEEZER_PLAYLIST) == ('deezer', '333')
+    assert api.parse_playlist_url(_DEEZER_TRACK) is None
+    assert api.parse_playlist_url(_DEEZER_ALBUM) is None
+    assert api.parse_playlist_url('https://example.com/x') is None
+
+
+def test_fetch_playlist_uses_deezer(monkeypatch):
     monkeypatch.setattr(
-        api, 'parse_playlist_url', lambda url: ('spotify', 'abc')
-    )
-    assert api._playlist_target_for_batch(_DEEZER_PLAYLIST) == (
-        'spotify',
-        'abc',
-    )
-
-
-def test_playlist_target_falls_back_to_deezer(monkeypatch):
-    monkeypatch.setattr(api, 'parse_playlist_url', lambda url: None)
-    assert api._playlist_target_for_batch(_DEEZER_PLAYLIST) == (
-        'deezer',
-        '333',
-    )
-
-
-def test_playlist_target_ignores_a_deezer_track_link(monkeypatch):
-    monkeypatch.setattr(api, 'parse_playlist_url', lambda url: None)
-    assert api._playlist_target_for_batch(_DEEZER_TRACK) is None
-
-
-def test_playlist_target_none_for_unrecognized_url(monkeypatch):
-    monkeypatch.setattr(api, 'parse_playlist_url', lambda url: None)
-    assert api._playlist_target_for_batch('https://example.com/x') is None
-
-
-# ── _fetch_playlist_for_batch ─────────────────────────────────────────────
-
-
-def test_fetch_playlist_for_batch_uses_deezer(monkeypatch):
-    monkeypatch.setattr(
-        api.deezer,
+        monitor.deezer,
         'playlist_info_and_tracks',
         lambda pid: ('My Playlist', [_SONG]),
     )
-    assert api._fetch_playlist_for_batch('deezer', '333') == (
-        'My Playlist',
-        [_SONG],
-    )
-
-
-def test_fetch_playlist_for_batch_delegates_other_sources(monkeypatch):
-    monkeypatch.setattr(
-        api, 'fetch_playlist', lambda source, pid: (source, pid)
-    )
-    assert api._fetch_playlist_for_batch('spotify', 'abc') == (
-        'spotify',
-        'abc',
-    )
-
-
-# ── _download_playlist_cover_for_batch ────────────────────────────────────
+    assert api.fetch_playlist('deezer', '333') == ('My Playlist', [_SONG])
 
 
 def test_download_playlist_cover_for_batch_saves_deezer_cover(
     monkeypatch, tmp_path
 ):
     monkeypatch.setattr(
-        api.deezer,
+        monitor.deezer,
         'playlist_cover_url_from_id',
         lambda pid: 'https://example.test/cover.jpg',
     )
     saved = {}
     monkeypatch.setattr(
-        api,
+        monitor,
         'save_playlist_cover',
         lambda url, path: saved.update(url=url, path=path),
     )
@@ -123,7 +83,9 @@ def test_download_playlist_cover_for_batch_respects_the_setting(
             'should not fetch a cover when the setting is off'
         )
 
-    monkeypatch.setattr(api.deezer, 'playlist_cover_url_from_id', unexpected)
+    monkeypatch.setattr(
+        monitor.deezer, 'playlist_cover_url_from_id', unexpected
+    )
     api._download_playlist_cover_for_batch(
         'deezer',
         '333',
@@ -132,18 +94,16 @@ def test_download_playlist_cover_for_batch_respects_the_setting(
     )
 
 
-def test_download_playlist_cover_for_batch_delegates_other_sources(
+def test_download_playlist_cover_for_batch_swallows_a_save_failure(
     monkeypatch, tmp_path
 ):
-    captured = {}
-    monkeypatch.setattr(
-        api,
-        'download_playlist_cover',
-        lambda source, pid, path, settings: captured.update(
-            source=source, pid=pid
-        ),
+    def broken(source, pid, path, settings):
+        raise OSError('disk full')
+
+    monkeypatch.setattr(api, 'download_playlist_cover', broken)
+    assert (
+        api._download_playlist_cover_for_batch(
+            'spotify', 'abc', tmp_path / 'playlist.m3u', {}
+        )
+        is None
     )
-    api._download_playlist_cover_for_batch(
-        'spotify', 'abc', tmp_path / 'playlist.m3u', {}
-    )
-    assert captured == {'source': 'spotify', 'pid': 'abc'}

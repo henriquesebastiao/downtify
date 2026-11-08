@@ -48,6 +48,14 @@
       <button
         type="button"
         role="columnheader"
+        class="text-left uppercase max-xl:hidden"
+        @click="sortBy('releaseDate')"
+      >
+        {{ t('track.releaseDate') }}<SortMark field="releaseDate" />
+      </button>
+      <button
+        type="button"
+        role="columnheader"
         class="text-right"
         @click="sortBy('duration')"
       >
@@ -65,7 +73,7 @@
     >
       <div
         v-for="row in rows"
-        :key="row.track.file"
+        :key="trackRowKey(row.track)"
         role="row"
         class="group grid h-14 items-center gap-3 rounded-[10px] px-3 transition-colors select-none"
         :class="[
@@ -103,7 +111,7 @@
             <span class="tabular group-hover:hidden">{{
               numbering === 'track'
                 ? row.track.trackNumber || '–'
-                : row.index + 1
+                : positions?.get(trackRowKey(row.track)) || row.index + 1
             }}</span>
             <button
               type="button"
@@ -124,6 +132,7 @@
             @click.stop="playRow(row)"
           >
             <CoverArt
+              :thumb="150"
               :src="row.track.hasCover ? row.track.cover : ''"
               :name="row.track.album || row.track.title"
               rounded="rounded-[6px]"
@@ -139,25 +148,40 @@
             </span>
           </button>
           <div class="min-w-0">
-            <p
-              class="truncate text-sm font-semibold"
-              :class="isCurrent(row.track) ? 'text-accent' : 'text-fg'"
-            >
-              {{ row.track.title }}
+            <p class="flex items-center gap-1.5">
+              <span
+                class="truncate text-sm font-semibold"
+                :class="isCurrent(row.track) ? 'text-accent' : 'text-fg'"
+                >{{ row.track.title }}</span
+              >
+              <ExplicitBadge v-if="row.track.explicit" />
+              <span
+                v-if="row.track.hiddenBy && auth.isAdmin.value"
+                class="shrink-0 text-faint"
+                role="img"
+                :title="t(`visibility.hiddenBy.${row.track.hiddenBy}`)"
+                :aria-label="t(`visibility.hiddenBy.${row.track.hiddenBy}`)"
+              >
+                <AppIcon name="eye-off" :size="14" />
+              </span>
             </p>
             <p class="truncate text-[13px] text-muted">
               <span
                 class="mr-1.5 inline-block rounded-[4px] border border-line-3 px-1 text-[10px] font-semibold text-faint md:hidden"
                 >{{ row.track.format }}</span
               >
-              <RouterLink
-                v-if="row.track.albumArtist && linkArtist"
-                :to="{ name: 'Artist', query: { name: row.track.albumArtist } }"
-                class="hover:text-fg hover:underline"
-                @click.stop
-                >{{ row.track.artist }}</RouterLink
+              <span
+                v-if="guestOf && isGuestOn(row.track, guestOf)"
+                class="mr-1.5 inline-block rounded-[4px] border border-line-3 px-1 text-[10px] font-semibold text-faint"
+                >{{ t('artist.guest') }}</span
               >
-              <template v-else>{{ row.track.artist }}</template>
+              <TrackArtistLinks
+                :artists="row.track.artists"
+                :fallback="row.track.artist"
+                :plain="!linkArtist"
+                only-known
+                search-missing
+              />
             </p>
           </div>
         </div>
@@ -188,13 +212,16 @@
         >
           {{ row.track.added ? timeAgo(row.track.added, locale) : '' }}
         </span>
+        <span class="truncate text-[13px] text-muted max-xl:hidden">
+          {{ row.track.releaseDate }}
+        </span>
         <span class="tabular text-right text-[13px] text-muted max-md:hidden">
           {{ row.track.duration ? formatDuration(row.track.duration) : '' }}
         </span>
         <span class="flex items-center justify-end" @click.stop>
           <LikeButton :file="row.track.file" />
           <UiMenu
-            :ref="(el) => (menus[row.track.file] = el)"
+            :ref="(el) => (menus[trackRowKey(row.track)] = el)"
             :items="menuItems(row)"
             :label="t('common.more')"
             size="sm"
@@ -211,12 +238,17 @@ import { useWindowVirtualizer } from '@tanstack/vue-virtual'
 import AppIcon from '../ui/AppIcon.vue'
 import CoverArt from '../ui/CoverArt.vue'
 import EqBars from '../ui/EqBars.vue'
+import ExplicitBadge from '../ui/ExplicitBadge.vue'
 import UiMenu from '../ui/UiMenu.vue'
 import LikeButton from '../player/LikeButton.vue'
+import TrackArtistLinks from './TrackArtistLinks.vue'
+import { useAuth } from '/src/model/auth'
+import { useLibrary } from '/src/model/library'
 import { usePlayer } from '/src/model/player'
 import { useTrackActions } from '/src/model/trackActions'
 import { usePlaylistActions } from '/src/model/playlistActions'
 import { formatDuration, timeAgo } from '/src/lib/format'
+import { isGuestOn, trackRowKey } from '/src/lib/library'
 import { useI18n } from '/src/i18n'
 
 const props = defineProps({
@@ -228,12 +260,20 @@ const props = defineProps({
   showCover: { type: Boolean, default: true },
   linkArtist: { type: Boolean, default: true },
   numbering: { type: String, default: 'index' },
+  // trackRowKey -> place in the whole list, numbered instead of the
+  // row's own place while a filtered list is shown (a playlist search).
+  positions: { type: Map, default: null },
   header: { type: Boolean, default: true },
   sort: { type: Object, default: null },
   hideMenu: { type: Array, default: () => [] },
+  // On an artist's page: their name, so the tracks they only guest on
+  // are labelled as such.
+  guestOf: { type: String, default: '' },
 })
 const emit = defineEmits(['update:selected', 'update:sort'])
 
+const auth = useAuth()
+const library = useLibrary()
 const player = usePlayer()
 const actions = useTrackActions()
 const playlistActions = usePlaylistActions()
@@ -254,18 +294,18 @@ const gridClass = computed(() => {
     selectable.value
       ? props.showAlbum
         ? props.showAdded
-          ? 'md:grid-cols-[28px_32px_minmax(0,1fr)_64px_72px] lg:grid-cols-[28px_32px_minmax(0,2fr)_minmax(0,1.3fr)_64px_72px] xl:grid-cols-[28px_32px_minmax(0,2fr)_minmax(0,1.3fr)_72px_120px_64px_72px]'
-          : 'md:grid-cols-[28px_32px_minmax(0,1fr)_64px_72px] lg:grid-cols-[28px_32px_minmax(0,2fr)_minmax(0,1.3fr)_64px_72px] xl:grid-cols-[28px_32px_minmax(0,2fr)_minmax(0,1.3fr)_72px_64px_72px]'
+          ? 'md:grid-cols-[28px_32px_minmax(0,1fr)_64px_72px] lg:grid-cols-[28px_32px_minmax(0,2fr)_minmax(0,1.3fr)_64px_72px] xl:grid-cols-[28px_32px_minmax(0,2fr)_minmax(0,1.3fr)_72px_120px_72px_64px_72px]'
+          : 'md:grid-cols-[28px_32px_minmax(0,1fr)_64px_72px] lg:grid-cols-[28px_32px_minmax(0,2fr)_minmax(0,1.3fr)_64px_72px] xl:grid-cols-[28px_32px_minmax(0,2fr)_minmax(0,1.3fr)_72px_72px_64px_72px]'
         : props.showAdded
-          ? 'md:grid-cols-[28px_32px_minmax(0,1fr)_64px_72px] xl:grid-cols-[28px_32px_minmax(0,1fr)_72px_120px_64px_72px]'
-          : 'md:grid-cols-[28px_32px_minmax(0,1fr)_64px_72px] xl:grid-cols-[28px_32px_minmax(0,1fr)_72px_64px_72px]'
+          ? 'md:grid-cols-[28px_32px_minmax(0,1fr)_64px_72px] xl:grid-cols-[28px_32px_minmax(0,1fr)_72px_120px_72px_64px_72px]'
+          : 'md:grid-cols-[28px_32px_minmax(0,1fr)_64px_72px] xl:grid-cols-[28px_32px_minmax(0,1fr)_72px_72px_64px_72px]'
       : props.showAlbum
         ? props.showAdded
-          ? 'md:grid-cols-[32px_minmax(0,1fr)_64px_72px] lg:grid-cols-[32px_minmax(0,2fr)_minmax(0,1.3fr)_64px_72px] xl:grid-cols-[32px_minmax(0,2fr)_minmax(0,1.3fr)_72px_120px_64px_72px]'
-          : 'md:grid-cols-[32px_minmax(0,1fr)_64px_72px] lg:grid-cols-[32px_minmax(0,2fr)_minmax(0,1.3fr)_64px_72px] xl:grid-cols-[32px_minmax(0,2fr)_minmax(0,1.3fr)_72px_64px_72px]'
+          ? 'md:grid-cols-[32px_minmax(0,1fr)_64px_72px] lg:grid-cols-[32px_minmax(0,2fr)_minmax(0,1.3fr)_64px_72px] xl:grid-cols-[32px_minmax(0,2fr)_minmax(0,1.3fr)_72px_120px_72px_64px_72px]'
+          : 'md:grid-cols-[32px_minmax(0,1fr)_64px_72px] lg:grid-cols-[32px_minmax(0,2fr)_minmax(0,1.3fr)_64px_72px] xl:grid-cols-[32px_minmax(0,2fr)_minmax(0,1.3fr)_72px_72px_64px_72px]'
         : props.showAdded
-          ? 'md:grid-cols-[32px_minmax(0,1fr)_64px_72px] xl:grid-cols-[32px_minmax(0,1fr)_72px_120px_64px_72px]'
-          : 'md:grid-cols-[32px_minmax(0,1fr)_64px_72px] xl:grid-cols-[32px_minmax(0,1fr)_72px_64px_72px]',
+          ? 'md:grid-cols-[32px_minmax(0,1fr)_64px_72px] xl:grid-cols-[32px_minmax(0,1fr)_72px_120px_72px_64px_72px]'
+          : 'md:grid-cols-[32px_minmax(0,1fr)_64px_72px] xl:grid-cols-[32px_minmax(0,1fr)_72px_72px_64px_72px]',
   ]
 })
 
@@ -365,7 +405,7 @@ function onRowClick(event, row) {
 }
 
 function openMenu(event, row) {
-  menus[row.track.file]?.openAt(event)
+  menus[trackRowKey(row.track)]?.openAt(event)
 }
 
 function menuItems(row) {
@@ -391,6 +431,17 @@ function menuItems(row) {
         label: t('playlists.removeTrack'),
         icon: 'x',
         action: () => playlistActions.removeFiles(playlist, [row.track]),
+      })
+    }
+  }
+  if (props.context?.imported && props.context?.playlistName) {
+    const playlist = library.findPlaylist(props.context.playlistName)
+    if (playlist) {
+      const trashAt = items.findIndex((item) => item.danger)
+      items.splice(trashAt >= 0 ? trashAt : items.length, 0, {
+        label: t('playlists.hideTrack'),
+        icon: 'eye-off',
+        action: () => playlistActions.hideFiles(playlist, [row.track]),
       })
     }
   }
