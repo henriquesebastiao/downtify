@@ -19,6 +19,12 @@ FROM node:26-alpine AS frontend-builder
 
 WORKDIR /frontend
 
+ARG DOWNTIFY_OIDC_ISSUER
+ARG DOWNTIFY_OIDC_CLIENT_ID
+ARG DOWNTIFY_OIDC_CLIENT_SECRET
+ARG DOWNTIFY_OIDC_REDIRECT_URI
+ARG DOWNTIFY_OIDC_ADMIN_GROUPS
+
 COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci
 
