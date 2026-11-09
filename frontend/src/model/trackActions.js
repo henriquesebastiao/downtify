@@ -16,6 +16,8 @@ import { groupingArtistName } from '/src/lib/library'
 import { saveName } from '/src/lib/paths'
 import { useI18n } from '/src/i18n'
 import API from '/src/model/api'
+import { startSongMix, mixAvailable, songMixLoading } from './songMix'
+import { djController } from './djController'
 import { previewLines, trashError, useTrashCapability } from '/src/lib/trash'
 
 export function useTrackActions() {
@@ -205,14 +207,26 @@ export function useTrackActions() {
           }),
       },
       {
-        label: t('similar.findSimilar'),
+        label: 'Lancer un mix à partir de ce titre',
         icon: 'wand',
-        hidden: !track.artist || !track.title,
-        action: () =>
-          router.push({
-            name: 'Similar',
-            query: { artist: track.artist, track: track.title },
-          }),
+        hidden:
+          !track.file || track.stream || track.isPodcast || !mixAvailable.value,
+        disabled: songMixLoading.value,
+        action: () => startSongMix(track),
+      },
+      {
+        label: 'Lancer un mix DJ à partir de ce titre',
+        icon: 'wand',
+        hidden:
+          !track.file ||
+          track.stream ||
+          track.isPodcast ||
+          !djController.available.value ||
+          !mixAvailable.value,
+        action: () => {
+          router.push('/music-dj')
+          return djController.startSeed(track)
+        },
       },
       {
         // Where to buy it, to support the artist.

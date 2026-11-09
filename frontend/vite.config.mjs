@@ -29,6 +29,7 @@ export default defineConfig({
         // Framework code and translations change rarely — keep them in
         // their own long-cached chunks.
         manualChunks(id) {
+          if (id.includes('node_modules/hls.js/')) return 'dj-hls'
           if (id.includes('node_modules')) return 'vendor'
           if (id.includes('/src/i18n/')) return 'i18n'
         },

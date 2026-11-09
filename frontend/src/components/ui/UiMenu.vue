@@ -10,7 +10,7 @@
         v-if="open"
         ref="menuEl"
         role="menu"
-        class="fixed z-[70] min-w-52 max-w-72 overflow-hidden rounded-[12px] border border-line-3 bg-surface py-1.5 shadow-float"
+        class="fixed z-[70] min-w-52 max-w-72 max-h-[calc(100dvh-16px)] overflow-y-auto overscroll-contain rounded-[12px] border border-line-3 bg-surface py-1.5 shadow-float"
         :style="position"
         @keydown="onKeydown"
       >
@@ -19,6 +19,24 @@
           <p v-else-if="item.heading" class="eyebrow px-3.5 pt-2 pb-1">
             {{ item.heading }}
           </p>
+          <label v-else-if="item.options" class="block px-3.5 py-2 text-sm">
+            <span class="sr-only">{{ item.label }}</span>
+            <select
+              :aria-label="item.label"
+              class="w-full max-w-60 rounded-control border border-line-2 bg-surface px-2 py-2 text-fg"
+              value=""
+              @change="choose(item, $event)"
+            >
+              <option value="" disabled>{{ item.label }}</option>
+              <option
+                v-for="option in item.options"
+                :key="option.value"
+                :value="option.value"
+              >
+                {{ option.label }}
+              </option>
+            </select>
+          </label>
           <button
             v-else
             type="button"
@@ -91,14 +109,14 @@ async function show(nextAnchor) {
   menuEl.value?.querySelector('button:not(:disabled)')?.focus()
   document.addEventListener('pointerdown', onOutside, true)
   window.addEventListener('resize', hide)
-  window.addEventListener('scroll', hide, true)
+  window.addEventListener('scroll', onScroll, true)
 }
 
 function hide() {
   open.value = false
   document.removeEventListener('pointerdown', onOutside, true)
   window.removeEventListener('resize', hide)
-  window.removeEventListener('scroll', hide, true)
+  window.removeEventListener('scroll', onScroll, true)
 }
 
 function toggle() {
@@ -133,8 +151,22 @@ function run(item) {
   item.action?.()
 }
 
+function onScroll(event) {
+  if (!menuEl.value?.contains(event.target)) hide()
+}
+
+function choose(item, event) {
+  const value = event.target.value
+  if (!value) return
+  hide()
+  item.action?.(value)
+}
+
 function onKeydown(event) {
-  const buttons = [...menuEl.value.querySelectorAll('button:not(:disabled)')]
+  const buttons = [
+    ...menuEl.value.querySelectorAll('button:not(:disabled), select'),
+  ]
+  if (event.target.tagName === 'SELECT' && event.key !== 'Escape') return
   const index = buttons.indexOf(document.activeElement)
   if (event.key === 'Escape') {
     hide()

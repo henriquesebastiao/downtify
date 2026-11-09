@@ -116,7 +116,7 @@
               class="now-playing-stage flex h-full min-h-0 w-full min-w-0 max-w-full flex-col justify-center gap-4 overflow-hidden lg:gap-5"
               :class="mobilePanel ? 'max-lg:hidden' : ''"
             >
-              <div class="now-playing-cover mx-auto">
+              <div class="now-playing-cover relative mx-auto">
                 <CoverArt
                   :src="track.hasCover ? track.cover : ''"
                   :name="track.album || track.title"
@@ -125,6 +125,20 @@
                   :icon-size="72"
                   class="aspect-square w-full min-h-0 min-w-0 transition-transform duration-500 ease-out-soft"
                   :class="player.isPlaying.value ? 'scale-100' : 'scale-[0.94]'"
+                />
+                <CoverArt
+                  v-if="
+                    player.dj.value?.next && player.dj.value.transition !== null
+                  "
+                  :src="
+                    player.dj.value.next.hasCover
+                      ? player.dj.value.next.cover
+                      : ''
+                  "
+                  :name="player.dj.value.next.title"
+                  rounded="rounded-[20px]"
+                  class="pointer-events-none absolute inset-0 aspect-square w-full motion-reduce:transition-none"
+                  :style="{ opacity: player.dj.value.transition }"
                 />
               </div>
               <div
@@ -216,6 +230,7 @@
                 formatDuration(scrub ?? player.currentTime.value)
               }}</span>
               <WaveSeekBar
+                v-if="!player.dj.value || player.dj.value.mode === 'prepared'"
                 class="flex-1"
                 :model-value="scrub ?? player.currentTime.value"
                 :max="player.duration.value || 1"
@@ -225,6 +240,13 @@
                 :palette="palette"
                 @update:model-value="(v) => (scrub = v)"
                 @commit="commitSeek"
+              />
+              <progress
+                v-else
+                class="h-1 flex-1 accent-violet-400"
+                :value="player.currentTime.value"
+                :max="player.duration.value || 1"
+                aria-label="Progression du titre DJ"
               />
               <span class="tabular w-12 text-right text-xs text-white/65">{{
                 formatDuration(player.duration.value)
@@ -258,15 +280,22 @@
                 <!-- Left of shuffle: tracks like this one
                      (podcasts have none). -->
                 <button
-                  v-if="similarArtist && similarTitle"
+                  v-if="
+                    similarArtist &&
+                    similarTitle &&
+                    mixAvailable &&
+                    !track?.stream
+                  "
                   type="button"
                   class="flex size-11 items-center justify-center rounded-full text-white/80 transition-colors hover:bg-white/10"
-                  :aria-label="t('similar.findSimilar')"
+                  aria-label="Lancer un mix à partir de ce titre"
+                  :disabled="songMixLoading"
                   @click="goSimilar"
                 >
                   <AppIcon name="wand" :size="22" />
                 </button>
                 <button
+                  v-if="!player.dj.value"
                   type="button"
                   class="flex size-11 items-center justify-center rounded-full transition-colors hover:bg-white/10"
                   :class="
@@ -279,6 +308,7 @@
                   <AppIcon name="shuffle" :size="22" />
                 </button>
                 <button
+                  :disabled="Boolean(player.dj.value)"
                   type="button"
                   class="flex size-13 items-center justify-center rounded-full hover:bg-white/10"
                   :aria-label="t('player.previous')"
@@ -319,7 +349,7 @@
                   <AppIcon name="skip-forward" :size="22" />
                 </button>
                 <button
-                  v-else
+                  v-else-if="!player.dj.value"
                   type="button"
                   class="relative flex size-11 items-center justify-center rounded-full transition-colors hover:bg-white/10"
                   :class="
@@ -508,6 +538,8 @@ import { saveName } from '/src/lib/paths'
 import { useBuyLinks } from '/src/model/buyLinks'
 import { buyTargetForTrack } from '/src/lib/buyLinks'
 import { useI18n } from '/src/i18n'
+import { startSongMix, mixAvailable, songMixLoading } from '/src/model/songMix'
+import { djController } from '/src/model/djController'
 
 const player = usePlayer()
 const library = useLibrary()
@@ -537,14 +569,7 @@ const similarTitle = computed(
 )
 
 function goSimilar() {
-  const artist = (
-    (track.value?.artists || [])[0] ||
-    track.value?.artist ||
-    ''
-  ).trim()
-  const title = (track.value?.name || track.value?.title || '').trim()
-  if (!artist || !title) return
-  router.push({ name: 'Similar', query: { artist, track: title } })
+  return startSongMix(track.value)
 }
 const palette = useCoverPalette(track)
 const tint = computed(
@@ -642,8 +667,9 @@ const speedMenu = computed(() =>
 
 const sleepMenu = computed(() => [
   { heading: t('player.sleepTimer') },
-  ...[15, 30, 45, 60, 90].map((minutes) => ({
-    label: t('player.sleepMinutes', { count: minutes }),
+  ...[5, 10, 20, 30, 45, 60].map((minutes) => ({
+    label:
+      minutes === 60 ? '1 h' : t('player.sleepMinutes', { count: minutes }),
     action: () => player.setSleepTimer(minutes),
   })),
   {
@@ -664,6 +690,27 @@ const trackMenu = computed(() => {
   const tr = track.value
   if (!tr) return []
   return [
+    {
+      label: 'Lancer un mix à partir de ce titre',
+      icon: 'wand',
+      hidden: !mixAvailable.value || !tr.file || tr.stream || tr.isPodcast,
+      disabled: songMixLoading.value,
+      action: () => startSongMix(tr),
+    },
+    {
+      label: 'Lancer un mix DJ à partir de ce titre',
+      icon: 'wand',
+      hidden:
+        !mixAvailable.value ||
+        !djController.available.value ||
+        !tr.file ||
+        tr.stream ||
+        tr.isPodcast,
+      action: () => {
+        navigate({ name: 'MusicDJ' })
+        return djController.startSeed(tr)
+      },
+    },
     {
       label: t('player.goToAlbum'),
       icon: 'disc',

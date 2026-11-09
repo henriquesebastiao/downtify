@@ -1,0 +1,10 @@
+FROM ghcr.io/henriquesebastiao/downtify@sha256:8daf035bebbb51042cc26a11732778743b5f389302af4a5c9d435ea736d4fecd
+ENV DOWNTIFY_MUSIC_AI_ENABLED=0 OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1
+RUN python -m ensurepip \
+    && python -m pip install --no-cache-dir numpy==2.5.4 \
+    && python -m pip uninstall -y pip
+COPY main.py /downtify/
+COPY downtify/ /downtify/downtify/
+COPY frontend/dist/ /downtify/frontend/dist/
+COPY --from=source_offer --chmod=444 /source.tar.gz /downtify/music-ai-source.tar.gz
+COPY LICENSE docs/music-ai.md /usr/share/doc/downtify-music-ai/

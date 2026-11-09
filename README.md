@@ -28,6 +28,91 @@
   <img src="assets/readme-hero.png" alt="Downtify 3.0: paste a Spotify link, get the music. The home screen, the full-screen player and the mobile app." width="100%">
 </p>
 
+## Experimental music AI and DJ beta
+
+**Opt-in beta. All modules and the additional unqualified-DJ trial default off
+for new installations/accounts.** Existing explicit preferences survive updates.
+
+My music shows four daily selections below favorite playlists: Relaxation,
+Focus, Motivation and Calm, with a See all page for daily/weekly playlists.
+The separate DJ page offers themes/genres, prepared sets and continuous local
+mixes. Song menus distinguish a classic similar-track mix from a DJ mix.
+The queue also has a DJ button; playback, pause, sleep timer and system media
+controls use the same player.
+
+DCLAP/ONNX analysis runs in a separate CPU companion. Beat This!, Rubber Band
+and a single HLS encoder prepare server transitions. Audio roots stay read-only.
+Native authentication, current catalog visibility and per-account isolation
+remain authoritative. External discovery is separately optional; DJ uses local
+files and never falls back to radio.
+
+| Component | Configured starting budget |
+| --- | --- |
+| Analysis | 0.5 CPU, 1.5 GiB memory cap, one file and one inference thread |
+| DJ | 1 CPU, 2 GiB memory cap, one session, separate 5 GiB disk cache |
+| Scheduling | One heavy compute lease shared by analysis and DJ; DJ has priority |
+| Preparation | Current deck plus up to three following decks; 24-second committed render horizon |
+| Android | 64 MiB audio allocator target; live HLS bypasses the persistent library cache |
+
+These are configurable limits, **not measured minimum requirements or measured
+phone consumption**. Pausing DJ or filling its render horizon yields compute
+back to analysis. Interactive HTTP reads do not reconcile the full catalog;
+the indexer consumes native revisions in the background. DJ status uses bounded
+playback windows, private ETags and session summaries.
+
+A local synthetic comparison on 50,000 catalog entries measured home cards at
+46.49 ms median / 51.81 ms p95 over 25 runs, resolving at most 160 selected ids
+and making zero full-catalog calls. The reconstructed former reconciliation
+path measured 2,812.54 ms median over three runs. This is an in-process
+comparison, **not** a LAN, NAS or Android benchmark.
+
+One post-deployment snapshot, about 50 minutes after startup on 6 November 2026,
+reported the following Docker process usage:
+
+| Component | Observed CPU | Observed memory |
+| --- | --- | --- |
+| Web | 0.24% | 283.9 MiB |
+| Analysis | 1.20% | 78.05 MiB |
+| DJ | 1.36% | 21.18 MiB |
+
+All three containers were running with zero restarts and no observed OOM exit.
+This is a **single uncontrolled snapshot**: model warm-up, concurrent work and
+playback load were not controlled. It establishes neither active-mix/inference
+throughput nor a controlled before/after improvement, minimum RAM or phone cost.
+
+Latest web checks: 777 tests passed (one existing skipped) and the production
+build passed. Earlier backend checks passed 116 focused Python checks, 75 Linux
+DJ checks with local models, and 3,375 native/server checks plus ten subtests. Test groups overlap;
+they are not a subjective music-quality score. The broad server harness needs
+a writable temporary workspace for its trash fixtures, while production can
+remain read-only.
+
+The 7 November live-pipeline correction passed 98 isolated Linux DJ checks
+(real FFmpeg/Beat This! runtime) and 25 targeted Windows checks (one explicit
+symlink-privilege skip). Deck analysis and decoding now run in one cancellable
+preparation slot while HLS production and transport commands remain responsive.
+The current deck and three following occurrences are retained; a single staged
+plan change waits for its audio before taking effect. These synthetic checks
+do not replace an uninterrupted real playback trial or physical Android tests.
+
+The final candidate passed 100 Linux checks, including two cache-identity
+regressions. Its subsequent real trial still failed continuity on clock drift
+and reader events; long segment loads and an unresponsive test browser were
+observed without establishing one cause. It remains unqualified. Administrator
+diagnostics include simultaneous monotonic/wall timestamps to distinguish clock
+effects in the next trial; trial opt-in no longer hides the validation action.
+
+The real uninterrupted one-hour DJ qualification, comparative listening,
+physical Android/background acceptance and phone thermal/battery measurements
+remain pending. A separate **voluntary unqualified-engine trial** allows testing
+an available server engine without pretending it is qualified. It requires both
+administrator and user opt-in and can be disabled independently. The Android
+companion offers an optional short-fade device prototype; on-device beat-model
+inference and physical qualification are still pending.
+
+See [builds, licenses, API behavior and beta limits](docs/music-ai.md).
+The matching Android contribution is [downtify-android#49](https://github.com/henriquesebastiao/downtify-android/pull/49).
+
 ## Overview
 
 Downtify is a self-hosted web app that turns Spotify and YouTube Music links into a tagged audio library. It never touches the Spotify API, and it needs no account and no Premium subscription. It also plays that library back, so what you download is one tab away from listening.
