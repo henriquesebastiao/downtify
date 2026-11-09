@@ -183,7 +183,9 @@ def _require_playlist_writer(request: Request) -> None:
 def _id_file(track_id: Any, request: Request) -> str:
     """Resolve an id only if its file is visible to this caller."""
     if not isinstance(track_id, str) or not track_id.strip():
-        raise HTTPException(status_code=400, detail='track_ids must be strings')
+        raise HTTPException(
+            status_code=400, detail='track_ids must be strings'
+        )
     sync = _sync()
     row = sync.row_for(track_id.strip())
     if row is None:
@@ -238,7 +240,9 @@ async def rename_mobile_playlist(request: Request) -> dict[str, Any]:
         or not isinstance(new_name, str)
         or not new_name.strip()
     ):
-        raise HTTPException(status_code=400, detail='name and new_name are required')
+        raise HTTPException(
+            status_code=400, detail='name and new_name are required'
+        )
     entry = api.require_playlist_visible(name.strip(), request, manage=True)
     if not entry.get('manual'):
         raise HTTPException(
@@ -269,10 +273,14 @@ async def edit_mobile_playlist_tracks(request: Request) -> dict[str, Any]:
         )
     for key in ('add', 'remove'):
         if key in payload and not isinstance(payload[key], list):
-            raise HTTPException(status_code=400, detail=f'{key} must be a list')
+            raise HTTPException(
+                status_code=400, detail=f'{key} must be a list'
+            )
     raw_refs = payload.get('remove_entries', [])
     if not isinstance(raw_refs, list):
-        raise HTTPException(status_code=400, detail='remove_entries must be a list')
+        raise HTTPException(
+            status_code=400, detail='remove_entries must be a list'
+        )
     refs = []
     for ref in raw_refs:
         if (
@@ -280,13 +288,17 @@ async def edit_mobile_playlist_tracks(request: Request) -> dict[str, Any]:
             or type(ref.get('occurrence', 0)) is not int
             or ref.get('occurrence', 0) < 0
         ):
-            raise HTTPException(status_code=400, detail='Invalid remove_entries item')
+            raise HTTPException(
+                status_code=400, detail='Invalid remove_entries item'
+            )
         refs.append({
             'file': _id_file(ref.get('track_id'), request),
             'occurrence': ref.get('occurrence', 0),
         })
     for key in ('add', 'remove'):
-        payload[key] = [_id_file(item, request) for item in payload.get(key, [])]
+        payload[key] = [
+            _id_file(item, request) for item in payload.get(key, [])
+        ]
     payload['remove_entries'] = refs
     if 'allow_duplicates' in payload and not isinstance(
         payload['allow_duplicates'], bool
@@ -301,11 +313,15 @@ async def edit_mobile_playlist_tracks(request: Request) -> dict[str, Any]:
             entry['name'],
             add=payload.get('add', []),
             remove=payload.get('remove', []),
-            remove_entries=[(item['file'], item['occurrence']) for item in refs],
+            remove_entries=[
+                (item['file'], item['occurrence']) for item in refs
+            ],
             allow_duplicates=payload.get('allow_duplicates', False),
         )
     except ManualPlaylistError as exc:
-        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+        raise HTTPException(
+            status_code=exc.status_code, detail=str(exc)
+        ) from exc
     invalidate_library_paths_cache()
     if entry.get('visibility', 'private') != 'private':
         await api.announce_playlists_changed()
@@ -318,8 +334,14 @@ async def reorder_mobile_playlist(request: Request) -> dict[str, Any]:
     _sync()
     payload = await api._json_object(request)
     name, ids = payload.get('name'), payload.get('track_ids')
-    if not isinstance(name, str) or not name.strip() or not isinstance(ids, list):
-        raise HTTPException(status_code=400, detail='name and track_ids are required')
+    if (
+        not isinstance(name, str)
+        or not name.strip()
+        or not isinstance(ids, list)
+    ):
+        raise HTTPException(
+            status_code=400, detail='name and track_ids are required'
+        )
     entry = api.require_playlist_visible(name.strip(), request)
     if not entry.get('manual'):
         raise HTTPException(
@@ -339,7 +361,9 @@ async def reorder_mobile_playlist(request: Request) -> dict[str, Any]:
             visible=set(entry.get('files') or []),
         )
     except ManualPlaylistError as exc:
-        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+        raise HTTPException(
+            status_code=exc.status_code, detail=str(exc)
+        ) from exc
     invalidate_library_paths_cache()
     if entry.get('visibility', 'private') != 'private':
         await api.announce_playlists_changed()

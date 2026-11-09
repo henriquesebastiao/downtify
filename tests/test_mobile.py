@@ -649,7 +649,9 @@ def test_likes_by_track_id(client, app_dirs):
 
 
 @_needs_ffmpeg
-def test_mobile_playlist_writes_use_track_ids_and_occurrences(client, app_dirs):
+def test_mobile_playlist_writes_use_track_ids_and_occurrences(
+    client, app_dirs
+):
     downloads, _data = app_dirs
     _make_mp3(downloads / 'Roads.mp3')
     track_id = _library(client)['tracks'][0]['id']
@@ -657,148 +659,329 @@ def test_mobile_playlist_writes_use_track_ids_and_occurrences(client, app_dirs):
     created = client.post('/api/v1/playlists', json={'name': 'Roads list'})
     assert created.status_code == 200
     assert created.json() == {
-        'name': 'Roads list', 'manual': True, 'count': 0, 'track_ids': []
+        'name': 'Roads list',
+        'manual': True,
+        'count': 0,
+        'track_ids': [],
     }
-    added = client.post('/api/v1/playlists/tracks', json={
-        'name': 'Roads list', 'add': [track_id, track_id],
-        'allow_duplicates': True,
-    })
+    added = client.post(
+        '/api/v1/playlists/tracks',
+        json={
+            'name': 'Roads list',
+            'add': [track_id, track_id],
+            'allow_duplicates': True,
+        },
+    )
     assert added.status_code == 200
     assert added.json()['track_ids'] == [track_id, track_id]
     assert added.json()['added'] == 2
 
-    removed = client.post('/api/v1/playlists/tracks', json={
-        'name': 'Roads list',
-        'remove_entries': [{'track_id': track_id, 'occurrence': 1}],
-    })
+    removed = client.post(
+        '/api/v1/playlists/tracks',
+        json={
+            'name': 'Roads list',
+            'remove_entries': [{'track_id': track_id, 'occurrence': 1}],
+        },
+    )
     assert removed.status_code == 200
     assert removed.json()['track_ids'] == [track_id]
     assert removed.json()['removed'] == 1
 
-    assert client.put('/api/v1/playlists/order', json={
-        'name': 'Roads list', 'track_ids': [],
-    }).status_code == 409
-    reordered = client.put('/api/v1/playlists/order', json={
-        'name': 'Roads list', 'track_ids': [track_id],
-    })
+    assert (
+        client.put(
+            '/api/v1/playlists/order',
+            json={
+                'name': 'Roads list',
+                'track_ids': [],
+            },
+        ).status_code
+        == 409
+    )
+    reordered = client.put(
+        '/api/v1/playlists/order',
+        json={
+            'name': 'Roads list',
+            'track_ids': [track_id],
+        },
+    )
     assert reordered.status_code == 200
     assert reordered.json()['track_ids'] == [track_id]
-    renamed = client.post('/api/v1/playlists/rename', json={
-        'name': 'Roads list', 'new_name': 'Roads renamed',
-    })
+    renamed = client.post(
+        '/api/v1/playlists/rename',
+        json={
+            'name': 'Roads list',
+            'new_name': 'Roads renamed',
+        },
+    )
     assert renamed.status_code == 200
     assert renamed.json()['previous'] == 'Roads list'
     assert renamed.json()['name'] == 'Roads renamed'
 
 
 @_needs_ffmpeg
-def test_mobile_playlist_writes_reject_bad_ids_and_imported_playlists(client, app_dirs):
+def test_mobile_playlist_writes_reject_bad_ids_and_imported_playlists(
+    client, app_dirs
+):
     downloads, _data = app_dirs
     _make_mp3(downloads / 'Roads.mp3')
     (downloads / 'Imported.m3u').write_text('#EXTM3U\nRoads.mp3\n')
     track_id = _library(client)['tracks'][0]['id']
-    assert client.post('/api/v1/playlists/tracks', json={
-        'name': 'Imported', 'add': [track_id],
-    }).status_code == 403
-    assert client.post('/api/v1/playlists/tracks', json={
-        'name': 'missing', 'add': ['unknown'],
-    }).status_code == 404
-    assert client.post('/api/v1/playlists', json={'name': ''}).status_code == 400
+    assert (
+        client.post(
+            '/api/v1/playlists/tracks',
+            json={
+                'name': 'Imported',
+                'add': [track_id],
+            },
+        ).status_code
+        == 403
+    )
+    assert (
+        client.post(
+            '/api/v1/playlists/tracks',
+            json={
+                'name': 'missing',
+                'add': ['unknown'],
+            },
+        ).status_code
+        == 404
+    )
+    assert (
+        client.post('/api/v1/playlists', json={'name': ''}).status_code == 400
+    )
     created = client.post('/api/v1/playlists', json={'name': 'Bad fields'})
     assert created.status_code == 200
-    assert client.post('/api/v1/playlists/tracks', json={
-        'name': 'Bad fields', 'remove_entries': [
-            {'track_id': track_id, 'occurrence': -1},
-        ],
-    }).status_code == 400
-    assert client.post('/api/v1/playlists/tracks', json={
-        'name': 'Bad fields', 'allow_duplicates': 'true',
-    }).status_code == 400
+    assert (
+        client.post(
+            '/api/v1/playlists/tracks',
+            json={
+                'name': 'Bad fields',
+                'remove_entries': [
+                    {'track_id': track_id, 'occurrence': -1},
+                ],
+            },
+        ).status_code
+        == 400
+    )
+    assert (
+        client.post(
+            '/api/v1/playlists/tracks',
+            json={
+                'name': 'Bad fields',
+                'allow_duplicates': 'true',
+            },
+        ).status_code
+        == 400
+    )
 
 
-@_needs_ffmpeg
-def test_mobile_playlist_write_permissions_for_paired_users(client, app_dirs):
+def _paired_playlist_setup(client, app_dirs):
     downloads, _data = app_dirs
     _make_mp3(downloads / 'Roads.mp3')
     track_id = _library(client)['tracks'][0]['id']
     auth = api.state.auth
-    owner_user = auth.users.create('playlist-owner', 'correct horse battery')
-    editor_user = auth.users.create('playlist-editor', 'correct horse battery')
-    viewer_user = auth.users.create('playlist-viewer', 'correct horse battery')
-    stranger_user = auth.users.create('playlist-stranger', 'correct horse battery')
-    owner_id, editor_id = owner_user['id'], editor_user['id']
-
-    def paired_headers(user_id: int, label: str) -> dict[str, str]:
-        _device, token = auth.create_device(label, user_id=user_id)
-        return {'Authorization': f'Bearer {token}'}
-
-    owner_headers = paired_headers(owner_id, 'Owner phone')
-    editor_headers = paired_headers(editor_id, 'Editor phone')
-    viewer_headers = paired_headers(viewer_user['id'], 'Viewer phone')
-    stranger_headers = paired_headers(stranger_user['id'], 'Stranger phone')
+    users = {
+        name: auth.users.create(name, 'correct horse battery')
+        for name in (
+            'playlist-owner',
+            'playlist-editor',
+            'playlist-viewer',
+            'playlist-stranger',
+        )
+    }
+    headers = {}
+    for name, user in users.items():
+        _device, token = auth.create_device(name, user_id=user['id'])
+        headers[name] = {'Authorization': f'Bearer {token}'}
     created = client.post(
-        '/api/v1/playlists', json={'name': 'Paired Mix'}, headers=owner_headers
+        '/api/v1/playlists',
+        json={'name': 'Paired Mix'},
+        headers=headers['playlist-owner'],
     )
     assert created.status_code == 200
-    assert client.post('/api/v1/playlists/tracks', json={
-        'name': 'Paired Mix', 'add': [track_id],
-    }, headers=owner_headers).status_code == 200
-    assert client.put('/api/v1/playlists/order', json={
-        'name': 'Paired Mix', 'track_ids': [track_id],
-    }, headers=owner_headers).status_code == 200
-    assert client.post('/api/v1/playlists/tracks', json={
-        'name': 'Paired Mix', 'remove': [track_id],
-    }).status_code == 200
+    assert (
+        client.post(
+            '/api/v1/playlists/tracks',
+            json={
+                'name': 'Paired Mix',
+                'add': [track_id],
+            },
+            headers=headers['playlist-owner'],
+        ).status_code
+        == 200
+    )
     api.state.playlist_shares.set_visibility(
-        'Paired Mix', 'shared', [editor_id, viewer_user['id']], editors=[editor_id]
+        'Paired Mix',
+        'shared',
+        [users['playlist-editor']['id'], users['playlist-viewer']['id']],
+        editors=[users['playlist-editor']['id']],
+    )
+    return {'track_id': track_id, 'headers': headers}
+
+
+@_needs_ffmpeg
+def test_mobile_playlist_owner_and_admin_can_edit_and_rename(client, app_dirs):
+    setup = _paired_playlist_setup(client, app_dirs)
+    track_id, headers = setup['track_id'], setup['headers']
+    owner_headers = headers['playlist-owner']
+    payload = {'name': 'Paired Mix', 'add': [track_id]}
+    assert (
+        client.post(
+            '/api/v1/playlists/tracks', json=payload, headers=owner_headers
+        ).status_code
+        == 200
+    )
+    assert (
+        client.put(
+            '/api/v1/playlists/order',
+            json={
+                'name': 'Paired Mix',
+                'track_ids': [track_id],
+            },
+            headers=owner_headers,
+        ).status_code
+        == 200
+    )
+    assert (
+        client.post(
+            '/api/v1/playlists/rename',
+            json={
+                'name': 'Paired Mix',
+                'new_name': 'Owner renamed',
+            },
+            headers=owner_headers,
+        ).status_code
+        == 200
+    )
+    assert (
+        client.post(
+            '/api/v1/playlists/tracks',
+            json={
+                'name': 'Owner renamed',
+                'remove': [track_id],
+            },
+        ).status_code
+        == 200
+    )
+    assert (
+        client.put(
+            '/api/v1/playlists/order',
+            json={
+                'name': 'Owner renamed',
+                'track_ids': [],
+            },
+        ).status_code
+        == 200
+    )
+    assert (
+        client.post(
+            '/api/v1/playlists/rename',
+            json={
+                'name': 'Owner renamed',
+                'new_name': 'Admin renamed',
+            },
+        ).status_code
+        == 200
     )
 
+
+@_needs_ffmpeg
+def test_mobile_playlist_shared_editor_and_viewer_permissions(
+    client, app_dirs
+):
+    setup = _paired_playlist_setup(client, app_dirs)
+    track_id, headers = setup['track_id'], setup['headers']
+    editor_headers = headers['playlist-editor']
+    viewer_headers = headers['playlist-viewer']
     payload = {'name': 'Paired Mix', 'add': [track_id]}
-    assert client.post(
-        '/api/v1/playlists/tracks', json=payload
-    ).status_code == 200
-    assert client.put('/api/v1/playlists/order', json={
-        'name': 'Paired Mix', 'track_ids': [track_id],
-    }).status_code == 200
-    assert client.post(
-        '/api/v1/playlists/tracks', json=payload, headers=editor_headers
-    ).status_code == 200
-    assert client.put('/api/v1/playlists/order', json={
-        'name': 'Paired Mix', 'track_ids': [track_id],
-    }, headers=editor_headers).status_code == 200
-    assert client.post('/api/v1/playlists/rename', json={
-        'name': 'Paired Mix', 'new_name': 'Editor rename',
-    }, headers=editor_headers).status_code == 403
+    assert (
+        client.post(
+            '/api/v1/playlists/tracks', json=payload, headers=editor_headers
+        ).status_code
+        == 200
+    )
+    assert (
+        client.put(
+            '/api/v1/playlists/order',
+            json={
+                'name': 'Paired Mix',
+                'track_ids': [track_id],
+            },
+            headers=editor_headers,
+        ).status_code
+        == 200
+    )
+    assert (
+        client.post(
+            '/api/v1/playlists/rename',
+            json={
+                'name': 'Paired Mix',
+                'new_name': 'Editor rename',
+            },
+            headers=editor_headers,
+        ).status_code
+        == 403
+    )
+    assert (
+        client.post(
+            '/api/v1/playlists/tracks', json=payload, headers=viewer_headers
+        ).status_code
+        == 403
+    )
+    assert (
+        client.put(
+            '/api/v1/playlists/order',
+            json={
+                'name': 'Paired Mix',
+                'track_ids': [track_id],
+            },
+            headers=viewer_headers,
+        ).status_code
+        == 403
+    )
+    assert (
+        client.post(
+            '/api/v1/playlists/rename',
+            json={
+                'name': 'Paired Mix',
+                'new_name': 'Viewer rename',
+            },
+            headers=viewer_headers,
+        ).status_code
+        == 403
+    )
 
-    assert client.post(
-        '/api/v1/playlists/tracks', json=payload, headers=viewer_headers
-    ).status_code == 403
-    assert client.put('/api/v1/playlists/order', json={
-        'name': 'Paired Mix', 'track_ids': [track_id],
-    }, headers=viewer_headers).status_code == 403
-    assert client.post('/api/v1/playlists/rename', json={
-        'name': 'Paired Mix', 'new_name': 'Viewer rename',
-    }, headers=viewer_headers).status_code == 403
 
+@_needs_ffmpeg
+def test_mobile_playlist_inaccessible_user_gets_not_found(client, app_dirs):
+    setup = _paired_playlist_setup(client, app_dirs)
+    track_id, stranger_headers = (
+        setup['track_id'],
+        setup['headers']['playlist-stranger'],
+    )
+    payload = {'name': 'Paired Mix', 'add': [track_id]}
     for method, path, body in (
         (client.post, '/api/v1/playlists/tracks', payload),
-        (client.put, '/api/v1/playlists/order', {
-            'name': 'Paired Mix', 'track_ids': [track_id],
-        }),
-        (client.post, '/api/v1/playlists/rename', {
-            'name': 'Paired Mix', 'new_name': 'Stranger rename',
-        }),
+        (
+            client.put,
+            '/api/v1/playlists/order',
+            {
+                'name': 'Paired Mix',
+                'track_ids': [track_id],
+            },
+        ),
+        (
+            client.post,
+            '/api/v1/playlists/rename',
+            {
+                'name': 'Paired Mix',
+                'new_name': 'Stranger rename',
+            },
+        ),
     ):
         response = method(path, json=body, headers=stranger_headers)
         assert response.status_code == 404
         assert response.json()['detail'] == 'Playlist not found'
-
-    assert client.post('/api/v1/playlists/rename', json={
-        'name': 'Paired Mix', 'new_name': 'Owner renamed',
-    }, headers=owner_headers).status_code == 200
-    assert client.post('/api/v1/playlists/rename', json={
-        'name': 'Owner renamed', 'new_name': 'Admin renamed',
-    }).status_code == 200
 
 
 @_needs_ffmpeg
