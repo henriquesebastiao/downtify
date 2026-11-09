@@ -26,8 +26,8 @@ from .auth import SIGNED_URL_DEFAULT_TTL, SIGNED_URL_MAX_TTL, Principal
 from .cover_thumbs import normalize_size
 from .library_catalog import list_library_entries, resolve_library_file
 from .library_paths_cache import invalidate_library_paths_cache
-from .manual_playlists import ManualPlaylistError
 from .lyrics import read_track_lyrics
+from .manual_playlists import ManualPlaylistError
 from .transcode import (
     FORMATS,
     TranscodeError,
@@ -232,11 +232,18 @@ async def rename_mobile_playlist(request: Request) -> dict[str, Any]:
     _sync()
     payload = await api._json_object(request)
     name, new_name = payload.get('name'), payload.get('new_name')
-    if not isinstance(name, str) or not name.strip() or not isinstance(new_name, str) or not new_name.strip():
+    if (
+        not isinstance(name, str)
+        or not name.strip()
+        or not isinstance(new_name, str)
+        or not new_name.strip()
+    ):
         raise HTTPException(status_code=400, detail='name and new_name are required')
     entry = api.require_playlist_visible(name.strip(), request, manage=True)
     if not entry.get('manual'):
-        raise HTTPException(status_code=403, detail='Only a Library playlist can be renamed')
+        raise HTTPException(
+            status_code=403, detail='Only a Library playlist can be renamed'
+        )
     result = await api.rename_library_playlist_endpoint(request)
     out = await _mobile_playlist_result(result)
     out['previous'] = entry['name']
@@ -253,9 +260,13 @@ async def edit_mobile_playlist_tracks(request: Request) -> dict[str, Any]:
         raise HTTPException(status_code=400, detail='name is required')
     entry = api.require_playlist_visible(name.strip(), request)
     if not entry.get('manual'):
-        raise HTTPException(status_code=403, detail='Only a Library playlist can be edited')
+        raise HTTPException(
+            status_code=403, detail='Only a Library playlist can be edited'
+        )
     if not entry.get('mine', True) and not entry.get('can_edit_tracks'):
-        raise HTTPException(status_code=403, detail='Only an editor can change this playlist')
+        raise HTTPException(
+            status_code=403, detail='Only an editor can change this playlist'
+        )
     for key in ('add', 'remove'):
         if key in payload and not isinstance(payload[key], list):
             raise HTTPException(status_code=400, detail=f'{key} must be a list')
@@ -270,12 +281,19 @@ async def edit_mobile_playlist_tracks(request: Request) -> dict[str, Any]:
             or ref.get('occurrence', 0) < 0
         ):
             raise HTTPException(status_code=400, detail='Invalid remove_entries item')
-        refs.append({'file': _id_file(ref.get('track_id'), request), 'occurrence': ref.get('occurrence', 0)})
+        refs.append({
+            'file': _id_file(ref.get('track_id'), request),
+            'occurrence': ref.get('occurrence', 0),
+        })
     for key in ('add', 'remove'):
         payload[key] = [_id_file(item, request) for item in payload.get(key, [])]
     payload['remove_entries'] = refs
-    if 'allow_duplicates' in payload and not isinstance(payload['allow_duplicates'], bool):
-        raise HTTPException(status_code=400, detail='allow_duplicates must be a boolean')
+    if 'allow_duplicates' in payload and not isinstance(
+        payload['allow_duplicates'], bool
+    ):
+        raise HTTPException(
+            status_code=400, detail='allow_duplicates must be a boolean'
+        )
     try:
         result = await asyncio.to_thread(
             api.edit_manual_playlist,
@@ -304,12 +322,22 @@ async def reorder_mobile_playlist(request: Request) -> dict[str, Any]:
         raise HTTPException(status_code=400, detail='name and track_ids are required')
     entry = api.require_playlist_visible(name.strip(), request)
     if not entry.get('manual'):
-        raise HTTPException(status_code=403, detail='Only a Library playlist can be edited')
+        raise HTTPException(
+            status_code=403, detail='Only a Library playlist can be edited'
+        )
     if not entry.get('mine', True) and not entry.get('can_edit_tracks'):
-        raise HTTPException(status_code=403, detail='Only an editor can change this playlist')
+        raise HTTPException(
+            status_code=403, detail='Only an editor can change this playlist'
+        )
     paths = [_id_file(item, request) for item in ids]
     try:
-        result = await asyncio.to_thread(api.reorder_manual_playlist, api.library_context(), entry['name'], paths, visible=set(entry.get('files') or []))
+        result = await asyncio.to_thread(
+            api.reorder_manual_playlist,
+            api.library_context(),
+            entry['name'],
+            paths,
+            visible=set(entry.get('files') or []),
+        )
     except ManualPlaylistError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
     invalidate_library_paths_cache()
