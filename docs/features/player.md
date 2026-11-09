@@ -35,6 +35,14 @@ Five panels sit next to the cover on wide screens, or replace it on phones:
 
 Now playing is part of the page address (`?np=1`, plus `&panel=lyrics|karaoke|queue|details|equalizer`), so the browser's Back button closes it and a reload keeps it open.
 
+To project the karaoke, use the **Open in a new window** button in the Karaoke header, on wide screens. It opens the lyrics in a window of their own for a projector or second screen, and closes Now playing on the main screen so you can browse Downtify while people sing.
+
+The new window shows only the song, its cover, the next song and the karaoke lyrics, with no playback controls. Everything is controlled from the main window, and the projected one follows it at once: pressing play on a song replaces the one being sung immediately, while **Play next** and **Add to queue** line up the following ones without interrupting it.
+
+To set it up, drag the window to the projector and use the **Full screen** button in its bottom-right corner. The button and the mouse pointer disappear after a few seconds without moving the mouse. Your system has to extend the desktop to the projector rather than duplicate it. If the browser blocks the window, allow pop-ups for Downtify and press the button again.
+
+Keep the main window open, because the audio plays there. Moving between pages doesn't affect it. Reloading it pauses the music until you press play, and the projected window picks it up again by itself. Closing it stops the music and leaves the projected window waiting: close that one too and open a new one. Both windows must be in the same browser on the same computer.
+
 ## Hiding the lyrics
 
 Prefer the artwork and the queue without the words? Turn off **Settings → General → Player → Show lyrics in the player**. It applies at once, and takes away everything that leads to lyrics in the player:
