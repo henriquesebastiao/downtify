@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import Mock
 
 import pytest
@@ -34,8 +35,9 @@ def clock(monkeypatch):
         sleeps.append(seconds)
         now[0] += seconds
 
-    monkeypatch.setattr(provider.time, 'monotonic', lambda: now[0])
-    monkeypatch.setattr(provider.time, 'sleep', sleep)
+    monkeypatch.setattr(
+        provider, 'time', SimpleNamespace(monotonic=lambda: now[0], sleep=sleep)
+    )
     return now, sleeps
 
 
