@@ -37,6 +37,7 @@ from downtify.library_sync import (
     grouping_keys,
     split_artists,
 )
+from downtify.manual_playlists import MAX_TRACKS_PER_EDIT
 from downtify.server_identity import ServerIdentity
 from downtify.transcode import (
     FORMATS,
@@ -773,6 +774,54 @@ def test_mobile_playlist_writes_reject_bad_ids_and_imported_playlists(
         ).status_code
         == 400
     )
+
+
+@_needs_ffmpeg
+def test_mobile_playlist_edit_limits_reject_before_any_write(client, app_dirs):
+    downloads, _data = app_dirs
+    _make_mp3(downloads / 'Roads.mp3')
+    track_id = _library(client)['tracks'][0]['id']
+    assert (
+        client.post('/api/v1/playlists', json={'name': 'Bounded'}).status_code
+        == 200
+    )
+
+    oversized_edit = client.post(
+        '/api/v1/playlists/tracks',
+        json={
+            'name': 'Bounded',
+            'add': [track_id] * (MAX_TRACKS_PER_EDIT + 1),
+        },
+    )
+    assert oversized_edit.status_code == 400
+    playlist = next(
+        p
+        for p in client.get('/api/v1/playlists').json()
+        if p['name'] == 'Bounded'
+    )
+    assert playlist['track_ids'] == []
+
+    assert (
+        client.post(
+            '/api/v1/playlists/tracks',
+            json={'name': 'Bounded', 'add': [track_id]},
+        ).status_code
+        == 200
+    )
+    oversized_order = client.put(
+        '/api/v1/playlists/order',
+        json={
+            'name': 'Bounded',
+            'track_ids': [track_id] * (MAX_TRACKS_PER_EDIT + 1),
+        },
+    )
+    assert oversized_order.status_code == 400
+    playlist = next(
+        p
+        for p in client.get('/api/v1/playlists').json()
+        if p['name'] == 'Bounded'
+    )
+    assert playlist['track_ids'] == [track_id]
 
 
 def _paired_playlist_setup(client, app_dirs):
