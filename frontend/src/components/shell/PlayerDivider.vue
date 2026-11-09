@@ -1,7 +1,10 @@
 <template>
   <div
     class="flex h-10 items-center justify-center rounded-control"
-    :class="editable && 'cursor-col-resize touch-none select-none hover:bg-surface-2 focus-visible:bg-surface-2'"
+    :class="
+      editable &&
+      'cursor-col-resize touch-none select-none hover:bg-surface-2 focus-visible:bg-surface-2'
+    "
     :role="editable ? 'separator' : undefined"
     :tabindex="editable ? 0 : undefined"
     :aria-label="editable ? label : undefined"

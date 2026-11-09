@@ -8,9 +8,13 @@ import { computed } from 'vue'
 // "Download lyrics" (a server setting) is untouched.
 const showLyrics = useLocalStorage('downtify-show-lyrics', true)
 const normalizeVolume = useLocalStorage('downtify-normalize-volume', false)
-const storedMiniPlayerLayout = useLocalStorage('downtify-mini-player-layout', null, {
-  serializer: StorageSerializers.object,
-})
+const storedMiniPlayerLayout = useLocalStorage(
+  'downtify-mini-player-layout',
+  null,
+  {
+    serializer: StorageSerializers.object,
+  }
+)
 
 function validMiniPlayerLayout(value) {
   return (

@@ -453,7 +453,9 @@ function commitSeek(value) {
   height: calc(40px + var(--control-growth));
 }
 
-.adjustable-player :is(.transport-section, .utility-section, .track-section) :deep(button > svg),
+.adjustable-player
+  :is(.transport-section, .utility-section, .track-section)
+  :deep(button > svg),
 .adjustable-player .downloaded-check :deep(svg) {
   width: calc(16px + var(--control-growth) / 2);
   height: calc(16px + var(--control-growth) / 2);

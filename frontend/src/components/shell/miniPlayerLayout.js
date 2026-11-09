@@ -27,7 +27,10 @@ export function useMiniPlayerLayout(bar, visible, preference) {
   const spare = computed(() => Math.max(0, width.value - fixedWidth))
   const widths = computed(() => {
     const proportions = preference.value ?? defaultLayout
-    return preview.value ?? minimums.map((min, i) => min + proportions[i] * spare.value)
+    return (
+      preview.value ??
+      minimums.map((min, i) => min + proportions[i] * spare.value)
+    )
   })
   const grid = computed(() => {
     if (!wide.value) return undefined
@@ -46,7 +49,9 @@ export function useMiniPlayerLayout(bar, visible, preference) {
   function limits(index) {
     return {
       min: minimums[index],
-      max: Math.round(widths.value[index] + widths.value[index + 1] - minimums[index + 1]),
+      max: Math.round(
+        widths.value[index] + widths.value[index + 1] - minimums[index + 1]
+      ),
       current: Math.round(widths.value[index]),
     }
   }
@@ -67,23 +72,35 @@ export function useMiniPlayerLayout(bar, visible, preference) {
   }
 
   function startDrag(event, index) {
-    if (drag || !unlocked.value || event.button !== 0 || !event.isPrimary) return
+    if (drag || !unlocked.value || event.button !== 0 || !event.isPrimary)
+      return
     const element = event.currentTarget
     element.focus()
     element.setPointerCapture(event.pointerId)
-    drag = { element, id: event.pointerId, x: event.clientX, widths: widths.value, index }
+    drag = {
+      element,
+      id: event.pointerId,
+      x: event.clientX,
+      widths: widths.value,
+      index,
+    }
     event.preventDefault()
   }
 
   function moveDrag(event) {
     if (drag?.id !== event.pointerId) return
-    preview.value = resizeSections(drag.widths, drag.index, event.clientX - drag.x)
+    preview.value = resizeSections(
+      drag.widths,
+      drag.index,
+      event.clientX - drag.x
+    )
   }
 
   function endDrag(event) {
     if (drag?.id !== event.pointerId) return
     moveDrag(event)
-    if (preview.value[drag.index] !== drag.widths[drag.index]) save(preview.value)
+    if (preview.value[drag.index] !== drag.widths[drag.index])
+      save(preview.value)
     cancelDrag()
   }
 
@@ -92,7 +109,12 @@ export function useMiniPlayerLayout(bar, visible, preference) {
   }
 
   function onKeydown(event, index) {
-    const deltas = { ArrowLeft: -8, ArrowRight: 8, Home: -Infinity, End: Infinity }
+    const deltas = {
+      ArrowLeft: -8,
+      ArrowRight: 8,
+      Home: -Infinity,
+      End: Infinity,
+    }
     if (!Object.hasOwn(deltas, event.key)) return
     event.preventDefault()
     event.stopPropagation()
@@ -124,17 +146,36 @@ export function useMiniPlayerLayout(bar, visible, preference) {
     cancelDrag()
     width.value = entry.contentRect.width
   })
-  watch(visible, (shown) => {
-    if (!shown) width.value = 0
-  }, { flush: 'sync' })
-  watch(wide, (enabled) => {
-    if (enabled) return
-    cancelDrag()
-    unlocked.value = false
-  }, { flush: 'sync' })
+  watch(
+    visible,
+    (shown) => {
+      if (!shown) width.value = 0
+    },
+    { flush: 'sync' }
+  )
+  watch(
+    wide,
+    (enabled) => {
+      if (enabled) return
+      cancelDrag()
+      unlocked.value = false
+    },
+    { flush: 'sync' }
+  )
 
   return {
-    wide, unlocked, grid, sectionStyle, limits,
-    startDrag, moveDrag, endDrag, cancelPointer, onKeydown, onEscape, toggle, reset,
+    wide,
+    unlocked,
+    grid,
+    sectionStyle,
+    limits,
+    startDrag,
+    moveDrag,
+    endDrag,
+    cancelPointer,
+    onKeydown,
+    onEscape,
+    toggle,
+    reset,
   }
 }

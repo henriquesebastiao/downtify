@@ -1099,7 +1099,8 @@ export default {
     lockLayout: 'Verrouiller la disposition du lecteur',
     resetLayout: 'Réinitialiser la disposition du lecteur',
     resizeTrackSection: 'Redimensionner la section des informations du titre',
-    resizeTransportSection: 'Redimensionner la section des commandes de lecture',
+    resizeTransportSection:
+      'Redimensionner la section des commandes de lecture',
     nowPlaying: 'Lecture en cours',
     openNowPlaying: 'Ouvrir la lecture en cours',
     closeNowPlaying: 'Fermer la lecture en cours',

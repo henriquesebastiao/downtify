@@ -1079,8 +1079,10 @@ export default {
     unlockLayout: 'Desbloquear el diseño del reproductor',
     lockLayout: 'Bloquear el diseño del reproductor',
     resetLayout: 'Restablecer el diseño del reproductor',
-    resizeTrackSection: 'Cambiar el tamaño de la sección de información de la pista',
-    resizeTransportSection: 'Cambiar el tamaño de la sección de controles de reproducción',
+    resizeTrackSection:
+      'Cambiar el tamaño de la sección de información de la pista',
+    resizeTransportSection:
+      'Cambiar el tamaño de la sección de controles de reproducción',
     nowPlaying: 'Reproduciendo',
     openNowPlaying: 'Abrir reproducción actual',
     closeNowPlaying: 'Cerrar reproducción actual',
