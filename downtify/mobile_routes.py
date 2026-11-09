@@ -26,6 +26,7 @@ from .auth import SIGNED_URL_DEFAULT_TTL, SIGNED_URL_MAX_TTL, Principal
 from .cover_thumbs import normalize_size
 from .library_catalog import list_library_entries, resolve_library_file
 from .library_paths_cache import invalidate_library_paths_cache
+from .manual_playlists import ManualPlaylistError
 from .lyrics import read_track_lyrics
 from .transcode import (
     FORMATS,
@@ -172,6 +173,141 @@ async def playlists(request: Request) -> list[dict[str, Any]]:
         }
         for p in found
     ]
+
+
+def _require_playlist_writer(request: Request) -> None:
+    if not api.request_user_id(request) and not api.request_is_admin(request):
+        raise HTTPException(status_code=401, detail='Sign in required')
+
+
+def _id_file(track_id: Any, request: Request) -> str:
+    """Resolve an id only if its file is visible to this caller."""
+    if not isinstance(track_id, str) or not track_id.strip():
+        raise HTTPException(status_code=400, detail='track_ids must be strings')
+    sync = _sync()
+    row = sync.row_for(track_id.strip())
+    if row is None:
+        _refresh()
+        row = sync.row_for(track_id.strip())
+    if row is None or not api.filter_paths_for_request([row['file']], request):
+        raise HTTPException(status_code=404, detail='Track not found')
+    return str(row['file'])
+
+
+async def _mobile_playlist_result(result: dict[str, Any]) -> dict[str, Any]:
+    files = list(result.get('files') or [])
+    ids = await asyncio.to_thread(_sync().ids_for_paths, files)
+    response = {
+        'name': str(result.get('name') or ''),
+        'manual': bool(result.get('manual')),
+        'count': len(files),
+        'track_ids': [ids[file] for file in files if file in ids],
+    }
+    for key in ('added', 'removed', 'already'):
+        if key in result:
+            value = result[key]
+            if key == 'already':
+                response[key] = [ids[file] for file in value if file in ids]
+            else:
+                response[key] = value
+    return response
+
+
+@router.post('/playlists')
+async def create_mobile_playlist(request: Request) -> dict[str, Any]:
+    _require_playlist_writer(request)
+    payload = await api._json_object(request)
+    name = payload.get('name')
+    if not isinstance(name, str) or not name.strip():
+        raise HTTPException(status_code=400, detail='name is required')
+    result = await api.create_library_playlist_endpoint(request)
+    await api.announce_playlists_changed()
+    return await _mobile_playlist_result(result)
+
+
+@router.post('/playlists/rename')
+async def rename_mobile_playlist(request: Request) -> dict[str, Any]:
+    _require_playlist_writer(request)
+    payload = await api._json_object(request)
+    name, new_name = payload.get('name'), payload.get('new_name')
+    if not isinstance(name, str) or not name.strip() or not isinstance(new_name, str) or not new_name.strip():
+        raise HTTPException(status_code=400, detail='name and new_name are required')
+    entry = api.require_playlist_visible(name.strip(), request, manage=True)
+    if not entry.get('manual'):
+        raise HTTPException(status_code=403, detail='Only a Library playlist can be renamed')
+    result = await api.rename_library_playlist_endpoint(request)
+    out = await _mobile_playlist_result(result)
+    out['previous'] = entry['name']
+    return out
+
+
+@router.post('/playlists/tracks')
+async def edit_mobile_playlist_tracks(request: Request) -> dict[str, Any]:
+    _require_playlist_writer(request)
+    payload = await api._json_object(request)
+    name = payload.get('name')
+    if not isinstance(name, str) or not name.strip():
+        raise HTTPException(status_code=400, detail='name is required')
+    entry = api.require_playlist_visible(name.strip(), request)
+    if not entry.get('manual'):
+        raise HTTPException(status_code=403, detail='Only a Library playlist can be edited')
+    if not entry.get('mine', True) and not entry.get('can_edit_tracks'):
+        raise HTTPException(status_code=403, detail='Only an editor can change this playlist')
+    for key in ('add', 'remove'):
+        if key in payload and not isinstance(payload[key], list):
+            raise HTTPException(status_code=400, detail=f'{key} must be a list')
+    raw_refs = payload.get('remove_entries', [])
+    if not isinstance(raw_refs, list):
+        raise HTTPException(status_code=400, detail='remove_entries must be a list')
+    refs = []
+    for ref in raw_refs:
+        if not isinstance(ref, dict) or not isinstance(ref.get('occurrence', 0), int) or ref.get('occurrence', 0) < 0:
+            raise HTTPException(status_code=400, detail='Invalid remove_entries item')
+        refs.append({'file': _id_file(ref.get('track_id'), request), 'occurrence': ref.get('occurrence', 0)})
+    for key in ('add', 'remove'):
+        payload[key] = [_id_file(item, request) for item in payload.get(key, [])]
+    payload['remove_entries'] = refs
+    if 'allow_duplicates' in payload and not isinstance(payload['allow_duplicates'], bool):
+        raise HTTPException(status_code=400, detail='allow_duplicates must be a boolean')
+    try:
+        result = await asyncio.to_thread(
+            api.edit_manual_playlist,
+            api.library_context(),
+            entry['name'],
+            add=payload.get('add', []),
+            remove=payload.get('remove', []),
+            remove_entries=[(item['file'], item['occurrence']) for item in refs],
+            allow_duplicates=payload.get('allow_duplicates', False),
+        )
+    except ManualPlaylistError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    invalidate_library_paths_cache()
+    if entry.get('visibility', 'private') != 'private':
+        await api.announce_playlists_changed()
+    return await _mobile_playlist_result(result)
+
+
+@router.put('/playlists/order')
+async def reorder_mobile_playlist(request: Request) -> dict[str, Any]:
+    _require_playlist_writer(request)
+    payload = await api._json_object(request)
+    name, ids = payload.get('name'), payload.get('track_ids')
+    if not isinstance(name, str) or not name.strip() or not isinstance(ids, list):
+        raise HTTPException(status_code=400, detail='name and track_ids are required')
+    entry = api.require_playlist_visible(name.strip(), request)
+    if not entry.get('manual'):
+        raise HTTPException(status_code=403, detail='Only a Library playlist can be edited')
+    if not entry.get('mine', True) and not entry.get('can_edit_tracks'):
+        raise HTTPException(status_code=403, detail='Only an editor can change this playlist')
+    paths = [_id_file(item, request) for item in ids]
+    try:
+        result = await asyncio.to_thread(api.reorder_manual_playlist, api.library_context(), entry['name'], paths, visible=set(entry.get('files') or []))
+    except ManualPlaylistError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    invalidate_library_paths_cache()
+    if entry.get('visibility', 'private') != 'private':
+        await api.announce_playlists_changed()
+    return await _mobile_playlist_result(result)
 
 
 @router.get('/usernames')
