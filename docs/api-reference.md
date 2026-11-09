@@ -3580,6 +3580,8 @@ Add or remove tracks from a manual playlist. The body accepts `name` and any com
 
 `add` and `remove` are arrays of track IDs. `remove` removes every copy of each ID; `remove_entries` removes only the specified zero-based occurrence of an ID in playlist order. A missing occurrence removes nothing. By default, adding an ID already in the playlist skips it and lists it in `already`; set `allow_duplicates` to `true` to add another copy. The response may include `added` and `removed` counts and `already` track IDs, alongside the canonical result shape.
 
+The combined number of IDs in `add`, `remove`, and `remove_entries` may not exceed 10,000. The reorder endpoint also accepts at most 10,000 IDs. Larger requests return `400` before any IDs are resolved or the playlist is changed. Unknown and caller-hidden IDs both return `404`.
+
 #### `PUT /api/v1/playlists/order`
 
 Replace the order of a manual playlist's tracks. `track_ids` must describe the caller-visible playlist contents, including each repeated occurrence.

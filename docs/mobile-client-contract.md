@@ -154,8 +154,8 @@ Other reads, all by track id:
 | `POST /api/v1/playlists/hidden` | Body `{ "name", "hide": [track_ids], "show": [keys] }` — hide tracks from an imported playlist of the user's (they stay out when its watch or link brings them back; the tracks stay in the library), or show hidden ones again. Answers `{ "name", "hidden", "keys", "shown", "restored", "count", "track_ids" }`; send `keys` as `show` to undo. Offer it on `mine` playlists that aren't `manual` or `liked` (`409` otherwise). See [Hidden playlist songs](features/hidden-playlist-songs.md) |
 | `POST /api/v1/playlists` | Body `{ "name" }` — create an empty manual playlist |
 | `POST /api/v1/playlists/rename` | Body `{ "name", "new_name" }` — rename a manual playlist |
-| `POST /api/v1/playlists/tracks` | Body `{ "name", "add"?: [track_id], "remove"?: [track_id], "remove_entries"?: [{ "track_id", "occurrence" }], "allow_duplicates"?: bool }` — edit a manual playlist by track ID |
-| `PUT /api/v1/playlists/order` | Body `{ "name", "track_ids": [...] }` — reorder a manual playlist, including repeated occurrences |
+| `POST /api/v1/playlists/tracks` | Body `{ "name", "add"?: [track_id], "remove"?: [track_id], "remove_entries"?: [{ "track_id", "occurrence" }], "allow_duplicates"?: bool }` — edit a manual playlist by track ID; at most 10,000 total references across all three arrays (`400` above the limit) |
+| `PUT /api/v1/playlists/order` | Body `{ "name", "track_ids": [...] }` — reorder a manual playlist, including repeated occurrences; at most 10,000 IDs (`400` above the limit) |
 | `GET /api/v1/likes` | `{ "track_ids": [...] }`, newest first |
 | `PUT /api/v1/likes` | Body `{ "track_id", "liked" }` — idempotent |
 

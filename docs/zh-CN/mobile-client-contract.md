@@ -154,8 +154,8 @@ GET /api/v1/library?since=<cursor>
 | `POST /api/v1/playlists/hidden` | 请求体 `{ "name", "hide": [track_ids], "show": [keys] }`；从用户导入的播放列表中隐藏曲目（监控或重新导入链接时仍保持隐藏，但曲目仍在媒体库中），或重新显示隐藏曲目。返回 `{ "name", "hidden", "keys", "shown", "restored", "count", "track_ids" }`；将 `keys` 作为 `show` 发送即可撤销隐藏。应在 `mine` 为真的、且 `manual` 和 `liked` 均为假的播放列表中提供此功能（否则返回 `409`）。参见[隐藏播放列表歌曲](features/hidden-playlist-songs.md)。 |
 | `POST /api/v1/playlists` | 请求体 `{ "name" }`；创建空的自建播放列表。 |
 | `POST /api/v1/playlists/rename` | 请求体 `{ "name", "new_name" }`；重命名自建播放列表。 |
-| `POST /api/v1/playlists/tracks` | 请求体 `{ "name", "add"?: [track_id], "remove"?: [track_id], "remove_entries"?: [{ "track_id", "occurrence" }], "allow_duplicates"?: bool }`；按曲目 ID 编辑自建播放列表。 |
-| `PUT /api/v1/playlists/order` | 请求体 `{ "name", "track_ids": [...] }`；调整自建播放列表的曲目顺序，包括重复项。 |
+| `POST /api/v1/playlists/tracks` | 请求体 `{ "name", "add"?: [track_id], "remove"?: [track_id], "remove_entries"?: [{ "track_id", "occurrence" }], "allow_duplicates"?: bool }`；按曲目 ID 编辑自建播放列表；三个数组合计最多 10,000 项（超出时返回 `400`）。 |
+| `PUT /api/v1/playlists/order` | 请求体 `{ "name", "track_ids": [...] }`；调整自建播放列表的曲目顺序，包括重复项；最多 10,000 个 ID（超出时返回 `400`）。 |
 | `GET /api/v1/likes` | `{ "track_ids": [...] }`，按最新时间在前排序。 |
 | `PUT /api/v1/likes` | 请求体 `{ "track_id", "liked" }`；操作具有幂等性。 |
 
