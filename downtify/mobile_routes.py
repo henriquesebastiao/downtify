@@ -216,6 +216,7 @@ async def _mobile_playlist_result(result: dict[str, Any]) -> dict[str, Any]:
 @router.post('/playlists')
 async def create_mobile_playlist(request: Request) -> dict[str, Any]:
     _require_playlist_writer(request)
+    _sync()
     payload = await api._json_object(request)
     name = payload.get('name')
     if not isinstance(name, str) or not name.strip():
@@ -228,6 +229,7 @@ async def create_mobile_playlist(request: Request) -> dict[str, Any]:
 @router.post('/playlists/rename')
 async def rename_mobile_playlist(request: Request) -> dict[str, Any]:
     _require_playlist_writer(request)
+    _sync()
     payload = await api._json_object(request)
     name, new_name = payload.get('name'), payload.get('new_name')
     if not isinstance(name, str) or not name.strip() or not isinstance(new_name, str) or not new_name.strip():
@@ -244,6 +246,7 @@ async def rename_mobile_playlist(request: Request) -> dict[str, Any]:
 @router.post('/playlists/tracks')
 async def edit_mobile_playlist_tracks(request: Request) -> dict[str, Any]:
     _require_playlist_writer(request)
+    _sync()
     payload = await api._json_object(request)
     name = payload.get('name')
     if not isinstance(name, str) or not name.strip():
@@ -261,7 +264,11 @@ async def edit_mobile_playlist_tracks(request: Request) -> dict[str, Any]:
         raise HTTPException(status_code=400, detail='remove_entries must be a list')
     refs = []
     for ref in raw_refs:
-        if not isinstance(ref, dict) or not isinstance(ref.get('occurrence', 0), int) or ref.get('occurrence', 0) < 0:
+        if (
+            not isinstance(ref, dict)
+            or type(ref.get('occurrence', 0)) is not int
+            or ref.get('occurrence', 0) < 0
+        ):
             raise HTTPException(status_code=400, detail='Invalid remove_entries item')
         refs.append({'file': _id_file(ref.get('track_id'), request), 'occurrence': ref.get('occurrence', 0)})
     for key in ('add', 'remove'):
@@ -290,6 +297,7 @@ async def edit_mobile_playlist_tracks(request: Request) -> dict[str, Any]:
 @router.put('/playlists/order')
 async def reorder_mobile_playlist(request: Request) -> dict[str, Any]:
     _require_playlist_writer(request)
+    _sync()
     payload = await api._json_object(request)
     name, ids = payload.get('name'), payload.get('track_ids')
     if not isinstance(name, str) or not name.strip() or not isinstance(ids, list):
