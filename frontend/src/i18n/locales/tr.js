@@ -1070,6 +1070,7 @@ export default {
     queue: 'Kuyruk',
     upNext: 'Sıradaki',
     lyrics: 'Şarkı sözleri',
+    karaoke: 'Karaoke',
     details: 'Ayrıntılar',
     playing: 'Çalıyor',
     play: 'Çal',

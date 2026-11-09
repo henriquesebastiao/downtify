@@ -1055,6 +1055,7 @@ export default {
     queue: 'Queue',
     upNext: 'Up next',
     lyrics: 'Lyrics',
+    karaoke: 'Karaoke',
     details: 'Details',
     playing: 'Playing',
     play: 'Play',

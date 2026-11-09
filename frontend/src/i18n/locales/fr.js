@@ -1101,6 +1101,7 @@ export default {
     queue: 'File',
     upNext: 'À suivre',
     lyrics: 'Paroles',
+    karaoke: 'Karaoké',
     details: 'Détails',
     playing: 'En lecture',
     play: 'Lire',

@@ -1074,6 +1074,7 @@ export default {
     queue: 'Fila',
     upNext: 'A seguir',
     lyrics: 'Letra',
+    karaoke: 'Karaoke',
     details: 'Detalhes',
     playing: 'Tocando',
     play: 'Tocar',

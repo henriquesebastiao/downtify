@@ -1075,6 +1075,7 @@ export default {
     queue: 'Sor',
     upNext: 'Következik',
     lyrics: 'Dalszöveg',
+    karaoke: 'Karaoke',
     details: 'Részletek',
     playing: 'Lejátszás',
     play: 'Lejátszás',

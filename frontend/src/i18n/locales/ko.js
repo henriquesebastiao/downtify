@@ -1068,6 +1068,7 @@ export default {
     queue: '대기열',
     upNext: '다음 재생 곡',
     lyrics: '가사',
+    karaoke: '노래방',
     details: '세부정보',
     playing: '재생 중',
     play: '재생',

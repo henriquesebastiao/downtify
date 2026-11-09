@@ -1101,6 +1101,7 @@ export default {
     queue: 'Warteschlange',
     upNext: 'Als Nächstes',
     lyrics: 'Songtexte',
+    karaoke: 'Karaoke',
     details: 'Details',
     playing: 'Wird abgespielt',
     play: 'Abspielen',

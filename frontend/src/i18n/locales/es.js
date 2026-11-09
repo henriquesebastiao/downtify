@@ -1082,6 +1082,7 @@ export default {
     queue: 'Cola',
     upNext: 'A continuación',
     lyrics: 'Letra',
+    karaoke: 'Karaoke',
     details: 'Detalles',
     playing: 'Reproduciendo',
     play: 'Reproducir',

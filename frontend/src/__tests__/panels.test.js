@@ -14,7 +14,11 @@ describe('availablePanels', () => {
     expect(availablePanels()).toEqual(PANEL_IDS)
   })
 
-  it('drops only the lyrics panel when they are hidden', () => {
+  it('puts karaoke right after the lyrics tab', () => {
+    expect(availablePanels().slice(0, 2)).toEqual(['lyrics', 'karaoke'])
+  })
+
+  it('drops only the lyrics panels when they are hidden', () => {
     expect(availablePanels({ lyrics: false })).toEqual([
       'queue',
       'details',
@@ -50,6 +54,7 @@ describe('requestedPanel', () => {
   it('ignores a link to lyrics once they are hidden', () => {
     // An old ?panel=lyrics link or bookmark must not land on an empty tab.
     expect(requestedPanel('lyrics', off)).toBe('')
+    expect(requestedPanel('karaoke', off)).toBe('')
     expect(requestedPanel('queue', off)).toBe('queue')
   })
 

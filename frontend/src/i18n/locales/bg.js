@@ -1063,6 +1063,7 @@ export default {
     queue: 'Опашка',
     upNext: 'Следват',
     lyrics: 'Текст',
+    karaoke: 'Караоке',
     details: 'Подробности',
     playing: 'Звучи',
     play: 'Пусни',

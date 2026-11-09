@@ -989,6 +989,7 @@ export default {
     queue: '队列',
     upNext: '接下来播放',
     lyrics: '歌词',
+    karaoke: '卡拉OK',
     details: '详情',
     playing: '播放中',
     play: '播放',

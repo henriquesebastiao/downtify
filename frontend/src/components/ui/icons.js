@@ -138,6 +138,8 @@ export const STROKE = {
 }
 
 export const FILLED = {
+  'mic-vocal':
+    '<g transform="rotate(45 12 12)"><path d="M7 3.2a5 5 0 0 1 10 0z"/><path d="M7.2 4.5h9.6l-1 2.6H8.2z"/><path d="M8.6 8.4h6.8l-1.3 11.4H9.9z"/><path d="M10.2 21h3.6l-.4 2.2h-2.8z"/></g><path d="M4.1 19.9c-1.6 1 1 1.8-.8 3.2" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>',
   play: '<path d="M7 4.5v15a1 1 0 0 0 1.5.86l12.5-7.5a1 1 0 0 0 0-1.72L8.5 3.64A1 1 0 0 0 7 4.5z"/>',
   pause:
     '<rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/>',

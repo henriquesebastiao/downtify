@@ -1086,6 +1086,7 @@ export default {
     queue: 'Ουρά',
     upNext: 'Επόμενα',
     lyrics: 'Στίχοι',
+    karaoke: 'Καραόκε',
     details: 'Λεπτομέρειες',
     playing: 'Παίζει',
     play: 'Αναπαραγωγή',
