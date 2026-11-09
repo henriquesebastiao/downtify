@@ -92,7 +92,7 @@ def test_measured_profile_carries_the_original_download_etag(
     monkeypatch.setattr(
         mobile_routes,
         '_track_path',
-        lambda track_id: ({'file': 'song.flac'}, audio),
+        lambda track_id, request: ({'file': 'song.flac'}, audio),
     )
 
     profile = asyncio.run(mobile_routes.track_loudness('t1', request()))
