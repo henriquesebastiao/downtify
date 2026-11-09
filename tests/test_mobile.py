@@ -649,6 +649,64 @@ def test_likes_by_track_id(client, app_dirs):
 
 
 @_needs_ffmpeg
+def test_mobile_playlist_writes_use_track_ids_and_occurrences(client, app_dirs):
+    downloads, _data = app_dirs
+    _make_mp3(downloads / 'Roads.mp3')
+    track_id = _library(client)['tracks'][0]['id']
+
+    created = client.post('/api/v1/playlists', json={'name': 'Roads list'})
+    assert created.status_code == 200
+    assert created.json() == {
+        'name': 'Roads list', 'manual': True, 'count': 0, 'track_ids': []
+    }
+    added = client.post('/api/v1/playlists/tracks', json={
+        'name': 'Roads list', 'add': [track_id, track_id],
+        'allow_duplicates': True,
+    })
+    assert added.status_code == 200
+    assert added.json()['track_ids'] == [track_id, track_id]
+    assert added.json()['added'] == 2
+
+    removed = client.post('/api/v1/playlists/tracks', json={
+        'name': 'Roads list',
+        'remove_entries': [{'track_id': track_id, 'occurrence': 1}],
+    })
+    assert removed.status_code == 200
+    assert removed.json()['track_ids'] == [track_id]
+    assert removed.json()['removed'] == 1
+
+    assert client.put('/api/v1/playlists/order', json={
+        'name': 'Roads list', 'track_ids': [],
+    }).status_code == 409
+    reordered = client.put('/api/v1/playlists/order', json={
+        'name': 'Roads list', 'track_ids': [track_id],
+    })
+    assert reordered.status_code == 200
+    assert reordered.json()['track_ids'] == [track_id]
+    renamed = client.post('/api/v1/playlists/rename', json={
+        'name': 'Roads list', 'new_name': 'Roads renamed',
+    })
+    assert renamed.status_code == 200
+    assert renamed.json()['previous'] == 'Roads list'
+    assert renamed.json()['name'] == 'Roads renamed'
+
+
+@_needs_ffmpeg
+def test_mobile_playlist_writes_reject_bad_ids_and_imported_playlists(client, app_dirs):
+    downloads, _data = app_dirs
+    _make_mp3(downloads / 'Roads.mp3')
+    (downloads / 'Imported.m3u').write_text('#EXTM3U\nRoads.mp3\n')
+    track_id = _library(client)['tracks'][0]['id']
+    assert client.post('/api/v1/playlists/tracks', json={
+        'name': 'Imported', 'add': [track_id],
+    }).status_code == 403
+    assert client.post('/api/v1/playlists/tracks', json={
+        'name': 'missing', 'add': ['unknown'],
+    }).status_code == 404
+    assert client.post('/api/v1/playlists', json={'name': ''}).status_code == 400
+
+
+@_needs_ffmpeg
 def test_signed_stream_url_for_a_cast_receiver(client, app_dirs):
     downloads, _data = app_dirs
     _make_mp3(downloads / 'Portishead - Roads.mp3')
