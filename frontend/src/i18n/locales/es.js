@@ -1083,6 +1083,12 @@ export default {
     upNext: 'A continuación',
     lyrics: 'Letra',
     karaoke: 'Karaoke',
+    karaokeWindow: 'Abrir en una ventana nueva',
+    karaokeWindowBlocked:
+      'El navegador bloqueó la ventana nueva. Permite las ventanas emergentes para Downtify e inténtalo de nuevo.',
+    karaokeWaiting:
+      'Esperando una canción desde la ventana principal de Downtify',
+    fullscreen: 'Pantalla completa',
     details: 'Detalles',
     playing: 'Reproduciendo',
     play: 'Reproducir',

@@ -1071,6 +1071,11 @@ export default {
     upNext: 'Sıradaki',
     lyrics: 'Şarkı sözleri',
     karaoke: 'Karaoke',
+    karaokeWindow: 'Yeni pencerede aç',
+    karaokeWindowBlocked:
+      'Tarayıcı yeni pencereyi engelledi. Downtify için açılır pencerelere izin verip yeniden deneyin.',
+    karaokeWaiting: 'Ana Downtify penceresinden şarkı bekleniyor',
+    fullscreen: 'Tam ekran',
     details: 'Ayrıntılar',
     playing: 'Çalıyor',
     play: 'Çal',

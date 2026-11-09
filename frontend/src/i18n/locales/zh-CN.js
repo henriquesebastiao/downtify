@@ -990,6 +990,11 @@ export default {
     upNext: '接下来播放',
     lyrics: '歌词',
     karaoke: '卡拉OK',
+    karaokeWindow: '在新窗口中打开',
+    karaokeWindowBlocked:
+      '浏览器阻止了新窗口。请允许 Downtify 弹出窗口后重试。',
+    karaokeWaiting: '正在等待 Downtify 主窗口播放歌曲',
+    fullscreen: '全屏',
     details: '详情',
     playing: '播放中',
     play: '播放',

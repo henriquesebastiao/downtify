@@ -1087,6 +1087,11 @@ export default {
     upNext: 'Επόμενα',
     lyrics: 'Στίχοι',
     karaoke: 'Καραόκε',
+    karaokeWindow: 'Άνοιγμα σε νέο παράθυρο',
+    karaokeWindowBlocked:
+      'Το πρόγραμμα περιήγησης απέκλεισε το νέο παράθυρο. Επιτρέψτε τα αναδυόμενα παράθυρα για το Downtify και δοκιμάστε ξανά.',
+    karaokeWaiting: 'Αναμονή για τραγούδι από το κύριο παράθυρο του Downtify',
+    fullscreen: 'Πλήρης οθόνη',
     details: 'Λεπτομέρειες',
     playing: 'Παίζει',
     play: 'Αναπαραγωγή',

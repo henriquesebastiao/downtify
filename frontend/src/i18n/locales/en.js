@@ -1056,6 +1056,11 @@ export default {
     upNext: 'Up next',
     lyrics: 'Lyrics',
     karaoke: 'Karaoke',
+    karaokeWindow: 'Open in a new window',
+    karaokeWindowBlocked:
+      'The browser blocked the new window. Allow pop-ups for Downtify and try again.',
+    karaokeWaiting: 'Waiting for a song from the main Downtify window',
+    fullscreen: 'Full screen',
     details: 'Details',
     playing: 'Playing',
     play: 'Play',

@@ -8,33 +8,12 @@
         aria-modal="true"
         :aria-label="t('player.nowPlaying')"
       >
-        <!-- Backdrop: the artwork, blown up and blurred. Clipped, or what
-             sticks out lets the whole view scroll. -->
-        <div
-          class="pointer-events-none absolute inset-0 overflow-hidden"
-          aria-hidden="true"
-        >
-          <div
-            class="absolute inset-0 transition-colors duration-700"
-            :style="{ backgroundColor: tint }"
-          />
-          <img
-            v-if="track.hasCover"
-            :src="track.cover"
-            alt=""
-            class="absolute inset-0 size-full scale-125 object-cover opacity-55 blur-[90px] saturate-150"
-          />
-          <div
-            class="absolute inset-0 bg-gradient-to-b from-black/25 via-black/45 to-black/80"
-          />
-          <Transition name="fade">
-            <KaraokeSmoke
-              v-if="isKaraoke"
-              :palette="palette"
-              :playing="player.isPlaying.value"
-            />
-          </Transition>
-        </div>
+        <NowPlayingBackdrop
+          :track="track"
+          :palette="palette"
+          :karaoke="isKaraoke"
+          :playing="player.isPlaying.value"
+        />
 
         <div
           class="relative flex h-full flex-col px-5 lg:px-10"
@@ -111,20 +90,22 @@
                 }}</span>
               </span>
             </component>
-            <div
+            <KaraokeUpNext
               v-if="isKaraoke && nextTrack"
-              class="hidden max-w-60 min-w-0 text-right xl:block"
+              :track="nextTrack"
+              class="hidden xl:block"
+            />
+            <button
+              v-if="isKaraoke"
+              type="button"
+              class="hidden size-10 shrink-0 items-center justify-center rounded-full bg-white/10 transition-colors hover:bg-white/20 lg:flex"
+              :class="{ 'text-accent': karaokeStage.connected.value }"
+              :aria-label="t('player.karaokeWindow')"
+              :title="t('player.karaokeWindow')"
+              @click="openKaraokeWindow"
             >
-              <p class="eyebrow !text-white/55">
-                {{ t('player.upNext') }}
-              </p>
-              <p class="truncate text-sm font-medium text-white/85">
-                {{ nextTrack.title }}
-                <span v-if="nextTrack.artist" class="text-white/55"
-                  >· {{ nextTrack.artist }}</span
-                >
-              </p>
-            </div>
+              <AppIcon name="screen-share" :size="20" />
+            </button>
             <div
               class="ml-auto hidden gap-1 rounded-[12px] p-1 lg:flex"
               :class="isKaraoke ? 'bg-black/40' : 'bg-white/8'"
@@ -238,6 +219,7 @@
                 v-if="panel === 'lyrics' || isKaraoke"
                 :compact="isMobile"
                 :karaoke="isKaraoke"
+                :player="player"
               />
               <UpNextPanel v-else-if="panel === 'queue'" />
               <TrackDetails v-else-if="panel === 'details'" class="lg:pt-10" />
@@ -558,14 +540,16 @@ import UpNextPanel from '../player/UpNextPanel.vue'
 import TrackDetails from '../player/TrackDetails.vue'
 import NowPlayingTrackInfo from '../player/NowPlayingTrackInfo.vue'
 import EqualizerPanel from '../player/EqualizerPanel.vue'
-import KaraokeSmoke from '../player/KaraokeSmoke.vue'
+import KaraokeUpNext from '../player/KaraokeUpNext.vue'
+import NowPlayingBackdrop from '../player/NowPlayingBackdrop.vue'
 import { usePlayer } from '/src/model/player'
+import { useKaraokeStage } from '/src/model/karaokeStage'
 import { useDownloadManager, useProgressTracker } from '/src/model/download'
 import { useLibrary } from '/src/model/library'
 import { useUi } from '/src/model/ui'
 import { usePlayerPrefs } from '/src/model/playerPrefs'
 import { useNowPlaying } from '/src/model/ui'
-import { formatBytes, formatDuration, hueFor } from '/src/lib/format'
+import { formatBytes, formatDuration } from '/src/lib/format'
 import { availablePanels, defaultPanel, requestedPanel } from '/src/lib/panels'
 import { useCoverPalette } from '/src/model/coverPalette'
 import { groupingArtistName } from '/src/lib/library'
@@ -612,11 +596,6 @@ function goSimilar() {
   router.push({ name: 'Similar', query: { artist, track: title } })
 }
 const palette = useCoverPalette(track)
-const tint = computed(
-  () =>
-    palette.value?.background ||
-    `oklch(0.3 0.06 ${hueFor(track.value?.album || track.value?.title)})`
-)
 
 const PANEL_TABS = {
   lyrics: { icon: 'lyrics', label: 'player.lyrics' },
@@ -657,6 +636,13 @@ const panel = computed(
 const mobilePanel = computed(() => isMobile.value && !!requested.value)
 const isKaraoke = computed(() => panel.value === 'karaoke')
 const nextTrack = computed(() => player.upcoming.value[0]?.track || null)
+const karaokeStage = useKaraokeStage()
+
+// The words go to the other screen; this one is free to pick the next song.
+function openKaraokeWindow() {
+  if (karaokeStage.open()) nowPlaying.close()
+  else ui.toast(t('player.karaokeWindowBlocked'), { kind: 'error' })
+}
 
 function setPanel(id) {
   router.replace({ query: { ...route.query, panel: id } })

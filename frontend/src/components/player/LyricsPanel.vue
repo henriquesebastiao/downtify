@@ -30,11 +30,12 @@
       v-else-if="lines.length"
       ref="scroller"
       class="relative flex-1 overflow-y-auto overscroll-contain px-2 [mask-image:linear-gradient(transparent,#000_18%,#000_82%,transparent)] [scrollbar-width:none]"
-      :class="
+      :class="[
         karaoke
           ? 'py-[calc(50dvh-140px)] lg:py-[calc(50dvh-66px)]'
-          : 'py-[min(30vh,9rem)]'
-      "
+          : 'py-[min(30vh,9rem)]',
+        { 'pointer-events-none': readonly },
+      ]"
       @wheel.passive="userScrolled"
       @touchmove.passive="userScrolled"
     >
@@ -45,6 +46,7 @@
         type="button"
         class="text-display block w-full transition-all duration-300"
         :class="karaoke ? karaokeLineClass(i) : lineClass(i)"
+        :tabindex="readonly ? -1 : undefined"
         @click="player.seek(line.time)"
       >
         <span
@@ -95,7 +97,6 @@
 <script setup>
 import { computed, nextTick, ref, watch } from 'vue'
 import AppIcon from '../ui/AppIcon.vue'
-import { usePlayer } from '/src/model/player'
 import { loadLyrics } from '/src/model/lyrics'
 import { activeLineIndex, countInBeats, lineProgress } from '/src/lib/lrc'
 import { centerLine } from '/src/lib/lyricsScroll'
@@ -107,9 +108,12 @@ const props = defineProps({
   compact: { type: Boolean, default: false },
   // Stage layout: huge centred lines, the sung part filling in as it goes.
   karaoke: { type: Boolean, default: false },
+  // The app's player, or the projected window's read-only copy of it.
+  player: { type: Object, required: true },
+  // Projected: nothing here to click or scroll.
+  readonly: { type: Boolean, default: false },
 })
 
-const player = usePlayer()
 const { t } = useI18n()
 const loading = ref(false)
 const lines = ref([])
@@ -119,7 +123,7 @@ const lineEls = ref([])
 let manualUntil = 0
 
 watch(
-  () => player.currentTrack.value?.file,
+  () => props.player.currentTrack.value?.file,
   async (file) => {
     lines.value = []
     plain.value = ''
@@ -127,7 +131,7 @@ watch(
     if (!file) return
     loading.value = true
     const result = await loadLyrics(file)
-    if (player.currentTrack.value?.file !== file) return
+    if (props.player.currentTrack.value?.file !== file) return
     lines.value = result.lines
     plain.value = result.plain
     loading.value = false
@@ -135,7 +139,7 @@ watch(
   { immediate: true }
 )
 
-const clock = computed(() => player.currentTime.value + 0.25)
+const clock = computed(() => props.player.currentTime.value + 0.25)
 const active = computed(() => activeLineIndex(lines.value, clock.value))
 const countIn = computed(() =>
   props.karaoke ? countInBeats(lines.value, clock.value, COUNT_IN_DOTS) : 0

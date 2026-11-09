@@ -1064,6 +1064,11 @@ export default {
     upNext: 'Следват',
     lyrics: 'Текст',
     karaoke: 'Караоке',
+    karaokeWindow: 'Отваряне в нов прозорец',
+    karaokeWindowBlocked:
+      'Браузърът блокира новия прозорец. Разрешете изскачащите прозорци за Downtify и опитайте отново.',
+    karaokeWaiting: 'Изчакване на песен от главния прозорец на Downtify',
+    fullscreen: 'Цял екран',
     details: 'Подробности',
     playing: 'Звучи',
     play: 'Пусни',
