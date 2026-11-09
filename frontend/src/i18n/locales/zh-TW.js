@@ -1016,6 +1016,12 @@ export default {
     queue: '佇列',
     upNext: '接下來播放',
     lyrics: '歌詞',
+    karaoke: '卡拉OK',
+    karaokeWindow: '在新視窗中開啟',
+    karaokeWindowBlocked:
+      '瀏覽器封鎖了新視窗。請允許 Downtify 的彈出式視窗後再試一次。',
+    karaokeWaiting: '正在等待 Downtify 主視窗播放歌曲',
+    fullscreen: '全螢幕',
     details: '詳細資訊',
     playing: '播放中',
     play: '播放',
