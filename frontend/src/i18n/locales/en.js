@@ -1049,6 +1049,11 @@ export default {
     file: 'File',
   },
   player: {
+    unlockLayout: 'Unlock player layout',
+    lockLayout: 'Lock player layout',
+    resetLayout: 'Reset player layout',
+    resizeTrackSection: 'Resize track information section',
+    resizeTransportSection: 'Resize playback controls section',
     nowPlaying: 'Now playing',
     openNowPlaying: 'Open now playing',
     closeNowPlaying: 'Close now playing',

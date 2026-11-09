@@ -1010,6 +1010,11 @@ export default {
     file: '檔案',
   },
   player: {
+    unlockLayout: '解鎖播放器版面',
+    lockLayout: '鎖定播放器版面',
+    resetLayout: '重設播放器版面',
+    resizeTrackSection: '調整曲目資訊區域大小',
+    resizeTransportSection: '調整播放控制區域大小',
     nowPlaying: '正在播放',
     openNowPlaying: '開啟正在播放',
     closeNowPlaying: '關閉正在播放',

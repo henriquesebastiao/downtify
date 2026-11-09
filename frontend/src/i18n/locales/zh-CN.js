@@ -983,6 +983,11 @@ export default {
     file: '文件',
   },
   player: {
+    unlockLayout: '解锁播放器布局',
+    lockLayout: '锁定播放器布局',
+    resetLayout: '重置播放器布局',
+    resizeTrackSection: '调整曲目信息区域大小',
+    resizeTransportSection: '调整播放控件区域大小',
     nowPlaying: '正在播放',
     openNowPlaying: '打开正在播放',
     closeNowPlaying: '关闭正在播放',

@@ -1068,6 +1068,11 @@ export default {
     file: 'Arquivo',
   },
   player: {
+    unlockLayout: 'Desbloquear o layout do player',
+    lockLayout: 'Bloquear o layout do player',
+    resetLayout: 'Redefinir o layout do player',
+    resizeTrackSection: 'Redimensionar a seção de informações da faixa',
+    resizeTransportSection: 'Redimensionar a seção de controles de reprodução',
     nowPlaying: 'Tocando agora',
     openNowPlaying: 'Abrir tocando agora',
     closeNowPlaying: 'Fechar tocando agora',

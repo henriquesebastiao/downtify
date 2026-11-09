@@ -1064,6 +1064,11 @@ export default {
     file: 'Dosya',
   },
   player: {
+    unlockLayout: 'Oynatıcı düzeninin kilidini aç',
+    lockLayout: 'Oynatıcı düzenini kilitle',
+    resetLayout: 'Oynatıcı düzenini sıfırla',
+    resizeTrackSection: 'Parça bilgileri bölümünü yeniden boyutlandır',
+    resizeTransportSection: 'Oynatma kontrolleri bölümünü yeniden boyutlandır',
     nowPlaying: 'Şimdi çalıyor',
     openNowPlaying: 'Şimdi çalanı aç',
     closeNowPlaying: 'Şimdi çalanı kapat',

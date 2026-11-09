@@ -1057,6 +1057,11 @@ export default {
     file: 'Файл',
   },
   player: {
+    unlockLayout: 'Отключване на оформлението на плейъра',
+    lockLayout: 'Заключване на оформлението на плейъра',
+    resetLayout: 'Възстановяване на оформлението на плейъра',
+    resizeTrackSection: 'Преоразмеряване на секцията с информация за песента',
+    resizeTransportSection: 'Преоразмеряване на секцията с контроли за възпроизвеждане',
     nowPlaying: 'Сега звучи',
     openNowPlaying: 'Отвори „Сега звучи“',
     closeNowPlaying: 'Затвори „Сега звучи“',

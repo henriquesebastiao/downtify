@@ -121,6 +121,7 @@ export const STROKE = {
   cookie:
     '<path d="M21 12a9 9 0 1 1-9-9 3 3 0 0 0 4 3 3 3 0 0 0 5 6z"/><path d="M8.5 9.5h.01M12 14h.01M8 15h.01M15 16h.01"/>',
   lock: '<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
+  unlock: '<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 7.5-2"/>',
   refresh: '<path d="M21 12a9 9 0 1 1-2.6-6.4M21 3v6h-6"/>',
   menu: '<path d="M4 6h16M4 12h16M4 18h16"/>',
   'panel-left':
