@@ -59,6 +59,7 @@
                 : t('album.markCompilation')
             }}
           </UiButton>
+          <UiButton variant="ghost" @click="editingMetadata = true">Edit metadata</UiButton>
           <!-- Download as ZIP lives in the ⋯ menu below. -->
           <UiMenu :items="menu" :label="t('common.more')" size="lg" />
         </template>
@@ -110,6 +111,7 @@
         </div>
       </section>
     </DetailState>
+    <MetadataEditor v-if="editingMetadata && album" :open="true" :tracks="album.tracks" @close="editingMetadata = false" />
   </div>
 </template>
 
@@ -117,6 +119,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import UiButton from '/src/components/ui/UiButton.vue'
+import MetadataEditor from '/src/components/library/MetadataEditor.vue'
 import UiIconButton from '/src/components/ui/UiIconButton.vue'
 import UiMenu from '/src/components/ui/UiMenu.vue'
 import CollectionHero from '/src/components/library/CollectionHero.vue'
@@ -139,6 +142,7 @@ import { useTrashCapability } from '/src/lib/trash'
 import { useI18n } from '/src/i18n'
 
 const { t } = useI18n()
+const editingMetadata = ref(false)
 const route = useRoute()
 const router = useRouter()
 const library = useLibrary()

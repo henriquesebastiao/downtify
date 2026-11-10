@@ -1131,3 +1131,56 @@ def test_discovery_can_be_turned_off(monkeypatch, value, enabled):
 def test_a_bound_host_is_the_only_address_announced():
     assert local_addresses('192.168.1.20') == ['192.168.1.20']
     assert all(not a.startswith('127.') for a in local_addresses('0.0.0.0'))
+
+
+@_needs_ffmpeg
+def test_edit_metadata_by_device_and_batch_results(client, app_dirs):
+    downloads, _data = app_dirs
+    path = _make_mp3(downloads / 'Portishead - Roads.mp3', cover=False)
+    first = _library(client)
+    track = first['tracks'][0]
+    _device, token = api.state.auth.create_device('Phone', user_id=1)
+    client.cookies.clear()
+    url = f'/api/v1/tracks/{track["id"]}/metadata'
+    assert (
+        client.patch(url, json={'changes': {'title': 'Changed'}}).status_code
+        == 401
+    )
+    headers = {'Authorization': f'Bearer {token}'}
+    response = client.patch(
+        url,
+        headers=headers,
+        json={
+            'changes': {'title': 'Changed', 'genre': 'Trip hop'},
+            'revision': track['revision'],
+        },
+    )
+    assert response.status_code == 200, response.text
+    assert read_audio_metadata(path)['title'] == 'Changed'
+    updates = client.get(
+        f'/api/v1/library?since={first["cursor"]}', headers=headers
+    ).json()
+    assert updates['tracks'][0]['id'] == track['id']
+    assert updates['tracks'][0]['title'] == 'Changed'
+    assert updates['tracks'][0]['genre'] == 'Trip hop'
+    conflict = client.patch(
+        url,
+        headers=headers,
+        json={
+            'changes': {'title': 'Outdated'},
+            'revision': track['revision'],
+        },
+    )
+    assert conflict.status_code == 409
+    result = client.patch(
+        '/api/v1/tracks/metadata/batch',
+        headers=headers,
+        json={
+            'track_ids': [track['id'], 'missing'],
+            'changes': {'album': 'Edited album'},
+        },
+    )
+    assert result.status_code == 200
+    assert result.json()['results'][0]['ok'] is True
+    assert result.json()['results'][1]['status'] == 404
+    assert read_audio_metadata(path)['album'] == 'Edited album'

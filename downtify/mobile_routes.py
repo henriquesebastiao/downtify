@@ -26,8 +26,10 @@ from .auth import SIGNED_URL_DEFAULT_TTL, SIGNED_URL_MAX_TTL, Principal
 from .cover_thumbs import normalize_size
 from .library_catalog import list_library_entries, resolve_library_file
 from .library_paths_cache import invalidate_library_paths_cache
+from .likes import content_key_for
 from .lyrics import read_track_lyrics
 from .manual_playlists import MAX_TRACKS_PER_EDIT, ManualPlaylistError
+from .metadata_edit import edit_file, validate_changes
 from .mobile_track_ids import resolve_mobile_track_ids
 from .transcode import (
     FORMATS,
@@ -819,3 +821,125 @@ async def sign(request: Request) -> dict[str, Any]:
             )
         )
     return {'urls': urls, 'expires_at': int(time.time()) + ttl}
+
+
+@router.patch('/tracks/{track_id}/metadata')
+async def edit_track_metadata(
+    track_id: str, request: Request
+) -> dict[str, Any]:
+    """Edit tags on one visible track; see the batch endpoint for details."""
+    payload = await request.json()
+    if not isinstance(payload, dict):
+        raise HTTPException(status_code=422, detail='Expected an object')
+    results = await _edit_metadata(
+        request,
+        [track_id],
+        payload.get('changes'),
+        {track_id: payload.get('revision')},
+    )
+    result = results[0]
+    if result.get('error'):
+        raise HTTPException(
+            status_code=result['status'], detail=result['error']
+        )
+    return result
+
+
+@router.patch('/tracks/metadata/batch')
+async def edit_tracks_metadata(request: Request) -> dict[str, Any]:
+    """Apply common changes to track IDs, reporting success or failure per track."""
+    payload = await request.json()
+    if not isinstance(payload, dict) or not isinstance(
+        payload.get('track_ids'), list
+    ):
+        raise HTTPException(status_code=422, detail='track_ids must be a list')
+    ids = payload['track_ids']
+    if (
+        not ids
+        or len(ids) > 500
+        or any(not isinstance(i, str) or not i for i in ids)
+        or len(set(ids)) != len(ids)
+    ):
+        raise HTTPException(
+            status_code=422, detail='Provide 1 to 500 unique track IDs'
+        )
+    revisions = payload.get('revisions', {})
+    if not isinstance(revisions, dict):
+        raise HTTPException(
+            status_code=422, detail='revisions must be an object'
+        )
+    return {
+        'results': await _edit_metadata(
+            request, ids, payload.get('changes'), revisions
+        )
+    }
+
+
+async def _edit_metadata(
+    request: Request, ids: list[str], changes: Any, revisions: dict[str, Any]
+) -> list[dict[str, Any]]:
+    principal = api.principal_of(request)
+    if (
+        principal is None
+        or principal.kind not in {'session', 'device', 'open'}
+        or not api.request_user_id(request)
+    ):
+        raise HTTPException(status_code=401, detail='Sign in required')
+    try:
+        changes = validate_changes(changes)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    await asyncio.to_thread(_refresh)
+    results = []
+    changed = False
+    for track_id in ids:
+        try:
+            row, full = await asyncio.to_thread(_track_path, track_id)
+            file = row['file']
+            if not await asyncio.to_thread(
+                api.filter_paths_for_request, [file], request
+            ):
+                raise HTTPException(status_code=404, detail='Track not found')
+            revision = revisions.get(track_id)
+            if revision is not None and revision != row.get('revision'):
+                raise HTTPException(
+                    status_code=409,
+                    detail='Track changed; reload and try again',
+                )
+            old_key = content_key_for(full) or ''
+            await asyncio.to_thread(edit_file, full, changes)
+            changed = True
+            new_key = content_key_for(full) or ''
+            if old_key and new_key and old_key != new_key:
+                await asyncio.to_thread(
+                    api.rekey_file_owners, old_key, new_key, file
+                )
+            await asyncio.to_thread(api._after_replacement, file, full)
+            changed = True
+            results.append({'id': track_id, 'ok': True})
+        except HTTPException as exc:
+            results.append({
+                'id': track_id,
+                'ok': False,
+                'status': exc.status_code,
+                'error': exc.detail,
+            })
+        except (OSError, ValueError, TypeError, KeyError) as exc:
+            results.append({
+                'id': track_id,
+                'ok': False,
+                'status': 422,
+                'error': str(exc),
+            })
+        except Exception:
+            logger.exception('Could not edit metadata for track {}', track_id)
+            results.append({
+                'id': track_id,
+                'ok': False,
+                'status': 500,
+                'error': 'Could not edit metadata',
+            })
+    if changed:
+        await asyncio.to_thread(_refresh)
+        api.announce_library_changed()
+    return results
