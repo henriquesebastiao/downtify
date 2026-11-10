@@ -992,7 +992,11 @@ function metadataLibrary() {
 }
 
 function editMetadata(trackIds, changes, revisions) {
-  return API.patch('/api/v1/tracks/metadata/batch', { track_ids: trackIds, changes, revisions })
+  return API.patch('/api/v1/tracks/metadata/batch', {
+    track_ids: trackIds,
+    changes,
+    revisions,
+  })
 }
 
 export default {

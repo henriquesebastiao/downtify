@@ -270,3 +270,11 @@ POST /api/activity/playback
 - 移动操作分三步：使用 `{ "track_ids": [...] }`（媒体库 ID，最多 200 个）调用 `POST …/preview`；之后每秒左右轮询 `GET …/preview/{request_id}`，直到 `state` 为 `ready`；向用户展示 `items`（标题、格式、路径）并请求确认，随后使用其中的 `confirmation` 调用 `POST …/confirm`（有效期 10 分钟）。确认响应先于实际移动操作返回，因此歌曲应显示为等待处理，而不是已删除。
 - 确认移入回收站的歌曲会以已删除 ID 的形式从媒体库消息流移除（出现在 `GET /api/v1/library` 的 `deleted` 中）；恢复的歌曲会以**相同的 `id`** 返回，因此以 ID 为键的喜欢记录、播放列表、队列条目和离线文件仍能关联到该歌曲。在本次会话首次成功同步之前，不要删除用户队列或离线文件；只有同步明确确认 ID 消失时才视为已移除。
 - 对 `409` 响应中的 `detail.code` 显示相应提示（代码列表见 API 参考）；未知代码按“操作未完成，未删除任何内容”处理。
+
+## 编辑媒体库元数据
+
+已登录用户和已配对设备可以编辑共享媒体库中可见曲目的标签。单曲编辑使用 `PATCH /api/v1/tracks/{track_id}/metadata`，请求体例如 `{"changes": {"title": "新标题"}, "revision": "..."}`；批量编辑使用 `PATCH /api/v1/tracks/metadata/batch`，请求体例如 `{"track_ids": ["id1", "id2"], "changes": {"album": "新专辑名"}}`。
+
+曲目数据中的 `revision` 可用于检测过期编辑：单曲请求直接提供该值，批量请求通过以曲目 ID 为键的 `revisions` 对象提供；不匹配时返回 409。版本字段可省略。批量请求最多接受 500 个不同的 ID，返回 `results` 数组，逐项包含 `id`、`ok`，失败时还包含 `status` 和 `error`。批量操作尽力执行，部分失败不会回滚成功的编辑。单曲编辑返回结果或 HTTP 错误；未知或不可访问的曲目返回 404，无效请求返回 422。
+
+可编辑字段为 `title`、`artist`、`album`、`album_artist`、`track_number`（1–9999 的整数）、`release_date`、`genre`、`explicit` 和 `compilation`（后两项为布尔值）。省略字段保持不变，`null` 清除标签。不支持的格式或文件系统错误会逐曲目报告。成功编辑后服务器会更新媒体库变更流；客户端应重新同步并根据返回的曲目重新分组专辑。编辑标签不会重命名文件，并保留内嵌封面及其他无关标签。

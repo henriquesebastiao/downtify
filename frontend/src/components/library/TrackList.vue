@@ -229,7 +229,12 @@
         </span>
       </div>
     </div>
-    <MetadataEditor v-if="editingTrack" :open="true" :tracks="[editingTrack]" @close="editingTrack = null" />
+    <MetadataEditor
+      v-if="editingTrack"
+      :open="true"
+      :tracks="[editingTrack]"
+      @close="editingTrack = null"
+    />
   </div>
 </template>
 
@@ -418,7 +423,13 @@ function menuItems(row) {
     context: props.context,
     hide: props.hideMenu,
   })
-  if (row.track.file) items.unshift({ label: 'Edit metadata', action: () => { editingTrack.value = row.track } })
+  if (row.track.file)
+    items.unshift({
+      label: 'Edit metadata',
+      action: () => {
+        editingTrack.value = row.track
+      },
+    })
   const addItems = playlistActions.addMenuItems([row.track])
   if (addItems.length) {
     const queueAt = items.findIndex((item) => item.icon === 'queue')

@@ -59,7 +59,9 @@
                 : t('album.markCompilation')
             }}
           </UiButton>
-          <UiButton variant="ghost" @click="editingMetadata = true">Edit metadata</UiButton>
+          <UiButton variant="ghost" @click="editingMetadata = true"
+            >Edit metadata</UiButton
+          >
           <!-- Download as ZIP lives in the ⋯ menu below. -->
           <UiMenu :items="menu" :label="t('common.more')" size="lg" />
         </template>
@@ -111,7 +113,12 @@
         </div>
       </section>
     </DetailState>
-    <MetadataEditor v-if="editingMetadata && album" :open="true" :tracks="album.tracks" @close="editingMetadata = false" />
+    <MetadataEditor
+      v-if="editingMetadata && album"
+      :open="true"
+      :tracks="album.tracks"
+      @close="editingMetadata = false"
+    />
   </div>
 </template>
 
