@@ -1848,6 +1848,12 @@ export default {
     androidUnreleased:
       'Még nem jelent meg egyetlen verzió sem: az alkalmazás még fejlesztés alatt áll, így egyelőre nincs mit telepíteni.',
     androidRepo: 'Tárhely megtekintése',
+    iosGroup: 'Downtify iOS-re',
+    iosHint:
+      'iPhone- és iPad-alkalmazás a kiszolgálón lévő könyvtár böngészéséhez és lejátszásához.',
+    iosBody:
+      'Jelentkezz be a fiókoddal, vagy párosítsd az alkalmazást az ezen az oldalon látható kóddal. Böngészd és játszd le a könyvtáradat, ments dalokat offline hallgatáshoz, és vezéreld a lejátszást a zárolási képernyőről.',
+    iosRepo: 'Tárhely megtekintése',
   },
   replace: {
     menu: 'Hang cseréje…',

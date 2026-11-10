@@ -1861,6 +1861,12 @@ export default {
     androidUnreleased:
       'Todavía no se ha publicado ninguna versión: la app sigue en desarrollo, así que por ahora no hay nada que instalar.',
     androidRepo: 'Ver el repositorio',
+    iosGroup: 'Downtify para iOS',
+    iosHint:
+      'Una app para iPhone y iPad que explora y reproduce tu biblioteca desde este servidor.',
+    iosBody:
+      'Inicia sesión con tu cuenta o vincula la app con un código de esta página. Explora y reproduce tu biblioteca, guarda canciones para escucharlas sin conexión y controla la reproducción desde la pantalla de bloqueo.',
+    iosRepo: 'Ver el repositorio',
   },
   replace: {
     menu: 'Reemplazar audio…',
