@@ -38,7 +38,7 @@ Build the address from the resolved host + `port`. Discovery is a convenience: a
   "require_sign_in": true,
   "capabilities": {
     "transcoding": { "available": true, "formats": ["aac", "mp3", "opus"], "bitrates": [96, 128, 160, 192, 256, 320] },
-    "signed_urls": true, "pairing": true, "password_sign_in": true, "podcasts": true, "discover": true, "lyrics": true, "library_sync": true
+    "signed_urls": true, "pairing": true, "password_sign_in": true, "podcasts": true, "discover": true, "lyrics": true, "library_sync": true, "playlist_editing": true
   }
 }
 ```
@@ -152,8 +152,22 @@ Other reads, all by track id:
 | `POST /api/v1/playlists/seen` | Body `{ "name" }` — clear the `new` marker of a playlist shared with the user |
 | `GET /api/v1/playlists/hidden?name=` | `{ "name", "songs": [{ "key", "label", "track_id", "hidden_at" }] }` — the songs the user hid from an imported playlist of theirs (`track_id` is `""` once the file is gone) |
 | `POST /api/v1/playlists/hidden` | Body `{ "name", "hide": [track_ids], "show": [keys] }` — hide tracks from an imported playlist of the user's (they stay out when its watch or link brings them back; the tracks stay in the library), or show hidden ones again. Answers `{ "name", "hidden", "keys", "shown", "restored", "count", "track_ids" }`; send `keys` as `show` to undo. Offer it on `mine` playlists that aren't `manual` or `liked` (`409` otherwise). See [Hidden playlist songs](features/hidden-playlist-songs.md) |
+| `POST /api/v1/playlists` | Body `{ "name" }` — create an empty manual playlist |
+| `POST /api/v1/playlists/rename` | Body `{ "name", "new_name" }` — rename a manual playlist |
+| `POST /api/v1/playlists/tracks` | Body `{ "name", "add"?: [track_id], "remove"?: [track_id], "remove_entries"?: [{ "track_id", "occurrence" }], "allow_duplicates"?: bool }` — edit a manual playlist by track ID; at most 10,000 total references across all three arrays (`400` above the limit) |
+| `PUT /api/v1/playlists/order` | Body `{ "name", "track_ids": [...] }` — reorder a manual playlist, including repeated occurrences; at most 10,000 IDs (`400` above the limit) |
 | `GET /api/v1/likes` | `{ "track_ids": [...] }`, newest first |
 | `PUT /api/v1/likes` | Body `{ "track_id", "liked" }` — idempotent |
+
+### Editing playlists
+
+The `capabilities.playlist_editing` flag in `/api/server/info` is `true` when the server supports these writes. Use the stable track IDs from library sync, never file paths. All four routes operate on manual playlists; this API has no whole-playlist delete route. Create and rename require the owner or an admin. Adding, removing, or reordering requires the owner, an admin, or an editor of a shared playlist.
+
+Successful writes return `{ "name", "manual", "count", "track_ids" }`, with `track_ids` in playlist order and repeated once per occurrence. Rename also returns `previous`; track edits may return `added`, `removed`, and `already`.
+
+For `POST /api/v1/playlists/tracks`, `add` appends IDs; existing IDs are skipped and listed in `already` unless `allow_duplicates` is `true`. `remove` removes every copy of each ID. `remove_entries` removes only a specified zero-based `occurrence` of that ID in playlist order; a nonexistent occurrence removes nothing. For `PUT /api/v1/playlists/order`, send the current caller-visible IDs in the desired order, retaining repeated IDs. A stale list returns `409`; reload the playlist and retry.
+
+Inaccessible playlists or tracks return `404`. Imported playlists and callers without the required write permission return `403`. Invalid bodies or fields return `400`; if the library sync index is not ready, the write returns `503`. Successful playlist changes send `playlists_changed` to connected WebSocket clients according to playlist visibility.
 
 ## 5. Stream and download
 
@@ -200,7 +214,7 @@ Messages the app can rely on:
 | Message | When |
 |---------|------|
 | `{ "type": "library_changed" }` | Tracks were added, removed or moved (debounced ~2 s) — sync |
-| `{ "type": "playlists_changed" }` | A playlist was shared, unshared, followed, copied, detached, renamed or deleted, or songs were hidden from it or shown again — refetch `GET /api/v1/playlists` |
+| `{ "type": "playlists_changed" }` | A playlist was shared, unshared, followed, copied, detached, renamed or deleted, its tracks changed, or songs were hidden from it or shown again — refetch `GET /api/v1/playlists`; playlist write notifications follow playlist visibility |
 | `{ "type": "likes", "count": 3 }` | Likes changed somewhere — refetch `GET /api/v1/likes` |
 | `{ "type": "queue_reload" }` | Many downloads were queued at once — refetch `GET /api/queue` |
 | `{ "song": {…}, "progress": 42.5, "status": "downloading"\|"done"\|"error", "message", "filename", "provider" }` | A server download's progress (no `type`) — one’s own jobs only (every job on an admin’s device) |

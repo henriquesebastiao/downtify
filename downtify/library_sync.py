@@ -33,6 +33,7 @@ from __future__ import annotations
 import hashlib
 import json
 import secrets
+import sqlite3
 import threading
 from collections.abc import Collection, Iterable
 from datetime import datetime, timedelta, timezone
@@ -547,6 +548,77 @@ class LibrarySync:
         if row is None:
             return None
         return {'id': row['track_id'], **json.loads(row['row_json'])}
+
+    def rows_for(self, track_ids: Iterable[str]) -> dict[str, dict[str, Any]]:
+        """Resolve many live ids in one database connection.
+
+        Includes the compatibility aliases handled by :meth:`row_for`.
+        Missing and deleted ids are omitted from the returned mapping.
+        """
+
+        wanted = list(dict.fromkeys(track_ids))
+        found: dict[str, dict[str, Any]] = {}
+        with self._connect() as conn:
+            for start in range(0, len(wanted), 400):
+                chunk = wanted[start : start + 400]
+                marks = ','.join('?' * len(chunk))
+                replacements: dict[str, dict[str, Any]] = {}
+                try:
+                    for row in conn.execute(
+                        f"""SELECT a.track_id, r.new_metadata
+                            FROM library_audio_sync_aliases a
+                            JOIN library_audio_replacements r
+                              ON r.old_file = a.old_file
+                            WHERE a.track_id IN ({marks})
+                              AND r.state IN ('linked','retained','removed','complete')""",
+                        chunk,
+                    ).fetchall():
+                        replacements[row['track_id']] = json.loads(
+                            row['new_metadata']
+                        )
+                except sqlite3.OperationalError as exc:
+                    # These tables are optional on installs predating audio
+                    # replacement support. Match replacement_for_id's behavior.
+                    if 'no such table' not in str(exc).lower():
+                        raise
+
+                # row_for gives compatibility aliases precedence over a
+                # same-named live id, so resolve those first.
+                replacement_paths = list({
+                    row['file'] for row in replacements.values()
+                })
+                current_rows = {}
+                if replacement_paths:
+                    marks = ','.join('?' * len(replacement_paths))
+                    current_rows = {
+                        row['path']: json.loads(row['row_json'])
+                        for row in conn.execute(
+                            f'SELECT path, row_json FROM sync_tracks '
+                            f'WHERE deleted_at IS NULL AND path IN ({marks})',
+                            replacement_paths,
+                        ).fetchall()
+                    }
+                for track_id, replacement in replacements.items():
+                    current = current_rows.get(replacement['file'])
+                    found[track_id] = (
+                        {'id': track_id, **current}
+                        if current is not None
+                        else {'id': track_id, **public_row(replacement)}
+                    )
+                remaining = [key for key in chunk if key not in replacements]
+                if not remaining:
+                    continue
+                marks = ','.join('?' * len(remaining))
+                for row in conn.execute(
+                    f'SELECT track_id, row_json FROM sync_tracks '
+                    f'WHERE deleted_at IS NULL AND track_id IN ({marks})',
+                    remaining,
+                ).fetchall():
+                    found[row['track_id']] = {
+                        'id': row['track_id'],
+                        **json.loads(row['row_json']),
+                    }
+        return found
 
     def ids_for_paths(self, paths: Iterable[str]) -> dict[str, str]:
         """``{path: track_id}`` for the paths that are known."""

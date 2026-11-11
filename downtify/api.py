@@ -1857,24 +1857,6 @@ def require_playlist_visible(
     return entry
 
 
-def claim_manual_playlist(name: str, request: Optional[Request]) -> None:
-    """Record a Library-created playlist's owner (best effort)."""
-
-    user_id = request_user_id(request)
-    if not user_id or state.manual_playlist_owners is None:
-        return
-    try:
-        state.manual_playlist_owners.set_owner(name, user_id)
-        if state.playlist_shares is not None:
-            # A new playlist never inherits what an older one by that name
-            # was shared with.
-            state.playlist_shares.forget(name)
-    except Exception:
-        logger.opt(exception=True).debug(
-            'Could not record owner for playlist {!r}', name
-        )
-
-
 def request_ip(request: Request) -> str:
     return client_ip(request.scope, _TRUSTED_PROXIES)
 
@@ -6995,12 +6977,18 @@ async def create_library_playlist_endpoint(request: Request) -> dict[str, Any]:
     name = str(payload.get('name') or '').strip()
     ctx = library_context()
     try:
-        result = await asyncio.to_thread(create_manual_playlist, ctx, name)
+        result = await asyncio.to_thread(
+            create_manual_playlist,
+            ctx,
+            name,
+            state.manual_playlist_owners,
+            request_user_id(request),
+            state.playlist_shares,
+        )
     except ManualPlaylistError as exc:
         raise HTTPException(
             status_code=exc.status_code, detail=str(exc)
         ) from exc
-    claim_manual_playlist(str(result.get('name') or name), request)
     invalidate_library_paths_cache()
     return result
 
@@ -7606,12 +7594,19 @@ async def copy_library_playlist_endpoint(request: Request) -> dict[str, Any]:
             new_name = f'{base} {number}'
             number += 1
     try:
-        result = await asyncio.to_thread(copy_playlist, ctx, files, new_name)
+        result = await asyncio.to_thread(
+            copy_playlist,
+            ctx,
+            files,
+            new_name,
+            state.manual_playlist_owners,
+            request_user_id(request),
+            state.playlist_shares,
+        )
     except ManualPlaylistError as exc:
         raise HTTPException(
             status_code=exc.status_code, detail=str(exc)
         ) from exc
-    claim_manual_playlist(str(result.get('name') or new_name), request)
     invalidate_library_paths_cache()
     await announce_playlists_changed()
     return result

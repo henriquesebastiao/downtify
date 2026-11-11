@@ -3540,6 +3540,56 @@ The playlists [`GET /playlists`](#get-playlists) lists, with track ids in playli
 
 Keep the other people's playlists apart from the caller's own (a "Shared with me" and a "Public playlists" section, each entry labelled with its `owner`).
 
+### Mobile playlist writes
+
+`GET /api/server/info` advertises `capabilities.playlist_editing: true` when these routes are available. These routes use stable mobile **track IDs**, and write only **manual** (Library-created) playlists. An inaccessible playlist or track returns `404`; imported playlists and callers without the required write permission return `403`; malformed bodies or fields return `400`; a stale reorder returns `409` without changing the playlist. The library sync index must be ready; otherwise a write returns `503` (`Starting up`). There is no whole-playlist delete route in this mobile API.
+
+Create and rename require the playlist owner or an admin. Add, remove, and reorder require the owner, an admin, or an editor of a shared playlist. Successful changes notify connected WebSocket clients with `playlists_changed` according to playlist visibility.
+
+All successful writes return the canonical shape `{ "name", "manual", "count", "track_ids" }`, where `track_ids` is in playlist order and includes every repeated occurrence. Rename also returns `previous`; track edits may also return `added`, `removed`, and `already`.
+
+#### `POST /api/v1/playlists`
+
+Create an empty manual playlist.
+
+**Body:** `{ "name": "Late night" }`
+
+**Response:** `{ "name": "Late night", "manual": true, "count": 0, "track_ids": [] }`
+
+#### `POST /api/v1/playlists/rename`
+
+Rename a manual playlist.
+
+**Body:** `{ "name": "Late night", "new_name": "Night drive" }`
+
+**Response:** `{ "name": "Night drive", "previous": "Late night", "manual": true, "count": 0, "track_ids": [] }`
+
+#### `POST /api/v1/playlists/tracks`
+
+Add or remove tracks from a manual playlist. The body accepts `name` and any combination of these optional fields:
+
+```json
+{
+  "name": "Late night",
+  "add": ["track-id"],
+  "remove": ["track-id"],
+  "remove_entries": [{ "track_id": "track-id", "occurrence": 0 }],
+  "allow_duplicates": false
+}
+```
+
+`add` and `remove` are arrays of track IDs. `remove` removes every copy of each ID; `remove_entries` removes only the specified zero-based occurrence of an ID in playlist order. A missing occurrence removes nothing. By default, adding an ID already in the playlist skips it and lists it in `already`; set `allow_duplicates` to `true` to add another copy. The response may include `added` and `removed` counts and `already` track IDs, alongside the canonical result shape.
+
+The combined number of IDs in `add`, `remove`, and `remove_entries` may not exceed 10,000. The reorder endpoint also accepts at most 10,000 IDs. Larger requests return `400` before any IDs are resolved or the playlist is changed. Unknown and caller-hidden IDs both return `404`.
+
+#### `PUT /api/v1/playlists/order`
+
+Replace the order of a manual playlist's tracks. `track_ids` must describe the caller-visible playlist contents, including each repeated occurrence.
+
+**Body:** `{ "name": "Late night", "track_ids": ["track-id", "track-id-2"] }`
+
+If the playlist changed since the client loaded it, the request returns `409`; reload and retry with the current IDs. Success returns the canonical result shape.
+
 ---
 
 ### `GET /api/v1/usernames`
