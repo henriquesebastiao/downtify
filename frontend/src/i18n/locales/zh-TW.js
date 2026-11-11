@@ -1753,6 +1753,11 @@ export default {
     androidUnreleased:
       '目前尚未發布任何版本：應用程式仍在開發中，所以現在還沒有東西可以安裝。',
     androidRepo: '查看程式碼存放庫',
+    iosGroup: 'Downtify for iOS',
+    iosHint: '在 iPhone 和 iPad 上直接從這台伺服器瀏覽和播放媒體庫。',
+    iosBody:
+      '使用你的帳號登入，或使用此頁面的配對碼配對應用程式。接著就能瀏覽和播放媒體庫、將歌曲儲存在裝置上離線收聽，並從鎖定畫面控制播放。',
+    iosRepo: '查看程式碼存放庫',
   },
   replace: {
     menu: '取代音訊…',
