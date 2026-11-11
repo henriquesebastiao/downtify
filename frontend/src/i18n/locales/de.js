@@ -1095,6 +1095,11 @@ export default {
     file: 'Datei',
   },
   player: {
+    unlockLayout: 'Player-Layout entsperren',
+    lockLayout: 'Player-Layout sperren',
+    resetLayout: 'Player-Layout zurücksetzen',
+    resizeTrackSection: 'Größe der Titelinformationen ändern',
+    resizeTransportSection: 'Größe der Wiedergabesteuerung ändern',
     nowPlaying: 'Wiedergabe',
     openNowPlaying: 'Wiedergabe öffnen',
     closeNowPlaying: 'Wiedergabe schließen',

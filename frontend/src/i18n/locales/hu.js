@@ -1069,6 +1069,11 @@ export default {
     file: 'Fájl',
   },
   player: {
+    unlockLayout: 'Lejátszó elrendezésének feloldása',
+    lockLayout: 'Lejátszó elrendezésének zárolása',
+    resetLayout: 'Lejátszó elrendezésének visszaállítása',
+    resizeTrackSection: 'Száminformációk méretének módosítása',
+    resizeTransportSection: 'Lejátszásvezérlők méretének módosítása',
     nowPlaying: 'Most szól',
     openNowPlaying: 'Most szóló megnyitása',
     closeNowPlaying: 'Most szóló bezárása',

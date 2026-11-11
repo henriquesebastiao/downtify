@@ -1062,6 +1062,11 @@ export default {
     file: '파일',
   },
   player: {
+    unlockLayout: '플레이어 레이아웃 잠금 해제',
+    lockLayout: '플레이어 레이아웃 잠금',
+    resetLayout: '플레이어 레이아웃 초기화',
+    resizeTrackSection: '트랙 정보 영역 크기 조절',
+    resizeTransportSection: '재생 컨트롤 영역 크기 조절',
     nowPlaying: '현재 재생 중',
     openNowPlaying: '현재 재생 화면 열기',
     closeNowPlaying: '현재 재생 화면 닫기',
