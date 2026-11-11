@@ -1080,6 +1080,12 @@ export default {
     queue: 'Sor',
     upNext: 'Következik',
     lyrics: 'Dalszöveg',
+    karaoke: 'Karaoke',
+    karaokeWindow: 'Megnyitás új ablakban',
+    karaokeWindowBlocked:
+      'A böngésző letiltotta az új ablakot. Engedélyezd a felugró ablakokat a Downtify számára, majd próbáld újra.',
+    karaokeWaiting: 'Várakozás egy dalra a Downtify fő ablakából',
+    fullscreen: 'Teljes képernyő',
     details: 'Részletek',
     playing: 'Lejátszás',
     play: 'Lejátszás',

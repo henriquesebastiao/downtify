@@ -1073,6 +1073,12 @@ export default {
     queue: '대기열',
     upNext: '다음 재생 곡',
     lyrics: '가사',
+    karaoke: '노래방',
+    karaokeWindow: '새 창에서 열기',
+    karaokeWindowBlocked:
+      '브라우저가 새 창을 차단했습니다. Downtify의 팝업을 허용한 후 다시 시도하세요.',
+    karaokeWaiting: 'Downtify 기본 창에서 노래를 기다리는 중',
+    fullscreen: '전체 화면',
     details: '세부정보',
     playing: '재생 중',
     play: '재생',

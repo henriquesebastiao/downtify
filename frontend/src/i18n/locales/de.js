@@ -1106,6 +1106,12 @@ export default {
     queue: 'Warteschlange',
     upNext: 'Als Nächstes',
     lyrics: 'Songtexte',
+    karaoke: 'Karaoke',
+    karaokeWindow: 'In neuem Fenster öffnen',
+    karaokeWindowBlocked:
+      'Der Browser hat das neue Fenster blockiert. Erlaube Pop-ups für Downtify und versuche es erneut.',
+    karaokeWaiting: 'Warte auf einen Song aus dem Downtify-Hauptfenster',
+    fullscreen: 'Vollbild',
     details: 'Details',
     playing: 'Wird abgespielt',
     play: 'Abspielen',

@@ -1079,6 +1079,12 @@ export default {
     queue: 'Fila',
     upNext: 'A seguir',
     lyrics: 'Letra',
+    karaoke: 'Karaoke',
+    karaokeWindow: 'Abrir em uma nova janela',
+    karaokeWindowBlocked:
+      'O navegador bloqueou a nova janela. Permita pop-ups para o Downtify e tente novamente.',
+    karaokeWaiting: 'Aguardando uma música na janela principal do Downtify',
+    fullscreen: 'Tela cheia',
     details: 'Detalhes',
     playing: 'Tocando',
     play: 'Tocar',

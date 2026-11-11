@@ -1107,6 +1107,13 @@ export default {
     queue: 'File',
     upNext: 'À suivre',
     lyrics: 'Paroles',
+    karaoke: 'Karaoké',
+    karaokeWindow: 'Ouvrir dans une nouvelle fenêtre',
+    karaokeWindowBlocked:
+      'Le navigateur a bloqué la nouvelle fenêtre. Autorisez les fenêtres pop-up pour Downtify et réessayez.',
+    karaokeWaiting:
+      'En attente d’un titre depuis la fenêtre principale de Downtify',
+    fullscreen: 'Plein écran',
     details: 'Détails',
     playing: 'En lecture',
     play: 'Lire',
