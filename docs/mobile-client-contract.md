@@ -270,3 +270,22 @@ When the server has the [music trash](features/music-trash.md) on, an admin's de
 - Moving takes three steps: `POST …/preview` with `{ "track_ids": [...] }` (library ids, up to 200), poll `GET …/preview/{request_id}` about once a second until `state` is `ready`, show its `items` (title, format, path) for the user to confirm, then `POST …/confirm` with its `confirmation` (good for 10 minutes). The confirmation answers before anything has moved: show the song as waiting, not as gone.
 - Confirmed songs leave the library feed as removed ids (`deleted` in `GET /api/v1/library`); a restored song comes back with **the same `id`**, so likes, playlists, queue entries and offline files keyed by id find it again. Don't drop the user's queue or offline files before the first successful sync of a session: an id is gone only when a sync says so.
 - Show `detail.code` from a `409` as a message (the codes are listed in the API reference) and treat an unknown code as "not done, nothing deleted".
+
+## Editing library metadata
+
+Authenticated users and paired devices can edit visible tracks in the shared
+library. Send `PATCH /api/v1/tracks/{track_id}/metadata` with `{"changes": {"title": "New title"}, "revision": "..."}`, or `PATCH /api/v1/tracks/metadata/batch` with
+`{"track_ids": ["id1", "id2"], "changes": {"album": "New title"}}`.
+A track row includes a `revision`; send it in the single request or in a `revisions` object keyed by track ID in a batch to reject stale edits with 409. Revisions are optional for compatibility. Batch requests accept up to 500 distinct IDs and return `results`, one per
+track, each with `id`, `ok`, and, on failure, `status` and `error`. They are
+best effort; successful edits are not rolled back if another fails. A single
+edit returns its result, or an HTTP error. Unknown or inaccessible tracks
+return 404. Invalid requests return 422.
+
+Editable fields are `title`, `artist`, `album`, `album_artist`, `track_number`
+(an integer 1–9999), `release_date`, `genre`, `explicit`, and `compilation`
+(the last two booleans). Omitted fields are unchanged; `null` clears a tag.
+Unsupported formats or filesystem failures are reported per track. The server
+updates the library change feed after successful edits; clients should sync
+again and regroup albums from the returned rows. Editing tags does not rename
+files. Embedded artwork and other unrelated tags are retained.

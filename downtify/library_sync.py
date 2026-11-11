@@ -60,6 +60,9 @@ ROW_FIELDS = (
     'artist_id',
     'track_number',
     'year',
+    'release_date',
+    'genre',
+    'compilation',
     'duration',
     'codec',
     'bitrate',
@@ -137,6 +140,9 @@ def public_row(entry: dict[str, Any]) -> dict[str, Any]:
         'album': str(entry.get('album') or ''),
         'track_number': int(entry.get('track_number') or 0),
         'year': str(entry.get('year') or ''),
+        'release_date': str(entry.get('release_date') or ''),
+        'genre': str(entry.get('genre') or ''),
+        'compilation': bool(entry.get('compilation')),
         'duration': float(entry.get('duration') or 0.0),
         'codec': str(entry.get('codec') or ''),
         'bitrate': int(entry.get('bitrate') or 0),
@@ -153,6 +159,9 @@ def public_row(entry: dict[str, Any]) -> dict[str, Any]:
     # and the rows of every other track - hash included - stay as they were.
     if entry.get('explicit'):
         public['explicit'] = True
+    public['revision'] = hashlib.sha256(
+        json.dumps(public, sort_keys=True).encode()
+    ).hexdigest()
     return public
 
 

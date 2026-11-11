@@ -987,7 +987,21 @@ function setSettings(settings) {
   })
 }
 
+function metadataLibrary() {
+  return API.get('/api/v1/library')
+}
+
+function editMetadata(trackIds, changes, revisions) {
+  return API.patch('/api/v1/tracks/metadata/batch', {
+    track_ids: trackIds,
+    changes,
+    revisions,
+  })
+}
+
 export default {
+  metadataLibrary,
+  editMetadata,
   trashCapabilities,
   trashPreview,
   trashConfirm,
