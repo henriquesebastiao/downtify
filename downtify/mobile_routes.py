@@ -894,12 +894,8 @@ async def _edit_metadata(
     changed = False
     for track_id in ids:
         try:
-            row, full = await asyncio.to_thread(_track_path, track_id)
+            row, full = await asyncio.to_thread(_track_path, track_id, request)
             file = row['file']
-            if not await asyncio.to_thread(
-                api.filter_paths_for_request, [file], request
-            ):
-                raise HTTPException(status_code=404, detail='Track not found')
             revision = revisions.get(track_id)
             if revision is not None and revision != row.get('revision'):
                 raise HTTPException(
