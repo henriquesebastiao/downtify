@@ -54,12 +54,30 @@
             {{ t('playlists.downloadMissing', { count: batch.missing_count }) }}
           </UiButton>
           <UiButton
-            v-if="playlist.manual && playlist.mine"
+            v-if="playlist.canEditTracks"
             variant="secondary"
             icon="plus"
             @click="playlistActions.openAddSongs(playlist)"
           >
             {{ t('playlists.addSongs') }}
+          </UiButton>
+          <UiButton
+            v-if="playlist.manual && playlist.mine && !playlist.liked"
+            variant="ghost"
+            icon="upload"
+            :disabled="coverBusy"
+            @click="coverPicker?.click()"
+          >
+            {{ t('playlists.uploadCover') }}
+          </UiButton>
+          <UiButton
+            v-if="playlist.manual && playlist.mine && playlist.explicitCover"
+            variant="ghost"
+            icon="trash"
+            :disabled="coverBusy"
+            @click="removeCover"
+          >
+            {{ t('playlists.removeCover') }}
           </UiButton>
           <UiButton
             v-if="!playlist.liked && playlist.mine"
@@ -121,18 +139,96 @@
           <UiMenu :items="menu" :label="t('common.more')" size="lg" />
         </template>
       </CollectionHero>
+      <input
+        ref="coverPicker"
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        class="hidden"
+        @change="onCoverSelected"
+      />
 
       <div
         class="mx-auto flex max-w-[1680px] flex-col gap-10 px-4 sm:px-6 lg:px-10"
       >
+        <UiPanel
+          v-if="batch?.spotify_playlist_id"
+          :title="t('playlists.diagnostics.title')"
+        >
+          <template #actions>
+            <UiButton
+              variant="ghost"
+              size="sm"
+              icon="activity"
+              :loading="loadingDiagnostics"
+              @click="loadDiagnostics"
+            >
+              {{
+                diagnostics
+                  ? t('playlists.diagnostics.refresh')
+                  : t('playlists.diagnostics.check')
+              }}
+            </UiButton>
+          </template>
+          <p
+            v-if="diagnostics && !diagnostics.available"
+            class="text-[13px] text-muted"
+            role="status"
+          >
+            {{ t('playlists.diagnostics.unavailable') }}
+          </p>
+          <ul
+            v-else-if="diagnosticItems.length"
+            class="-mx-2 divide-y divide-line-2"
+          >
+            <li v-for="item in diagnosticItems" :key="item.key">
+              <button
+                type="button"
+                class="flex min-h-10 w-full items-center justify-between gap-4 rounded-control px-2 text-left text-[13px] hover:bg-surface-2 disabled:cursor-default disabled:hover:bg-transparent"
+                :aria-expanded="expandedDiagnostic === item.key"
+                :disabled="!item.issues.length"
+                @click="toggleDiagnostic(item.key)"
+              >
+                <span class="min-w-0 truncate text-muted">
+                  {{ t(`playlists.diagnostics.items.${item.key}`) }}
+                </span>
+                <span class="tabular shrink-0 font-semibold text-fg">
+                  {{
+                    item.count === null
+                      ? '-'
+                      : t('common.tracks', { count: item.count })
+                  }}
+                </span>
+              </button>
+              <ul
+                v-if="expandedDiagnostic === item.key"
+                class="mb-2 ml-2 border-l border-line-2 pl-3 text-[13px] text-muted"
+              >
+                <li
+                  v-for="(issue, index) in item.issues"
+                  :key="`${issue.track_id}-${index}`"
+                  class="py-1 break-words"
+                >
+                  {{ issue.label }}
+                </li>
+              </ul>
+            </li>
+          </ul>
+        </UiPanel>
+
         <div
           v-if="playlist.tracks.length || batch?.missing_count"
           class="flex flex-col gap-3"
         >
+          <PlaylistReorder
+            v-if="reordering"
+            :playlist="playlist"
+            @close="reordering = false"
+            @saved="onReordered"
+          />
           <!-- Search and filters over the whole playlist: the list below
                only renders the rows on screen, so the browser's own find
                can't see the rest. -->
-          <div class="flex flex-wrap items-center gap-2">
+          <div v-if="!reordering" class="flex flex-wrap items-center gap-2">
             <label
               class="flex h-10 min-w-0 flex-1 basis-56 items-center gap-2.5 rounded-control border border-line-2 bg-surface px-3 focus-within:border-accent sm:max-w-xs"
             >
@@ -159,9 +255,17 @@
               playlist-order
               class="ml-auto"
             />
+            <UiButton
+              v-if="canReorder && !isSongView(view)"
+              variant="ghost"
+              icon="grip"
+              @click="reordering = true"
+            >
+              {{ t('playlists.reorder') }}
+            </UiButton>
           </div>
           <p
-            v-if="filtering"
+            v-if="filtering && !reordering"
             class="tabular text-[13px] text-muted"
             aria-live="polite"
           >
@@ -208,7 +312,7 @@
               :body="t('playlistSearch.noMatchHint')"
             />
           </template>
-          <template v-else>
+          <template v-else-if="!reordering">
             <TrackList
               v-if="shownTracks.length"
               v-model:sort="trackSort"
@@ -302,6 +406,7 @@ import UiPanel from '/src/components/ui/UiPanel.vue'
 import CollectionHero from '/src/components/library/CollectionHero.vue'
 import DetailState from '/src/components/library/DetailState.vue'
 import PlayButton from '/src/components/library/PlayButton.vue'
+import PlaylistReorder from '/src/components/library/PlaylistReorder.vue'
 import PlaylistStatus from '/src/components/library/PlaylistStatus.vue'
 import TrackList from '/src/components/library/TrackList.vue'
 import TrackSortSelect from '/src/components/library/TrackSortSelect.vue'
@@ -313,7 +418,8 @@ import { useLibrary } from '/src/model/library'
 import { usePlayer } from '/src/model/player'
 import { usePlaylistActions } from '/src/model/playlistActions'
 import { useTrackActions } from '/src/model/trackActions'
-import { sortTracks } from '/src/lib/library'
+import { useUi } from '/src/model/ui'
+import { sortTracks, trackRowKey } from '/src/lib/library'
 import { songDownloadState } from '/src/lib/downloadState'
 import {
   filterPlaylistSongs,
@@ -334,6 +440,15 @@ const actions = useTrackActions()
 const playlistActions = usePlaylistActions()
 const account = useAccount()
 const tracker = useProgressTracker()
+const ui = useUi()
+const coverPicker = ref(null)
+const coverBusy = ref(false)
+const MAX_COVER_BYTES = 10 * 1024 * 1024
+const COVER_TYPES = {
+  'image/jpeg': true,
+  'image/png': true,
+  'image/webp': true,
+}
 
 const playlist = computed(() =>
   library.findPlaylist(String(route.query.name || ''))
@@ -364,10 +479,15 @@ const searchInput = ref(null)
 const details = ref(null)
 const providers = computed(() => details.value?.providers || {})
 const unmatched = computed(() => details.value?.navidrome?.unmatched || [])
+const diagnostics = ref(null)
+const loadingDiagnostics = ref(false)
+const expandedDiagnostic = ref('')
+const diagnosticItems = computed(() => diagnostics.value?.items || [])
 
 const PROVIDER_LABELS = {
   'youtube-music': 'settings.sourceYtm',
   youtube: 'settings.sourceYt',
+  soundcloud: 'settings.sourceSoundcloud',
   slskd: 'settings.sourceSlskd',
   deemix: 'settings.deemixTitle',
   folder: 'playlistSearch.fromFolders',
@@ -448,10 +568,34 @@ const filtering = computed(
   () => Boolean(query.value.trim()) || view.value !== 'all'
 )
 // Where each song sits in the playlist, numbered while filtering so a
-// song found by the search shows its real place.
+// song found by the search shows its real place (each copy of a song
+// the playlist repeats its own).
 const positions = computed(
-  () => new Map((playlist.value?.tracks || []).map((t, i) => [t.file, i + 1]))
+  () =>
+    new Map(
+      (playlist.value?.tracks || []).map((t, i) => [trackRowKey(t), i + 1])
+    )
 )
+
+// A Library playlist's songs can be put in another order by whoever may
+// edit them; imported ones follow their source.
+const reordering = ref(false)
+const canReorder = computed(
+  () =>
+    playlist.value?.manual &&
+    playlist.value.canEditTracks &&
+    !playlist.value.liked &&
+    playlist.value.tracks.length > 1
+)
+watch(canReorder, (can) => {
+  if (!can) reordering.value = false
+})
+
+// Show the order just saved, rather than a sort picked before.
+function onReordered() {
+  reordering.value = false
+  trackSort.value = { key: 'order', dir: 'asc' }
+}
 const shown = computed(() =>
   isSongView(view.value) ? shownSongs.value.length : shownTracks.value.length
 )
@@ -480,6 +624,25 @@ async function loadDetails(name) {
   } catch {
     // Only the provider and Navidrome filters need it.
   }
+}
+
+async function loadDiagnostics() {
+  const name = playlist.value?.name
+  if (!name) return
+  loadingDiagnostics.value = true
+  expandedDiagnostic.value = ''
+  try {
+    const res = await API.getPlaylistDiagnostics(name)
+    if (playlist.value?.name === name) diagnostics.value = res.data
+  } catch {
+    if (playlist.value?.name === name) diagnostics.value = { available: false }
+  } finally {
+    loadingDiagnostics.value = false
+  }
+}
+
+function toggleDiagnostic(key) {
+  expandedDiagnostic.value = expandedDiagnostic.value === key ? '' : key
 }
 
 // Ctrl/⌘+F searches the playlist; pressed again in the box, it is the
@@ -526,7 +689,11 @@ const canHide = computed(
 const sharingLine = computed(() => {
   const p = playlist.value
   if (!p || p.liked) return ''
-  if (!p.mine) return t('sharing.by', { owner: p.owner })
+  if (!p.mine) {
+    return t(p.canEditTracks ? 'collaboration.byEditor' : 'sharing.by', {
+      owner: p.owner,
+    })
+  }
   if (p.visibility === 'public') return t('sharing.public')
   if (p.visibility === 'shared') {
     return t('sharing.sharedWithCount', { count: p.sharedWith.length })
@@ -559,6 +726,67 @@ const isThisPlaying = computed(
 function togglePlay() {
   if (isThisPlaying.value) player.pause()
   else playlistActions.play(playlist.value, { tracks: sortedTracks.value })
+}
+
+async function refreshCoverContext(name) {
+  await library.refreshPlaylists()
+  const updated = library.findPlaylist(name)
+  const context = player.context.value
+  if (
+    updated &&
+    context?.type === 'playlist' &&
+    context.playlistName === name
+  ) {
+    player.context.value = {
+      ...context,
+      cover: updated.cover || '',
+      covers: updated.covers || [],
+    }
+  }
+}
+
+async function onCoverSelected(event) {
+  const file = event.target.files?.[0]
+  event.target.value = ''
+  if (!file) return
+  if (file.size > MAX_COVER_BYTES) {
+    ui.toast(t('playlists.coverTooLarge'), { kind: 'error' })
+    return
+  }
+  const contentType = file.type.toLowerCase()
+  if (!COVER_TYPES[contentType]) {
+    ui.toast(t('playlists.coverInvalid'), { kind: 'error' })
+    return
+  }
+  coverBusy.value = true
+  const name = playlist.value.name
+  try {
+    await API.uploadLibraryPlaylistCover(name, file, contentType)
+    await refreshCoverContext(name)
+    ui.toast(t('playlists.coverSaved'), { kind: 'success' })
+  } catch (error) {
+    ui.toast(error?.response?.data?.detail || t('toast.actionFailed'), {
+      kind: 'error',
+    })
+  } finally {
+    coverBusy.value = false
+  }
+}
+
+async function removeCover() {
+  coverBusy.value = true
+  const name = playlist.value.name
+  try {
+    await API.removeLibraryPlaylistCover(name)
+    await refreshCoverContext(name)
+    ui.toast(t('playlists.coverRemoved'), { kind: 'success' })
+  } catch (error) {
+    ui.toast(error?.response?.data?.detail || t('toast.actionFailed'), {
+      kind: 'error',
+    })
+  } finally {
+    coverBusy.value = false
+  }
 }
 
 const menu = computed(() =>
@@ -635,7 +863,10 @@ watch(
     hidden.value = []
     query.value = ''
     view.value = 'all'
+    reordering.value = false
     details.value = null
+    diagnostics.value = null
+    expandedDiagnostic.value = ''
     loadDetails(name)
     await library.loadPlaylistTracks(name)
     // Opening a playlist shared with the user clears its "new" marker.
@@ -645,12 +876,16 @@ watch(
 )
 
 // New songs arrive with a provider (and maybe a Navidrome match) of their
-// own: refresh what the filters know.
+// own: refresh what the filters know. Songs an editor added elsewhere may
+// not have their rows here yet.
 watch(
   () => playlist.value?.fileCount,
   (count, before) => {
     if (playlist.value && before !== undefined && count !== before) {
       loadDetails(playlist.value.name)
+      if (count > before) {
+        library.loadPlaylistTracks(playlist.value.name).catch(() => {})
+      }
     }
   }
 )

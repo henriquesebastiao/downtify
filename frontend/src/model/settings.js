@@ -1,11 +1,13 @@
 import { ref, computed, watch } from 'vue'
 
 import API from '/src/model/api'
+import { libraryOnly } from '/src/model/musicPolicy'
 import { useAuth } from '/src/model/auth'
 import { currentLocale } from '/src/i18n'
 import { needsLanguageSync, splitUiLanguage } from '/src/lib/uiLanguage'
 
 const settings = ref({
+  library_only: false,
   audio_providers: ['youtube-music'],
   deemix: {
     enabled: false,
@@ -33,6 +35,8 @@ const settings = ref({
     duration_tolerance_percent: 15,
     mix_duration_tolerance_percent: 50,
     extensions: ['mp3', 'flac'],
+    strict_format_priority: false,
+    extensions_whitelist: false,
     min_bitrate: 256,
   },
   external_library: {
@@ -93,9 +97,15 @@ const MIN_COVER_RESOLUTION = 300
 const MAX_COVER_RESOLUTION = 1200
 
 const settingsOptions = {
-  audio_providers: ['youtube', 'youtube-music', 'slskd', 'deemix'],
+  audio_providers: [
+    'youtube',
+    'youtube-music',
+    'soundcloud',
+    'slskd',
+    'deemix',
+  ],
   lyrics_providers: ['lrclib', 'genius', 'musixmatch', 'azlyrics'],
-  format: ['mp3', 'flac', 'ogg', 'opus', 'm4a'],
+  format: ['mp3', 'flac', 'ogg', 'opus', 'm4a', 'original'],
   bitrate: ['128', '192', '256', '320'],
   max_parallel_downloads_presets: [1, 2, 3, 5, 8],
   max_parallel_downloads_min: MIN_PARALLEL_DOWNLOADS,
@@ -304,6 +314,7 @@ async function saveSettings() {
       },
     }
     saved.value = snapshot()
+    libraryOnly.value = rest.library_only === true
     isSaved.value = true
     return true
   } catch (error) {

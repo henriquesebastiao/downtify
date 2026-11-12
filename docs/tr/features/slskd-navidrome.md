@@ -19,6 +19,7 @@ Kendi sunucunuzda barındırılan kitaplıklar için iki isteğe bağlı entegra
 |--------|-------------|
 | **YouTube Music** | Varsayılan. YouTube Music’te arar, kabul edilebilir eşleşme yoksa standart YouTube’a geçer — bkz. [Nasıl çalışır](../how-it-works.md#fallback-to-standard-youtube). |
 | **YouTube** | Yalnızca standart YouTube’da arar. |
+| **SoundCloud** | Varsayılan olarak kapalı. SoundCloud’da arar ve yapıştırılan bir SoundCloud bağlantısının parçasını olduğu gibi indirir — [SoundCloud](soundcloud.md). |
 | **slskd** | slskd üzerinden Soulseek’te arar ve en iyi eşleşen dosyayı indirir. |
 
 slskd’yi etkinleştirmek onu listenin başına koyar. slskd tek kaynak kalırsa YouTube Music ve YouTube yine de ondan sonra denenir; böylece slskd’nin bulamadığı bir parça yine iner. İndirme kuyruğu, her parçayı hangi kaynağın sunduğunu gösterir.
@@ -63,6 +64,7 @@ Kabul edilebilir bir şey çıkmazsa, aktarım **Toplam zaman aşımı** içinde
 **slskd dosyalarını yerinde bırak** açıkken (varsayılan) indirilen dosya slskd klasöründe kalır: Downtify üst verileri, kapağı ve sözleri doğrudan orada içine yazar ve kitaplıkta `slskd/…` yoluyla kaydeder. Kitaplık, oynatıcı ve M3U dosyaları bu yolu kullanır ve `/media/slskd/…` üzerinden sunulur.
 
 Dosyayı bunun yerine dosya adı şablonunuza ve [dosya düzeni](file-organization.md) ayarlarınıza göre diğer indirmelerinizin yanına kopyalamak için kapatın.
+Aktarımın kendisi slskd klasöründe kalır; [Depolama ve kullanım](storage-usage.md#the-library-not-its-working-copies) bu kopyaları kitaplıktan ayrı, *slskd çalışma kopyaları* olarak sayar; böylece ne kadar yer kapladıklarını görebilirsiniz.
 
 ::: info
 slskd dosyaları özgün biçimlerini korur — Ayarlar’da seçilen biçime dönüştürülmezler.

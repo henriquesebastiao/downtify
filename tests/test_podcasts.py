@@ -825,7 +825,11 @@ def test_monitor_dispatches_a_podcast_watch_to_sync_show(
 ):
     calls = []
 
-    def _fake_sync_show(store, show, download_dir, progress=None):
+    def _fake_sync_show(
+        store, show, download_dir, progress=None, should_continue=None
+    ):
+        assert should_continue is not None
+        assert should_continue()
         calls.append((show['feed_url'], download_dir))
         return 2
 

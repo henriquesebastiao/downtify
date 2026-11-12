@@ -1,9 +1,221 @@
 export default {
+  artistSuggestions: {
+    title: 'Künstler zum Folgen',
+    listening: 'Nach deinem Hörverlauf',
+    library: 'Nach deiner Bibliothek',
+    listeningHelp:
+      'Die Künstler, die du am meisten hörst. Neue Wiedergaben zählen mehr: Das Gewicht einer Wiedergabe halbiert sich alle {days} Tage.',
+    libraryHelp:
+      'Die Künstler mit den meisten Titeln, dann Alben, in deiner Bibliothek.',
+    listens: { one: '{count} Wiedergabe', other: '{count} Wiedergaben' },
+    tracks: { one: '{count} Titel', other: '{count} Titel' },
+    albums: { one: '{count} Album', other: '{count} Alben' },
+    follow: 'Folgen',
+    more: 'Mehr anzeigen',
+    loading: 'Vorschläge werden geladen…',
+    empty: 'Gerade gibt es keine weiteren Künstler vorzuschlagen.',
+    failed: 'Die Vorschläge konnten nicht geladen werden.',
+    retry: 'Erneut versuchen',
+    choose: 'Welcher Künstler ist {name}?',
+    chooseHelp:
+      'Mehrere Künstler auf YouTube Music könnten {name} sein. Vergleiche die Fotos oder öffne ihre Profile und folge dem richtigen.',
+    notFound:
+      'Auf YouTube Music wurde kein Künstler namens {name} gefunden. Füge stattdessen den Link des Künstlers ein.',
+    lookupFailed:
+      'Die Künstlersuche ist nicht verfügbar. Du kannst trotzdem einen Link einfügen.',
+    followProfile: 'Diesem Künstler folgen',
+    inspect: 'Auf YouTube Music öffnen',
+    manual: 'Link einfügen',
+    cancel: 'Abbrechen',
+  },
+  trash: {
+    title: 'Papierkorb',
+    subtitle:
+      'Aus der Bibliothek genommene Titel, nach dem Verschieben {days} Tage aufbewahrt. Bis dahin kannst du sie wiederherstellen.',
+    adminOnly: 'Nur für Admins sichtbar',
+    adminOnlyHint:
+      'Bitte einen Admin dieses Servers, einen Titel wiederherzustellen.',
+    off: 'Der Papierkorb ist aus',
+    offHint:
+      'Auf diesem Server werden Titel endgültig gelöscht. Der Papierkorb wird in der Serverkonfiguration eingeschaltet (DOWNTIFY_TRASH).',
+    inTrash: 'Im Papierkorb',
+    exclusions: 'Von Downloads ausgeschlossen',
+    search: 'Papierkorb durchsuchen',
+    restoreSelected: {
+      one: '{count} Titel wiederherstellen',
+      other: '{count} Titel wiederherstellen',
+    },
+    summary: {
+      one: '{count} Titel · {size}',
+      other: '{count} Titel · {size}',
+    },
+    empty: 'Der Papierkorb ist leer',
+    emptyHint:
+      'Titel, die du aus der Bibliothek in den Papierkorb verschiebst, erscheinen hier, bis sie ablaufen.',
+    noMatch: 'Nichts im Papierkorb passt',
+    select: '„{title}“ auswählen',
+    keptUntil: 'Aufbewahrt bis {date}',
+    restore: 'Wiederherstellen',
+    retry: 'Erneut versuchen',
+    previous: 'Zurück',
+    next: 'Weiter',
+    exclusionsHint:
+      'Titel, deren Zeit im Papierkorb abgelaufen ist. Automatische Downloads (Playlist-Überwachung, Beobachtungen) überspringen sie weiter, bis du sie wieder erlaubst.',
+    exclusionsEmpty: 'Nichts ist von Downloads ausgeschlossen',
+    allowDownload: 'Downloads erlauben',
+    allowTitle: '„{title}“ wieder herunterladen lassen?',
+    allowBody:
+      'Automatische Downloads können ihn wieder holen. Jetzt wird nichts heruntergeladen.',
+    move: 'In den Papierkorb',
+    preparing: 'Dateien werden geprüft…',
+    confirmTitle: {
+      one: '{count} Titel in den Papierkorb verschieben?',
+      other: '{count} Titel in den Papierkorb verschieben?',
+    },
+    confirmBody:
+      'Nur diese Dateien werden verschoben, mit ihren Songtext-Dateien. Sie verschwinden für alle aus der Bibliothek und lassen sich {days} Tage lang wiederherstellen. Ihre Playlists und Likes kommen mit ihnen zurück, und automatische Downloads überspringen sie so lange.',
+    confirmMore: {
+      one: 'und {count} weiterer',
+      other: 'und {count} weitere',
+    },
+    pending: {
+      one: '{count} Titel wird in den Papierkorb verschoben',
+      other: '{count} Titel werden in den Papierkorb verschoben',
+    },
+    downloadBlocked: 'Im Musik-Papierkorb: Ein Admin muss ihn wieder erlauben.',
+    states: {
+      preview: 'Wartet auf Bestätigung',
+      pending: 'Wartet aufs Verschieben',
+      moving: 'Wird verschoben',
+      trashed: 'Im Papierkorb',
+      restore_pending: 'Wartet aufs Wiederherstellen',
+      restoring: 'Wird wiederhergestellt',
+      restored: 'Wiederhergestellt',
+      purging: 'Läuft ab',
+      purged: 'Abgelaufen',
+      error: 'Angehalten — Dateien behalten',
+    },
+    errors: {
+      unavailable:
+        'Der Papierkorb ist gerade nicht verfügbar. Nichts wurde verschoben.',
+      admin_required: 'Nur ein Admin kann den Papierkorb benutzen.',
+      admin_access_revoked: 'Das anfragende Konto ist kein Admin mehr.',
+      atomic_move_unsupported:
+        'Dieser Speicher kann Dateien nicht sicher verschieben. Nichts wurde verschoben.',
+      confirmation_expired:
+        'Die Prüfung ist abgelaufen. Wähle die Titel erneut.',
+      confirmation_invalid:
+        'Diese Bestätigung gehört nicht zu deinem Konto oder deiner Auswahl.',
+      file_changed:
+        'Die Datei hat sich nach der Prüfung geändert. Sie blieb, wo sie war; wähle sie erneut.',
+      file_changed_during_move:
+        'Die Datei hat sich beim Verschieben geändert. Sie bleibt zur Prüfung im Papierkorb.',
+      file_missing:
+        'Eine Datei fehlt. Prüfe den Speicher und versuch es erneut.',
+      filesystem_unavailable:
+        'Der Speicher ist nicht verfügbar. Prüfe ihn und versuch es erneut.',
+      identity_uncertain:
+        'Die Tags dieses Titels reichen nicht, um ihn von automatischen Downloads auszuschließen. Nichts wurde verschoben.',
+      invalid_path:
+        'Diese Datei liegt außerhalb der Ordner, die der Papierkorb abdeckt.',
+      invalid_selection: 'Wähle zwischen 1 und 200 Titeln.',
+      item_not_found: 'Dieser Titel ist nicht mehr in der Bibliothek.',
+      library_task_active:
+        'Die Bibliotheksverbesserung läuft. Warte oder pausiere sie zuerst.',
+      nas_marker_changed:
+        'Der Speicher ist nicht der, den der Papierkorb erwartet. Nichts wurde verschoben.',
+      nas_marker_missing:
+        'Der erwartete Speicher ist nicht eingehängt. Nichts wurde verschoben.',
+      operation_already_pending: 'Dieser Titel ist schon unterwegs.',
+      operation_in_progress:
+        'Das Verschieben läuft noch. Warte, bevor du wiederherstellst.',
+      operation_not_complete: 'Warte, bis der aktuelle Schritt fertig ist.',
+      preview_busy: 'Eine andere Prüfung läuft. Warte, bis sie fertig ist.',
+      preview_unavailable:
+        'Die Prüfung wurde unterbrochen. Wähle die Titel erneut.',
+      restore_collision:
+        'Dort liegt schon eine andere Datei. Nichts wurde überschrieben; der Titel bleibt im Papierkorb.',
+      retention_expired: 'Seine Zeit im Papierkorb ist abgelaufen.',
+      root_unavailable: 'Der Musikordner ist nicht verfügbar.',
+      track_is_playing:
+        'Jemand spielt diesen Titel gerade. Pausiere ihn zuerst.',
+      trash_file_changed:
+        'Die Kopie im Papierkorb hat sich geändert. Sie wird nicht gelöscht.',
+      trash_file_missing: 'Eine Datei im Papierkorb fehlt.',
+      trash_ignore_invalid:
+        'Die .ignore-Datei des Papierkorbordners ist nicht leer. Nichts wurde verschoben.',
+      trash_not_configured: 'Der Papierkorb ist auf diesem Server aus.',
+      trash_permissions_unsafe:
+        'Andere können den Papierkorbordner lesen. Prüfe seine Berechtigungen.',
+      unsafe_symlink:
+        'Der Pfad enthält einen symbolischen Link und wird daher nicht angefasst.',
+      unsupported_collection:
+        'Der Ordner dieses Titels wird vom Papierkorb nicht abgedeckt.',
+      unsupported_lyrics_location:
+        'Der Songtext-Ordner wird vom Papierkorb nicht abgedeckt. Nichts wurde verschoben.',
+    },
+  },
+  downloadPolicy: {
+    block: 'Stop downloading',
+    blocked: 'Downloads suspended for this track.',
+    confirm: 'Suspend downloads for this track?',
+    confirmHelp:
+      'New attempts will be blocked. A shared transfer already started may finish. Existing files will not be deleted.',
+    exclusions: 'Suspended tracks',
+    empty: 'No suspended tracks.',
+    resume: 'Allow again',
+    timeout: 'Attempt time limit reached',
+    manual: 'Suspended manually',
+    error: 'Could not change the suspension.',
+    alreadyActive: 'An attempt for this track is already in progress.',
+    budget: 'Cumulative attempt limit',
+    budgetHelp:
+      'Automatically suspend a track after this cumulative attempt time. Time between attempts is excluded. 0 disables the limit.',
+  },
   playlistNames: { restore: 'Restore source name' },
+  libraryOnly: {
+    title: 'Library-only mode',
+    active: 'Only music in your server library is available.',
+    enable: 'Use only the library',
+    hint: 'Search and similar tracks use your library. External music, previews, downloads and automatic watches are disabled.',
+    serverHint:
+      'Applies to all accounts, browsers and Android clients. Wait for external work to finish before enabling it. The phone still needs access to the server unless tracks are downloaded.',
+    empty: 'No matching tracks in the accessible library.',
+    similar:
+      'Similar tracks from saved library tags. No external provider is contacted.',
+  },
   playlistFavorites: {
     title: 'Lieblingsplaylists',
     add: 'Playlist zu Favoriten hinzufügen',
     remove: 'Playlist aus Favoriten entfernen',
+  },
+  normalization: {
+    level: 'Lautstärke',
+    levelNormal: 'Normal',
+    levelLouder: 'Lauter',
+    levelMaximum: 'Maximum',
+    levelHint:
+      'Die Lautstärke steigt innerhalb der gemessenen Grenzen jedes Titels. Die Dateien bleiben unverändert.',
+    title: 'Lautstärkenormalisierung',
+    hint: 'Alle Songs in ähnlicher Lautstärke abspielen, ohne deine Audiodateien zu verändern.',
+    enable: 'Wiedergabelautstärke normalisieren',
+    enableHint:
+      'Nutzt die gemessene Lautheit jedes Songs, verstärkt um höchstens 12 dB und verhindert übersteuerte Spitzen. Noch nicht gemessene Songs spielen in ihrer ursprünglichen Lautstärke.',
+    analysisHint:
+      'Die Analyse liest jeden Song einmal im Hintergrund; spätere Durchläufe messen nur neue oder geänderte Dateien. Sie startet nie von selbst, auch nicht nach einem Neustart.',
+    progress: '{done} / {total} analysiert · {failed} fehlgeschlagen',
+    analyze: 'Bibliothek analysieren',
+    pause: 'Analyse pausieren',
+    resume: 'Analyse fortsetzen',
+    pausing: 'Die aktuellen Dateien werden vor der Pause fertig analysiert…',
+    states: {
+      ready: 'Gemessene Lautstärke auf den aktuellen Song angewendet.',
+      silent: 'Stiller Song: ursprüngliche Lautstärke beibehalten.',
+      unanalysed:
+        'Dieser Song ist noch nicht gemessen: ursprüngliche Lautstärke beibehalten.',
+      unavailable:
+        'Normalisierung nicht verfügbar: ursprüngliche Lautstärke beibehalten.',
+    },
   },
   externalPlaylistImport: {
     open: 'Import folder playlists',
@@ -19,6 +231,13 @@ export default {
     add: 'Add selected playlists ({count})',
     result:
       '{added} added · {existing} already present · {failed} need a new preview or could not be imported',
+  },
+  collaboration: {
+    canEdit: 'Darf Titel hinzufügen und entfernen',
+    copyHint:
+      'Diese Playlist folgt ihrer Quelle, daher können andere ihre Titel nicht bearbeiten. Teile stattdessen eine bearbeitbare Kopie: Sie bleibt deine, und das Original folgt weiter seiner Quelle.',
+    copy: 'Bearbeitbare Kopie teilen',
+    byEditor: 'von {owner} · du kannst Titel hinzufügen und entfernen',
   },
   language: {
     name: 'Deutsch',
@@ -118,6 +337,7 @@ export default {
     hintSpotify: 'Titel, Alben, Playlists und Künstler',
     hintYoutube: 'YouTube-Music-Titel, Alben, Playlists und Künstler',
     hintDeezer: 'Deezer-Titel, Alben, Playlists und Künstler',
+    hintSoundcloud: 'SoundCloud-Titel',
     hintCsv: 'CSV importieren (Soundiiz, Exportify …)',
     downloading: 'Wird heruntergeladen',
     waiting: {
@@ -173,7 +393,7 @@ export default {
     typeSingle: 'Single',
     typeEp: 'EP',
     unsupportedLink:
-      'Downtify kann diesen Link nicht herunterladen. Füge einen Spotify, Album- oder ein Playlist- oder einen YouTube-Music-Link ein.',
+      'Downtify kann diesen Link nicht herunterladen. Füge einen Spotify-Titel, ein Album oder eine Playlist, einen YouTube-Music-Link oder einen SoundCloud-Titel ein.',
     tipSearchTitle: 'Nach Namen suchen',
     tipSearchBody:
       'Gib einen Künstler, ein Album oder einen Titel ein - die Ergebnisse stammen von YouTube Music.',
@@ -282,6 +502,7 @@ export default {
     openSpotify: 'Auf Spotify öffnen',
     openYoutube: 'Auf YouTube Music öffnen',
     openDeezer: 'Auf Deezer öffnen',
+    openSoundcloud: 'Auf SoundCloud öffnen',
     filterAll: 'Alle',
     filterNew: 'Neu',
     filterLibrary: 'In der Bibliothek',
@@ -297,6 +518,17 @@ export default {
     playCountYoutubeMusic: 'Wiedergaben auf YouTube Music (ungefähr)',
   },
   queue: {
+    globalPause: 'Downloads und Überwachung pausieren',
+    globalResume: 'Downloads und Überwachung fortsetzen',
+    globalTitle: 'Serveraktivität',
+    globalHint:
+      'Neue Downloads und Prüfungen warten. Laufende Arbeit endet, die Warteschlange bleibt erhalten.',
+    globalPaused: 'Downloads und Überwachung pausiert.',
+    globalDraining: 'Laufende Arbeit wird beendet…',
+    globalRetry: 'Status prüfen',
+    globalFailed: 'Änderung konnte nicht bestätigt werden.',
+    globalAdmin: 'Eine Web-Administratorsitzung ist erforderlich.',
+    globalExpired: 'Sitzung abgelaufen. Bitte erneut anmelden.',
     title: 'Warteschlange',
     tabActive: 'In Bearbeitung',
     tabQueued: 'Wartend',
@@ -315,6 +547,20 @@ export default {
     retryFailed: 'Fehlgeschlagene erneut versuchen ({count})',
     clearDone: 'Abgeschlossene entfernen ({count})',
     clearAll: 'Warteschlange leeren',
+    pause: 'Downloads pausieren',
+    resume: 'Downloads fortsetzen',
+    pauseFailed:
+      'Die Warteschlange konnte nicht geändert werden. Versuche es erneut.',
+    pausingTitle: 'Downloads werden pausiert…',
+    pausingBody: {
+      one: 'Warte, bis {count} Download fertig ist. Es starten keine neuen Downloads.',
+      other:
+        'Warte, bis {count} Downloads fertig sind. Es starten keine neuen Downloads.',
+    },
+    pausedTitle: 'Downloads pausiert',
+    pausedBody: 'Bis zum Fortsetzen startet kein neuer Download.',
+    pausedKept:
+      'Wartende Titel bleiben in der Warteschlange, auch wenn Downtify neu startet oder aktualisiert wird.',
     emptyTitle: 'Die Warteschlange ist leer',
     emptyBody:
       'Suche nach Musik oder füge einen Link ein - Downloads erscheinen hier.',
@@ -332,13 +578,16 @@ export default {
     },
     showMore: 'Weitere {count} anzeigen',
     statusQueued: 'Wartend',
+    statusPaused: 'Pausiert',
     statusDone: 'Heruntergeladen',
     retry: 'Erneut versuchen',
     remove: 'Aus Warteschlange entfernen',
     failedGeneric: 'Der Download ist fehlgeschlagen.',
-    overridePlaceholder: 'YouTube-Link als Audioquelle einfügen',
+    overridePlaceholder:
+      'YouTube- oder SoundCloud-Link als Audioquelle einfügen',
     useLink: 'Diesen Link verwenden',
-    invalidYoutube: 'Das sieht nicht wie ein YouTube-Videolink aus.',
+    invalidAudioLink:
+      'Das sieht nicht wie ein YouTube-Video- oder SoundCloud-Titellink aus.',
     playlistDownloads: 'Playlist-Downloads',
     sources: 'Heruntergeladen von',
     noSourcesYet:
@@ -374,6 +623,8 @@ export default {
       artistDesc: 'Interpret (Z–A)',
       albumAsc: 'Album (A–Z)',
       albumDesc: 'Album (Z–A)',
+      releaseNewest: 'Neueste Veröffentlichungen zuerst',
+      releaseOldest: 'Älteste Veröffentlichungen zuerst',
       longest: 'Längste zuerst',
       shortest: 'Kürzeste zuerst',
     },
@@ -400,6 +651,7 @@ export default {
     downloadZip: 'Als ZIP herunterladen',
     saveToDevice: 'Auf diesem Gerät speichern',
     upgrade: 'Bibliothek verbessern',
+    storage: 'Speicher und Nutzung',
   },
   likes: {
     like: 'Zu „Lieblingssongs“ hinzufügen',
@@ -520,14 +772,143 @@ export default {
     stageWriting: 'Datei wird geschrieben',
     loadFailed: 'Bibliotheksverbesserung konnte nicht geladen werden',
   },
+  usage: {
+    title: 'Speicher und Nutzung',
+    subtitle:
+      'Wie groß die Bibliothek ist, wie schnell sie wächst und woher sie stammt.',
+    adminOnly: 'Nur für Admins sichtbar',
+    adminOnlyHint: 'Frag einen Admin dieses Servers nach den Speicherzahlen.',
+    loadFailed: 'Die Speicherzahlen konnten nicht geladen werden.',
+    tileLibrary: 'Bibliothek',
+    tileAdded: {
+      one: 'Am letzten Tag hinzugefügt',
+      other: 'In {count} Tagen hinzugefügt',
+    },
+    tileGrowth: 'Veränderung',
+    tileFree: 'Freier Speicher',
+    tileDownloads: 'Heruntergeladen',
+    tileCleanup: 'Ließe sich freigeben',
+    songs: {
+      one: '{count} Song',
+      other: '{count} Songs',
+    },
+    files: {
+      one: '{count} Datei',
+      other: '{count} Dateien',
+    },
+    perWeekRate: '{size} pro Woche',
+    ofTotal: 'von {total}',
+    daysLeft: {
+      one: 'von {total} · bei diesem Tempo in etwa {count} Tag voll',
+      other: 'von {total} · bei diesem Tempo in etwa {count} Tagen voll',
+    },
+    downloadsShort: '{skipped} übersprungen · {failed} fehlgeschlagen',
+    growthTitle: 'Größe der Bibliothek',
+    growthHint:
+      'Die Bibliothek am Ende jedes Tages, ohne die Arbeitskopien von slskd.',
+    estimated: 'Aus den Dateidaten geschätzt',
+    estimatedNote:
+      'Vor dem {date} wird die Größe aus den Daten der Songs geschätzt, die noch in der Bibliothek sind – seitdem gelöschte Songs fehlen darin.',
+    allEstimatedNote:
+      'Downtify notiert die Größe der Bibliothek ab jetzt stündlich. Frühere Tage werden aus den Daten der Songs geschätzt, die noch in der Bibliothek sind.',
+    addedPerDay: 'Pro Tag hinzugefügt',
+    addedPerWeek: 'Pro Woche hinzugefügt',
+    sourcesTitle: 'Nach Quelle',
+    sourcesHint: {
+      one: 'Woher das Audio stammt und was jede Quelle am letzten Tag hinzugefügt hat.',
+      other:
+        'Woher das Audio stammt und was jede Quelle in den letzten {count} Tagen hinzugefügt hat.',
+    },
+    addedInPeriod: {
+      one: '+{size} · {count} Song im Zeitraum',
+      other: '+{size} · {count} Songs im Zeitraum',
+    },
+    emptyLibrary: 'Die Bibliothek ist leer.',
+    whereTitle: 'Wo sie gespeichert ist',
+    byLocation: 'Ordner',
+    byFormat: 'Format',
+    location: {
+      downloads: 'Download-Ordner',
+      slskd: 'slskd-Ordner',
+      folders: 'Zusätzliche Musikordner',
+    },
+    unknown: 'Unbekannt',
+    downloadsTitle: 'Downloads',
+    downloadsHint: {
+      one: 'Wie Downloads aus der Warteschlange und dem Playlist-Monitor am letzten Tag endeten. Jeder Versuch zählt.',
+      other:
+        'Wie Downloads aus der Warteschlange und dem Playlist-Monitor in den letzten {count} Tagen endeten. Jeder Versuch zählt.',
+    },
+    outcome: {
+      completed: 'Abgeschlossen',
+      skipped: 'Übersprungen',
+      failed: 'Fehlgeschlagen',
+    },
+    perDay: 'Pro Tag',
+    perWeek: 'Pro Woche',
+    downloadedBySource: 'Nach Quelle heruntergeladen · {size}',
+    noDownloads: 'In diesem Zeitraum wurde nichts heruntergeladen.',
+    logEmptyNote:
+      'Noch kein Download gezählt: Downtify zählt sie ab dieser Version.',
+    logSinceNote: 'Downloads werden seit dem {date} gezählt.',
+    cleanupTitle: 'Ließe sich aufräumen',
+    cleanupHint:
+      'Speicher, den Downtify als überflüssig oder liegen geblieben erkennt. Hier wird nichts gelöscht.',
+    duplicatesTitle: 'Doppelte Songs',
+    duplicatesHint:
+      '{exact} zweimal als dieselbe Datei gespeichert, {likely} wahrscheinlich derselbe Song aus einer anderen Quelle. Die Größe ist das, was frei würde, wenn nur die größte Kopie bliebe.',
+    duplicateKind: {
+      exact: 'Dieselbe Datei',
+      likely: 'Wahrscheinlich derselbe Song',
+    },
+    workingTitle: 'Arbeitskopien von slskd',
+    workingHint:
+      'Soulseek-Übertragungen, die im slskd-Ordner liegen blieben, nachdem Downtify sie in die Bibliothek kopiert hat.',
+    workingInPlace:
+      'slskd-Dateien bleiben an Ort und Stelle, der slskd-Ordner gehört also zur Bibliothek.',
+    leftoversTitle: 'Liegen gebliebene temporäre Dateien',
+    leftoversHint:
+      'Unvollständige Downloads und Konvertierungen, älter als eine Stunde.',
+    orphansTitle: 'Verwaiste Begleitdateien',
+    orphansHint:
+      'Songtext-Dateien und Album-Cover, deren Songs nicht mehr da sind.',
+    foldersTitle: 'Ordner',
+    foldersHint: 'Alles in den Ordnern, in die Downtify schreibt, nach Art.',
+    rescan: 'Erneut prüfen',
+    scanFailed: 'Die Ordner konnten nicht geprüft werden.',
+    scanning: 'Ordner werden geprüft…',
+    scannedAt: 'Geprüft {when} in {seconds} s',
+    folder: {
+      downloads: 'Download-Ordner',
+      slskd: 'slskd-Ordner',
+      lyrics: 'Songtext-Ordner',
+    },
+    kind: {
+      audio: 'Songs',
+      podcasts: 'Podcasts',
+      lyrics: 'Songtexte',
+      images: 'Bilder',
+      playlists: 'Playlists',
+      metadata: 'Künstlerfotos und -profile',
+      temporary: 'Temporäre Dateien',
+      other: 'Sonstiges',
+    },
+  },
   album: {
     kicker: 'Album',
     notFound: 'Album nicht gefunden',
     moreBy: 'Mehr von {artist}',
     searchMore: 'Auf YouTube Music suchen',
     delete: 'Album löschen',
+    markCompilation: 'Als Various Artists markieren',
+    unmarkCompilation: 'Markierung als Various Artists entfernen',
+    markedCompilation: 'Album als Various Artists markiert',
+    unmarkedCompilation: 'Das Album ist nicht mehr Various Artists',
+    compilationPartial: 'Einige Titel konnten nicht geändert werden',
+    compilationFailed: 'Das Album konnte nicht geändert werden',
   },
   artist: {
+    guest: 'Gast',
     kicker: 'Künstler',
     notFound: 'Künstler nicht gefunden',
     findMore: 'Mehr finden',
@@ -593,6 +974,23 @@ export default {
   },
   playlists: {
     kicker: 'Playlist',
+    diagnostics: {
+      title: 'Playlist-Diagnose',
+      check: 'Prüfen',
+      refresh: 'Aktualisieren',
+      unavailable: 'Für diese Playlist ist keine Diagnose verfügbar.',
+      items: {
+        spotify_tracks: 'Spotify-Titel',
+        downloaded: 'Von Downtify heruntergeladen',
+        physical_files: 'Gefundene Dateien',
+        track_index: 'TrackIndex-Zuordnungen',
+        monitor_history: 'Monitor-Verlauf',
+        navidrome_matched: 'In Navidrome gefunden',
+        navidrome_rows: 'Titel in der Navidrome-Playlist',
+        missing_files: 'Fehlende Dateien',
+        orphan_files: 'Verwaiste Dateien',
+      },
+    },
     notFound: 'Playlist nicht gefunden',
     progress: '{have} von {total} heruntergeladen',
     missingShort: { one: '{count} fehlt', other: '{count} fehlen' },
@@ -633,6 +1031,26 @@ export default {
     },
     alreadyIn: 'Bereits in „{name}“',
     removedTrack: 'Aus „{name}“ entfernt',
+    reorder: 'Neu anordnen',
+    reorderHint:
+      'Ziehe die Titel oder nutze die Pfeile und speichere dann die neue Reihenfolge.',
+    reorderSave: 'Reihenfolge speichern',
+    reordered: 'Reihenfolge gespeichert',
+    reorderStale:
+      'Jemand hat diese Playlist inzwischen geändert. Sie wurde neu geladen: Ordne sie erneut an.',
+    moveUp: 'Nach oben',
+    moveDown: 'Nach unten',
+    moveTop: 'An den Anfang',
+    moveBottom: 'Ans Ende',
+    repeatTitle: 'Bereits in dieser Playlist',
+    repeatBody: {
+      one: 'Dieser Titel ist bereits in „{name}“. Erneut hinzufügen?',
+      other:
+        '{count} dieser Titel sind bereits in „{name}“. Erneut hinzufügen?',
+    },
+    repeatConfirm: 'Trotzdem hinzufügen',
+    repeatCancel: 'Nicht hinzufügen',
+    inPlaylist: 'Bereits hinzugefügt',
     hideTrack: 'In Playlist ausblenden',
     hiddenTrack: 'In „{name}“ ausgeblendet',
     hiddenTitle: {
@@ -656,6 +1074,12 @@ export default {
     nothingYetHint:
       'Hier erscheinen Titel, sobald der Download abgeschlossen ist.',
     nothingYetManualHint: 'Füge Titel aus deiner Bibliothek hinzu.',
+    uploadCover: 'Cover hochladen',
+    removeCover: 'Cover entfernen',
+    coverSaved: 'Playlist-Cover gespeichert',
+    coverRemoved: 'Playlist-Cover entfernt',
+    coverInvalid: 'Wähle ein JPEG-, PNG- oder WebP-Bild aus.',
+    coverTooLarge: 'Das Bild darf höchstens 10 MiB groß sein.',
   },
   track: {
     title: 'Titel',
@@ -663,6 +1087,7 @@ export default {
     album: 'Album',
     trackNumber: 'Titelnummer',
     year: 'Jahr',
+    releaseDate: 'Veröffentlichungsdatum',
     length: 'Länge',
     format: 'Format',
     size: 'Größe',
@@ -670,12 +1095,23 @@ export default {
     file: 'Datei',
   },
   player: {
+    unlockLayout: 'Player-Layout entsperren',
+    lockLayout: 'Player-Layout sperren',
+    resetLayout: 'Player-Layout zurücksetzen',
+    resizeTrackSection: 'Größe der Titelinformationen ändern',
+    resizeTransportSection: 'Größe der Wiedergabesteuerung ändern',
     nowPlaying: 'Wiedergabe',
     openNowPlaying: 'Wiedergabe öffnen',
     closeNowPlaying: 'Wiedergabe schließen',
     queue: 'Warteschlange',
     upNext: 'Als Nächstes',
     lyrics: 'Songtexte',
+    karaoke: 'Karaoke',
+    karaokeWindow: 'In neuem Fenster öffnen',
+    karaokeWindowBlocked:
+      'Der Browser hat das neue Fenster blockiert. Erlaube Pop-ups für Downtify und versuche es erneut.',
+    karaokeWaiting: 'Warte auf einen Song aus dem Downtify-Hauptfenster',
+    fullscreen: 'Vollbild',
     details: 'Details',
     playing: 'Wird abgespielt',
     play: 'Abspielen',
@@ -747,6 +1183,8 @@ export default {
       'Der Equalizer konnte nicht gestartet werden. Die Wiedergabe wird ohne ihn fortgesetzt.',
   },
   monitor: {
+    tableColumns: 'Spalten',
+    resetTableColumns: 'Spalten zurücksetzen',
     releaseTypes: 'Veröffentlichungen',
     releaseTypesAtLeastOne:
       'Lass mindestens eine Veröffentlichungsart ausgewählt',
@@ -803,7 +1241,7 @@ export default {
     urlLabelPlaylist: 'Playlist-Link',
     urlLabelArtist: 'Künstler-Link',
     urlPlaceholderPlaylist:
-      'Spotify- oder YouTube-Music-Playlist-Link einfügen',
+      'Spotify-, Deezer- oder YouTube-Music-Playlist-Link einfügen',
     urlPlaceholderArtist: 'Spotify- oder YouTube-Music-Künstlerlink einfügen',
     watchPlaylist: 'Playlist überwachen',
     watchArtist: 'Künstler überwachen',
@@ -851,9 +1289,135 @@ export default {
     saved: 'Überwachung aktualisiert',
     retargeted: '{name} wird jetzt überwacht',
   },
+  watchStats: {
+    colActivity: 'Aktivität',
+    colStorage: 'Speicher',
+    period: 'Zeitraum',
+    days: { one: '{count} Tag', other: '{count} Tage' },
+    totalNew: { one: 'Neu am letzten Tag', other: 'Neu in {count} Tagen' },
+    totalSongs: 'Titel aus Überwachungen',
+    totalSize: 'Auf dem Datenträger',
+    totalShared: 'In mehreren Überwachungen',
+    statsFailed: 'Die Statistiken konnten nicht geladen werden.',
+    rateWeekShort: '{rate}/Woche',
+    sharedShort: '+{count} geteilt',
+    activityTooltip:
+      '{added} neu in den letzten {count} Tagen · {rate} pro Woche · {trend}',
+    storageTooltip:
+      '{unique} nur in dieser Überwachung · {shared} mit anderen Überwachungen geteilt',
+    sortActivity: 'Letzte Aktivität',
+    sortRate: 'Durchschnittliches Tempo',
+    sortGrowth: 'Speicherzuwachs',
+    sortStorage: 'Eigener Speicher',
+    sortContributed: 'Heruntergeladene Titel',
+    details: 'Aktivität und Titel',
+    openInLibrary: 'In der Bibliothek öffnen',
+    notFound: 'Überwachung nicht gefunden',
+    notFoundHint:
+      'Sie wurde vielleicht entfernt oder gehört zu einem anderen Konto.',
+    since: 'Überwacht seit {date}',
+    tileSongs: 'Titel auf dem Datenträger',
+    tileDownloaded: 'Von ihr heruntergeladen',
+    tileLinked: 'Schon in der Bibliothek',
+    tileUnique: 'Nur in dieser Überwachung',
+    tileUniqueHint: {
+      one: '{count} Titel, den keine andere Überwachung hat',
+      other: '{count} Titel, die keine andere Überwachung hat',
+    },
+    tileShared: 'Geteilt',
+    tileSharedHint: '{size}, auch in anderen Überwachungen, einmal gespeichert',
+    tileFailing: 'Fehlgeschlagen',
+    unknownNote: {
+      one: '{count} Titel wurde hinzugefügt, bevor Downtify festhielt, wie Titel in eine Überwachung kommen.',
+      other:
+        '{count} Titel wurden hinzugefügt, bevor Downtify festhielt, wie Titel in eine Überwachung kommen.',
+    },
+    missingNote: {
+      one: '{count} Titel, den diese Überwachung erfasst hat, ist nicht mehr auf dem Datenträger.',
+      other:
+        '{count} Titel, die diese Überwachung erfasst hat, sind nicht mehr auf dem Datenträger.',
+    },
+    activityTitle: 'Aktivität',
+    activityHint:
+      'Neue Titel, die sie hinzugefügt hat: nicht die, die schon in deiner Bibliothek waren, und nicht die ihrer ersten Prüfung.',
+    newSongsLabel: {
+      one: 'neuer Titel hinzugefügt',
+      other: 'neue Titel hinzugefügt',
+    },
+    rateDay: 'Pro Tag',
+    rateWeek: 'Pro Woche',
+    rateMonth: 'Pro Monat',
+    trendUp: 'Fügt zuletzt mehr hinzu',
+    trendDown: 'Fügt zuletzt weniger hinzu',
+    trendSteady: 'Gleichmäßiges Tempo',
+    trendIdle: 'Zuletzt nichts Neues',
+    trendNew: 'Noch zu neu',
+    periodGrowth: '{size} neues Audio',
+    periodLinked: {
+      one: '{count} weiterer war schon in deiner Bibliothek',
+      other: '{count} weitere waren schon in deiner Bibliothek',
+    },
+    periodInitial: {
+      one: '{count} kam mit ihrer ersten Prüfung',
+      other: '{count} kamen mit ihrer ersten Prüfung',
+    },
+    periodUnknown: {
+      one: '{count} davon wurde erfasst, bevor Downtify festhielt, wie',
+      other: '{count} davon wurden erfasst, bevor Downtify festhielt, wie',
+    },
+    barsPerDay: 'Neue Titel pro Tag',
+    barsPerWeek: 'Neue Titel pro Woche',
+    providersTitle: 'Woher das Audio kam',
+    failuresTitle: {
+      one: '{count} Titel schlägt immer wieder fehl',
+      other: '{count} Titel schlagen immer wieder fehl',
+    },
+    attempts: { one: '{count} Versuch', other: '{count} Versuche' },
+    lastTried: 'zuletzt versucht {when}',
+    songsTitle: 'Titel aus dieser Überwachung',
+    songsHint:
+      'Neueste zuerst, auch Titel, die die Playlist inzwischen verlassen haben. Wähle welche aus, um sie abzuspielen, zu einer Playlist hinzuzufügen oder zu löschen.',
+    filter: {
+      all: 'Alle',
+      recent: { one: 'Letzter Tag', other: 'Letzte {count} Tage' },
+      downloaded: 'Von ihr heruntergeladen',
+      linked: 'Schon in der Bibliothek',
+      unknown: 'Vor der Erfassung',
+    },
+    noSongs: 'Keine Titel dieser Überwachung auf dem Datenträger',
+    noSongsHint:
+      'Sie erscheinen hier, sobald eine Prüfung sie herunterlädt oder in deiner Bibliothek findet.',
+  },
+  origin: {
+    menu: 'Woher er kommt',
+    title: 'Woher dieser Titel kommt',
+    body: 'Die Playlist-Überwachungen, die ihn in deine Bibliothek gebracht haben.',
+    failed: 'Die Herkunft dieses Titels konnte nicht geladen werden.',
+    firstTitle: 'Zuerst heruntergeladen von',
+    none: 'Keine Überwachung hat ihn heruntergeladen: Er wurde von Hand geladen oder bevor Downtify das festhielt.',
+    otherAccount: 'Eine Überwachung eines anderen Kontos',
+    backfill: 'Erste Prüfung',
+    estimated: 'Vermutlich',
+    gone: 'Diese Überwachung wurde entfernt oder folgt jetzt einem anderen Link.',
+    watchesTitle: {
+      one: 'In {count} Überwachung',
+      other: 'In {count} Überwachungen',
+    },
+    noWatches: 'Gerade hat ihn keine Überwachung.',
+    others: {
+      one: '{count} davon gehört zu einem anderen Konto.',
+      other: '{count} davon gehören zu anderen Konten.',
+    },
+    oneFile: 'Es ist eine Datei: Alle Überwachungen zeigen auf dieselbe Kopie.',
+    outcome: {
+      downloaded: 'Hat ihn geladen',
+      linked: 'Schon in der Bibliothek',
+      unknown: 'Vor der Erfassung',
+    },
+  },
   sharing: {
     title: '„{name}“ teilen',
-    hint: 'Wer sie bekommt, kann sie abspielen, ihr folgen und eine Kopie speichern, aber nichts daran ändern.',
+    hint: 'Wer sie bekommt, kann sie abspielen, ihr folgen und eine Kopie speichern. Titel hinzufügen oder entfernen kann nur, wem du das Bearbeiten erlaubst.',
     private: 'Privat',
     privateHint: 'Nur du kannst sie sehen.',
     shared: 'Bestimmte Personen',
@@ -890,7 +1454,7 @@ export default {
     },
     sharedWithMe: 'Mit mir geteilt',
     sharedWithMeHint:
-      'Playlists, die andere mit dir geteilt haben. Du kannst sie abspielen, aber nicht ändern.',
+      'Playlists, die andere mit dir geteilt haben. Du kannst sie abspielen und, wo es der Besitzer erlaubt, Titel hinzufügen oder entfernen.',
     publicPlaylists: 'Öffentliche Playlists',
     publicPlaylistsHint:
       'Mit allen auf diesem Server geteilt. Folge einer, um sie in der Seitenleiste zu behalten.',
@@ -955,6 +1519,9 @@ export default {
     sourceYtmHint: 'Beste Metadaten-Übereinstimmungen',
     sourceYt: 'YouTube',
     sourceYtHint: 'Ersatzquelle für Titel, die auf YouTube Music fehlen',
+    sourceSoundcloud: 'SoundCloud',
+    sourceSoundcloudHint:
+      'Uploads, die anderswo fehlen, und der Titel selbst bei SoundCloud-Links',
     deemixTitle: 'Deemix',
     deemixHint:
       'Download from your own Deemix server. Requested quality requires the matching Deezer entitlement.',
@@ -966,6 +1533,21 @@ export default {
     deemixLocal: 'Same folder inside Downtify (read-only is supported)',
     deemixQuality: 'Audio quality',
     slskdTitle: 'slskd',
+    slskdFormats: 'Formatpriorität',
+    slskdFormatsHint:
+      'Kommagetrennte Dateiendungen, zuerst die höchste Priorität (z. B. flac, mp3).',
+    slskdMinBitrate: 'Minimale Bitrate für verlustbehaftete Formate',
+    slskdMinBitrateHint:
+      'Im strikten Modus werden verlustbehaftete Dateien unter diesem Wert oder ohne gemeldete Bitrate abgelehnt. FLAC ist ausgenommen.',
+    slskdAttempts: 'Kandidatenversuche',
+    slskdAttemptsHint:
+      'Im strikten Modus wird diese Anzahl je Format versucht, sonst insgesamt.',
+    slskdStrictPriority: 'Strikte Formatpriorität',
+    slskdStrictPriorityHint:
+      'Formate der Reihe nach versuchen und Treffer innerhalb jedes Formats bewerten.',
+    slskdWhitelist: 'Nur aufgeführte Formate zulassen',
+    slskdWhitelistHint:
+      'Ergebnisse mit einer nicht aufgeführten Dateiendung ablehnen.',
     slskdHint:
       'Lade Musik über deinen slskd-Server von Soulseek herunter. Nicht gefundene Titel werden bei der nächsten Quelle gesucht.',
     slskdEnabled: 'slskd verwenden',
@@ -980,7 +1562,7 @@ export default {
     slskdQueuedTimeout: 'Zeitlimit in Warteschlange',
     slskdInPlace: 'Dateien im slskd-Ordner belassen',
     slskdInPlaceHint:
-      'Füge Tags dort hinzu, wo slskd die Dateien gespeichert hat, statt sie in den Downloadordner zu kopieren.',
+      'Ein: Dateien am Speicherort taggen und behalten. Aus: in Downloads kopieren und taggen; die Quelle wird erst nach erfolgreichem Import entfernt. Bei Fehlern bleibt sie erhalten.',
     youtubeTitle: 'YouTube',
     cookies: 'YouTube-Cookies',
     cookiesHint:
@@ -999,9 +1581,14 @@ export default {
     format: 'Format',
     formatHint:
       'Von YouTube heruntergeladene Dateien werden in dieses Format konvertiert.',
+    formatOriginal: 'Original',
+    formatOriginalHint:
+      'Den besten verfügbaren Audiostream ohne erneute Kodierung beibehalten. Die Dateiendung hängt von der Quelle ab.',
     bitrate: 'Qualität',
     bitrateHint: 'Bitrate für verlustbehaftete Formate.',
     bitrateLossless: 'Wird für verlustfreies FLAC nicht verwendet.',
+    bitrateOriginal:
+      'Wird beim Beibehalten des Originalformats nicht verwendet.',
     filesGroup: 'Dateien',
     template: 'Dateiname',
     templateHint: 'Verwende /, um Ordner zu erstellen.',
@@ -1247,9 +1834,14 @@ export default {
   auth: {
     signInTitle: 'Bei Downtify anmelden',
     signInBody: 'Melde dich mit deinem Benutzernamen und Passwort an.',
+    signInBodyOidcOnly: 'Melde dich über deinen Identitätsanbieter an.',
     username: 'Benutzername',
     password: 'Passwort',
     signIn: 'Anmelden',
+    oidcSignIn: 'Mit Identitätsanbieter fortfahren',
+    or: 'oder',
+    oidcFailed:
+      'Die Anmeldung über den Identitätsanbieter ist fehlgeschlagen. Bitte versuche es erneut.',
     wrongPassword: 'Benutzername oder Passwort falsch',
     tooMany: 'Zu viele Versuche. Warte einige Minuten und versuche es erneut.',
     forgotHint:
@@ -1312,6 +1904,12 @@ export default {
     androidUnreleased:
       'Es wurde noch keine Version veröffentlicht: Die App befindet sich noch in Entwicklung und kann derzeit nicht installiert werden.',
     androidRepo: 'Repository ansehen',
+    iosGroup: 'Downtify für iOS',
+    iosHint:
+      'Eine iPhone- und iPad-App zum Durchsuchen und Abspielen deiner Bibliothek auf diesem Server.',
+    iosBody:
+      'Melde dich mit deinem Konto an oder kopple die App mit einem Code von dieser Seite. Durchsuche und spiele deine Bibliothek, speichere Titel für die Offline-Wiedergabe und steuere die Wiedergabe auf dem Sperrbildschirm.',
+    iosRepo: 'Repository ansehen',
   },
   replace: {
     menu: 'Audio ersetzen …',
@@ -1319,7 +1917,8 @@ export default {
     body: 'Falscher Titel oder falsche Version? Wähle die richtige. Dateiname, Tags, Cover und Songtexte bleiben erhalten, ebenso die Zugehörigkeit zu Playlists.',
     current: 'Aktuell',
     search: 'Suche',
-    searchHint: 'Oder füge einen YouTube- oder YouTube-Music-Link ein.',
+    searchHint:
+      'Oder füge einen YouTube-, YouTube-Music- oder SoundCloud-Link ein.',
     searchButton: 'Suchen',
     results: 'Version auswählen',
     none: 'Nichts gefunden. Versuche andere Begriffe oder füge einen Link ein.',
@@ -1479,6 +2078,7 @@ export default {
       unlike: 'Likes entfernt',
       delete: 'Gelöschte Dateien',
       audio_replaced: 'Audio ersetzt',
+      album_compilation: 'Markierte Compilations',
       library_hidden: 'Vor Nutzern verborgene Einträge',
       library_shown: 'Nutzern gezeigte Einträge',
       device_paired: 'Apps gekoppelt',
@@ -1499,6 +2099,8 @@ export default {
       unlike: 'hat den Like für {what} entfernt',
       delete: 'hat {what} gelöscht',
       audio_replaced: 'hat das Audio von {what} ersetzt',
+      album_compilation:
+        'hat geändert, ob {what} eine Various-Artists-Compilation ist',
       library_hidden: 'hat {what} vor Nutzern verborgen',
       library_shown: 'hat {what} Nutzern gezeigt',
       device_paired: 'hat {what} gekoppelt',

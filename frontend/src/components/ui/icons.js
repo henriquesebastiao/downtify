@@ -31,6 +31,8 @@ export const STROKE = {
   'chevron-left': '<path d="m15 6-6 6 6 6"/>',
   'arrow-left': '<path d="M19 12H5m0 0 6-6m-6 6 6 6"/>',
   'arrow-up-right': '<path d="M7 17 17 7M8 7h9v9"/>',
+  'arrow-up-to-line': '<path d="M5 3h14M18 13l-6-6-6 6M12 7v14"/>',
+  'arrow-down-to-line': '<path d="M12 17V3M6 11l6 6 6-6M19 21H5"/>',
   sort: '<path d="M7 4v16m0 0-3-3m3 3 3-3M17 20V4m0 0-3 3m3-3 3 3"/>',
   trending: '<path d="m22 7-8.5 8.5-5-5L2 17"/><path d="M16 7h6v6"/>',
   eye: '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
@@ -52,6 +54,8 @@ export const STROKE = {
   'play-next': '<path d="M4 6h10M4 12h10M4 18h6"/><path d="M17 9v6M14 12h6"/>',
   moon: '<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>',
   sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+  'screen-share':
+    '<path d="M13 3H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-3"/><path d="M8 21h8M12 17v4M17 8l5-5M17 3h5v5"/>',
   monitor:
     '<rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/>',
   mic: '<rect x="9" y="2.5" width="6" height="12" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M8.5 21h7"/>',
@@ -119,6 +123,8 @@ export const STROKE = {
   cookie:
     '<path d="M21 12a9 9 0 1 1-9-9 3 3 0 0 0 4 3 3 3 0 0 0 5 6z"/><path d="M8.5 9.5h.01M12 14h.01M8 15h.01M15 16h.01"/>',
   lock: '<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
+  unlock:
+    '<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 7.5-2"/>',
   refresh: '<path d="M21 12a9 9 0 1 1-2.6-6.4M21 3v6h-6"/>',
   menu: '<path d="M4 6h16M4 12h16M4 18h16"/>',
   'panel-left':
@@ -136,6 +142,8 @@ export const STROKE = {
 }
 
 export const FILLED = {
+  'mic-vocal':
+    '<g transform="rotate(45 12 12)"><path d="M7 3.2a5 5 0 0 1 10 0z"/><path d="M7.2 4.5h9.6l-1 2.6H8.2z"/><path d="M8.6 8.4h6.8l-1.3 11.4H9.9z"/><path d="M10.2 21h3.6l-.4 2.2h-2.8z"/></g><path d="M4.1 19.9c-1.6 1 1 1.8-.8 3.2" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>',
   play: '<path d="M7 4.5v15a1 1 0 0 0 1.5.86l12.5-7.5a1 1 0 0 0 0-1.72L8.5 3.64A1 1 0 0 0 7 4.5z"/>',
   pause:
     '<rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/>',
@@ -151,6 +159,9 @@ export const FILLED = {
   bandcamp: '<path d="M0 18.75 7.44 5.25H24l-7.44 13.5H0z"/>',
   deezer:
     '<rect x="3" y="14" width="3" height="6" rx="1"/><rect x="8" y="10" width="3" height="10" rx="1"/><rect x="13" y="6" width="3" height="14" rx="1"/><rect x="18" y="2" width="3" height="18" rx="1"/>',
+  // SoundCloud's mark: rising bars beside a cloud.
+  soundcloud:
+    '<rect x="1" y="12" width="1.6" height="5" rx=".8"/><rect x="3.6" y="10" width="1.6" height="7" rx=".8"/><rect x="6.2" y="8.5" width="1.6" height="8.5" rx=".8"/><path d="M9 8.2a6.5 6.5 0 0 1 10.1 2.2A3.3 3.3 0 0 1 19.6 17H9z"/>',
   'apple-music':
     '<path d="M15.8 3.4c.1 1-.3 2-.9 2.7-.6.7-1.6 1.3-2.6 1.2-.1-1 .4-2 1-2.7.6-.7 1.7-1.2 2.5-1.2zM18.9 17c-.5 1.1-.7 1.6-1.3 2.6-.9 1.4-2.1 3.1-3.6 3.1-1.3 0-1.7-.9-3.5-.9s-2.2.9-3.5.8c-1.6 0-2.7-1.5-3.6-2.9-2.5-3.8-2.7-8.3-1.2-10.7 1.1-1.7 2.7-2.7 4.3-2.7 1.6 0 2.6 1 3.9 1 1.3 0 2.1-1 3.9-1 1.4 0 2.9.8 4 2.1-3.5 1.9-2.9 6.9.6 8.6z"/>',
   twitter:

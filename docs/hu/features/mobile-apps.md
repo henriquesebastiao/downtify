@@ -12,7 +12,15 @@ A **Beállítások → Alkalmazások** *Kísérleti*nek van jelölve. Az ezen az
 Az alkalmazás nyíltan készül a [henriquesebastiao/downtify-android](https://github.com/henriquesebastiao/downtify-android) adattárban. Bármi más is építhető ugyanerre az API-ra — lásd a [mobilkliens-szerződést](../mobile-client-contract.md).
 :::
 
+## Bejelentkezés az alkalmazásból
+
+Írd be a szerver címét (vagy válaszd ki az **Ezen a hálózaton találhatók** alatt), majd jelentkezz be **ugyanazzal a felhasználónévvel és jelszóval**, mint a weboldalon. A telefon megjelenik a **Párosított alkalmazások** között, pontosan úgy, mintha lent kóddal párosítottad volna: a te nevedben játszik, saját kulcsot őriz (a jelszót nem tárolja a telefon), és a **Párosítás bontása** leállítja.
+
+A hibás jelszavak a weboldal bejelentkezésével együtt sebességkorlátozottak. Amíg a fiókok ki vannak kapcsolva (`DOWNTIFY_DISABLE_AUTH`), nincs mivel bejelentkezni: párosíts kóddal.
+
 ## Telefon párosítása
+
+A párosításhoz nem kell jelszó a telefonon: kényelmes, ha a weboldal már nyitva van, vagy olyan telefonon, amelybe inkább nem írnád be a jelszavad.
 
 1. Nyisd meg a **Beállítások → Alkalmazások** oldalt, és nyomd meg a **Telefon párosítása** gombot.
 2. Az alkalmazásban válaszd a **Kód beolvasása** lehetőséget, és irányítsd a kamerát a QR-kódra — vagy írd be az alatta látható 8 karakteres kódot (`K7QM-2XPD`; a kis- és nagybetű, valamint a kötőjelek nem számítanak).
@@ -47,6 +55,10 @@ Az alkalmazások a fájlokat úgy játsszák le, ahogy vannak (**Eredeti**), vag
 - Az a fájl, amely már elég kicsi (egy veszteséges fájl a kért bitrátán vagy az alatt), változatlanul streamelődik, soha nem kódolódik újra.
 - A másolatok a `/data/transcode_cache` mappában vannak, alapértelmezetten legfeljebb 2 GB; a legrégebben lejátszottak mennek előbb. Egyszerre legfeljebb kettő készül. Mindkét korlát [környezeti változó](../getting-started/environment-variables.md#mobile-apps-and-sign-in).
 - Ha a telefon feladja, miközben egy másolat készül, a szerver abbahagyja a készítését.
+
+## Hangerő-normalizálás
+
+Az Android-alkalmazás a webes lejátszóval azonos mérések alapján hasonló hangerővel játszhatja le a dalokat: kapcsold be a **Hangerő normalizálása** beállítást a **Beállítások → Lejátszás** alatt. A következő dalnál lép életbe, a mérés nélküli dalok pedig eredeti hangerővel szólnak. Egy offline másolat csak akkor használ mérést, ha teljes egészében töltődött le, és egyezik a szerver által mért fájllal. Lásd: [Hangerő-normalizálás](playback-normalization.md).
 
 ## Casting
 

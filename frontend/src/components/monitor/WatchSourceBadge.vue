@@ -2,6 +2,9 @@
   <UiBadge v-if="source === 'youtube_music'" tone="neutral" icon="youtube"
     >YouTube Music</UiBadge
   >
+  <UiBadge v-else-if="source === 'deezer'" tone="neutral" icon="deezer"
+    >Deezer</UiBadge
+  >
   <UiBadge v-else tone="spotify" icon="spotify">Spotify</UiBadge>
 </template>
 

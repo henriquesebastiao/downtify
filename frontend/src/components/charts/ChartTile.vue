@@ -17,6 +17,20 @@
         >
       </CoverArt>
     </RouterLink>
+    <!-- Outside the link, so opening the menu doesn't also open the card. -->
+    <div v-if="menu.length" class="absolute top-2 right-2">
+      <UiMenu :items="menu" :label="t('common.more')">
+        <template #trigger>
+          <button
+            type="button"
+            class="flex size-9 items-center justify-center rounded-full bg-black/55 text-white backdrop-blur transition-colors hover:bg-black/75"
+            :aria-label="t('common.more')"
+          >
+            <AppIcon name="more" :size="18" />
+          </button>
+        </template>
+      </UiMenu>
+    </div>
     <button
       v-if="downloadable"
       type="button"
@@ -51,11 +65,21 @@
 // artist resolves to release summaries, not songs (like ReleaseCard's own
 // round/artist tiles), so it only navigates. Chart tracks are the only
 // immediately-downloadable kind and use TrackDownPlay instead, not this
-// card.
+// card. A Deezer playlist also gets a menu with what its /link page
+// offers besides downloading: watching it, and saving the songs of it
+// already in the library as one of the user's playlists.
 import { computed, ref } from 'vue'
+import { useRouter } from 'vue-router'
+import { localCatalogRoute } from '/src/lib/library'
+import { playableQueue } from '/src/lib/topSongs'
 import AppIcon from '../ui/AppIcon.vue'
 import CoverArt from '../ui/CoverArt.vue'
+import UiMenu from '../ui/UiMenu.vue'
+import API from '/src/model/api'
+import monitorAPI from '/src/model/monitor'
 import { useDownloadManager } from '/src/model/download'
+import { useLibrary } from '/src/model/library'
+import { usePlaylistActions } from '/src/model/playlistActions'
 import { useUi } from '/src/model/ui'
 import { useI18n } from '/src/i18n'
 
@@ -69,9 +93,15 @@ const props = defineProps({
   rank: { type: Number, default: null },
 })
 const { t } = useI18n()
+const router = useRouter()
 const dm = useDownloadManager()
+const library = useLibrary()
+const playlistActions = usePlaylistActions()
 const ui = useUi()
-const queued = ref(false)
+const queued = ref(props.item.source === 'library')
+const watching = ref(false)
+const watched = ref(false)
+const saving = ref(false)
 
 const round = computed(() => props.kind === 'artist')
 // An artist resolves to release summaries, not songs - nothing fromURL
@@ -80,10 +110,13 @@ const round = computed(() => props.kind === 'artist')
 const downloadable = computed(
   () => props.kind === 'album' || props.kind === 'playlist'
 )
-const linkTo = computed(() => ({
-  name: 'Link',
-  query: { url: props.item.url },
-}))
+const linkTo = computed(
+  () =>
+    localCatalogRoute(props.item, props.kind) || {
+      name: 'Link',
+      query: { url: props.item.url },
+    }
+)
 
 const icon = computed(
   () => ({ album: 'disc', artist: 'user', playlist: 'playlist' })[props.kind]
@@ -102,6 +135,33 @@ const subtitle = computed(() => {
   }
 })
 
+// Library-only mode lists the library's own playlists here: nothing to
+// watch or save there.
+const menu = computed(() =>
+  props.kind === 'playlist' && props.item.source !== 'library'
+    ? [
+        {
+          label: t('link.watchPlaylist'),
+          icon: 'radar',
+          disabled: watching.value || watched.value,
+          action: watchPlaylist,
+        },
+        {
+          label: t('link.addPlaylist'),
+          icon: 'playlist',
+          disabled: saving.value,
+          action: savePlaylist,
+        },
+      ]
+    : []
+)
+
+function failed(err) {
+  ui.toast(err?.response?.data?.detail || t('toast.actionFailed'), {
+    kind: 'error',
+  })
+}
+
 async function download() {
   queued.value = true
   try {
@@ -111,9 +171,58 @@ async function download() {
     })
   } catch (err) {
     queued.value = false
-    ui.toast(err?.response?.data?.detail || t('toast.actionFailed'), {
-      kind: 'error',
+    failed(err)
+  }
+}
+
+// Same interval as the /link page's own Watch for new tracks.
+async function watchPlaylist() {
+  if (watching.value || watched.value) return
+  watching.value = true
+  try {
+    await monitorAPI.addMonitoredPlaylist(props.item.url, 360)
+    watched.value = true
+    ui.toast(t('toast.watching', { name: props.item.name }), {
+      kind: 'success',
+      action: {
+        label: t('nav.monitor'),
+        run: () =>
+          router.push({ name: 'Monitor', params: { tab: 'playlists' } }),
+      },
     })
+  } catch (err) {
+    failed(err)
+  } finally {
+    watching.value = false
+  }
+}
+
+// As the /link page's Add to my playlists: the songs already in the
+// library, nothing downloaded.
+async function savePlaylist() {
+  if (saving.value) return
+  saving.value = true
+  try {
+    const { data } = await API.resolveUrl(props.item.url)
+    const tracks = data?.tracks || []
+    await library.lookupSongs(tracks)
+    const files = playableQueue(tracks, library.findTrack)
+    if (!files.length) {
+      ui.toast(t('link.noAvailableTracks'), { kind: 'error' })
+      return
+    }
+    playlistActions.openCreate(files, {
+      name: data?.name || props.item.name,
+      sourcePlaylistUrl: props.item.url,
+      description: t('link.saveAvailableHint', {
+        count: files.length,
+        total: tracks.length,
+      }),
+    })
+  } catch (err) {
+    failed(err)
+  } finally {
+    saving.value = false
   }
 }
 </script>

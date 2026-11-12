@@ -7,6 +7,7 @@ import {
 } from '../lib/providerOrder.js'
 
 const ALL = ['slskd', 'youtube-music', 'youtube']
+const ALL_WITH_SOUNDCLOUD = [...ALL, 'soundcloud']
 
 describe('providerRows', () => {
   it('numbers the enabled ones and parks the rest', () => {
@@ -89,6 +90,22 @@ describe('dropProvider', () => {
       'youtube',
       'slskd',
     ])
+  })
+
+  describe('SoundCloud audio source', () => {
+    it('can be enabled and moved in the configured provider order', () => {
+      const enabled = toggleProvider(['youtube-music'], 'soundcloud', true)
+      expect(enabled).toEqual(['youtube-music', 'soundcloud'])
+      expect(providerRows(ALL_WITH_SOUNDCLOUD, enabled)).toContainEqual({
+        id: 'soundcloud',
+        enabled: true,
+        position: 2,
+      })
+      expect(moveProvider(enabled, 'soundcloud', -1)).toEqual([
+        'soundcloud',
+        'youtube-music',
+      ])
+    })
   })
 
   it('ignores a drop on itself or on a disabled provider', () => {

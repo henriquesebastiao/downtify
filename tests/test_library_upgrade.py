@@ -10,6 +10,7 @@ from types import SimpleNamespace
 from typing import Any, Optional
 
 import pytest
+from mutagen.flac import VCFLACDict
 from mutagen.id3 import APIC, ID3, TALB, TDRC, TIT2, TPE1, TPE2, TRCK
 
 from downtify import cover_sources, library_upgrade
@@ -752,6 +753,51 @@ def test_a_scan_queues_only_the_tracks_that_are_behind(
     assert summary['categories'][CATEGORY_ARTWORK] == 1
     assert summary['library_tracks'] == 2
     assert summary['library_bytes'] > 0
+
+
+def test_scan_continues_after_unreadable_embedded_lyrics(
+    tmp_path: Path, monkeypatch: Any
+) -> None:
+    ctx = _context(tmp_path)
+    broken = ctx.download_dir / 'broken.flac'
+    healthy = ctx.download_dir / 'healthy.flac'
+    broken.parent.mkdir(parents=True)
+    broken.write_bytes(b'not audio')
+    healthy.write_bytes(b'not audio')
+    entries = [
+        {'file': 'broken.flac', 'size': 10, 'cover_px': 0},
+        {'file': 'healthy.flac', 'size': 20, 'cover_px': 0},
+    ]
+    monkeypatch.setattr(
+        library_upgrade,
+        'list_library_entries',
+        lambda *_args, **_kwargs: entries,
+    )
+    monkeypatch.setattr(
+        library_upgrade,
+        'resolve_track',
+        lambda stored, _ctx: ctx.download_dir / stored,
+    )
+    tags = VCFLACDict()
+
+    def unreadable(_key: str) -> Any:
+        raise ValueError('invalid Vorbis comment key')
+
+    monkeypatch.setattr(tags, 'get', unreadable)
+    monkeypatch.setattr(
+        library_upgrade.lyrics_mod, '_file_tags', lambda _path: tags
+    )
+    runner = _runner(tmp_path, ctx)
+
+    runner.start_scan(UpgradeOptions(artwork_min_px=600))
+    _wait(runner)
+
+    status = runner.status()
+    assert status['state'] == STATE_READY
+    assert status['scan'] == {'scanned': 2, 'total': 2}
+    summary = runner.scan_summary()
+    assert summary['library_tracks'] == 2
+    assert summary['categories'][CATEGORY_LYRICS] == 2
 
 
 def test_every_progress_message_carries_what_the_scan_found(

@@ -4,6 +4,140 @@ icon: lucide/history
 
 # Changelog
 
+## [3.10.0](https://github.com/henriquesebastiao/downtify/tree/3.10.0) (2026-11-06)
+
+[Full Changelog](https://github.com/henriquesebastiao/downtify/compare/3.9.0...3.10.0)
+
+**Implemented enhancements:**
+
+- Native HTTP/SOCKS5 proxy support across outbound services \(optional strict mode\) [\#521](https://github.com/henriquesebastiao/downtify/issues/521)
+- Feature request: Remove Soulseek source copies after successful import into the Downtify library [\#493](https://github.com/henriquesebastiao/downtify/issues/493)
+- Apply the audio source order \(slskd first\) to downloads started from the search bar [\#420](https://github.com/henriquesebastiao/downtify/issues/420)
+- slskd: add strict format priority and allowed-format filtering \(e.g. FLAC → 320 kbps MP3\) [\#417](https://github.com/henriquesebastiao/downtify/issues/417)
+- Playlist diagnostics / health summary [\#402](https://github.com/henriquesebastiao/downtify/issues/402)
+- Feature request: connect with Spotify to choose imports from user playlists [\#383](https://github.com/henriquesebastiao/downtify/issues/383)
+- Feature Request: Lidarr-style Artist Library & Discography Monitoring [\#317](https://github.com/henriquesebastiao/downtify/issues/317)
+- Original file format downloading option [\#249](https://github.com/henriquesebastiao/downtify/issues/249)
+
+**Fixed bugs:**
+
+- Title Streaming from an album can play the wrong track: `videoIdFor()` takes the first search hit and ignores duration [\#514](https://github.com/henriquesebastiao/downtify/issues/514)
+- Navidrome playlist sync misses tracks unless "Report Real Path" is enabled [\#392](https://github.com/henriquesebastiao/downtify/issues/392)
+- Possible race condition: slskd downloads bypass the per-target lock [\#389](https://github.com/henriquesebastiao/downtify/issues/389)
+- 500 error viewing lyrics for FLAC files — ValueError in \_embedded\_lyrics [\#374](https://github.com/henriquesebastiao/downtify/issues/374)
+- ValueError during library upgrade scan on .opus files with embedded lyrics [\#371](https://github.com/henriquesebastiao/downtify/issues/371)
+- Every downloaded song is just called "unknown.mp3" [\#264](https://github.com/henriquesebastiao/downtify/issues/264)
+
+**Closed issues:**
+
+- Question: could manual playlists hold more than 500 tracks? [\#488](https://github.com/henriquesebastiao/downtify/issues/488)
+
+**Merged pull requests:**
+
+- Add first-interaction action [\#544](https://github.com/henriquesebastiao/downtify/pull/544) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- fix: improve playlist editing, Soulseek locking, and Navidrome matching [\#543](https://github.com/henriquesebastiao/downtify/pull/543) ([pakhozako](https://github.com/pakhozako))
+- feat\(playlists\): reorder Library playlists and repeat songs in them [\#541](https://github.com/henriquesebastiao/downtify/pull/541) ([ruflas](https://github.com/ruflas))
+- Add stale action [\#540](https://github.com/henriquesebastiao/downtify/pull/540) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- fix\(slskd\): remove source files after successful import [\#539](https://github.com/henriquesebastiao/downtify/pull/539) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- fix\(player\): reject streaming matches with wrong duration [\#538](https://github.com/henriquesebastiao/downtify/pull/538) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- fix\(lyrics\): safely read embedded lyrics across audio formats [\#537](https://github.com/henriquesebastiao/downtify/pull/537) ([pakhozako](https://github.com/pakhozako))
+- docs\(i18n\): add Simplified Chinese documentation [\#536](https://github.com/henriquesebastiao/downtify/pull/536) ([pakhozako](https://github.com/pakhozako))
+- feat\(proxy\): support strict outbound HTTP and SOCKS routing [\#535](https://github.com/henriquesebastiao/downtify/pull/535) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- fix\(download\): honor source order for search results [\#534](https://github.com/henriquesebastiao/downtify/pull/534) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- feat\(slskd\): add strict format priority and whitelist [\#533](https://github.com/henriquesebastiao/downtify/pull/533) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- feat: add playlist pipeline diagnostics [\#532](https://github.com/henriquesebastiao/downtify/pull/532) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- feat\(downloads\): keep the best available original audio [\#530](https://github.com/henriquesebastiao/downtify/pull/530) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- feat\(i18n\): add Simplified Chinese \(zh-CN\) translation [\#529](https://github.com/henriquesebastiao/downtify/pull/529) ([pakhozako](https://github.com/pakhozako))
+
+## [3.9.0](https://github.com/henriquesebastiao/downtify/tree/3.9.0) (2026-11-03)
+
+[Full Changelog](https://github.com/henriquesebastiao/downtify/compare/3.8.1...3.9.0)
+
+**Implemented enhancements:**
+
+- Add release date to library table [\#523](https://github.com/henriquesebastiao/downtify/issues/523)
+- Custom cover images for my own playlists, and an optional per-user library mode with download quotas [\#520](https://github.com/henriquesebastiao/downtify/issues/520)
+- \[FR\] Add OIDC authentication support [\#453](https://github.com/henriquesebastiao/downtify/issues/453)
+
+**Merged pull requests:**
+
+- feat\(auth\): add optional OpenID Connect login [\#527](https://github.com/henriquesebastiao/downtify/pull/527) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- feat\(playlists\): support custom playlist covers [\#525](https://github.com/henriquesebastiao/downtify/pull/525) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- feat\(library\): sort tracks by release date [\#524](https://github.com/henriquesebastiao/downtify/pull/524) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- Fix queued YouTube video playback [\#522](https://github.com/henriquesebastiao/downtify/pull/522) ([michaelmoskie](https://github.com/michaelmoskie))
+
+## [3.8.1](https://github.com/henriquesebastiao/downtify/tree/3.8.1) (2026-10-31)
+
+[Full Changelog](https://github.com/henriquesebastiao/downtify/compare/3.8.0...3.8.1)
+
+**Merged pull requests:**
+
+- perf: serve library pages without waiting on the disk [\#519](https://github.com/henriquesebastiao/downtify/pull/519) ([ruflas](https://github.com/ruflas))
+- fix\(player\): keep Now playing in place at the end of the lyrics [\#518](https://github.com/henriquesebastiao/downtify/pull/518) ([ruflas](https://github.com/ruflas))
+- feat\(search\): open a song result's album or artist from its row [\#517](https://github.com/henriquesebastiao/downtify/pull/517) ([michaelmcg](https://github.com/michaelmcg))
+- feat\(player\): add safe playback normalization levels [\#516](https://github.com/henriquesebastiao/downtify/pull/516) ([QuietForge7294](https://github.com/QuietForge7294))
+- feat: pause server downloads and watches from settings and monitor [\#515](https://github.com/henriquesebastiao/downtify/pull/515) ([QuietForge7294](https://github.com/QuietForge7294))
+- perf: reduce idle slskd polling and repeated disk scans [\#513](https://github.com/henriquesebastiao/downtify/pull/513) ([QuietForge7294](https://github.com/QuietForge7294))
+
+## [3.8.0](https://github.com/henriquesebastiao/downtify/tree/3.8.0) (2026-10-29)
+
+[Full Changelog](https://github.com/henriquesebastiao/downtify/compare/3.7.0...3.8.0)
+
+**Implemented enhancements:**
+
+- Feature request: Add a graceful pause/resume control for the download queue [\#494](https://github.com/henriquesebastiao/downtify/issues/494)
+- Feature request: Track playlist origins, activity rates, and storage usage per monitored playlist [\#492](https://github.com/henriquesebastiao/downtify/issues/492)
+- Feature request: Show library storage growth and usage by audio source [\#491](https://github.com/henriquesebastiao/downtify/issues/491)
+- Option to remove songs from source playlist [\#466](https://github.com/henriquesebastiao/downtify/issues/466)
+- Add link to purchase music [\#429](https://github.com/henriquesebastiao/downtify/issues/429)
+- Search/filter inside playlist pages [\#401](https://github.com/henriquesebastiao/downtify/issues/401)
+
+**Fixed bugs:**
+
+- Downtify 3.7.0 hangs on startup in Umbrel [\#498](https://github.com/henriquesebastiao/downtify/issues/498)
+
+**Closed issues:**
+
+- Opt-in administrator music trash with 30-day recovery [\#510](https://github.com/henriquesebastiao/downtify/issues/510)
+- Optional download exclusions and cumulative attempt budgets [\#509](https://github.com/henriquesebastiao/downtify/issues/509)
+- Quick watch actions from artist pages and Deezer chart playlists [\#438](https://github.com/henriquesebastiao/downtify/issues/438)
+
+**Merged pull requests:**
+
+- feat: add opt-in administrator music trash with 30-day recovery [\#512](https://github.com/henriquesebastiao/downtify/pull/512) ([QuietForge7294](https://github.com/QuietForge7294))
+- feat: add reversible download exclusions and cumulative attempt budgets [\#511](https://github.com/henriquesebastiao/downtify/pull/511) ([QuietForge7294](https://github.com/QuietForge7294))
+- feat: library storage and usage page \(\#491\) [\#508](https://github.com/henriquesebastiao/downtify/pull/508) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- feat: playlist provenance and per-watch activity and storage stats \(\#492\) [\#507](https://github.com/henriquesebastiao/downtify/pull/507) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- feat: pause and resume the download queue \(\#494\) [\#506](https://github.com/henriquesebastiao/downtify/pull/506) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- Fix legacy-encoded M3U playlists breaking Library requests [\#505](https://github.com/henriquesebastiao/downtify/pull/505) ([a8h](https://github.com/a8h))
+- feat: let apps sign in with a username and password [\#504](https://github.com/henriquesebastiao/downtify/pull/504) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- chore\(deps\): bump docker/login-action from 4.6.0 to 4.7.0 [\#503](https://github.com/henriquesebastiao/downtify/pull/503) ([dependabot[bot]](https://github.com/apps/dependabot))
+- chore\(deps-dev\): bump ruff from 0.17.1 to 0.17.2 [\#502](https://github.com/henriquesebastiao/downtify/pull/502) ([dependabot[bot]](https://github.com/apps/dependabot))
+- chore\(deps\): bump yt-dlp from 2026.8.19 to 2026.10.21 [\#501](https://github.com/henriquesebastiao/downtify/pull/501) ([dependabot[bot]](https://github.com/apps/dependabot))
+- fix: keep monitored names readable with adjustable columns [\#500](https://github.com/henriquesebastiao/downtify/pull/500) ([QuietForge7294](https://github.com/QuietForge7294))
+- fix: honor audio provider order for known YouTube videos [\#499](https://github.com/henriquesebastiao/downtify/pull/499) ([QuietForge7294](https://github.com/QuietForge7294))
+- fix: validate every track of monitored artist releases [\#496](https://github.com/henriquesebastiao/downtify/pull/496) ([QuietForge7294](https://github.com/QuietForge7294))
+- feat: suggest artists from personal listening and library [\#495](https://github.com/henriquesebastiao/downtify/pull/495) ([QuietForge7294](https://github.com/QuietForge7294))
+- feat: search and filter a whole playlist from its page [\#487](https://github.com/henriquesebastiao/downtify/pull/487) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- feat: show where to buy a song to support the artist [\#486](https://github.com/henriquesebastiao/downtify/pull/486) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- feat: hide songs from an imported playlist and keep them out [\#485](https://github.com/henriquesebastiao/downtify/pull/485) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- feat: add a server-wide library-only music mode [\#484](https://github.com/henriquesebastiao/downtify/pull/484) ([QuietForge7294](https://github.com/QuietForge7294))
+- ci: adding an action to automatically add issues and pull requests to the Downtify project in GitHub Actions [\#481](https://github.com/henriquesebastiao/downtify/pull/481) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- docs: translate the documentation into every app language [\#480](https://github.com/henriquesebastiao/downtify/pull/480) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- feat: add optional playback loudness normalization [\#479](https://github.com/henriquesebastiao/downtify/pull/479) ([QuietForge7294](https://github.com/QuietForge7294))
+- feat: save linked playlists using existing library tracks [\#478](https://github.com/henriquesebastiao/downtify/pull/478) ([QuietForge7294](https://github.com/QuietForge7294))
+- feat: import selected M3U playlists from music folders [\#476](https://github.com/henriquesebastiao/downtify/pull/476) ([QuietForge7294](https://github.com/QuietForge7294))
+- feat: collaborate on playlist tracks with named users [\#475](https://github.com/henriquesebastiao/downtify/pull/475) ([QuietForge7294](https://github.com/QuietForge7294))
+- feat: customize synchronized playlist display names [\#474](https://github.com/henriquesebastiao/downtify/pull/474) ([QuietForge7294](https://github.com/QuietForge7294))
+- feat: pin favorite playlists on the home screen [\#473](https://github.com/henriquesebastiao/downtify/pull/473) ([QuietForge7294](https://github.com/QuietForge7294))
+- feat: safely replace library recordings through Deemix [\#470](https://github.com/henriquesebastiao/downtify/pull/470) ([QuietForge7294](https://github.com/QuietForge7294))
+- feat: prefer a configured external library folder [\#469](https://github.com/henriquesebastiao/downtify/pull/469) ([QuietForge7294](https://github.com/QuietForge7294))
+- feat: add opt-in Deemix audio source [\#468](https://github.com/henriquesebastiao/downtify/pull/468) ([QuietForge7294](https://github.com/QuietForge7294))
+- fix: publish upgrade lyrics across filesystem boundaries [\#440](https://github.com/henriquesebastiao/downtify/pull/440) ([QuietForge7294](https://github.com/QuietForge7294))
+- feat: follow artists and Deezer chart playlists in place [\#439](https://github.com/henriquesebastiao/downtify/pull/439) ([QuietForge7294](https://github.com/QuietForge7294))
+- Added support for SoundCloud, adds SoundCloud for available source [\#424](https://github.com/henriquesebastiao/downtify/pull/424) ([the1andoni](https://github.com/the1andoni))
+- fix: multiples artists issues [\#411](https://github.com/henriquesebastiao/downtify/pull/411) ([fvidals](https://github.com/fvidals))
+
 ## [3.7.0](https://github.com/henriquesebastiao/downtify/tree/3.7.0) (2026-10-21)
 
 [Full Changelog](https://github.com/henriquesebastiao/downtify/compare/3.6.0...3.7.0)

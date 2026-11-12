@@ -63,7 +63,9 @@ Ein eingefügter Deezer-Link zu Titel/Album/Playlist/Künstler (`deezer.com/trac
 | Tag | Geschrieben |
 |-----|---------|
 | Titel | Ja |
-| Künstler | Ja |
+| Künstler | Ja, alle genannten Künstler, außerdem einzeln als Werte eines `ARTISTS`-Tags |
+| Albumkünstler | Ja, der Künstler des Albums, wie die Quelle ihn nennt, sonst der erste Künstler |
+| Compilation-Flag | Nur bei einem Album, das die Quelle „Various Artists“ zuschreibt oder das ein Admin als solches markiert |
 | Album | Ja |
 | Jahr | Ja |
 | Albumcover (JPEG) | Ja |
@@ -80,4 +82,4 @@ Downtify streamt den Download-Fortschritt per **WebSocket**-Verbindung (`/api/ws
 
 Der Ausgabedateiname wird aus der in den Einstellungen konfigurierten Vorlage gebildet (Standard: `{artists} - {title}`). In Dateinamen ungültige Zeichen werden entfernt.
 
-Ist *Nach Künstler sortieren* aktiv, kommt die Datei in einen Unterordner mit dem Namen des Hauptkünstlers. Andernfalls landen einzelne Titel im Hauptverzeichnis des Download-Ordners, und Playlist-/Albumtitel kommen in einen Unterordner pro Playlist oder Album.
+Ist *Nach Künstler sortieren* aktiv, kommt die Datei in einen Unterordner mit dem Namen des Albumkünstlers — oder, bei einem Titel einer Various-Artists-Compilation, seines ersten Künstlers. Andernfalls landen einzelne Titel im Hauptverzeichnis des Download-Ordners, und Playlist-/Albumtitel kommen in einen Unterordner pro Playlist oder Album. Siehe [Mehrere Künstler und Compilations](features/file-organization.md#several-artists-and-compilations).

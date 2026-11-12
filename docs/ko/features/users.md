@@ -69,7 +69,7 @@ Downtify를 쓰는 모든 사람은 **사용자 이름과 비밀번호**로 로�
 
 사이드바에도 나에게 공유된 것과 내가 팔로우하는 공개 재생목록 중 일부가 표시됩니다.
 
-**보는 사람이 할 수 있는 일:** 재생, 셔플, 대기열에 추가, ZIP으로 다운로드(또는 휴대폰/데스크톱 앱으로), 공개 재생목록을 **팔로우**해 — *공개 재생목록 표시*가 꺼져 있어도 — 자기 목록에 남기고 소유자의 변경 사항을 따라가기, 그리고 **사본 저장**: 자기가 볼 수 있는 곡으로 이루어진 비공개 편집 가능한 자기 재생목록. 보는 사람은 다른 사람의 재생목록을 편집, 이름 변경, 삭제, 공유, 분리할 수 없습니다.
+**보는 사람이 할 수 있는 일:** 재생, 셔플, 대기열에 추가, ZIP으로 다운로드(또는 휴대폰/데스크톱 앱으로), 공개 재생목록을 **팔로우**해 — *공개 재생목록 표시*가 꺼져 있어도 — 자기 목록에 남기고 소유자의 변경 사항을 따라가기, 그리고 **사본 저장**: 자기가 볼 수 있는 곡으로 이루어진 비공개 편집 가능한 자기 재생목록. 보는 사람은 다른 사람의 재생목록을 편집, 이름 변경, 삭제, 공유, 분리할 수 없습니다. 라이브러리 재생목록의 소유자는 공유한 사람 중 일부를 편집자로 지정할 수 있으며, 편집자는 곡을 추가하고 제거할 수도 있습니다. [함께 편집하는 재생목록](collaborative-playlists.md)을 참고하세요.
 
 **공유 해제:** 소유자가 재생목록을 다시 비공개로 하거나 목록에서 누군가를 빼면, 그 사람의 목록에서 즉시 사라집니다(팔로우했든 아니든). 공개가 아니게 된 재생목록은 더 이상 팔로우되지 않습니다. 이미 저장한 사본은 그 사람에게 남습니다. 공유된 재생목록의 이름을 바꿔도 공유는 유지되고, 삭제하면 공유도 함께 사라집니다. 관리자가 [사용자에게서 숨긴](#hiding-from-users) 곡은 다른 곳과 마찬가지로 그들에게는 공유 재생목록의 트랙에서 제외됩니다.
 
@@ -119,6 +119,30 @@ Downtify를 쓰는 모든 사람은 **사용자 이름과 비밀번호**로 로�
 - **전체 사용자 일괄 로그아웃** — 모든 사용자의 모든 앱 연결이 해제되고 모든 브라우저가 로그아웃되며, 내 것도 포함됩니다.
 
 관리자는 항상 최소 한 명 있습니다. 마지막 관리자는 삭제하거나 사용자로 바꿀 수 없고, 자기 계정은 삭제할 수 없습니다.
+
+## OpenID Connect
+
+Downtify can add an optional **Continue with identity provider** button to the sign-in page and authenticate through an OpenID Connect provider such as Authelia, Authentik, Keycloak or Pocket ID. Local username/password sign-in stays available unless you disable it. The browser flow uses Authorization Code with PKCE; Downtify verifies the provider's signed ID token before creating its own session cookie.
+
+Set these variables on the server and register the callback URL shown below as an allowed redirect URI in your provider:
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `DOWNTIFY_OIDC_ISSUER` | Yes | | The exact issuer URL from the provider's discovery document. |
+| `DOWNTIFY_OIDC_CLIENT_ID` | Yes | | The registered client ID. |
+| `DOWNTIFY_OIDC_CLIENT_SECRET` | Yes | | The confidential client's secret. |
+| `DOWNTIFY_OIDC_REDIRECT_URI` | No | Derived from the request | Public callback URL, normally `https://music.example.com/api/auth/oidc/callback`. Set it explicitly when Downtify is behind a reverse proxy. |
+| `DOWNTIFY_OIDC_SCOPES` | No | `openid profile email` | Space-separated OIDC scopes. |
+| `DOWNTIFY_OIDC_USERNAME_CLAIM` | No | `preferred_username` | Claim used as the new Downtify username; falls back to `email`, then `sub`. |
+| `DOWNTIFY_OIDC_GROUPS_CLAIM` | No | `groups` | Claim containing a string or list of group names. Dotted paths such as `realm_access.roles` are supported. |
+| `DOWNTIFY_OIDC_ALLOWED_GROUPS` | No | _(empty)_ | Comma-separated groups allowed to sign in. Empty means any authenticated identity. |
+| `DOWNTIFY_OIDC_ADMIN_GROUPS` | No | _(empty)_ | Comma-separated groups whose members receive the Downtify admin role. Everyone else is a user. |
+
+For example, the provider's client needs the callback `https://music.example.com/api/auth/oidc/callback` and the scopes `openid profile email`. For a reverse proxy, also configure [`DOWNTIFY_TRUSTED_PROXIES`](../getting-started/environment-variables.md#mobile-apps-and-sign-in) or set the redirect URI explicitly.
+
+The first successful sign-in creates a Downtify account. Identity is keyed by the exact `issuer` and OIDC `sub`, not by a mutable username or email. An existing local account is **never** linked automatically by matching username or email; if a claimed username is already taken, Downtify adds a stable suffix. Admins can still manage local roles in **Settings → Users**, while a configured admin-group mapping is synchronized on every OIDC sign-in. If the mapped group change would remove the server's last admin, Downtify rejects that sign-in until another admin exists.
+
+To turn off username/password login for both the web page and the app's password-token endpoint, set `DOWNTIFY_DISABLE_LOCAL_LOGIN=true`. OIDC and code-based app pairing remain available. This does not revoke existing browser sessions or device tokens. It requires a complete OIDC configuration and is separate from `DOWNTIFY_DISABLE_AUTH`, which removes authentication entirely.
 
 ## 활동 로그
 

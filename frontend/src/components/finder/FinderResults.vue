@@ -57,6 +57,7 @@
             :queue="songQueue"
             :songs="visibleSongs"
             :to="browseLocation('song', song)"
+            :search-links="searchLinks"
           />
         </div>
         <button
@@ -134,6 +135,8 @@ import { useI18n } from '/src/i18n'
 const props = defineProps({
   query: { type: String, default: '' },
   artist: { type: Object, default: null },
+  // Forwarded to every TrackDownPlay as-is (see its own `searchLinks`).
+  searchLinks: { type: Boolean, default: true },
 })
 
 const GRID =

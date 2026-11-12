@@ -22,6 +22,7 @@ from downtify.library_catalog import (
     listing_for_request,
     lookup_library_songs,
     merge_library_listing_file,
+    refresh_library_listing_files,
 )
 from downtify.library_paths_cache import (
     invalidate_library_paths_cache,
@@ -153,6 +154,42 @@ def test_drop_listing_files_hides_deleted_album_without_rescan(tmp_path):
     assert 'Keep.mp3' in files
 
 
+def _tag(path, title, album_artist):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(b'x')
+    tags = ID3()
+    tags.add(TIT2(encoding=3, text=title))
+    tags.add(TPE1(encoding=3, text='AliasNorth'))
+    tags.add(TPE2(encoding=3, text=album_artist))
+    tags.add(TALB(encoding=3, text='Glass Harbor'))
+    tags.save(str(path), v2_version=3)
+
+
+def test_refresh_listing_files_reads_a_retag_in_place(tmp_path):
+    download_dir = tmp_path / 'downloads'
+    first = download_dir / 'AliasNorth' / 'a.mp3'
+    _tag(first, 'Harbor Lights', 'AliasNorth')
+    invalidate_library_paths_cache()
+    ctx = LibraryContext(download_dir=download_dir)
+    list_library_entries(ctx)
+    # Marked as a compilation: same path, new album artist.
+    _tag(first, 'Harbor Lights', 'Various Artists')
+    refresh_library_listing_files(ctx, ['AliasNorth/a.mp3'])
+    # A download finishing before the rescan stores the snapshot again
+    # under the tree's new fingerprint; the retag must survive it.
+    _tag(download_dir / 'AliasWest' / 'b.mp3', 'Tide Line', 'Various Artists')
+    merge_library_listing_file(ctx, 'AliasWest/b.mp3')
+    rows = {row['file']: row for row in listing_for_request(ctx)}
+    assert rows['AliasNorth/a.mp3']['album_artist'] == 'Various Artists'
+    albums = [
+        row
+        for row in library_album_index(ctx)
+        if row['title'] == 'Glass Harbor'
+    ]
+    assert len(albums) == 1
+    assert albums[0]['track_count'] == 2
+
+
 def test_a_delete_removes_the_search_downloaded_badge(tmp_path, monkeypatch):
     download_dir = tmp_path / 'downloads'
     download_dir.mkdir()
@@ -247,10 +284,93 @@ def test_a_hand_edited_m3u_shows_up_after_the_recheck_window(
 
     clock = time.monotonic() + paths_cache.PLAYLIST_RECHECK_SECONDS + 1
     monkeypatch.setattr(paths_cache.time, 'monotonic', lambda: clock)
+    # That read doesn't wait for the check it starts; the next one has it.
+    assert list_library_playlists(download_dir, stale_ok=True) == []
+    _finish_background_recheck()
     names = [
         p['name'] for p in list_library_playlists(download_dir, stale_ok=True)
     ]
     assert names == ['Manual']
+
+
+def _finish_background_recheck() -> None:
+    for thread in threading.enumerate():
+        if thread.name == 'downtify-playlist-recheck':
+            thread.join(timeout=5)
+
+
+def test_a_stale_playlist_listing_never_makes_a_page_wait(
+    tmp_path, monkeypatch
+):
+    """Each read past the recheck window walked the downloads folder, one
+    after another behind a lock: a page load after a minute of quiet took
+    seconds on a large library."""
+
+    download_dir = tmp_path / 'downloads'
+    download_dir.mkdir()
+    invalidate_library_paths_cache()
+    set_listing_refresh_fn(lambda: None)
+    assert list_library_playlists(download_dir, stale_ok=True) == []
+
+    clock = time.monotonic() + paths_cache.PLAYLIST_RECHECK_SECONDS + 1
+    monkeypatch.setattr(paths_cache.time, 'monotonic', lambda: clock)
+    real_walk = paths_cache.playlist_listing_fingerprint
+    release = threading.Event()
+    walks = []
+
+    def slow_walk(folder):
+        walks.append(folder)
+        release.wait(5)
+        return real_walk(folder)
+
+    monkeypatch.setattr(paths_cache, 'playlist_listing_fingerprint', slow_walk)
+
+    # All three answer while the only walk is still stuck on the disk.
+    for _ in range(3):
+        assert list_library_playlists(download_dir, stale_ok=True) == []
+    release.set()
+    _finish_background_recheck()
+
+    assert len(walks) == 1
+
+
+def test_a_walk_cannot_overwrite_a_listing_dropped_meanwhile(
+    tmp_path, monkeypatch
+):
+    """An M3U written during a background check must not be hidden by what
+    the check read before it."""
+
+    download_dir = tmp_path / 'downloads'
+    (download_dir / 'Playlists').mkdir(parents=True)
+    invalidate_library_paths_cache()
+    built = threading.Event()
+    release = threading.Event()
+    answers = [['before'], ['read too early'], ['after']]
+
+    def build():
+        answer = answers.pop(0)
+        if answer == ['read too early']:
+            built.set()
+            release.wait(5)
+        return answer
+
+    def read():
+        return paths_cache.get_cached_playlists(
+            download_dir, None, (), build, stale_ok=True
+        )
+
+    assert read() == ['before']
+    (download_dir / 'Playlists' / 'New.m3u').write_text('#EXTM3U\n')
+    clock = time.monotonic() + paths_cache.PLAYLIST_RECHECK_SECONDS + 1
+    monkeypatch.setattr(paths_cache.time, 'monotonic', lambda: clock)
+    assert read() == ['before']
+    assert built.wait(5)
+
+    paths_cache.forget_cached_playlists()
+    release.set()
+    _finish_background_recheck()
+
+    assert read() == ['after']
 
 
 def test_merging_a_download_neither_walks_nor_rewrites_the_snapshot(

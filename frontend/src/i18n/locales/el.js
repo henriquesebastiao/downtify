@@ -1,9 +1,222 @@
 export default {
+  artistSuggestions: {
+    title: 'Καλλιτέχνες για να ακολουθήσεις',
+    listening: 'Με βάση όσα ακούς',
+    library: 'Με βάση τη βιβλιοθήκη σου',
+    listeningHelp:
+      'Οι καλλιτέχνες που ακούς περισσότερο. Οι πρόσφατες ακροάσεις μετρούν περισσότερο: το βάρος κάθε ακρόασης μειώνεται στο μισό κάθε {days} ημέρες.',
+    libraryHelp:
+      'Οι καλλιτέχνες με τα περισσότερα τραγούδια και μετά άλμπουμ στη βιβλιοθήκη σου.',
+    listens: { one: '{count} ακρόαση', other: '{count} ακροάσεις' },
+    tracks: { one: '{count} τραγούδι', other: '{count} τραγούδια' },
+    albums: { one: '{count} άλμπουμ', other: '{count} άλμπουμ' },
+    follow: 'Ακολούθησε',
+    more: 'Εμφάνιση περισσότερων',
+    loading: 'Φόρτωση προτάσεων…',
+    empty: 'Δεν υπάρχουν άλλοι καλλιτέχνες για πρόταση προς το παρόν.',
+    failed: 'Δεν ήταν δυνατή η φόρτωση των προτάσεων.',
+    retry: 'Δοκίμασε ξανά',
+    choose: 'Ποιος καλλιτέχνης είναι {name};',
+    chooseHelp:
+      'Περισσότεροι από έναν καλλιτέχνες στο YouTube Music θα μπορούσαν να είναι {name}. Σύγκρινε τις φωτογραφίες ή άνοιξε τα προφίλ τους και ακολούθησε τον σωστό.',
+    notFound:
+      'Δεν βρέθηκε καλλιτέχνης με το όνομα {name} στο YouTube Music. Επικόλλησε καλύτερα τον σύνδεσμο του καλλιτέχνη.',
+    lookupFailed:
+      'Η αναζήτηση καλλιτεχνών δεν είναι διαθέσιμη. Μπορείς ακόμα να επικολλήσεις έναν σύνδεσμο.',
+    followProfile: 'Ακολούθησε αυτόν τον καλλιτέχνη',
+    inspect: 'Άνοιγμα στο YouTube Music',
+    manual: 'Επικόλληση συνδέσμου',
+    cancel: 'Ακύρωση',
+  },
+  trash: {
+    title: 'Κάδος',
+    subtitle:
+      'Κομμάτια που βγήκαν από τη βιβλιοθήκη, φυλάσσονται {days} ημέρες αφού μετακινηθούν. Μέχρι τότε μπορείς να τα επαναφέρεις.',
+    adminOnly: 'Μόνο οι διαχειριστές μπορούν να το δουν αυτό',
+    adminOnlyHint:
+      'Ζήτησε από έναν διαχειριστή αυτού του διακομιστή να επαναφέρει ένα κομμάτι.',
+    off: 'Ο κάδος είναι απενεργοποιημένος',
+    offHint:
+      'Σε αυτόν τον διακομιστή τα κομμάτια διαγράφονται οριστικά. Ο κάδος ενεργοποιείται στις ρυθμίσεις του διακομιστή (DOWNTIFY_TRASH).',
+    inTrash: 'Στον κάδο',
+    exclusions: 'Εκτός λήψεων',
+    search: 'Αναζήτηση στον κάδο',
+    restoreSelected: {
+      one: 'Επαναφορά {count} κομματιού',
+      other: 'Επαναφορά {count} κομματιών',
+    },
+    summary: {
+      one: '{count} κομμάτι · {size}',
+      other: '{count} κομμάτια · {size}',
+    },
+    empty: 'Ο κάδος είναι άδειος',
+    emptyHint:
+      'Τα κομμάτια που μετακινείς από τη βιβλιοθήκη στον κάδο εμφανίζονται εδώ μέχρι να λήξουν.',
+    noMatch: 'Τίποτα στον κάδο δεν ταιριάζει',
+    select: 'Επιλογή «{title}»',
+    keptUntil: 'Φυλάσσεται έως {date}',
+    restore: 'Επαναφορά',
+    retry: 'Δοκίμασε ξανά',
+    previous: 'Προηγούμενη',
+    next: 'Επόμενη',
+    exclusionsHint:
+      'Κομμάτια των οποίων ο χρόνος στον κάδο έληξε. Οι αυτόματες λήψεις (παρακολούθηση λιστών, παρακολουθήσεις) συνεχίζουν να τα παραλείπουν μέχρι να τα επιτρέψεις ξανά.',
+    exclusionsEmpty: 'Τίποτα δεν είναι εκτός λήψεων',
+    allowDownload: 'Επίτρεψε λήψεις',
+    allowTitle: 'Να επιτραπεί ξανά η λήψη του «{title}»;',
+    allowBody:
+      'Οι αυτόματες λήψεις μπορεί να το κατεβάσουν ξανά. Τίποτα δεν κατεβαίνει τώρα.',
+    move: 'Μετακίνηση στον κάδο',
+    preparing: 'Έλεγχος αρχείων…',
+    confirmTitle: {
+      one: 'Μετακίνηση {count} κομματιού στον κάδο;',
+      other: 'Μετακίνηση {count} κομματιών στον κάδο;',
+    },
+    confirmBody:
+      'Μετακινούνται μόνο αυτά τα αρχεία, μαζί με τα αρχεία στίχων τους. Βγαίνουν από τη βιβλιοθήκη για όλους και μπορούν να επανέλθουν για {days} ημέρες. Οι λίστες και τα «μου αρέσει» τους επιστρέφουν μαζί τους, και στο μεταξύ οι αυτόματες λήψεις τα παραλείπουν.',
+    confirmMore: {
+      one: 'και {count} ακόμη',
+      other: 'και {count} ακόμη',
+    },
+    pending: {
+      one: 'Μετακίνηση {count} κομματιού στον κάδο',
+      other: 'Μετακίνηση {count} κομματιών στον κάδο',
+    },
+    downloadBlocked:
+      'Στον κάδο μουσικής: ένας διαχειριστής πρέπει να το επιτρέψει ξανά.',
+    states: {
+      preview: 'Αναμονή επιβεβαίωσης',
+      pending: 'Αναμονή μετακίνησης',
+      moving: 'Μετακινείται',
+      trashed: 'Στον κάδο',
+      restore_pending: 'Αναμονή επαναφοράς',
+      restoring: 'Επαναφέρεται',
+      restored: 'Επανήλθε',
+      purging: 'Λήγει',
+      purged: 'Έληξε',
+      error: 'Σταμάτησε — τα αρχεία κρατήθηκαν',
+    },
+    errors: {
+      unavailable:
+        'Ο κάδος δεν είναι διαθέσιμος τώρα. Δεν μετακινήθηκε τίποτα.',
+      admin_required:
+        'Μόνο ένας διαχειριστής μπορεί να χρησιμοποιήσει τον κάδο.',
+      admin_access_revoked:
+        'Ο λογαριασμός που το ζήτησε δεν είναι πια διαχειριστής.',
+      atomic_move_unsupported:
+        'Αυτός ο χώρος αποθήκευσης δεν μπορεί να μετακινήσει αρχεία με ασφάλεια. Δεν μετακινήθηκε τίποτα.',
+      confirmation_expired: 'Ο έλεγχος έληξε. Επίλεξε ξανά τα κομμάτια.',
+      confirmation_invalid:
+        'Αυτή η επιβεβαίωση δεν είναι για τον λογαριασμό ή την επιλογή σου.',
+      file_changed:
+        'Το αρχείο άλλαξε μετά τον έλεγχο. Έμεινε στη θέση του· επίλεξέ το ξανά.',
+      file_changed_during_move:
+        'Το αρχείο άλλαξε κατά τη μετακίνηση. Φυλάσσεται στον κάδο για να το ελέγξεις.',
+      file_missing:
+        'Λείπει ένα αρχείο. Έλεγξε τον χώρο αποθήκευσης και δοκίμασε ξανά.',
+      filesystem_unavailable:
+        'Ο χώρος αποθήκευσης δεν είναι διαθέσιμος. Έλεγξέ τον και δοκίμασε ξανά.',
+      identity_uncertain:
+        'Τα tags αυτού του κομματιού δεν αρκούν για να μείνει εκτός αυτόματων λήψεων. Δεν μετακινήθηκε τίποτα.',
+      invalid_path:
+        'Αυτό το αρχείο είναι εκτός των φακέλων που καλύπτει ο κάδος.',
+      invalid_selection: 'Επίλεξε από 1 έως 200 κομμάτια.',
+      item_not_found: 'Αυτό το κομμάτι δεν είναι πια στη βιβλιοθήκη.',
+      library_task_active:
+        'Η αναβάθμιση της βιβλιοθήκης τρέχει. Περίμενε ή βάλ’ την σε παύση πρώτα.',
+      nas_marker_changed:
+        'Ο χώρος αποθήκευσης δεν είναι αυτός που περιμένει ο κάδος. Δεν μετακινήθηκε τίποτα.',
+      nas_marker_missing:
+        'Ο αναμενόμενος χώρος αποθήκευσης δεν είναι προσαρτημένος. Δεν μετακινήθηκε τίποτα.',
+      operation_already_pending: 'Αυτό το κομμάτι είναι ήδη καθ’ οδόν.',
+      operation_in_progress:
+        'Η μετακίνηση τρέχει ακόμη. Περίμενε πριν την επαναφορά.',
+      operation_not_complete: 'Περίμενε να τελειώσει το τρέχον βήμα.',
+      preview_busy: 'Τρέχει άλλος έλεγχος. Περίμενε να τελειώσει.',
+      preview_unavailable: 'Ο έλεγχος διακόπηκε. Επίλεξε ξανά τα κομμάτια.',
+      restore_collision:
+        'Υπάρχει ήδη άλλο αρχείο εκεί. Δεν αντικαταστάθηκε τίποτα· το κομμάτι μένει στον κάδο.',
+      retention_expired: 'Ο χρόνος του στον κάδο έληξε.',
+      root_unavailable: 'Ο φάκελος μουσικής δεν είναι διαθέσιμος.',
+      track_is_playing:
+        'Κάποιος ακούει αυτό το κομμάτι. Βάλ’ το σε παύση πρώτα.',
+      trash_file_changed: 'Το αντίγραφο στον κάδο άλλαξε. Δεν θα διαγραφεί.',
+      trash_file_missing: 'Λείπει ένα αρχείο από τον κάδο.',
+      trash_ignore_invalid:
+        'Το αρχείο .ignore του φακέλου του κάδου δεν είναι κενό. Δεν μετακινήθηκε τίποτα.',
+      trash_not_configured:
+        'Ο κάδος είναι απενεργοποιημένος σε αυτόν τον διακομιστή.',
+      trash_permissions_unsafe:
+        'Άλλοι μπορούν να διαβάσουν τον φάκελο του κάδου. Έλεγξε τα δικαιώματά του.',
+      unsafe_symlink:
+        'Η διαδρομή έχει συμβολικό σύνδεσμο, γι’ αυτό δεν αγγίζεται.',
+      unsupported_collection:
+        'Ο φάκελος αυτού του κομματιού δεν καλύπτεται από τον κάδο.',
+      unsupported_lyrics_location:
+        'Ο φάκελος στίχων δεν καλύπτεται από τον κάδο. Δεν μετακινήθηκε τίποτα.',
+    },
+  },
+  downloadPolicy: {
+    block: 'Stop downloading',
+    blocked: 'Downloads suspended for this track.',
+    confirm: 'Suspend downloads for this track?',
+    confirmHelp:
+      'New attempts will be blocked. A shared transfer already started may finish. Existing files will not be deleted.',
+    exclusions: 'Suspended tracks',
+    empty: 'No suspended tracks.',
+    resume: 'Allow again',
+    timeout: 'Attempt time limit reached',
+    manual: 'Suspended manually',
+    error: 'Could not change the suspension.',
+    alreadyActive: 'An attempt for this track is already in progress.',
+    budget: 'Cumulative attempt limit',
+    budgetHelp:
+      'Automatically suspend a track after this cumulative attempt time. Time between attempts is excluded. 0 disables the limit.',
+  },
   playlistNames: { restore: 'Restore source name' },
+  libraryOnly: {
+    title: 'Library-only mode',
+    active: 'Only music in your server library is available.',
+    enable: 'Use only the library',
+    hint: 'Search and similar tracks use your library. External music, previews, downloads and automatic watches are disabled.',
+    serverHint:
+      'Applies to all accounts, browsers and Android clients. Wait for external work to finish before enabling it. The phone still needs access to the server unless tracks are downloaded.',
+    empty: 'No matching tracks in the accessible library.',
+    similar:
+      'Similar tracks from saved library tags. No external provider is contacted.',
+  },
   playlistFavorites: {
     title: 'Αγαπημένες λίστες',
     add: 'Προσθήκη λίστας στα αγαπημένα',
     remove: 'Αφαίρεση λίστας από τα αγαπημένα',
+  },
+  normalization: {
+    level: 'Επίπεδο έντασης',
+    levelNormal: 'Κανονικό',
+    levelLouder: 'Πιο δυνατά',
+    levelMaximum: 'Μέγιστο',
+    levelHint:
+      'Η ένταση αυξάνεται εντός των μετρημένων ορίων κάθε κομματιού. Τα αρχεία δεν αλλάζουν.',
+    title: 'Κανονικοποίηση έντασης',
+    hint: 'Όλα τα τραγούδια παίζουν σε παρόμοια ένταση, χωρίς αλλαγές στα αρχεία ήχου σας.',
+    enable: 'Κανονικοποίηση έντασης αναπαραγωγής',
+    enableHint:
+      'Χρησιμοποιεί τη μετρημένη ακουστότητα κάθε τραγουδιού, ενισχύει έως 12 dB και αποτρέπει την παραμόρφωση στις κορυφές. Τα τραγούδια που δεν έχουν μετρηθεί ακόμη παίζουν στην αρχική τους ένταση.',
+    analysisHint:
+      'Η ανάλυση διαβάζει κάθε τραγούδι μία φορά στο παρασκήνιο· οι επόμενες εκτελέσεις μετρούν μόνο νέα ή αλλαγμένα αρχεία. Δεν ξεκινά ποτέ μόνη της, ούτε μετά από επανεκκίνηση.',
+    progress: '{done} / {total} αναλύθηκαν · {failed} απέτυχαν',
+    analyze: 'Ανάλυση βιβλιοθήκης',
+    pause: 'Παύση ανάλυσης',
+    resume: 'Συνέχιση ανάλυσης',
+    pausing: 'Ολοκληρώνονται τα τρέχοντα αρχεία πριν την παύση…',
+    states: {
+      ready: 'Η μετρημένη ένταση εφαρμόστηκε στο τρέχον τραγούδι.',
+      silent: 'Σιωπηλό τραγούδι: διατηρείται η αρχική ένταση.',
+      unanalysed:
+        'Το τραγούδι δεν έχει μετρηθεί ακόμη: διατηρείται η αρχική ένταση.',
+      unavailable:
+        'Η κανονικοποίηση δεν είναι διαθέσιμη: διατηρείται η αρχική ένταση.',
+    },
   },
   externalPlaylistImport: {
     open: 'Import folder playlists',
@@ -19,6 +232,13 @@ export default {
     add: 'Add selected playlists ({count})',
     result:
       '{added} added · {existing} already present · {failed} need a new preview or could not be imported',
+  },
+  collaboration: {
+    canEdit: 'Μπορεί να προσθέτει και να αφαιρεί κομμάτια',
+    copyHint:
+      'Αυτή η λίστα ακολουθεί την πηγή της, οπότε άλλοι δεν μπορούν να επεξεργαστούν τα κομμάτιά της. Μοιράσου ένα επεξεργάσιμο αντίγραφο: μένει δικό σου και η αρχική συνεχίζει να ακολουθεί την πηγή.',
+    copy: 'Κοινοποίηση επεξεργάσιμου αντιγράφου',
+    byEditor: 'από {owner} · μπορείς να προσθέτεις και να αφαιρείς κομμάτια',
   },
   language: {
     name: 'Ελληνικά',
@@ -118,6 +338,7 @@ export default {
     hintSpotify: 'Κομμάτια, άλμπουμ, λίστες και καλλιτέχνες',
     hintYoutube: 'Τραγούδια, άλμπουμ, λίστες και καλλιτέχνες του YouTube Music',
     hintDeezer: 'Κομμάτια, άλμπουμ, λίστες και καλλιτέχνες του Deezer',
+    hintSoundcloud: 'Κομμάτια του SoundCloud',
     hintCsv: 'Εισαγωγή CSV (Soundiiz, Exportify…)',
     downloading: 'Λήψη τώρα',
     waiting: {
@@ -173,7 +394,7 @@ export default {
     typeSingle: 'Single',
     typeEp: 'EP',
     unsupportedLink:
-      'Το Downtify δεν μπορεί να κατεβάσει αυτόν τον σύνδεσμο. Επικόλλησε κομμάτι, άλμπουμ ή λίστα Spotify, ή σύνδεσμο YouTube Music.',
+      'Το Downtify δεν μπορεί να κατεβάσει αυτόν τον σύνδεσμο. Επικόλλησε κομμάτι, άλμπουμ ή λίστα Spotify, σύνδεσμο YouTube Music ή κομμάτι SoundCloud.',
     tipSearchTitle: 'Αναζήτηση με όνομα',
     tipSearchBody:
       'Γράψε καλλιτέχνη, άλμπουμ ή τραγούδι — τα αποτελέσματα έρχονται από το YouTube Music.',
@@ -277,6 +498,7 @@ export default {
     openSpotify: 'Άνοιγμα στο Spotify',
     openYoutube: 'Άνοιγμα στο YouTube Music',
     openDeezer: 'Άνοιγμα στο Deezer',
+    openSoundcloud: 'Άνοιγμα στο SoundCloud',
     filterAll: 'Όλα',
     filterNew: 'Νέα',
     filterLibrary: 'Στη βιβλιοθήκη',
@@ -292,6 +514,17 @@ export default {
     playCountYoutubeMusic: 'Αναπαραγωγές στο YouTube Music (κατά προσέγγιση)',
   },
   queue: {
+    globalPause: 'Παύση λήψεων και παρακολούθησης',
+    globalResume: 'Συνέχιση λήψεων και παρακολούθησης',
+    globalTitle: 'Δραστηριότητα διακομιστή',
+    globalHint:
+      'Οι νέες λήψεις και έλεγχοι περιμένουν. Η ενεργή εργασία ολοκληρώνεται και η ουρά διατηρείται.',
+    globalPaused: 'Λήψεις και παρακολούθηση σε παύση.',
+    globalDraining: 'Ολοκλήρωση ενεργής εργασίας…',
+    globalRetry: 'Έλεγχος κατάστασης',
+    globalFailed: 'Δεν επιβεβαιώθηκε η αλλαγή.',
+    globalAdmin: 'Απαιτείται σύνδεση διαχειριστή ιστού.',
+    globalExpired: 'Η συνεδρία έληξε. Συνδεθείτε ξανά.',
     title: 'Ουρά',
     tabActive: 'Σε εξέλιξη',
     tabQueued: 'Σε αναμονή',
@@ -304,6 +537,19 @@ export default {
     retryFailed: 'Επανάληψη αποτυχημένων ({count})',
     clearDone: 'Εκκαθάριση ολοκληρωμένων ({count})',
     clearAll: 'Άδειασμα ουράς',
+    pause: 'Παύση λήψεων',
+    resume: 'Συνέχιση λήψεων',
+    pauseFailed: 'Δεν ήταν δυνατή η αλλαγή της ουράς. Δοκιμάστε ξανά.',
+    pausingTitle: 'Παύση λήψεων…',
+    pausingBody: {
+      one: 'Αναμονή για να ολοκληρωθεί {count} λήψη. Δεν θα ξεκινήσει καμία νέα λήψη.',
+      other:
+        'Αναμονή για να ολοκληρωθούν {count} λήψεις. Δεν θα ξεκινήσει καμία νέα λήψη.',
+    },
+    pausedTitle: 'Οι λήψεις είναι σε παύση',
+    pausedBody: 'Καμία νέα λήψη δεν θα ξεκινήσει μέχρι τη συνέχιση.',
+    pausedKept:
+      'Τα τραγούδια σε αναμονή παραμένουν στην ουρά, ακόμη κι αν το Downtify επανεκκινηθεί ή ενημερωθεί.',
     emptyTitle: 'Η ουρά είναι άδεια',
     emptyBody:
       'Αναζήτησε μουσική ή επικόλλησε σύνδεσμο — οι λήψεις εμφανίζονται εδώ.',
@@ -321,13 +567,16 @@ export default {
     },
     showMore: 'Εμφάνιση {count} ακόμα',
     statusQueued: 'Σε αναμονή',
+    statusPaused: 'Σε παύση',
     statusDone: 'Ολοκληρώθηκε',
     retry: 'Επανάληψη',
     remove: 'Αφαίρεση από την ουρά',
     failedGeneric: 'Η λήψη απέτυχε.',
-    overridePlaceholder: 'Επικόλλησε σύνδεσμο YouTube για χρήση ως ήχο',
+    overridePlaceholder:
+      'Επικόλλησε σύνδεσμο YouTube ή SoundCloud για χρήση ως ήχο',
     useLink: 'Χρήση συνδέσμου',
-    invalidYoutube: 'Αυτό δεν μοιάζει με σύνδεσμο βίντεο YouTube.',
+    invalidAudioLink:
+      'Αυτό δεν μοιάζει με σύνδεσμο βίντεο YouTube ή κομματιού SoundCloud.',
     playlistDownloads: 'Λήψεις λιστών',
     sources: 'Πηγή λήψης',
     noSourcesYet: 'Οι ολοκληρωμένες λήψεις δείχνουν εδώ την πηγή τους.',
@@ -362,6 +611,8 @@ export default {
       artistDesc: 'Καλλιτέχνης (Ω–Α)',
       albumAsc: 'Άλμπουμ (Α–Ω)',
       albumDesc: 'Άλμπουμ (Ω–Α)',
+      releaseNewest: 'Πρώτα οι νεότερες κυκλοφορίες',
+      releaseOldest: 'Πρώτα οι παλαιότερες κυκλοφορίες',
       longest: 'Πρώτα τα μεγαλύτερα',
       shortest: 'Πρώτα τα μικρότερα',
     },
@@ -388,6 +639,7 @@ export default {
     downloadZip: 'Λήψη ως ZIP',
     saveToDevice: 'Αποθήκευση σε αυτή τη συσκευή',
     upgrade: 'Αναβάθμιση βιβλιοθήκης',
+    storage: 'Χώρος και χρήση',
   },
   likes: {
     like: 'Προσθήκη στα Αγαπημένα τραγούδια',
@@ -508,14 +760,145 @@ export default {
     stageWriting: 'Εγγραφή του αρχείου',
     loadFailed: 'Δεν φορτώθηκε η αναβάθμιση βιβλιοθήκης',
   },
+  usage: {
+    title: 'Χώρος και χρήση',
+    subtitle:
+      'Πόσο μεγάλη είναι η βιβλιοθήκη, πόσο γρήγορα μεγαλώνει και από πού προήλθε.',
+    adminOnly: 'Μόνο οι διαχειριστές μπορούν να το δουν αυτό',
+    adminOnlyHint:
+      'Ζητήστε τα στοιχεία χώρου από έναν διαχειριστή αυτού του διακομιστή.',
+    loadFailed: 'Δεν ήταν δυνατή η φόρτωση των στοιχείων χώρου.',
+    tileLibrary: 'Βιβλιοθήκη',
+    tileAdded: {
+      one: 'Προστέθηκαν την τελευταία ημέρα',
+      other: 'Προστέθηκαν σε {count} ημέρες',
+    },
+    tileGrowth: 'Καθαρή μεταβολή',
+    tileFree: 'Ελεύθερος χώρος',
+    tileDownloads: 'Λήψεις',
+    tileCleanup: 'Μπορεί να ελευθερωθεί',
+    songs: {
+      one: '{count} τραγούδι',
+      other: '{count} τραγούδια',
+    },
+    files: {
+      one: '{count} αρχείο',
+      other: '{count} αρχεία',
+    },
+    perWeekRate: '{size} την εβδομάδα',
+    ofTotal: 'από {total}',
+    daysLeft: {
+      one: 'από {total} · γεμίζει σε περίπου {count} ημέρα με αυτόν τον ρυθμό',
+      other:
+        'από {total} · γεμίζει σε περίπου {count} ημέρες με αυτόν τον ρυθμό',
+    },
+    downloadsShort: '{skipped} παραλείφθηκαν · {failed} απέτυχαν',
+    growthTitle: 'Μέγεθος βιβλιοθήκης',
+    growthHint:
+      'Η βιβλιοθήκη στο τέλος κάθε ημέρας, χωρίς τα αντίγραφα εργασίας του slskd.',
+    estimated: 'Εκτίμηση από τις ημερομηνίες των αρχείων',
+    estimatedNote:
+      'Πριν από τις {date}, το μέγεθος εκτιμάται από τις ημερομηνίες των τραγουδιών που είναι ακόμη στη βιβλιοθήκη, οπότε όσα διαγράφηκαν από τότε δεν περιλαμβάνονται.',
+    allEstimatedNote:
+      'Από εδώ και πέρα το Downtify σημειώνει το μέγεθος της βιβλιοθήκης κάθε ώρα. Οι προηγούμενες ημέρες εκτιμώνται από τις ημερομηνίες των τραγουδιών που είναι ακόμη στη βιβλιοθήκη.',
+    addedPerDay: 'Προστέθηκαν ανά ημέρα',
+    addedPerWeek: 'Προστέθηκαν ανά εβδομάδα',
+    sourcesTitle: 'Ανά πηγή',
+    sourcesHint: {
+      one: 'Από πού προήλθε ο ήχος και τι πρόσθεσε κάθε πηγή την τελευταία ημέρα.',
+      other:
+        'Από πού προήλθε ο ήχος και τι πρόσθεσε κάθε πηγή τις τελευταίες {count} ημέρες.',
+    },
+    addedInPeriod: {
+      one: '+{size} · {count} τραγούδι στην περίοδο',
+      other: '+{size} · {count} τραγούδια στην περίοδο',
+    },
+    emptyLibrary: 'Η βιβλιοθήκη είναι άδεια.',
+    whereTitle: 'Πού αποθηκεύεται',
+    byLocation: 'Φάκελος',
+    byFormat: 'Μορφή',
+    location: {
+      downloads: 'Φάκελος λήψεων',
+      slskd: 'Φάκελος slskd',
+      folders: 'Επιπλέον φάκελοι μουσικής',
+    },
+    unknown: 'Άγνωστο',
+    downloadsTitle: 'Λήψεις',
+    downloadsHint: {
+      one: 'Πώς κατέληξαν οι λήψεις από την ουρά και την Παρακολούθηση λιστών την τελευταία ημέρα. Κάθε προσπάθεια μετράει.',
+      other:
+        'Πώς κατέληξαν οι λήψεις από την ουρά και την Παρακολούθηση λιστών τις τελευταίες {count} ημέρες. Κάθε προσπάθεια μετράει.',
+    },
+    outcome: {
+      completed: 'Ολοκληρώθηκαν',
+      skipped: 'Παραλείφθηκαν',
+      failed: 'Απέτυχαν',
+    },
+    perDay: 'Ανά ημέρα',
+    perWeek: 'Ανά εβδομάδα',
+    downloadedBySource: 'Λήψεις ανά πηγή · {size}',
+    noDownloads: 'Δεν έγινε καμία λήψη σε αυτή την περίοδο.',
+    logEmptyNote:
+      'Δεν έχει μετρηθεί ακόμη καμία λήψη: το Downtify τις μετράει από αυτή την έκδοση και μετά.',
+    logSinceNote: 'Οι λήψεις μετρώνται από τις {date}.',
+    cleanupTitle: 'Μπορεί να καθαριστεί',
+    cleanupHint:
+      'Χώρος που το Downtify αναγνωρίζει ως περιττό ή απομεινάρι. Από εδώ δεν διαγράφεται τίποτα.',
+    duplicatesTitle: 'Διπλά τραγούδια',
+    duplicatesHint:
+      '{exact} αποθηκευμένα δύο φορές ως το ίδιο αρχείο, {likely} πιθανώς το ίδιο τραγούδι από άλλη πηγή. Το μέγεθος είναι όσο θα ελευθερωνόταν αν κρατούσατε μόνο το μεγαλύτερο αντίγραφο.',
+    duplicateKind: {
+      exact: 'Ίδιο αρχείο',
+      likely: 'Πιθανώς το ίδιο τραγούδι',
+    },
+    workingTitle: 'Αντίγραφα εργασίας slskd',
+    workingHint:
+      'Μεταφορές του Soulseek που έμειναν στον φάκελο του slskd αφού το Downtify τις αντέγραψε στη βιβλιοθήκη.',
+    workingInPlace:
+      'Τα αρχεία του slskd μένουν στη θέση τους, οπότε ο φάκελος του slskd είναι μέρος της βιβλιοθήκης.',
+    leftoversTitle: 'Προσωρινά αρχεία που έμειναν',
+    leftoversHint: 'Μισές λήψεις και μετατροπές παλαιότερες από μία ώρα.',
+    orphansTitle: 'Ορφανά συνοδευτικά αρχεία',
+    orphansHint:
+      'Αρχεία στίχων και εξώφυλλα άλμπουμ των οποίων τα τραγούδια δεν υπάρχουν πια.',
+    foldersTitle: 'Φάκελοι',
+    foldersHint:
+      'Ό,τι υπάρχει στους φακέλους όπου γράφει το Downtify, ανά είδος.',
+    rescan: 'Νέα σάρωση',
+    scanFailed: 'Δεν ήταν δυνατή η σάρωση των φακέλων.',
+    scanning: 'Σάρωση των φακέλων…',
+    scannedAt: 'Σαρώθηκε {when} σε {seconds} s',
+    folder: {
+      downloads: 'Φάκελος λήψεων',
+      slskd: 'Φάκελος slskd',
+      lyrics: 'Φάκελος στίχων',
+    },
+    kind: {
+      audio: 'Τραγούδια',
+      podcasts: 'Podcast',
+      lyrics: 'Στίχοι',
+      images: 'Εικόνες',
+      playlists: 'Λίστες αναπαραγωγής',
+      metadata: 'Φωτογραφίες και προφίλ καλλιτεχνών',
+      temporary: 'Προσωρινά αρχεία',
+      other: 'Άλλα',
+    },
+  },
   album: {
     kicker: 'Άλμπουμ',
     notFound: 'Το άλμπουμ δεν βρέθηκε',
     moreBy: 'Περισσότερα από {artist}',
     searchMore: 'Αναζήτηση στο YouTube Music',
     delete: 'Διαγραφή άλμπουμ',
+    markCompilation: 'Σήμανση ως Διάφοροι καλλιτέχνες',
+    unmarkCompilation: 'Αφαίρεση σήμανσης Διάφοροι καλλιτέχνες',
+    markedCompilation: 'Το άλμπουμ σημειώθηκε ως Διάφοροι καλλιτέχνες',
+    unmarkedCompilation: 'Το άλμπουμ δεν είναι πλέον Διάφοροι καλλιτέχνες',
+    compilationPartial: 'Ορισμένα κομμάτια δεν ήταν δυνατό να αλλάξουν',
+    compilationFailed: 'Δεν ήταν δυνατή η αλλαγή του άλμπουμ',
   },
   artist: {
+    guest: 'Συμμετοχή',
     kicker: 'Καλλιτέχνης',
     notFound: 'Ο καλλιτέχνης δεν βρέθηκε',
     findMore: 'Βρες περισσότερα',
@@ -582,6 +965,23 @@ export default {
   },
   playlists: {
     kicker: 'Λίστα',
+    diagnostics: {
+      title: 'Διαγνωστικά λίστας',
+      check: 'Έλεγχος',
+      refresh: 'Ανανέωση',
+      unavailable: 'Τα διαγνωστικά δεν είναι διαθέσιμα για αυτή τη λίστα.',
+      items: {
+        spotify_tracks: 'Κομμάτια Spotify',
+        downloaded: 'Λήψεις Downtify',
+        physical_files: 'Αρχεία που βρέθηκαν',
+        track_index: 'Αντιστοιχίσεις TrackIndex',
+        monitor_history: 'Ιστορικό Monitor',
+        navidrome_matched: 'Βρέθηκαν στο Navidrome',
+        navidrome_rows: 'Κομμάτια στη λίστα Navidrome',
+        missing_files: 'Αρχεία που λείπουν',
+        orphan_files: 'Ορφανά αρχεία',
+      },
+    },
     notFound: 'Η λίστα δεν βρέθηκε',
     progress: '{have} από {total} κατεβασμένα',
     missingShort: { one: 'λείπει {count}', other: 'λείπουν {count}' },
@@ -618,6 +1018,26 @@ export default {
     },
     alreadyIn: 'Ήδη στο «{name}»',
     removedTrack: 'Αφαιρέθηκε από τη «{name}»',
+    reorder: 'Αναδιάταξη',
+    reorderHint:
+      'Σύρετε τα κομμάτια ή χρησιμοποιήστε τα βέλη και μετά αποθηκεύστε τη νέα σειρά.',
+    reorderSave: 'Αποθήκευση σειράς',
+    reordered: 'Η σειρά αποθηκεύτηκε',
+    reorderStale:
+      'Κάποιος άλλαξε αυτή τη λίστα στο μεταξύ. Φορτώθηκε ξανά: ταξινομήστε την πάλι.',
+    moveUp: 'Μετακίνηση πάνω',
+    moveDown: 'Μετακίνηση κάτω',
+    moveTop: 'Μετακίνηση στην αρχή',
+    moveBottom: 'Μετακίνηση στο τέλος',
+    repeatTitle: 'Υπάρχει ήδη σε αυτή τη λίστα',
+    repeatBody: {
+      one: 'Αυτό το κομμάτι υπάρχει ήδη στο «{name}». Να προστεθεί ξανά;',
+      other:
+        '{count} από αυτά τα κομμάτια υπάρχουν ήδη στο «{name}». Να προστεθούν ξανά;',
+    },
+    repeatConfirm: 'Προσθήκη ούτως ή άλλως',
+    repeatCancel: 'Να μην προστεθεί',
+    inPlaylist: 'Έχει ήδη προστεθεί',
     hideTrack: 'Απόκρυψη από τη λίστα',
     hiddenTrack: 'Κρύφτηκε από τη «{name}»',
     hiddenTitle: {
@@ -639,6 +1059,12 @@ export default {
     nothingYet: 'Δεν έχουν κατέβει κομμάτια ακόμα',
     nothingYetHint: 'Τα κομμάτια εμφανίζονται εδώ καθώς ολοκληρώνονται.',
     nothingYetManualHint: 'Προσθέστε κομμάτια από τη βιβλιοθήκη.',
+    uploadCover: 'Μεταφόρτωση εξωφύλλου',
+    removeCover: 'Αφαίρεση εξωφύλλου',
+    coverSaved: 'Το εξώφυλλο της λίστας αποθηκεύτηκε',
+    coverRemoved: 'Το εξώφυλλο της λίστας αφαιρέθηκε',
+    coverInvalid: 'Επιλέξτε εικόνα JPEG, PNG ή WebP.',
+    coverTooLarge: 'Η εικόνα πρέπει να είναι έως 10 MiB.',
   },
   track: {
     title: 'Τίτλος',
@@ -646,6 +1072,7 @@ export default {
     album: 'Άλμπουμ',
     trackNumber: 'Κομμάτι',
     year: 'Έτος',
+    releaseDate: 'Ημερομηνία κυκλοφορίας',
     length: 'Διάρκεια',
     format: 'Μορφή',
     size: 'Μέγεθος',
@@ -653,12 +1080,24 @@ export default {
     file: 'Αρχείο',
   },
   player: {
+    unlockLayout: 'Ξεκλείδωμα διάταξης προγράμματος αναπαραγωγής',
+    lockLayout: 'Κλείδωμα διάταξης προγράμματος αναπαραγωγής',
+    resetLayout: 'Επαναφορά διάταξης προγράμματος αναπαραγωγής',
+    resizeTrackSection: 'Αλλαγή μεγέθους της ενότητας πληροφοριών κομματιού',
+    resizeTransportSection:
+      'Αλλαγή μεγέθους της ενότητας χειριστηρίων αναπαραγωγής',
     nowPlaying: 'Παίζει τώρα',
     openNowPlaying: 'Άνοιγμα αναπαραγωγής',
     closeNowPlaying: 'Κλείσιμο αναπαραγωγής',
     queue: 'Ουρά',
     upNext: 'Επόμενα',
     lyrics: 'Στίχοι',
+    karaoke: 'Καραόκε',
+    karaokeWindow: 'Άνοιγμα σε νέο παράθυρο',
+    karaokeWindowBlocked:
+      'Το πρόγραμμα περιήγησης απέκλεισε το νέο παράθυρο. Επιτρέψτε τα αναδυόμενα παράθυρα για το Downtify και δοκιμάστε ξανά.',
+    karaokeWaiting: 'Αναμονή για τραγούδι από το κύριο παράθυρο του Downtify',
+    fullscreen: 'Πλήρης οθόνη',
     details: 'Λεπτομέρειες',
     playing: 'Παίζει',
     play: 'Αναπαραγωγή',
@@ -731,6 +1170,8 @@ export default {
       'Ο ισοσταθμιστής δεν ξεκίνησε. Η αναπαραγωγή συνεχίζει χωρίς αυτόν.',
   },
   monitor: {
+    tableColumns: 'Στήλες',
+    resetTableColumns: 'Επαναφορά στηλών',
     releaseTypes: 'Λήψη',
     releaseTypesAtLeastOne: 'Κρατήστε τουλάχιστον ένα είδος κυκλοφορίας',
     release: { album: 'Άλμπουμ', single: 'Single', ep: 'EP' },
@@ -783,7 +1224,7 @@ export default {
     urlLabelPlaylist: 'Σύνδεσμος λίστας',
     urlLabelArtist: 'Σύνδεσμος καλλιτέχνη',
     urlPlaceholderPlaylist:
-      'Επικόλλησε σύνδεσμο λίστας Spotify ή YouTube Music',
+      'Επικόλλησε σύνδεσμο λίστας Spotify, Deezer ή YouTube Music',
     urlPlaceholderArtist:
       'Επικόλλησε σύνδεσμο καλλιτέχνη Spotify ή YouTube Music',
     watchPlaylist: 'Παρακολούθηση λίστας',
@@ -832,9 +1273,139 @@ export default {
     saved: 'Η παρακολούθηση ενημερώθηκε',
     retargeted: 'Παρακολούθηση του {name}',
   },
+  watchStats: {
+    colActivity: 'Δραστηριότητα',
+    colStorage: 'Χώρος',
+    period: 'Περίοδος',
+    days: { one: '{count} ημέρα', other: '{count} ημέρες' },
+    totalNew: {
+      one: 'Νέα την τελευταία ημέρα',
+      other: 'Νέα σε {count} ημέρες',
+    },
+    totalSongs: 'Τραγούδια από παρακολουθήσεις',
+    totalSize: 'Στον δίσκο',
+    totalShared: 'Σε περισσότερες από μία παρακολουθήσεις',
+    statsFailed: 'Δεν ήταν δυνατή η φόρτωση των στατιστικών.',
+    rateWeekShort: '{rate}/εβδομάδα',
+    sharedShort: '+{count} κοινά',
+    activityTooltip:
+      '{added} νέα τις τελευταίες {count} ημέρες · {rate} την εβδομάδα · {trend}',
+    storageTooltip:
+      '{unique} μόνο σε αυτή την παρακολούθηση · {shared} κοινά με άλλες παρακολουθήσεις',
+    sortActivity: 'Πρόσφατη δραστηριότητα',
+    sortRate: 'Μέσος ρυθμός',
+    sortGrowth: 'Αύξηση χώρου',
+    sortStorage: 'Δικός της χώρος',
+    sortContributed: 'Τραγούδια που κατέβασε',
+    details: 'Δραστηριότητα και τραγούδια',
+    openInLibrary: 'Άνοιγμα στη βιβλιοθήκη',
+    notFound: 'Η παρακολούθηση δεν βρέθηκε',
+    notFoundHint: 'Ίσως αφαιρέθηκε ή ανήκει σε άλλο λογαριασμό.',
+    since: 'Παρακολουθείται από {date}',
+    tileSongs: 'Τραγούδια στον δίσκο',
+    tileDownloaded: 'Τα κατέβασε η ίδια',
+    tileLinked: 'Ήδη στη βιβλιοθήκη',
+    tileUnique: 'Μόνο σε αυτή την παρακολούθηση',
+    tileUniqueHint: {
+      one: '{count} τραγούδι που δεν έχει καμία άλλη παρακολούθηση',
+      other: '{count} τραγούδια που δεν έχει καμία άλλη παρακολούθηση',
+    },
+    tileShared: 'Κοινά',
+    tileSharedHint:
+      '{size}, και σε άλλες παρακολουθήσεις, αποθηκευμένα μία φορά',
+    tileFailing: 'Αποτυγχάνουν',
+    unknownNote: {
+      one: '{count} τραγούδι προστέθηκε πριν το Downtify καταγράφει πώς μπαίνουν τα τραγούδια σε μια παρακολούθηση.',
+      other:
+        '{count} τραγούδια προστέθηκαν πριν το Downtify καταγράφει πώς μπαίνουν τα τραγούδια σε μια παρακολούθηση.',
+    },
+    missingNote: {
+      one: '{count} τραγούδι που κατέγραψε αυτή η παρακολούθηση δεν είναι πια στον δίσκο.',
+      other:
+        '{count} τραγούδια που κατέγραψε αυτή η παρακολούθηση δεν είναι πια στον δίσκο.',
+    },
+    activityTitle: 'Δραστηριότητα',
+    activityHint:
+      'Τα νέα τραγούδια που πρόσθεσε: όχι όσα υπήρχαν ήδη στη βιβλιοθήκη σας, ούτε όσα ήρθαν με τον πρώτο της έλεγχο.',
+    newSongsLabel: {
+      one: 'νέο τραγούδι προστέθηκε',
+      other: 'νέα τραγούδια προστέθηκαν',
+    },
+    rateDay: 'Την ημέρα',
+    rateWeek: 'Την εβδομάδα',
+    rateMonth: 'Τον μήνα',
+    trendUp: 'Προσθέτει περισσότερα τελευταία',
+    trendDown: 'Προσθέτει λιγότερα τελευταία',
+    trendSteady: 'Σταθερός ρυθμός',
+    trendIdle: 'Τίποτα νέο τελευταία',
+    trendNew: 'Πολύ νωρίς για να φανεί',
+    periodGrowth: '{size} νέου ήχου',
+    periodLinked: {
+      one: 'άλλο {count} υπήρχε ήδη στη βιβλιοθήκη σας',
+      other: 'άλλα {count} υπήρχαν ήδη στη βιβλιοθήκη σας',
+    },
+    periodInitial: {
+      one: '{count} ήρθε με τον πρώτο της έλεγχο',
+      other: '{count} ήρθαν με τον πρώτο της έλεγχο',
+    },
+    periodUnknown: {
+      one: '{count} από αυτά καταγράφηκε πριν το Downtify καταγράφει πώς',
+      other: '{count} από αυτά καταγράφηκαν πριν το Downtify καταγράφει πώς',
+    },
+    barsPerDay: 'Νέα τραγούδια ανά ημέρα',
+    barsPerWeek: 'Νέα τραγούδια ανά εβδομάδα',
+    providersTitle: 'Από πού ήρθε ο ήχος',
+    failuresTitle: {
+      one: '{count} τραγούδι συνεχίζει να αποτυγχάνει',
+      other: '{count} τραγούδια συνεχίζουν να αποτυγχάνουν',
+    },
+    attempts: { one: '{count} προσπάθεια', other: '{count} προσπάθειες' },
+    lastTried: 'τελευταία προσπάθεια {when}',
+    songsTitle: 'Τραγούδια από αυτή την παρακολούθηση',
+    songsHint:
+      'Τα νεότερα πρώτα, μαζί με όσα έχουν πια φύγει από τη λίστα. Επιλέξτε μερικά για να τα παίξετε, να τα προσθέσετε σε λίστα ή να τα διαγράψετε.',
+    filter: {
+      all: 'Όλα',
+      recent: { one: 'Τελευταία ημέρα', other: 'Τελευταίες {count} ημέρες' },
+      downloaded: 'Τα κατέβασε η ίδια',
+      linked: 'Ήδη στη βιβλιοθήκη',
+      unknown: 'Πριν την καταγραφή',
+    },
+    noSongs: 'Κανένα τραγούδι αυτής της παρακολούθησης στον δίσκο',
+    noSongsHint:
+      'Εμφανίζονται εδώ μόλις ένας έλεγχος τα κατεβάσει ή τα βρει στη βιβλιοθήκη σας.',
+  },
+  origin: {
+    menu: 'Από πού ήρθε',
+    title: 'Από πού ήρθε αυτό το τραγούδι',
+    body: 'Οι παρακολουθήσεις λιστών που το έφεραν στη βιβλιοθήκη σας.',
+    failed: 'Δεν ήταν δυνατή η φόρτωση της προέλευσης αυτού του τραγουδιού.',
+    firstTitle: 'Το κατέβασε πρώτη',
+    none: 'Καμία παρακολούθηση δεν το κατέβασε: κατέβηκε χειροκίνητα ή πριν το Downtify το καταγράφει.',
+    otherAccount: 'Παρακολούθηση άλλου λογαριασμού',
+    backfill: 'Πρώτος έλεγχος',
+    estimated: 'Πιθανότατα',
+    gone: 'Αυτή η παρακολούθηση αφαιρέθηκε ή ακολουθεί πλέον άλλον σύνδεσμο.',
+    watchesTitle: {
+      one: 'Σε {count} παρακολούθηση',
+      other: 'Σε {count} παρακολουθήσεις',
+    },
+    noWatches: 'Καμία παρακολούθηση δεν το έχει αυτή τη στιγμή.',
+    others: {
+      one: '{count} από αυτές ανήκει σε άλλο λογαριασμό.',
+      other: '{count} από αυτές ανήκουν σε άλλους λογαριασμούς.',
+    },
+    oneFile:
+      'Είναι ένα αρχείο: όλες οι παρακολουθήσεις δείχνουν στο ίδιο αντίγραφο.',
+    outcome: {
+      downloaded: 'Το κατέβασε',
+      linked: 'Ήδη στη βιβλιοθήκη',
+      unknown: 'Πριν την καταγραφή',
+    },
+  },
   sharing: {
     title: 'Κοινοποίηση «{name}»',
-    hint: 'Όσοι τη λάβουν μπορούν να την παίξουν, να την ακολουθήσουν και να αποθηκεύσουν αντίγραφο, αλλά όχι να την αλλάξουν.',
+    hint: 'Όσοι τη λάβουν μπορούν να την παίξουν, να την ακολουθήσουν και να αποθηκεύσουν αντίγραφο. Μόνο όσοι αφήσεις να την επεξεργαστούν μπορούν να προσθέτουν ή να αφαιρούν κομμάτια.',
     private: 'Ιδιωτική',
     privateHint: 'Μόνο εσύ μπορείς να τη δεις.',
     shared: 'Συγκεκριμένα άτομα',
@@ -871,7 +1442,7 @@ export default {
     },
     sharedWithMe: 'Κοινοποιημένες σε μένα',
     sharedWithMeHint:
-      'Λίστες που μοιράστηκαν μαζί σου άλλοι. Μπορείς να τις παίξεις, όχι να τις αλλάξεις.',
+      'Λίστες που μοιράστηκαν μαζί σου άλλοι. Μπορείς να τις παίξεις και, όπου το επιτρέπει ο κάτοχος, να προσθέτεις ή να αφαιρείς κομμάτια.',
     publicPlaylists: 'Δημόσιες λίστες',
     publicPlaylistsHint:
       'Κοινές για όλους σε αυτόν τον διακομιστή. Ακολούθησε μία για να μένει στην πλαϊνή στήλη.',
@@ -937,6 +1508,9 @@ export default {
     sourceYtmHint: 'Καλύτερες αντιστοιχίες μεταδεδομένων',
     sourceYt: 'YouTube',
     sourceYtHint: 'Εναλλακτική για τραγούδια που λείπουν από το YouTube Music',
+    sourceSoundcloud: 'SoundCloud',
+    sourceSoundcloudHint:
+      'Ανεβάσματα που λείπουν αλλού, και το ίδιο το κομμάτι των συνδέσμων SoundCloud',
     deemixTitle: 'Deemix',
     deemixHint:
       'Download from your own Deemix server. Requested quality requires the matching Deezer entitlement.',
@@ -948,6 +1522,21 @@ export default {
     deemixLocal: 'Same folder inside Downtify (read-only is supported)',
     deemixQuality: 'Audio quality',
     slskdTitle: 'slskd',
+    slskdFormats: 'Προτεραιότητα μορφών',
+    slskdFormatsHint:
+      'Επεκτάσεις χωρισμένες με κόμμα, πρώτα η υψηλότερη προτεραιότητα (π.χ. flac, mp3).',
+    slskdMinBitrate: 'Ελάχιστο bitrate για απωλεστικές μορφές',
+    slskdMinBitrateHint:
+      'Στην αυστηρή λειτουργία απορρίπτονται απωλεστικά αρχεία κάτω από αυτήν την τιμή ή χωρίς αναφερόμενο bitrate. Το FLAC εξαιρείται.',
+    slskdAttempts: 'Προσπάθειες υποψηφίων',
+    slskdAttemptsHint:
+      'Στην αυστηρή λειτουργία δοκιμάζονται τόσοι υποψήφιοι ανά μορφή· διαφορετικά είναι το σύνολο.',
+    slskdStrictPriority: 'Αυστηρή προτεραιότητα μορφών',
+    slskdStrictPriorityHint:
+      'Δοκίμασε τις μορφές με τη σειρά και κατάταξε τις αντιστοιχίες μέσα σε κάθε μορφή.',
+    slskdWhitelist: 'Να επιτρέπονται μόνο οι μορφές της λίστας',
+    slskdWhitelistHint:
+      'Απόρριψε αποτελέσματα με επέκταση που δεν υπάρχει στη λίστα.',
     slskdHint:
       'Λήψη από Soulseek μέσω του διακομιστή slskd. Όσα δεν βρεθούν περνούν στην επόμενη πηγή.',
     slskdEnabled: 'Χρήση slskd',
@@ -961,7 +1550,7 @@ export default {
     slskdQueuedTimeout: 'Χρονικό όριο αναμονής',
     slskdInPlace: 'Διατήρηση αρχείων στον φάκελο slskd',
     slskdInPlaceHint:
-      'Επισήμανση εκεί όπου τα αποθήκευσε το slskd αντί για αντιγραφή στον φάκελο λήψεων.',
+      'Ενεργό: επισήμανση των αρχείων εκεί όπου βρίσκονται και διατήρησή τους. Ανενεργό: αντιγραφή και επισήμανση στον φάκελο λήψεων· η πηγή αφαιρείται μόνο μετά από επιτυχή εισαγωγή. Σε αποτυχία διατηρείται.',
     youtubeTitle: 'YouTube',
     cookies: 'Cookies YouTube',
     cookiesHint:
@@ -979,9 +1568,14 @@ export default {
     audioGroup: 'Ήχος',
     format: 'Μορφή',
     formatHint: 'Τα αρχεία από το YouTube μετατρέπονται σε αυτή τη μορφή.',
+    formatOriginal: 'Πρωτότυπο',
+    formatOriginalHint:
+      'Διατήρηση της καλύτερης διαθέσιμης ροής ήχου χωρίς επανακωδικοποίηση. Η επέκταση αρχείου εξαρτάται από την πηγή.',
     bitrate: 'Ποιότητα',
     bitrateHint: 'Ρυθμός bit για μορφές με απώλειες.',
     bitrateLossless: 'Δεν χρησιμοποιείται για FLAC, που είναι χωρίς απώλειες.',
+    bitrateOriginal:
+      'Δεν χρησιμοποιείται όταν διατηρείται η αρχική μορφή ήχου.',
     filesGroup: 'Αρχεία',
     template: 'Όνομα αρχείου',
     templateHint: 'Χρησιμοποίησε / για δημιουργία φακέλων.',
@@ -1222,9 +1816,14 @@ export default {
   auth: {
     signInTitle: 'Σύνδεση στο Downtify',
     signInBody: 'Συνδεθείτε με το όνομα χρήστη και τον κωδικό σας.',
+    signInBodyOidcOnly: 'Συνδεθείτε μέσω του παρόχου ταυτότητάς σας.',
     username: 'Όνομα χρήστη',
     password: 'Κωδικός',
     signIn: 'Σύνδεση',
+    oidcSignIn: 'Συνέχεια με τον πάροχο ταυτότητας',
+    or: 'ή',
+    oidcFailed:
+      'Η σύνδεση μέσω του παρόχου ταυτότητας απέτυχε. Δοκιμάστε ξανά.',
     wrongPassword: 'Λάθος όνομα χρήστη ή κωδικός',
     tooMany:
       'Πάρα πολλές προσπάθειες. Περιμένετε λίγα λεπτά και δοκιμάστε ξανά.',
@@ -1286,6 +1885,12 @@ export default {
     androidUnreleased:
       'Δεν έχει δημοσιευτεί ακόμη καμία έκδοση: η εφαρμογή είναι ακόμη υπό ανάπτυξη, οπότε προς το παρόν δεν υπάρχει τίποτα να εγκαταστήσετε.',
     androidRepo: 'Δείτε το αποθετήριο',
+    iosGroup: 'Downtify για iOS',
+    iosHint:
+      'Μια εφαρμογή για iPhone και iPad που περιηγείται και αναπαράγει τη βιβλιοθήκη σας από αυτόν τον διακομιστή.',
+    iosBody:
+      'Συνδεθείτε με τον λογαριασμό σας ή συνδέστε την εφαρμογή με έναν κωδικό από αυτή τη σελίδα. Περιηγηθείτε και αναπαράγετε τη βιβλιοθήκη σας, κρατήστε τραγούδια για ακρόαση εκτός σύνδεσης και ελέγξτε την αναπαραγωγή από την οθόνη κλειδώματος.',
+    iosRepo: 'Δείτε το αποθετήριο',
   },
   replace: {
     menu: 'Αντικατάσταση ήχου…',
@@ -1293,7 +1898,7 @@ export default {
     body: 'Λάθος τραγούδι ή εκδοχή; Διαλέξτε τη σωστή. Το αρχείο κρατά όνομα, ετικέτες, εξώφυλλο και στίχους και μένει στις λίστες του.',
     current: 'Τώρα',
     search: 'Αναζήτηση',
-    searchHint: 'Ή επικολλήστε σύνδεσμο YouTube ή YouTube Music.',
+    searchHint: 'Ή επικολλήστε σύνδεσμο YouTube, YouTube Music ή SoundCloud.',
     searchButton: 'Αναζήτηση',
     results: 'Εκδοχές για επιλογή',
     none: 'Δεν βρέθηκε τίποτα. Δοκιμάστε άλλες λέξεις ή επικολλήστε σύνδεσμο.',
@@ -1453,6 +2058,7 @@ export default {
       unlike: 'Αφαιρέσεις «μου αρέσει»',
       delete: 'Διαγραμμένα αρχεία',
       audio_replaced: 'Αντικαταστάσεις ήχου',
+      album_compilation: 'Συλλογές που σημειώθηκαν',
       library_hidden: 'Στοιχεία που κρύφτηκαν από τους χρήστες',
       library_shown: 'Στοιχεία που εμφανίστηκαν στους χρήστες',
       device_paired: 'Συνδεδεμένες εφαρμογές',
@@ -1473,6 +2079,8 @@ export default {
       unlike: 'αφαίρεσε το «μου αρέσει» από το {what}',
       delete: 'διέγραψε {what}',
       audio_replaced: 'αντικατέστησε τον ήχο του {what}',
+      album_compilation:
+        'άλλαξε αν το {what} είναι συλλογή Διαφόρων καλλιτεχνών',
       library_hidden: 'έκρυψε το {what} από τους χρήστες',
       library_shown: 'εμφάνισε το {what} στους χρήστες',
       device_paired: 'σύνδεσε {what}',

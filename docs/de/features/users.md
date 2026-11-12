@@ -69,7 +69,7 @@ Playlists anderer mischen sich nie unter deine eigenen. Der Tab **Playlists** de
 
 Die Seitenleiste zeigt außerdem einige der mit dir geteilten und der öffentlichen Playlists, denen du folgst.
 
-**Was ein Betrachter tun kann:** abspielen, mischen, zur Warteschlange hinzufügen, als ZIP herunterladen (oder auf eine Handy- oder Desktop-App), einer öffentlichen Playlist **folgen**, damit sie in seinen Listen bleibt — auch bei ausgeschaltetem *Öffentliche Playlists anzeigen* — und den Änderungen ihres Besitzers folgen, und **Kopie speichern**: eine private, bearbeitbare eigene Playlist mit den Songs, die er sehen kann. Ein Betrachter kann die Playlist eines anderen nicht bearbeiten, umbenennen, löschen, teilen oder lösen.
+**Was ein Betrachter tun kann:** abspielen, mischen, zur Warteschlange hinzufügen, als ZIP herunterladen (oder auf eine Handy- oder Desktop-App), einer öffentlichen Playlist **folgen**, damit sie in seinen Listen bleibt — auch bei ausgeschaltetem *Öffentliche Playlists anzeigen* — und den Änderungen ihres Besitzers folgen, und **Kopie speichern**: eine private, bearbeitbare eigene Playlist mit den Songs, die er sehen kann. Ein Betrachter kann die Playlist eines anderen nicht bearbeiten, umbenennen, löschen, teilen oder lösen. Der Besitzer einer Bibliotheks-Playlist kann einige der Personen, mit denen er sie teilt, zu Bearbeitern machen, die auch Titel hinzufügen und entfernen – siehe [Gemeinsam bearbeitete Playlists](collaborative-playlists.md).
 
 **Teilen beenden:** Macht der Besitzer eine Playlist wieder privat oder entfernt jemanden aus der Liste, verschwindet sie sofort aus den Listen dieser Person (gefolgt oder nicht); eine Playlist, die nicht mehr öffentlich ist, wird nicht mehr gefolgt. Kopien, die Leute schon gespeichert haben, bleiben bei ihnen. Das Umbenennen einer geteilten Playlist lässt sie geteilt; das Löschen nimmt das Teilen mit. Songs, die ein Admin [vor Benutzern verbirgt](#hiding-from-users), sind für sie aus den Titeln einer geteilten Playlist ausgenommen, wie überall.
 
@@ -119,6 +119,30 @@ Unter **Einstellungen → Benutzer** kann ein Admin:
 - **Alle abmelden** — jede App jedes Benutzers wird getrennt und jeder Browser abgemeldet, deiner auch.
 
 Es gibt immer mindestens einen Admin: Der letzte kann nicht gelöscht oder zum Benutzer gemacht werden, und du kannst dein eigenes Konto nicht löschen.
+
+## OpenID Connect
+
+Downtify can add an optional **Continue with identity provider** button to the sign-in page and authenticate through an OpenID Connect provider such as Authelia, Authentik, Keycloak or Pocket ID. Local username/password sign-in stays available unless you disable it. The browser flow uses Authorization Code with PKCE; Downtify verifies the provider's signed ID token before creating its own session cookie.
+
+Set these variables on the server and register the callback URL shown below as an allowed redirect URI in your provider:
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `DOWNTIFY_OIDC_ISSUER` | Yes | | The exact issuer URL from the provider's discovery document. |
+| `DOWNTIFY_OIDC_CLIENT_ID` | Yes | | The registered client ID. |
+| `DOWNTIFY_OIDC_CLIENT_SECRET` | Yes | | The confidential client's secret. |
+| `DOWNTIFY_OIDC_REDIRECT_URI` | No | Derived from the request | Public callback URL, normally `https://music.example.com/api/auth/oidc/callback`. Set it explicitly when Downtify is behind a reverse proxy. |
+| `DOWNTIFY_OIDC_SCOPES` | No | `openid profile email` | Space-separated OIDC scopes. |
+| `DOWNTIFY_OIDC_USERNAME_CLAIM` | No | `preferred_username` | Claim used as the new Downtify username; falls back to `email`, then `sub`. |
+| `DOWNTIFY_OIDC_GROUPS_CLAIM` | No | `groups` | Claim containing a string or list of group names. Dotted paths such as `realm_access.roles` are supported. |
+| `DOWNTIFY_OIDC_ALLOWED_GROUPS` | No | _(empty)_ | Comma-separated groups allowed to sign in. Empty means any authenticated identity. |
+| `DOWNTIFY_OIDC_ADMIN_GROUPS` | No | _(empty)_ | Comma-separated groups whose members receive the Downtify admin role. Everyone else is a user. |
+
+For example, the provider's client needs the callback `https://music.example.com/api/auth/oidc/callback` and the scopes `openid profile email`. For a reverse proxy, also configure [`DOWNTIFY_TRUSTED_PROXIES`](../getting-started/environment-variables.md#mobile-apps-and-sign-in) or set the redirect URI explicitly.
+
+The first successful sign-in creates a Downtify account. Identity is keyed by the exact `issuer` and OIDC `sub`, not by a mutable username or email. An existing local account is **never** linked automatically by matching username or email; if a claimed username is already taken, Downtify adds a stable suffix. Admins can still manage local roles in **Settings → Users**, while a configured admin-group mapping is synchronized on every OIDC sign-in. If the mapped group change would remove the server's last admin, Downtify rejects that sign-in until another admin exists.
+
+To turn off username/password login for both the web page and the app's password-token endpoint, set `DOWNTIFY_DISABLE_LOCAL_LOGIN=true`. OIDC and code-based app pairing remain available. This does not revoke existing browser sessions or device tokens. It requires a complete OIDC configuration and is separate from `DOWNTIFY_DISABLE_AUTH`, which removes authentication entirely.
 
 ## Aktivität
 

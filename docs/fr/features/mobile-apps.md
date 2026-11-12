@@ -12,7 +12,15 @@ Downtify peut servir des applications sur votre téléphone : elles parcourent l
 L’application est développée en ouvert sur [henriquesebastiao/downtify-android](https://github.com/henriquesebastiao/downtify-android). Tout autre client peut être construit sur la même API — voir le [contrat du client mobile](../mobile-client-contract.md).
 :::
 
+## Se connecter depuis l’application
+
+Saisissez l’adresse du serveur (ou choisissez-le sous **Trouvés sur ce réseau**), puis connectez-vous avec **les mêmes nom d’utilisateur et mot de passe** que sur la page web. Le téléphone apparaît sous **Applications associées**, exactement comme si vous l’aviez associé avec un code ci-dessous : il lit en tant que vous, garde une clé qui lui est propre (le mot de passe n’est pas stocké sur le téléphone) et **Dissocier** l’arrête.
+
+Les mauvais mots de passe sont limités en même temps que la connexion de la page web. Tant que les comptes sont désactivés (`DOWNTIFY_DISABLE_AUTH`), il n’y a rien avec quoi se connecter : associez-le avec un code.
+
 ## Associer un téléphone
+
+L’association ne demande aucun mot de passe sur le téléphone : pratique quand la page web est déjà ouverte, ou sur un téléphone où vous préférez ne pas saisir votre mot de passe.
 
 1. Ouvrez **Paramètres → Applications** et appuyez sur **Associer un téléphone**.
 2. Dans l’application, choisissez **Scanner le code** et pointez la caméra vers le QR code — ou saisissez le code de 8 caractères affiché dessous (`K7QM-2XPD` ; casse et tirets sans importance).
@@ -47,6 +55,10 @@ Les applications lisent les fichiers tels quels (**Original**) ou demandent au s
 - Un fichier déjà assez petit (un fichier avec perte à un débit égal ou inférieur à celui demandé) est diffusé tel quel, jamais ré-encodé.
 - Les copies sont conservées dans `/data/transcode_cache`, 2 Go au maximum par défaut ; les moins récemment lues partent en premier. Deux au plus sont faites en même temps. Les deux limites sont des [variables d’environnement](../getting-started/environment-variables.md#mobile-apps-and-sign-in).
 - Si le téléphone abandonne pendant qu’une copie est en cours, le serveur cesse de la faire.
+
+## Normalisation du volume
+
+L’application Android peut lire les morceaux à un volume semblable avec les mêmes mesures que le lecteur web : activez **Normaliser le volume** dans ses **Paramètres → Lecture**. Le réglage s’applique dès le morceau suivant, et les morceaux sans mesure gardent leur niveau d’origine. Une copie hors ligne n’utilise une mesure que si elle a été téléchargée en entier et correspond au fichier mesuré par le serveur. Voir [Normalisation du volume](playback-normalization.md).
 
 ## Diffusion (cast)
 

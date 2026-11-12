@@ -26,6 +26,7 @@ _PLAYLIST = 'https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M'
 _ALBUM = 'https://open.spotify.com/album/2dZMT4gpOWtIYtvdSLT4pr'
 _TRACK = 'https://open.spotify.com/track/0DiWol3AO6WpXZgp0goxAV'
 _CHANNEL = 'https://music.youtube.com/channel/UCAjidy3vxRkgGVNIFqZMl_Q'
+_SOUNDCLOUD_TRACK = 'https://soundcloud.com/artist/track'
 
 _SONG = {
     'song_id': 't1',
@@ -77,6 +78,39 @@ def test_url_resolve_wraps_a_single_track(monkeypatch):
     assert result['kind'] == 'track'
     assert result['name'] == 'Harbor Lights'
     assert result['tracks'] == [_SONG]
+
+
+def test_url_resolve_wraps_a_soundcloud_track(monkeypatch):
+    soundcloud_song = {
+        **_SONG,
+        'url': _SOUNDCLOUD_TRACK,
+        'source': 'soundcloud',
+    }
+    monkeypatch.setattr(
+        api.providers,
+        'soundcloud_track_from_url',
+        lambda url: soundcloud_song,
+    )
+
+    result = api.url_resolve_endpoint(_SOUNDCLOUD_TRACK)
+
+    assert result['kind'] == 'track'
+    assert result['tracks'] == [soundcloud_song]
+
+
+def test_soundcloud_download_url_resolves_track_metadata(monkeypatch):
+    soundcloud_song = {
+        **_SONG,
+        'url': _SOUNDCLOUD_TRACK,
+        'source': 'soundcloud',
+    }
+    monkeypatch.setattr(
+        api.providers,
+        'soundcloud_track_from_url',
+        lambda url: soundcloud_song,
+    )
+
+    assert api._song_for_download(_SOUNDCLOUD_TRACK) == soundcloud_song
 
 
 def test_url_resolve_lists_an_artists_releases(monkeypatch):

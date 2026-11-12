@@ -69,6 +69,30 @@ describe('videoIdFor', () => {
     expect(search).not.toHaveBeenCalled()
   })
 
+  it('keeps the video id on an already queued player track', async () => {
+    search.mockClear()
+    const queuedTrack = {
+      stream: true,
+      video_id: 'crAmZkrKODg',
+      title: 'Believe',
+      artist: 'Cher',
+      url: '/api/stream/file?video_id=crAmZkrKODg',
+    }
+
+    await expect(videoIdFor(queuedTrack)).resolves.toBe('crAmZkrKODg')
+    expect(search).not.toHaveBeenCalled()
+  })
+
+  it('ignores an invalid player video id and falls back to search', async () => {
+    search.mockResolvedValueOnce({
+      data: [{ name: 'Believe', artists: ['Cher'], youtube_id: 'abc123DEFGH' }],
+    })
+    await expect(
+      videoIdFor({ ...SONG, video_id: 'not-a-video-id' })
+    ).resolves.toBe('abc123DEFGH')
+    expect(search).toHaveBeenCalledWith('Cher Believe')
+  })
+
   it('falls back to the first search hit with a video id', async () => {
     search.mockResolvedValueOnce({
       data: [
@@ -78,6 +102,51 @@ describe('videoIdFor', () => {
     })
     await expect(videoIdFor(SONG)).resolves.toBe('abc123DEFGH')
     expect(search).toHaveBeenCalledWith('Cher Believe')
+  })
+
+  it('skips search hits whose known duration is more than 10 seconds off', async () => {
+    search.mockResolvedValueOnce({
+      data: [
+        {
+          name: 'Main Title 3rd Season',
+          artists: ['Christopher Franke'],
+          song_id: 'wrong123456',
+          duration: 143,
+        },
+        {
+          name: 'Main Title 3rd Season',
+          artists: ['Christopher Franke'],
+          song_id: 'right123456',
+          duration: 89,
+        },
+      ],
+    })
+
+    await expect(
+      videoIdFor({
+        name: 'Main Title 3rd Season',
+        artists: ['Christopher Franke'],
+        duration: 89,
+      })
+    ).resolves.toBe('right123456')
+  })
+
+  it('accepts a search hit at the 10-second duration boundary', async () => {
+    search.mockResolvedValueOnce({
+      data: [{ ...SONG, song_id: 'abc123DEFGH', duration: 234 }],
+    })
+
+    await expect(videoIdFor({ ...SONG, duration: 224 })).resolves.toBe(
+      'abc123DEFGH'
+    )
+  })
+
+  it('fails when every search hit has an incompatible known duration', async () => {
+    search.mockResolvedValueOnce({
+      data: [{ ...SONG, song_id: 'abc123DEFGH', duration: 240 }],
+    })
+
+    await expect(videoIdFor({ ...SONG, duration: 224 })).rejects.toThrow()
   })
 
   it('fails when nothing resolves', async () => {

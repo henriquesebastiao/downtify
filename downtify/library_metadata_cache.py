@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import sqlite3
 import stat
 from concurrent.futures import ThreadPoolExecutor
@@ -24,7 +25,11 @@ _TAG_READ_THREADS = 8
 #: 4: the audio format (codec, bitrate, sample rate, channels).
 #: 5: genre (from tags, or iTunes when Sync cannot write the file).
 #: 6: the explicit mark.
-META_VERSION = 6
+#: 7: every credited artist (``artists``, from the ARTISTS tag), with an
+#: act split into its members read as its album artist
+#: (``library_metadata.split_artists``), and the compilation flag.
+#: 8: the full release date from audio tags.
+META_VERSION = 8
 
 #: Columns added after the table was first created, with their SQL type.
 _ADDED_COLUMNS = {
@@ -33,6 +38,7 @@ _ADDED_COLUMNS = {
     'album_artist': "TEXT NOT NULL DEFAULT ''",
     'track_number': 'INTEGER NOT NULL DEFAULT 0',
     'year': "TEXT NOT NULL DEFAULT ''",
+    'release_date': "TEXT NOT NULL DEFAULT ''",
     'duration': 'REAL NOT NULL DEFAULT 0',
     'meta_version': 'INTEGER NOT NULL DEFAULT 1',
     'codec': "TEXT NOT NULL DEFAULT ''",
@@ -41,13 +47,16 @@ _ADDED_COLUMNS = {
     'channels': 'INTEGER NOT NULL DEFAULT 0',
     'genre': "TEXT NOT NULL DEFAULT ''",
     'explicit': 'INTEGER NOT NULL DEFAULT 0',
+    'artists': "TEXT NOT NULL DEFAULT '[]'",
+    'compilation': 'INTEGER NOT NULL DEFAULT 0',
 }
 
 _ROW_COLUMNS = (
     'content_key, filename, file_mtime_ns, file_size, title, artist, '
     'album, has_cover, cover_px, album_artist, track_number, year, '
+    'release_date, '
     'duration, meta_version, codec, bitrate, sample_rate, channels, '
-    'genre, explicit'
+    'genre, explicit, artists, compilation'
 )
 
 
@@ -80,10 +89,12 @@ def _row_entry(
         'file': stored,
         'title': str(row['title'] or ''),
         'artist': str(row['artist'] or ''),
+        'artists': _artists_from_json(row['artists']),
         'album': str(row['album'] or ''),
         'album_artist': str(row['album_artist'] or ''),
         'track_number': int(row['track_number'] or 0),
         'year': str(row['year'] or ''),
+        'release_date': str(row['release_date'] or ''),
         'duration': float(row['duration'] or 0.0),
         'codec': str(row['codec'] or ''),
         'bitrate': int(row['bitrate'] or 0),
@@ -93,11 +104,22 @@ def _row_entry(
         'explicit': bool(int(row['explicit'] or 0))
         if 'explicit' in row.keys()
         else False,
+        'compilation': bool(int(row['compilation'] or 0)),
         'has_cover': bool(int(row['has_cover'] or 0)),
         'cover_px': int(row['cover_px'] or 0),
         'added': int(item['mtime_ns']) // 1_000_000_000,
         'size': int(item['size']),
     }
+
+
+def _artists_from_json(raw: Any) -> list[str]:
+    try:
+        value = json.loads(raw or '[]')
+    except (TypeError, ValueError):
+        return []
+    if not isinstance(value, list):
+        return []
+    return [str(name) for name in value if str(name).strip()]
 
 
 class LibraryMetadataCache:
@@ -128,6 +150,7 @@ class LibraryMetadataCache:
                         album_artist TEXT NOT NULL DEFAULT '',
                         track_number INTEGER NOT NULL DEFAULT 0,
                         year TEXT NOT NULL DEFAULT '',
+                        release_date TEXT NOT NULL DEFAULT '',
                         duration REAL NOT NULL DEFAULT 0,
                         meta_version INTEGER NOT NULL DEFAULT 1,
                         codec TEXT NOT NULL DEFAULT '',
@@ -136,6 +159,8 @@ class LibraryMetadataCache:
                         channels INTEGER NOT NULL DEFAULT 0,
                         genre TEXT NOT NULL DEFAULT '',
                         explicit INTEGER NOT NULL DEFAULT 0,
+                        artists TEXT NOT NULL DEFAULT '[]',
+                        compilation INTEGER NOT NULL DEFAULT 0,
                         file_mtime_ns INTEGER NOT NULL,
                         file_size INTEGER NOT NULL,
                         cached_at TEXT NOT NULL
@@ -494,11 +519,13 @@ class LibraryMetadataCache:
         conn.execute(
             """INSERT INTO library_metadata
                (content_key, filename, title, artist, album, has_cover,
-                cover_px, album_artist, track_number, year, duration,
+                     cover_px, album_artist, track_number, year, release_date,
+                     duration,
                 meta_version, codec, bitrate, sample_rate, channels, genre,
-                explicit, file_mtime_ns, file_size, cached_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-                       ?, ?, ?)
+                explicit, artists, compilation, file_mtime_ns, file_size,
+                cached_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                              ?, ?, ?, ?, ?, ?)
                ON CONFLICT(content_key) DO UPDATE SET
                filename=excluded.filename,
                title=excluded.title,
@@ -509,6 +536,7 @@ class LibraryMetadataCache:
                album_artist=excluded.album_artist,
                track_number=excluded.track_number,
                year=excluded.year,
+               release_date=excluded.release_date,
                duration=excluded.duration,
                meta_version=excluded.meta_version,
                codec=excluded.codec,
@@ -517,6 +545,8 @@ class LibraryMetadataCache:
                channels=excluded.channels,
                genre=excluded.genre,
                explicit=excluded.explicit,
+               artists=excluded.artists,
+               compilation=excluded.compilation,
                file_mtime_ns=excluded.file_mtime_ns,
                file_size=excluded.file_size,
                cached_at=excluded.cached_at""",
@@ -531,6 +561,7 @@ class LibraryMetadataCache:
                 str(entry.get('album_artist') or ''),
                 int(entry.get('track_number') or 0),
                 str(entry.get('year') or ''),
+                str(entry.get('release_date') or ''),
                 float(entry.get('duration') or 0.0),
                 META_VERSION,
                 str(entry.get('codec') or ''),
@@ -539,6 +570,11 @@ class LibraryMetadataCache:
                 int(entry.get('channels') or 0),
                 str(entry.get('genre') or ''),
                 1 if entry.get('explicit') else 0,
+                json.dumps(
+                    [str(a) for a in entry.get('artists') or []],
+                    ensure_ascii=False,
+                ),
+                1 if entry.get('compilation') else 0,
                 mtime_ns,
                 file_size,
                 _now_iso(),

@@ -3,6 +3,26 @@
     class="mx-auto flex max-w-[1680px] flex-col gap-6 px-4 pt-6 sm:px-6 md:pt-8 lg:px-10"
   >
     <PageHeader :title="t('queue.title')" :subtitle="subtitle">
+      <template v-if="auth.isAdmin.value">
+        <UiButton
+          v-if="queuePause.paused.value"
+          variant="primary"
+          icon="play"
+          :loading="queuePause.busy.value"
+          @click="toggleQueue(queuePause.resume)"
+        >
+          {{ t('queue.resume') }}
+        </UiButton>
+        <UiButton
+          v-else
+          variant="secondary"
+          icon="pause"
+          :loading="queuePause.busy.value"
+          @click="toggleQueue(queuePause.pause)"
+        >
+          {{ t('queue.pause') }}
+        </UiButton>
+      </template>
       <UiButton
         v-if="counts.failed"
         variant="ghost"
@@ -29,6 +49,37 @@
       </UiButton>
     </PageHeader>
 
+    <div
+      v-if="queuePause.paused.value"
+      role="status"
+      class="flex items-start gap-3 rounded-[14px] border border-line-2 bg-surface p-4"
+    >
+      <AppIcon
+        :name="queuePause.draining.value ? 'clock' : 'pause'"
+        :size="20"
+        class="mt-0.5 text-muted"
+      />
+      <div class="min-w-0">
+        <p class="text-sm font-semibold">
+          {{
+            queuePause.draining.value
+              ? t('queue.pausingTitle')
+              : t('queue.pausedTitle')
+          }}
+        </p>
+        <p class="mt-0.5 text-[13px] text-muted">
+          {{
+            queuePause.draining.value
+              ? t('queue.pausingBody', {
+                  count: queuePause.status.active,
+                })
+              : t('queue.pausedBody')
+          }}
+          {{ t('queue.pausedKept') }}
+        </p>
+      </div>
+    </div>
+
     <UiTabs :items="tabs" :model-value="tab" />
 
     <div class="grid items-start gap-8 xl:grid-cols-[minmax(0,1fr)_340px]">
@@ -50,7 +101,9 @@
           :title="t(`queue.emptyTab.${tab}`)"
           :body="
             tab === 'active' && counts.queued
-              ? t('queue.waitingHint', { count: counts.queued })
+              ? queuePause.paused.value
+                ? t('queue.pausedBody')
+                : t('queue.waitingHint', { count: counts.queued })
               : ''
           "
         />
@@ -80,6 +133,7 @@
       </div>
 
       <aside class="flex flex-col gap-4 xl:sticky xl:top-[96px]">
+        <DownloadExclusions />
         <UiPanel
           v-if="activeBatches.length"
           :title="t('queue.playlistDownloads')"
@@ -140,6 +194,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useWindowVirtualizer } from '@tanstack/vue-virtual'
+import AppIcon from '/src/components/ui/AppIcon.vue'
 import UiButton from '/src/components/ui/UiButton.vue'
 import UiEmpty from '/src/components/ui/UiEmpty.vue'
 import UiPanel from '/src/components/ui/UiPanel.vue'
@@ -148,13 +203,16 @@ import UiTabs from '/src/components/ui/UiTabs.vue'
 import SourceBadge from '/src/components/ui/SourceBadge.vue'
 import PageHeader from '/src/components/library/PageHeader.vue'
 import QueueItem from '/src/components/queue/QueueItem.vue'
+import DownloadExclusions from '/src/components/queue/DownloadExclusions.vue'
 import CsvImport from '/src/components/queue/CsvImport.vue'
 import {
   useDownloadManager,
   useProgressTracker,
   syncQueueFromServer,
 } from '/src/model/download'
+import { useAuth } from '/src/model/auth'
 import { useLibrary } from '/src/model/library'
+import { useQueuePause } from '/src/model/queuePause'
 import { useUi } from '/src/model/ui'
 import { queueRowEstimate } from '/src/lib/queueList'
 import { shouldJumpToActive } from '/src/lib/queueTab'
@@ -167,10 +225,13 @@ const dm = useDownloadManager()
 const tracker = useProgressTracker()
 const library = useLibrary()
 const ui = useUi()
+const auth = useAuth()
+const queuePause = useQueuePause()
 const listRoot = ref(null)
 const scrollMargin = ref(0)
 
 syncQueueFromServer().catch(() => {})
+queuePause.refresh().catch(() => {})
 
 const queue = computed(() => {
   tracker.queueVersion.value
@@ -300,6 +361,14 @@ watch(
   () => counts.value.done,
   () => library.refreshSoon(1500)
 )
+
+async function toggleQueue(change) {
+  try {
+    await change()
+  } catch {
+    ui.toast(t('queue.pauseFailed'), { kind: 'error' })
+  }
+}
 
 async function clearAll() {
   const ok = await ui.confirm({

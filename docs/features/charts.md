@@ -17,6 +17,13 @@ Open **Charts** from the sidebar (or the **More** sheet on phones). Four tabs re
 
 A chart track doesn't need a resolve step to download: Deezer already gives its title, artist and album name, which is enough to search for and match on YouTube, the same way a free-text search result is. An album, artist or playlist does need one — turning its link into a tracklist — so its card opens that resolved page instead of downloading straight from the grid. Playing a track row streams it in full from YouTube (never for albums, artists or playlists) — the same streaming every other track row uses, just fed the chart's title and artist.
 
+## Watching or saving a chart playlist
+
+Each playlist card has a **⋯** menu over its cover, with the two things its page offers besides downloading:
+
+- **Watch for new tracks** adds a [Playlist Monitor](playlist-monitor.md#deezer-playlists) watch, checked every 6 hours: its first check downloads what the playlist has now, later ones what is added to it. Change the interval, pause or stop it on the **Monitor** page.
+- **Add to my playlists** opens the playlist picker with the playlist's songs that are **already in your library**, to add them to one of your playlists or a new one named after it. Nothing is downloaded, and your playlist doesn't follow the chart playlist afterwards — use the download button or **Watch for new tracks** for that. When none of its songs are in the library yet, it says so instead.
+
 ## API
 
 See [`GET /api/discover/chart`](../api-reference.md#get-apidiscoverchart) in the API Reference.

@@ -15,9 +15,12 @@ account in Settings > Apps.
   ``POST /api/auth/pair`` within five minutes gets a long-lived device
   token, ``dtfy_<device id>_<secret>``, sent as ``Authorization: Bearer``,
   tied to the user who paired it. Only a hash of the secret is stored; a
-  device can be revoked at any time. Devices get the *client* scope: they
-  can read and play the library and ask for downloads, but settings,
-  credentials, deleting files and managing devices need a browser.
+  device can be revoked at any time. An app may instead sign in with the
+  user's username and password at ``POST /api/auth/token`` and get the
+  same kind of token without the web page. Devices get the *client*
+  scope: they can read and play the library and ask for downloads, but
+  settings, credentials, deleting files and managing devices need a
+  browser.
 
 Players that can't send headers (a Chromecast receiver fetching a stream
 itself) use **signed URLs**: ``exp``, ``kid`` (the device) and ``sig``
@@ -947,9 +950,11 @@ RULES: list[tuple[frozenset[str], re.Pattern[str], str]] = [
         (_READ, r'^/api/version$', PUBLIC),
         (_READ, r'^/api/server/info$', PUBLIC),
         (_READ, r'^/api/auth/status$', PUBLIC),
+        (_READ, r'^/api/auth/oidc(/callback)?$', PUBLIC),
         (_m('POST'), r'^/api/auth/login$', PUBLIC),
         (_m('POST'), r'^/api/auth/logout$', PUBLIC),
         (_m('POST'), r'^/api/auth/pair$', PUBLIC),
+        (_m('POST'), r'^/api/auth/token$', PUBLIC),
         # Any signed-in user: their own account, devices and pairing
         # (the routes check whose), and a WebSocket ticket.
         (_m('POST'), r'^/api/auth/ws-ticket$', CLIENT),
@@ -975,6 +980,12 @@ RULES: list[tuple[frozenset[str], re.Pattern[str], str]] = [
         (_m('PATCH', 'DELETE'), r'^/api/podcasts/shows/\d+$', USER),
         (_m('DELETE'), r'^/api/podcasts/episodes/\d+$', USER),
         (_m('POST', 'PATCH', 'DELETE'), r'^/api/monitor/playlists', USER),
+        # Where a song came from and what each watch added (own
+        # watches; every one for an admin).
+        (_READ, r'^/api/monitor/(stats|provenance)$', USER),
+        (_READ, r'^/api/monitor/playlists/\d+/tracks$', USER),
+        # Artists to suggest following, from one's own listens.
+        (_READ, r'^/api/monitor/artist-suggestions(/resolve)?$', USER),
         # Admin: signing everyone out, settings and credentials.
         (_ALL, r'^/api/auth/', ADMIN),
         (_ALL, r'^/api/server(/port)?$', ADMIN),
@@ -982,13 +993,17 @@ RULES: list[tuple[frozenset[str], re.Pattern[str], str]] = [
         (_READ, r'^/api/fs/dirs$', ADMIN),
         (_ALL, r'^/api/cookies$', ADMIN),
         (_ALL, r'^/api/(slskd|navidrome|deemix)/test$', ADMIN),
+        (_ALL, r'^/api/proxy/test$', ADMIN),
         (_ALL, r'^/api/similar/test$', ADMIN),
         (_READ, r'^/api/library/summary$', CLIENT),
+        (_READ, r'^/api/library/loudness$', CLIENT),
+        (_ALL, r'^/api/library/loudness/', ADMIN),
         (_READ, r'^/api/library/(albums|artists)$', CLIENT),
         (_m('POST'), r'^/api/library/lookup$', CLIENT),
         (
             _ALL,
-            r'^/api/library/(upgrade|reconcile|archive|replace|external|visibility)',
+            r'^/api/library/(upgrade|reconcile|archive|replace|external'
+            r'|visibility|usage|compilation)',
             ADMIN,
         ),
         (_ALL, r'^/api/library/playlist', ADMIN),
@@ -1017,7 +1032,7 @@ RULES: list[tuple[frozenset[str], re.Pattern[str], str]] = [
         (_READ, r'^/api/stream/file$', CLIENT),
         (_m('POST'), r'^/api/stream/prefetch$', CLIENT),
         (_m('POST'), r'^/api/download/(url|batch|album)$', CLIENT),
-        (_READ, r'^/api/queue$', CLIENT),
+        (_READ, r'^/api/queue(/state)?$', CLIENT),
         (_READ, r'^/api/playlists/(batches|incomplete)', CLIENT),
         (_READ, r'^/api/likes$', CLIENT),
         (_m('PUT'), r'^/api/likes$', CLIENT),
@@ -1044,6 +1059,7 @@ RULES: list[tuple[frozenset[str], re.Pattern[str], str]] = [
         (_m('POST'), r'^/api/playlist/m3u$', ADMIN),
         (_m('POST', 'DELETE'), r'^/api/playlists/', ADMIN),
         (_m('DELETE'), r'^/api/queue', ADMIN),
+        (_m('POST'), r'^/api/queue/(pause|resume)$', ADMIN),
         (_m('POST'), r'^/api/likes/clear$', ADMIN),
         (_m('DELETE'), r'^/api/discover/listens$', ADMIN),
         (_m('POST', 'PATCH', 'DELETE'), r'^/api/podcasts/', ADMIN),
@@ -1235,10 +1251,18 @@ class AuthMiddleware:
         send: Callable[..., Awaitable[None]],
     ) -> None:
         kind = scope.get('type')
-        store = self._get_store()
-        if kind not in {'http', 'websocket'} or store is None:
+        if kind not in {'http', 'websocket'}:
             await self.app(scope, receive, send)
             return
+
+        store = self._get_store()
+
+        if store is None:
+            await self._deny(
+                scope, send, 503, 'Authentication service unavailable'
+            )
+            return
+
         method = 'WS' if kind == 'websocket' else scope.get('method', 'GET')
         path = scope.get('path', '')
         needed = (

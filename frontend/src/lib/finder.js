@@ -1,3 +1,4 @@
+import { localCatalogRoute } from '/src/lib/library'
 // Pure helpers for the Finder page (a Deezer-only search, then an artist ->
 // albums -> tracks column view). No Vue, no API - unit-testable.
 
@@ -12,6 +13,8 @@ export const TRACK_COUNT_BATCH = 12
  * the Deezer id that needs.
  */
 export function browseLocation(kind, row) {
+  const local = localCatalogRoute(row, kind)
+  if (local) return local
   if (!row) return null
   let query = null
   if (kind === 'artist' && row.artist_id) {

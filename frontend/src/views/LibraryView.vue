@@ -13,6 +13,22 @@
         <span class="max-sm:sr-only">{{ t('library.upgrade') }}</span>
       </UiButton>
       <UiButton
+        v-if="auth.isAdmin.value"
+        variant="ghost"
+        icon="hard-drive"
+        :to="{ name: 'Storage' }"
+      >
+        <span class="max-sm:sr-only">{{ t('library.storage') }}</span>
+      </UiButton>
+      <UiButton
+        v-if="auth.isAdmin.value && trashCapability.canManage.value"
+        variant="ghost"
+        icon="trash"
+        :to="{ name: 'Trash' }"
+      >
+        <span class="max-sm:sr-only">{{ t('trash.title') }}</span>
+      </UiButton>
+      <UiButton
         variant="ghost"
         icon="refresh"
         :loading="library.loading.value"
@@ -302,6 +318,7 @@ import {
 import { artistPhotoSource } from '/src/lib/artistPhotoProxy'
 import { selectionChanges } from '/src/lib/visibility'
 import { formatBytes, splitLength } from '/src/lib/format'
+import { useTrashCapability } from '/src/lib/trash'
 import { useI18n } from '/src/i18n'
 
 const { t } = useI18n()
@@ -310,6 +327,7 @@ const router = useRouter()
 const library = useLibrary()
 const player = usePlayer()
 const actions = useTrackActions()
+const trashCapability = useTrashCapability()
 const playlistActions = usePlaylistActions()
 const ui = useUi()
 const auth = useAuth()

@@ -19,6 +19,7 @@ A **Beállítások → Hangforrások** egy rendezett lista. Koppints egy forrás
 |--------|-------------|
 | **YouTube Music** | Az alapértelmezett. A YouTube Musicban keres, és a hagyományos YouTube-ra esik vissza, ha nincs elfogadható találat — lásd: [Hogyan működik](../how-it-works.md#fallback-to-standard-youtube). |
 | **YouTube** | Csak a hagyományos YouTube-on keres. |
+| **SoundCloud** | Alapértelmezetten ki van kapcsolva. A SoundCloudon keres, és egy beillesztett SoundCloud link pontos számát tölti le — [SoundCloud](soundcloud.md). |
 | **slskd** | A slskd-n keresztül keres a Soulseeken, és letölti a legjobban egyező fájlt. |
 
 A slskd engedélyezése a lista elejére teszi. Ha a slskd lesz az egyetlen forrás, a YouTube Music és a YouTube akkor is ki lesz próbálva utána, így egy olyan szám is letöltődik, amelyet a slskd nem talál. A letöltési sor megmutatja, melyik forrás szolgálta ki az egyes számokat.
@@ -63,6 +64,7 @@ Ha nem akad semmi elfogadható, az átvitel nem fejeződik be a **Teljes időkor
 Ha a **slskd-fájlok helyben hagyása** be van kapcsolva (alapértelmezés), a letöltött fájl a slskd mappájában marad: a Downtify ott helyben beleírja a metaadatokat, a borítót és a dalszöveget, és `slskd/…` útvonallal regisztrálja a könyvtárban. A Könyvtár, a lejátszó és az M3U-fájlok ezt az útvonalat használják, és a `/media/slskd/…` útvonalon szolgálódik ki.
 
 Kapcsold ki, hogy a fájl helyette a többi letöltésed mellé másolódjon, a fájlnév-sablonod és a [fájlszervezés](file-organization.md) beállításai szerint.
+Maga az átvitel az slskd mappában marad; a [Tárhely és használat](storage-usage.md#the-library-not-its-working-copies) ezeket a másolatokat a könyvtártól külön, *slskd munkapéldányokként* számolja, így látod, mennyi helyet foglalnak.
 
 ::: info
 A slskd-fájlok megtartják az eredeti formátumukat — nem kódolódnak át a Beállításokban választott formátumra.

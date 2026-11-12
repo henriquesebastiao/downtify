@@ -38,6 +38,10 @@ const summary = shallowRef({
   recentAlbums: [],
 })
 
+// The files last dropped from the library (deleted), for pages that keep
+// their own list of tracks (a watch's songs) to drop them too.
+const forgotten = shallowRef([])
+
 const tracksByFile = computed(
   () => new Map(tracks.value.map((track) => [track.file, track]))
 )
@@ -195,9 +199,13 @@ async function load({ force = false } = {}) {
       // server checks every tracked Spotify track to build them: the page
       // shows first and the badges fill in when they arrive.
       refreshBatches()
-      if (tracksComplete.value) await ensureTracks({ force: true })
-      if (albumsComplete.value) await ensureAlbums({ force: true })
-      if (artistsComplete.value) await ensureArtists({ force: true })
+      // Only a forced reload has anything new to fetch: on a first load a
+      // list already here was requested by the page moments ago.
+      if (force) {
+        if (tracksComplete.value) await ensureTracks({ force: true })
+        if (albumsComplete.value) await ensureAlbums({ force: true })
+        if (artistsComplete.value) await ensureArtists({ force: true })
+      }
     } catch (err) {
       error.value = err?.message || 'failed'
     } finally {
@@ -342,6 +350,7 @@ async function refreshPlaylists() {
 let playlistsTimer = null
 
 API.onMessage((data) => {
+  if (data?.type === 'library_changed') refreshSoon()
   if (data?.status === 'done') refreshSoon()
   if (data?.type === 'playlists_changed') {
     clearTimeout(playlistsTimer)
@@ -351,6 +360,7 @@ API.onMessage((data) => {
 
 function forget(files) {
   const gone = new Set(files)
+  if (gone.size) forgotten.value = [...gone]
   tracks.value = tracks.value.filter((track) => !gone.has(track.file))
   rawPlaylists.value = rawPlaylists.value.map((playlist) => ({
     ...playlist,
@@ -438,6 +448,21 @@ function findArtist(name) {
   return artists.value.find((artist) => artist.key === key) || live || null
 }
 
+// Who has a Library page (see groupArtists): the artists index, plus the
+// artists of the tracks loaded so far (a new download the index hasn't
+// caught up with). One set for every row that asks.
+const artistPageKeys = computed(() => {
+  const keys = new Set(artists.value.map((artist) => artist.key))
+  if (!tracksComplete.value) {
+    for (const artist of groupArtists(tracks.value)) keys.add(artist.key)
+  }
+  return keys
+})
+
+function hasArtistPage(name) {
+  return artistPageKeys.value.has(artistKey(name))
+}
+
 function findPlaylist(name) {
   return playlists.value.find((playlist) => playlist.name === name) || null
 }
@@ -484,11 +509,13 @@ export function useLibrary() {
     refreshSoon,
     forget,
     forgetByPrefix,
+    forgotten,
     deleteFiles,
     deletePlaylist,
     downloadZip,
     findAlbum,
     findArtist,
+    hasArtistPage,
     findPlaylist,
     hasSong,
     findTrack,

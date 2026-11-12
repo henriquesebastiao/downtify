@@ -51,6 +51,11 @@
           >
             {{ t('artist.findMore') }}
           </UiButton>
+          <ArtistWatchButton
+            v-if="!libraryOnly && !isVariousArtists(artist.name)"
+            :name="artist.name"
+            :variant="artBannerUrl ? 'photo' : 'ghost'"
+          />
           <UiMenu v-if="moreMenu.length" :items="moreMenu">
             <template #trigger>
               <UiIconButton
@@ -126,7 +131,7 @@
             }}</UiButton>
           </UiEmpty>
           <TopSongsShelf
-            v-else-if="topSongsData?.songs.length"
+            v-else-if="!libraryOnly && topSongsData?.songs.length"
             :data="topSongsData"
             :context="context"
           />
@@ -176,6 +181,7 @@
           :context="context"
           :show-added="false"
           :hide-menu="['artist']"
+          :guest-of="artist.name"
         />
       </div>
     </DetailState>
@@ -201,6 +207,7 @@
 </template>
 
 <script setup>
+import { libraryOnly } from '/src/model/musicPolicy'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import UiBadge from '/src/components/ui/UiBadge.vue'
@@ -212,6 +219,7 @@ import UiSkeleton from '/src/components/ui/UiSkeleton.vue'
 import UiTabs from '/src/components/ui/UiTabs.vue'
 import ArtistArtModal from '/src/components/library/ArtistArtModal.vue'
 import ArtistLinks from '/src/components/library/ArtistLinks.vue'
+import ArtistWatchButton from '/src/components/monitor/ArtistWatchButton.vue'
 import CollectionHero from '/src/components/library/CollectionHero.vue'
 import DetailState from '/src/components/library/DetailState.vue'
 import MediaTile from '/src/components/library/MediaTile.vue'
@@ -226,7 +234,7 @@ import { useTrackActions } from '/src/model/trackActions'
 import { useVisibility } from '/src/model/visibility'
 import { useBuyLinks } from '/src/model/buyLinks'
 import { useUi } from '/src/model/ui'
-import { sortItems } from '/src/lib/library'
+import { isVariousArtists, sortItems } from '/src/lib/library'
 import { splitLength } from '/src/lib/format'
 import { proxiedArtistPhotoUrl } from '/src/lib/artistPhotoProxy'
 import { versionedArtUrl } from '/src/lib/artistArt'
@@ -597,6 +605,7 @@ async function refreshProfile() {
   try {
     // Seeds a brand-new artist's profile on their very first visit - a
     // cheap no-op every time after, once a profile file exists at all.
+    if (libraryOnly.value) return
     const res = await API.ensureArtistProfile(
       artist.value.name,
       locale.value,

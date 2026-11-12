@@ -3,28 +3,35 @@
 from __future__ import annotations
 
 import shutil
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+from threading import Barrier
 
 import pytest
 from mutagen.id3 import APIC, ID3, TIT2, TPE1
 
+from downtify import manual_playlists
 from downtify.library_catalog import LibraryContext
 from downtify.library_paths import library_stored_path
 from downtify.likes import LIKED_PLAYLIST_NAME
 from downtify.m3u import MANUAL_M3U_MARKER, is_manual_m3u, write_m3u
 from downtify.manual_playlists import (
     ManualPlaylistError,
+    copy_playlist,
     create_manual_playlist,
+    detach_imported_playlist,
     drop_manual_playlist,
     edit_manual_playlist,
     prune_files_from_manual_playlists,
     rename_manual_playlist,
+    reorder_manual_playlist,
 )
 from downtify.playlist_listing import list_library_playlists
 from downtify.playlist_mosaic import (
     _filter_complex,
     has_explicit_cover,
     keep_explicit_cover,
+    normalize_uploaded_cover,
     unique_cover_images,
 )
 
@@ -99,6 +106,18 @@ def test_add_downloaded_and_extra_tracks(tmp_path):
     assert mix['files'] == edited['files']
 
 
+def test_edit_manual_playlist_accepts_747_tracks(tmp_path, monkeypatch):
+    tracks = [f'Track {index:04}.mp3' for index in range(747)]
+    ctx = _plain_library(tmp_path, monkeypatch, *tracks)
+    create_manual_playlist(ctx, 'Large mix')
+
+    edited = edit_manual_playlist(ctx, 'Large mix', add=tracks)
+
+    assert edited['count'] == 747
+    assert edited['added'] == 747
+    assert edited['files'] == tracks
+
+
 def test_cannot_edit_imported_playlist(tmp_path):
     download = tmp_path / 'downloads'
     track = download / 'Song.mp3'
@@ -108,6 +127,24 @@ def test_cannot_edit_imported_playlist(tmp_path):
     with pytest.raises(ManualPlaylistError) as caught:
         edit_manual_playlist(ctx, 'Spotify Hits', add=['Song.mp3'])
     assert caught.value.status_code == 403
+
+
+def test_detach_preserves_legacy_paths_and_metadata(tmp_path: Path) -> None:
+    path = tmp_path / 'Mix.m3u'
+    path.write_bytes(
+        b'#EXTM3U\r\n#EXTINF:196,Beyonc\xe9\r\nBeyonc\xe9.mp3\r\n'
+    )
+    audio = tmp_path / 'Beyoncé.mp3'
+    audio.write_bytes(b'audio')
+
+    result = detach_imported_playlist(
+        LibraryContext(download_dir=tmp_path), 'Mix'
+    )
+
+    assert result['files'] == ['Beyoncé.mp3']
+    assert '#EXTINF:196,Beyoncé' in path.read_text(encoding='utf-8')
+    assert is_manual_m3u(path)
+    assert audio.read_bytes() == b'audio'
 
 
 def test_drop_manual_keeps_audio(tmp_path):
@@ -160,6 +197,15 @@ def test_mosaic_filter_matches_spotify_layouts():
     assert 'hstack' in three
     assert four.count('hstack') == 2
     assert 'vstack' in four
+
+
+def test_uploaded_jpeg_is_normalized_and_invalid_images_are_rejected():
+    if not shutil.which('ffmpeg'):
+        pytest.skip('ffmpeg is not installed')
+    normalized = normalize_uploaded_cover(_JPEG, 'image/jpeg')
+    assert normalized.startswith(b'\xff\xd8')
+    with pytest.raises(ValueError, match='JPEG, PNG or WebP'):
+        normalize_uploaded_cover(_JPEG, 'image/png')
 
 
 def test_manual_playlist_cover_uses_distinct_track_art(tmp_path):
@@ -226,6 +272,171 @@ def test_rename_rejects_taken_name(tmp_path):
     assert caught.value.status_code == 409
 
 
+def test_concurrent_additions_keep_both_tracks(tmp_path, monkeypatch):
+    root = tmp_path / 'downloads'
+    root.mkdir()
+    for name in ('One.mp3', 'Two.mp3'):
+        (root / name).write_bytes(b'audio fixture')
+    ctx = LibraryContext(download_dir=root)
+    monkeypatch.setattr(
+        manual_playlists, 'refresh_manual_playlist_cover', lambda *args: None
+    )
+    create_manual_playlist(ctx, 'Together')
+    ready = Barrier(2)
+
+    def add(name):
+        ready.wait(timeout=5)
+        return edit_manual_playlist(ctx, 'Together', add=[name])
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        results = list(pool.map(add, ['One.mp3', 'Two.mp3']))
+    assert sorted(result['count'] for result in results) == [1, 2]
+    assert set(
+        manual_playlists._read_files(ctx, root / 'Playlists' / 'Together.m3u')
+    ) == {'One.mp3', 'Two.mp3'}
+
+
+def _plain_library(tmp_path, monkeypatch, *names: str) -> LibraryContext:
+    root = tmp_path / 'downloads'
+    root.mkdir()
+    for name in names:
+        (root / name).write_bytes(b'audio fixture')
+    monkeypatch.setattr(
+        manual_playlists, 'refresh_manual_playlist_cover', lambda *args: None
+    )
+    return LibraryContext(download_dir=root)
+
+
+def test_a_song_is_only_repeated_when_asked(tmp_path, monkeypatch):
+    ctx = _plain_library(tmp_path, monkeypatch, 'a.mp3', 'b.mp3')
+    create_manual_playlist(ctx, 'Loop')
+    edit_manual_playlist(ctx, 'Loop', add=['a.mp3', 'b.mp3'])
+
+    skipped = edit_manual_playlist(ctx, 'Loop', add=['a.mp3'])
+    assert skipped['added'] == 0
+    assert skipped['already'] == ['a.mp3']
+    assert skipped['files'] == ['a.mp3', 'b.mp3']
+
+    repeated = edit_manual_playlist(
+        ctx, 'Loop', add=['a.mp3'], allow_duplicates=True
+    )
+    assert repeated['added'] == 1
+    assert repeated['already'] == []
+    assert repeated['files'] == ['a.mp3', 'b.mp3', 'a.mp3']
+    listed = list_library_playlists(ctx.download_dir)
+    assert listed[0]['files'] == ['a.mp3', 'b.mp3', 'a.mp3']
+    assert listed[0]['count'] == 3
+
+
+def test_one_copy_of_a_repeated_song_can_go(tmp_path, monkeypatch):
+    ctx = _plain_library(tmp_path, monkeypatch, 'a.mp3', 'b.mp3')
+    create_manual_playlist(ctx, 'Loop')
+    edit_manual_playlist(
+        ctx, 'Loop', add=['a.mp3', 'b.mp3', 'a.mp3'], allow_duplicates=True
+    )
+
+    first = edit_manual_playlist(ctx, 'Loop', remove_entries=[('a.mp3', 0)])
+    assert first['files'] == ['b.mp3', 'a.mp3']
+    assert first['removed'] == 1
+    # An occurrence the playlist doesn't have takes nothing.
+    assert edit_manual_playlist(ctx, 'Loop', remove_entries=[('a.mp3', 3)])[
+        'files'
+    ] == ['b.mp3', 'a.mp3']
+    # ``remove`` still takes every copy.
+    edit_manual_playlist(ctx, 'Loop', add=['a.mp3'], allow_duplicates=True)
+    assert edit_manual_playlist(ctx, 'Loop', remove=['a.mp3'])['files'] == [
+        'b.mp3'
+    ]
+
+
+def test_reorder_moves_songs_and_repeats(tmp_path, monkeypatch):
+    ctx = _plain_library(tmp_path, monkeypatch, 'a.mp3', 'b.mp3', 'c.mp3')
+    create_manual_playlist(ctx, 'Loop')
+    edit_manual_playlist(
+        ctx,
+        'Loop',
+        add=['a.mp3', 'b.mp3', 'c.mp3', 'a.mp3'],
+        allow_duplicates=True,
+    )
+
+    result = reorder_manual_playlist(
+        ctx, 'Loop', ['c.mp3', 'a.mp3', 'a.mp3', 'b.mp3']
+    )
+    assert result['files'] == ['c.mp3', 'a.mp3', 'a.mp3', 'b.mp3']
+    path = ctx.download_dir / 'Playlists' / 'Loop.m3u'
+    assert is_manual_m3u(path)
+    assert list_library_playlists(ctx.download_dir)[0]['files'] == [
+        'c.mp3',
+        'a.mp3',
+        'a.mp3',
+        'b.mp3',
+    ]
+
+
+def test_reorder_keeps_songs_hidden_from_the_caller_in_place(
+    tmp_path, monkeypatch
+):
+    ctx = _plain_library(tmp_path, monkeypatch, 'a.mp3', 'b.mp3', 'c.mp3')
+    create_manual_playlist(ctx, 'Loop')
+    edit_manual_playlist(
+        ctx,
+        'Loop',
+        add=['a.mp3', 'b.mp3', 'c.mp3', 'a.mp3'],
+        allow_duplicates=True,
+    )
+
+    result = reorder_manual_playlist(
+        ctx, 'Loop', ['c.mp3', 'a.mp3', 'a.mp3'], visible={'a.mp3', 'c.mp3'}
+    )
+    assert result['files'] == ['c.mp3', 'b.mp3', 'a.mp3', 'a.mp3']
+
+
+@pytest.mark.parametrize(
+    'order',
+    [
+        ['b.mp3', 'a.mp3'],
+        ['b.mp3', 'a.mp3', 'a.mp3', 'a.mp3'],
+        ['b.mp3', 'a.mp3', 'c.mp3'],
+    ],
+)
+def test_reorder_refuses_a_list_that_is_not_the_playlist(
+    tmp_path, monkeypatch, order
+):
+    ctx = _plain_library(tmp_path, monkeypatch, 'a.mp3', 'b.mp3', 'c.mp3')
+    create_manual_playlist(ctx, 'Loop')
+    edit_manual_playlist(
+        ctx, 'Loop', add=['a.mp3', 'b.mp3', 'a.mp3'], allow_duplicates=True
+    )
+
+    with pytest.raises(ManualPlaylistError) as caught:
+        reorder_manual_playlist(ctx, 'Loop', order)
+    assert caught.value.status_code == 409
+    path = ctx.download_dir / 'Playlists' / 'Loop.m3u'
+    assert manual_playlists._read_files(ctx, path) == [
+        'a.mp3',
+        'b.mp3',
+        'a.mp3',
+    ]
+
+
+def test_imported_playlist_cannot_be_reordered(tmp_path, monkeypatch):
+    ctx = _plain_library(tmp_path, monkeypatch, 'a.mp3', 'b.mp3')
+    write_m3u(
+        ctx.download_dir,
+        'Spotify Hits',
+        [{'filename': 'a.mp3'}, {'filename': 'b.mp3'}],
+    )
+    with pytest.raises(ManualPlaylistError) as caught:
+        reorder_manual_playlist(ctx, 'Spotify Hits', ['b.mp3', 'a.mp3'])
+    assert caught.value.status_code == 403
+
+
+def test_a_copy_keeps_repeated_songs(tmp_path, monkeypatch):
+    ctx = _plain_library(tmp_path, monkeypatch, 'a.mp3', 'b.mp3')
+    copied = copy_playlist(ctx, ['a.mp3', 'b.mp3', 'a.mp3'], 'Again')
+    assert copied['files'] == ['a.mp3', 'b.mp3', 'a.mp3']
+
+
 def test_source_cover_survives_edits_rename_and_does_not_change_audio(
     tmp_path,
 ):
@@ -270,6 +481,28 @@ def test_source_cover_survives_edits_rename_and_does_not_change_audio(
     assert {
         p: (p.read_bytes(), p.stat().st_mtime_ns) for p in original
     } == original
+
+
+def test_uploaded_cover_replaces_and_remove_restores_mosaic(
+    tmp_path, monkeypatch
+):
+    download = tmp_path / 'downloads'
+    ctx = LibraryContext(download_dir=download)
+    create_manual_playlist(ctx, 'Mix')
+    path = download / 'Playlists' / 'Mix.m3u'
+    monkeypatch.setattr(
+        manual_playlists, 'normalize_uploaded_cover', lambda *_: _JPEG
+    )
+
+    cover = manual_playlists.save_manual_playlist_cover(
+        ctx, 'Mix', b'validated image', 'image/png'
+    )
+
+    assert cover.read_bytes() == _JPEG
+    assert has_explicit_cover(path)
+    manual_playlists.remove_manual_playlist_cover(ctx, 'Mix')
+    assert not has_explicit_cover(path)
+    assert not cover.exists()
 
 
 def test_missing_explicit_image_allows_normal_mosaic_fallback(tmp_path):

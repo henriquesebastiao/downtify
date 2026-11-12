@@ -97,17 +97,39 @@
         <ExplicitBadge v-if="song.explicit" />
       </p>
       <p class="truncate text-[13px] text-muted">
-        {{ artists
-        }}<span v-if="song.album_name && !hideAlbum" class="lg:hidden">
-          · {{ song.album_name }}</span
+        <TrackArtistLinks
+          :artists="song.artists"
+          :fallback="song.artist || t('common.unknownArtist')"
+          only-known
+          :search-missing="searchLinks"
+        /><span v-if="song.album_name && !hideAlbum" class="lg:hidden">
+          ·
+          <RouterLink
+            v-if="albumLink"
+            :to="albumLink"
+            class="hover:text-fg hover:underline"
+            @click.stop
+            @dblclick.stop
+            >{{ song.album_name }}</RouterLink
+          ><template v-else>{{ song.album_name }}</template></span
         >
       </p>
     </div>
     <span
       v-if="!hideAlbum"
       class="hidden w-[30%] truncate text-[13px] text-muted lg:block"
-      >{{ song.album_name }}</span
     >
+      <!-- The album's Library page, or a search for it (albumLinkFor). -->
+      <RouterLink
+        v-if="albumLink"
+        :to="albumLink"
+        class="hover:text-fg hover:underline"
+        @click.stop
+        @dblclick.stop
+        >{{ song.album_name }}</RouterLink
+      >
+      <template v-else>{{ song.album_name }}</template>
+    </span>
     <span
       class="tabular hidden w-12 text-right text-[13px] text-muted sm:block"
     >
@@ -146,17 +168,21 @@
 // of TrackList without importing or editing either, so neither grid can be
 // affected by it. It takes a *song* (what a search or link result is), not a
 // library track, and finds the file behind it once it has been downloaded.
-import { computed } from 'vue'
+import { computed, onMounted } from 'vue'
+import { RouterLink } from 'vue-router'
 import AppIcon from '../ui/AppIcon.vue'
 import CoverArt from '../ui/CoverArt.vue'
 import EqBars from '../ui/EqBars.vue'
 import ExplicitBadge from '../ui/ExplicitBadge.vue'
 import DownloadState from '../search/DownloadState.vue'
 import SimilarButton from '../similar/SimilarButton.vue'
+import TrackArtistLinks from './TrackArtistLinks.vue'
+import { useLibrary } from '/src/model/library'
 import { usePlayer } from '/src/model/player'
 import { useSongPlay } from '/src/model/songPlay'
 import { deezerImage } from '/src/lib/deezerImage'
 import { formatDuration } from '/src/lib/format'
+import { albumLinkFor } from '/src/lib/library'
 import { useI18n } from '/src/i18n'
 
 const props = defineProps({
@@ -187,12 +213,29 @@ const props = defineProps({
   // Leaves out the album column (and the album after the artists on a
   // narrow screen) - for a list that is all one album anyway.
   hideAlbum: { type: Boolean, default: false },
+  // Whether an artist or album the Library doesn't have links to a search
+  // for it. Off where a page must not send anyone to Search (Discover):
+  // those names stay plain text, while what the Library has still links.
+  searchLinks: { type: Boolean, default: true },
 })
 
 const emit = defineEmits(['toggle'])
 
 const { t } = useI18n()
 const player = usePlayer()
+const library = useLibrary()
+
+// The album name links to the album in the Library, or to a search for it.
+// The albums index is fetched once and shared by every row.
+const albumLink = computed(() =>
+  albumLinkFor(library.albums.value, props.song, {
+    search: props.searchLinks,
+  })
+)
+onMounted(() => {
+  if (props.song.album_name && !props.hideAlbum)
+    library.ensureAlbums().catch(() => {})
+})
 const {
   isCurrent,
   loading,
@@ -203,12 +246,6 @@ const {
   ensurePlaying,
 } = useSongPlay(props)
 
-const artists = computed(
-  () =>
-    (props.song.artists || []).join(', ') ||
-    props.song.artist ||
-    t('common.unknownArtist')
-)
 const firstArtist = computed(
   () => (props.song.artists || [])[0] || props.song.artist || ''
 )

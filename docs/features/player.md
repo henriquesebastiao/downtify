@@ -25,20 +25,29 @@ A full-screen view tinted with colours picked from the current album cover:
 - **Sleep timer** — stop playback in 15, 30, 45, 60 or 90 minutes, or at the end of the current track. The remaining time shows next to the timer button
 - **File info** — format and size of the playing file
 
-Four panels sit next to the cover on wide screens, or replace it on phones:
+Five panels sit next to the cover on wide screens, or replace it on phones:
 
 - **Lyrics** — time-synced lyrics highlight the current line and scroll with the song; click a line to jump there. Plain lyrics are shown as-is. Lyrics come from the `.lrc` file next to the track, or those embedded in its tags — see [Lyrics](lyrics.md). You can hide this panel — see [Hiding the lyrics](#hiding-the-lyrics).
+- **Karaoke** — the same lyrics, made to be sung along to. The words take over the screen in very large, centred lines: the cover, title and artist move into the header next to the button that closes the view, in place of the *Playing from* label, the next song is named in that header on wide screens, the Up next column goes away, and the playback controls shrink — to a single row with the seek bar on wide screens — while all staying available. The current line fills in from left to right, and three dots count you in during the intro and instrumental gaps. Behind the words, stage smoke in the colours of the album cover rolls in from the top-right corner of the screen and reaches only the middle. The line being sung stays on a clear background. The smoke stops while the track is paused and is left out if your system asks for reduced motion. LRC files only time the start of each line, so the fill follows an estimate of how long the line lasts. Click a line to jump there. Plain lyrics are shown large, without the timing.
 - **Up next** — the play queue. Drag tracks to reorder them, remove single tracks, or clear everything after the current one.
 - **Details** — title, artist, album, track number, year, length, format, size, date added and file path.
 - **Equalizer** — shape the sound with ten frequency bands; see [Equalizer](#equalizer).
 
-Now playing is part of the page address (`?np=1`, plus `&panel=lyrics|queue|details|equalizer`), so the browser's Back button closes it and a reload keeps it open.
+Now playing is part of the page address (`?np=1`, plus `&panel=lyrics|karaoke|queue|details|equalizer`), so the browser's Back button closes it and a reload keeps it open.
+
+To project the karaoke, use the **Open in a new window** button in the Karaoke header, on wide screens. It opens the lyrics in a window of their own for a projector or second screen, and closes Now playing on the main screen so you can browse Downtify while people sing.
+
+The new window shows only the song, its cover, the next song and the karaoke lyrics, with no playback controls. Everything is controlled from the main window, and the projected one follows it at once: pressing play on a song replaces the one being sung immediately, while **Play next** and **Add to queue** line up the following ones without interrupting it.
+
+To set it up, drag the window to the projector and use the **Full screen** button in its bottom-right corner. The button and the mouse pointer disappear after a few seconds without moving the mouse. Your system has to extend the desktop to the projector rather than duplicate it. If the browser blocks the window, allow pop-ups for Downtify and press the button again.
+
+Keep the main window open, because the audio plays there. Moving between pages doesn't affect it. Reloading it pauses the music until you press play, and the projected window picks it up again by itself. Closing it stops the music and leaves the projected window waiting: close that one too and open a new one. Both windows must be in the same browser on the same computer.
 
 ## Hiding the lyrics
 
 Prefer the artwork and the queue without the words? Turn off **Settings → General → Player → Show lyrics in the player**. It applies at once, and takes away everything that leads to lyrics in the player:
 
-- the **Lyrics** panel and its tab (on phones, its button in the Now playing footer);
+- the **Lyrics** and **Karaoke** panels and their tabs (on phones, their buttons in the Now playing footer);
 - the lyrics button on the player bar;
 - the `L` shortcut, which is also dropped from the shortcut list (`?`).
 
@@ -74,7 +83,7 @@ iOS may pause Web Audio when the screen locks or you switch apps, which stops pl
 
 ## Building the queue
 
-Playing an album, artist, playlist or the track list queues those tracks in order, starting from the one you picked. **Shuffle** on a collection starts it in a random order. Tracks you haven't downloaded play in full right in the queue, served from the server's stream cache: while one plays, the next one is already being prepared one track ahead, so playback runs through undownloaded rows without stopping — even where the browser itself can't reach YouTube. A streamed track is never saved, liked or remembered across reloads.
+Playing an album, artist, playlist or the track list queues those tracks in order, starting from the one you picked. **Shuffle** on a collection starts it in a random order. Tracks you haven't downloaded play in full right in the queue, served from the server's stream cache: while one plays, the next one is already being prepared one track ahead, so playback runs through undownloaded rows without stopping — even where the browser itself can't reach YouTube. When matching an undownloaded track, the player skips search results more than 10 seconds away from its known duration. A streamed track is never saved, liked or remembered across reloads.
 
 Every track's menu (the **⋯** button, or right-click on desktop) has:
 

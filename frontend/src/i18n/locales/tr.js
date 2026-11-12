@@ -1,9 +1,210 @@
 export default {
+  artistSuggestions: {
+    title: 'Takip edilecek sanatçılar',
+    listening: 'Dinlediklerine göre',
+    library: 'Kitaplığına göre',
+    listeningHelp:
+      'En çok dinlediğin sanatçılar. Yakın zamandaki dinlemeler daha çok sayılır: bir dinlemenin ağırlığı her {days} günde yarıya iner.',
+    libraryHelp:
+      'Kitaplığında en çok parçası, ardından albümü olan sanatçılar.',
+    listens: { one: '{count} dinleme', other: '{count} dinleme' },
+    tracks: { one: '{count} parça', other: '{count} parça' },
+    albums: { one: '{count} albüm', other: '{count} albüm' },
+    follow: 'Takip et',
+    more: 'Daha fazla göster',
+    loading: 'Öneriler yükleniyor…',
+    empty: 'Şimdilik önerilecek başka sanatçı yok.',
+    failed: 'Öneriler yüklenemedi.',
+    retry: 'Tekrar dene',
+    choose: '{name} hangi sanatçı?',
+    chooseHelp:
+      'YouTube Music’te birden fazla sanatçı {name} olabilir. Fotoğrafları karşılaştır ya da profillerini aç, sonra doğru olanı takip et.',
+    notFound:
+      'YouTube Music’te {name} adında bir sanatçı bulunamadı. Bunun yerine sanatçının bağlantısını yapıştır.',
+    lookupFailed:
+      'Sanatçı araması kullanılamıyor. Yine de bir bağlantı yapıştırabilirsin.',
+    followProfile: 'Bu sanatçıyı takip et',
+    inspect: 'YouTube Music’te aç',
+    manual: 'Bağlantı yapıştır',
+    cancel: 'İptal',
+  },
+  trash: {
+    title: 'Çöp kutusu',
+    subtitle:
+      'Kitaplıktan çıkarılan parçalar, taşındıktan sonra {days} gün saklanır. O zamana kadar geri yükleyebilirsin.',
+    adminOnly: 'Bunu yalnızca yöneticiler görebilir',
+    adminOnlyHint:
+      'Bir parçayı geri yüklemesi için bu sunucunun bir yöneticisine başvur.',
+    off: 'Çöp kutusu kapalı',
+    offHint:
+      'Bu sunucuda parçalar kalıcı olarak silinir. Çöp kutusu sunucu yapılandırmasından açılır (DOWNTIFY_TRASH).',
+    inTrash: 'Çöp kutusunda',
+    exclusions: 'İndirmelerin dışında',
+    search: 'Çöp kutusunda ara',
+    restoreSelected: {
+      one: '{count} parçayı geri yükle',
+      other: '{count} parçayı geri yükle',
+    },
+    summary: {
+      one: '{count} parça · {size}',
+      other: '{count} parça · {size}',
+    },
+    empty: 'Çöp kutusu boş',
+    emptyHint:
+      'Kitaplıktan çöp kutusuna taşınan parçalar süreleri dolana kadar burada görünür.',
+    noMatch: 'Çöp kutusunda eşleşen bir şey yok',
+    select: '“{title}” seç',
+    keptUntil: '{date} tarihine kadar saklanır',
+    restore: 'Geri yükle',
+    retry: 'Yeniden dene',
+    previous: 'Önceki',
+    next: 'Sonraki',
+    exclusionsHint:
+      'Çöp kutusundaki süresi dolan parçalar. Otomatik indirmeler (Çalma Listesi İzleyici, takipler) sen yeniden izin verene kadar onları atlamaya devam eder.',
+    exclusionsEmpty: 'İndirmelerin dışında tutulan bir şey yok',
+    allowDownload: 'İndirmelere izin ver',
+    allowTitle: '“{title}” yeniden indirilebilsin mi?',
+    allowBody:
+      'Otomatik indirmeler onu yeniden alabilir. Şu anda hiçbir şey indirilmez.',
+    move: 'Çöp kutusuna taşı',
+    preparing: 'Dosyalar denetleniyor…',
+    confirmTitle: {
+      one: '{count} parça çöp kutusuna taşınsın mı?',
+      other: '{count} parça çöp kutusuna taşınsın mı?',
+    },
+    confirmBody:
+      'Yalnızca bu dosyalar, şarkı sözü dosyalarıyla birlikte taşınır. Herkes için kitaplıktan çıkarlar ve {days} gün boyunca geri yüklenebilirler. Çalma listeleri ve beğenileri onlarla birlikte geri gelir; bu sırada otomatik indirmeler onları atlar.',
+    confirmMore: {
+      one: 've {count} tane daha',
+      other: 've {count} tane daha',
+    },
+    pending: {
+      one: '{count} parça çöp kutusuna taşınıyor',
+      other: '{count} parça çöp kutusuna taşınıyor',
+    },
+    downloadBlocked:
+      'Müzik çöp kutusunda: bir yöneticinin yeniden izin vermesi gerekir.',
+    states: {
+      preview: 'Onay bekliyor',
+      pending: 'Taşınmayı bekliyor',
+      moving: 'Taşınıyor',
+      trashed: 'Çöp kutusunda',
+      restore_pending: 'Geri yüklenmeyi bekliyor',
+      restoring: 'Geri yükleniyor',
+      restored: 'Geri yüklendi',
+      purging: 'Süresi doluyor',
+      purged: 'Süresi doldu',
+      error: 'Durdu — dosyalar korundu',
+    },
+    errors: {
+      unavailable: 'Çöp kutusu şu anda kullanılamıyor. Hiçbir şey taşınmadı.',
+      admin_required: 'Çöp kutusunu yalnızca bir yönetici kullanabilir.',
+      admin_access_revoked: 'İsteyen hesap artık yönetici değil.',
+      atomic_move_unsupported:
+        'Bu depolama dosyaları güvenle taşıyamıyor. Hiçbir şey taşınmadı.',
+      confirmation_expired: 'Denetimin süresi doldu. Parçaları yeniden seç.',
+      confirmation_invalid: 'Bu onay senin hesabına veya seçimine ait değil.',
+      file_changed:
+        'Dosya denetimden sonra değişti. Yerinde kaldı; yeniden seç.',
+      file_changed_during_move:
+        'Dosya taşınırken değişti. Denetleyebilmen için çöp kutusunda tutuluyor.',
+      file_missing: 'Bir dosya eksik. Depolamayı denetle, sonra yeniden dene.',
+      filesystem_unavailable:
+        'Depolama kullanılamıyor. Denetle, sonra yeniden dene.',
+      identity_uncertain:
+        'Bu parçanın etiketleri onu otomatik indirmelerin dışında tutmaya yetmiyor. Hiçbir şey taşınmadı.',
+      invalid_path: 'Bu dosya çöp kutusunun kapsadığı klasörlerin dışında.',
+      invalid_selection: '1 ile 200 arasında parça seç.',
+      item_not_found: 'Bu parça artık kitaplıkta değil.',
+      library_task_active:
+        'Kitaplık iyileştirme çalışıyor. Bitmesini bekle ya da önce duraklat.',
+      nas_marker_changed:
+        'Depolama, çöp kutusunun beklediği depolama değil. Hiçbir şey taşınmadı.',
+      nas_marker_missing:
+        'Beklenen depolama bağlı değil. Hiçbir şey taşınmadı.',
+      operation_already_pending: 'Bu parça zaten yolda.',
+      operation_in_progress: 'Taşıma hâlâ sürüyor. Geri yüklemeden önce bekle.',
+      operation_not_complete: 'Geçerli adımın bitmesini bekle.',
+      preview_busy: 'Başka bir denetim sürüyor. Bitmesini bekle.',
+      preview_unavailable: 'Denetim yarıda kesildi. Parçaları yeniden seç.',
+      restore_collision:
+        'Orada zaten başka bir dosya var. Hiçbir şeyin üzerine yazılmadı; parça çöp kutusunda kalıyor.',
+      retention_expired: 'Çöp kutusundaki süresi doldu.',
+      root_unavailable: 'Müzik klasörü kullanılamıyor.',
+      track_is_playing: 'Biri bu parçayı çalıyor. Önce duraklat.',
+      trash_file_changed: 'Çöp kutusundaki kopya değişti. Silinmeyecek.',
+      trash_file_missing: 'Çöp kutusunda bir dosya eksik.',
+      trash_ignore_invalid:
+        'Çöp kutusu klasörünün .ignore dosyası boş değil. Hiçbir şey taşınmadı.',
+      trash_not_configured: 'Bu sunucuda çöp kutusu kapalı.',
+      trash_permissions_unsafe:
+        'Başkaları çöp kutusu klasörünü okuyabiliyor. İzinlerini denetle.',
+      unsafe_symlink: 'Yolda sembolik bağlantı var, bu yüzden dokunulmuyor.',
+      unsupported_collection:
+        'Bu parçanın klasörü çöp kutusunun kapsamında değil.',
+      unsupported_lyrics_location:
+        'Şarkı sözü klasörü çöp kutusunun kapsamında değil. Hiçbir şey taşınmadı.',
+    },
+  },
+  downloadPolicy: {
+    block: 'Stop downloading',
+    blocked: 'Downloads suspended for this track.',
+    confirm: 'Suspend downloads for this track?',
+    confirmHelp:
+      'New attempts will be blocked. A shared transfer already started may finish. Existing files will not be deleted.',
+    exclusions: 'Suspended tracks',
+    empty: 'No suspended tracks.',
+    resume: 'Allow again',
+    timeout: 'Attempt time limit reached',
+    manual: 'Suspended manually',
+    error: 'Could not change the suspension.',
+    alreadyActive: 'An attempt for this track is already in progress.',
+    budget: 'Cumulative attempt limit',
+    budgetHelp:
+      'Automatically suspend a track after this cumulative attempt time. Time between attempts is excluded. 0 disables the limit.',
+  },
   playlistNames: { restore: 'Restore source name' },
+  libraryOnly: {
+    title: 'Library-only mode',
+    active: 'Only music in your server library is available.',
+    enable: 'Use only the library',
+    hint: 'Search and similar tracks use your library. External music, previews, downloads and automatic watches are disabled.',
+    serverHint:
+      'Applies to all accounts, browsers and Android clients. Wait for external work to finish before enabling it. The phone still needs access to the server unless tracks are downloaded.',
+    empty: 'No matching tracks in the accessible library.',
+    similar:
+      'Similar tracks from saved library tags. No external provider is contacted.',
+  },
   playlistFavorites: {
     title: 'Favori çalma listeleri',
     add: 'Çalma listesini favorilere ekle',
     remove: 'Çalma listesini favorilerden kaldır',
+  },
+  normalization: {
+    level: 'Ses seviyesi',
+    levelNormal: 'Normal',
+    levelLouder: 'Daha yüksek',
+    levelMaximum: 'En yüksek',
+    levelHint:
+      'Ses, her parçanın ölçülen sınırları içinde artar. Dosyalarınız değişmez.',
+    title: 'Ses seviyesi normalleştirme',
+    hint: 'Ses dosyalarınızı değiştirmeden tüm şarkıları benzer bir ses seviyesinde çalın.',
+    enable: 'Çalma ses seviyesini normalleştir',
+    enableHint:
+      'Her şarkının ölçülen ses yüksekliğini kullanır, en fazla 12 dB yükseltir ve tepe noktalarının bozulmasını önler. Henüz ölçülmemiş şarkılar özgün seviyelerinde çalar.',
+    analysisHint:
+      'Analiz her şarkıyı arka planda bir kez okur; sonraki çalıştırmalar yalnızca yeni veya değişmiş dosyaları ölçer. Yeniden başlatmadan sonra bile asla kendiliğinden başlamaz.',
+    progress: '{done} / {total} analiz edildi · {failed} başarısız',
+    analyze: 'Kitaplığı analiz et',
+    pause: 'Analizi duraklat',
+    resume: 'Analizi sürdür',
+    pausing: 'Duraklatmadan önce geçerli dosyalar bitiriliyor…',
+    states: {
+      ready: 'Ölçülen ses seviyesi geçerli şarkıya uygulandı.',
+      silent: 'Sessiz şarkı: özgün seviye korunuyor.',
+      unanalysed: 'Bu şarkı henüz ölçülmedi: özgün seviye korunuyor.',
+      unavailable: 'Normalleştirme kullanılamıyor: özgün seviye korunuyor.',
+    },
   },
   externalPlaylistImport: {
     open: 'Import folder playlists',
@@ -19,6 +220,13 @@ export default {
     add: 'Add selected playlists ({count})',
     result:
       '{added} added · {existing} already present · {failed} need a new preview or could not be imported',
+  },
+  collaboration: {
+    canEdit: 'Şarkı ekleyip çıkarabilir',
+    copyHint:
+      'Bu liste kaynağını takip ediyor, bu yüzden başkaları şarkılarını düzenleyemez. Bunun yerine düzenlenebilir bir kopya paylaş: kopya senin kalır, orijinal de kaynağını takip etmeye devam eder.',
+    copy: 'Düzenlenebilir kopya paylaş',
+    byEditor: '{owner} tarafından · şarkı ekleyip çıkarabilirsin',
   },
   language: {
     name: 'Türkçe',
@@ -119,6 +327,7 @@ export default {
     hintYoutube:
       'YouTube Music şarkıları, albümleri, çalma listeleri ve sanatçıları',
     hintDeezer: 'Deezer parçaları, albümleri, çalma listeleri ve sanatçıları',
+    hintSoundcloud: 'SoundCloud parçaları',
     hintCsv: 'CSV içe aktar (Soundiiz, Exportify…)',
     downloading: 'Şimdi indiriliyor',
     waiting: {
@@ -174,7 +383,7 @@ export default {
     typeSingle: 'Single',
     typeEp: 'EP',
     unsupportedLink:
-      'Downtify bu bağlantıyı indiremiyor. Bir Spotify parçası, albümü veya çalma listesi ya da YouTube Music bağlantısı yapıştır.',
+      'Downtify bu bağlantıyı indiremiyor. Bir Spotify parçası, albümü veya çalma listesi, bir YouTube Music bağlantısı ya da bir SoundCloud parçası yapıştır.',
     tipSearchTitle: 'Adla ara',
     tipSearchBody:
       'Bir sanatçı, albüm veya şarkı yaz — sonuçlar YouTube Music’ten gelir.',
@@ -276,6 +485,7 @@ export default {
     openSpotify: 'Spotify’da aç',
     openYoutube: 'YouTube Music’te aç',
     openDeezer: "Deezer'da aç",
+    openSoundcloud: 'SoundCloud’da aç',
     filterAll: 'Tümü',
     filterNew: 'Yeni',
     filterLibrary: 'Kitaplıkta',
@@ -291,6 +501,17 @@ export default {
     playCountYoutubeMusic: 'YouTube Music’teki dinlenme sayısı (yaklaşık)',
   },
   queue: {
+    globalPause: 'İndirmeleri ve izlemeyi duraklat',
+    globalResume: 'İndirmeleri ve izlemeyi sürdür',
+    globalTitle: 'Sunucu etkinliği',
+    globalHint:
+      'Yeni indirmeler ve kontroller bekler. Etkin işler tamamlanır ve kuyruk korunur.',
+    globalPaused: 'İndirmeler ve izleme duraklatıldı.',
+    globalDraining: 'Etkin iş tamamlanıyor…',
+    globalRetry: 'Durumu kontrol et',
+    globalFailed: 'Değişiklik doğrulanamadı.',
+    globalAdmin: 'Web yöneticisi oturumu gerekli.',
+    globalExpired: 'Oturum sona erdi. Yeniden giriş yapın.',
     title: 'Kuyruk',
     tabActive: 'Devam eden',
     tabQueued: 'Bekleyen',
@@ -303,6 +524,19 @@ export default {
     retryFailed: 'Başarısızları yeniden dene ({count})',
     clearDone: 'Tamamlananları temizle ({count})',
     clearAll: 'Kuyruğu temizle',
+    pause: 'İndirmeleri duraklat',
+    resume: 'İndirmeleri sürdür',
+    pauseFailed: 'Kuyruk değiştirilemedi. Tekrar deneyin.',
+    pausingTitle: 'İndirmeler duraklatılıyor…',
+    pausingBody: {
+      one: '{count} indirmenin bitmesi bekleniyor. Yeni indirme başlamayacak.',
+      other:
+        '{count} indirmenin bitmesi bekleniyor. Yeni indirme başlamayacak.',
+    },
+    pausedTitle: 'İndirmeler duraklatıldı',
+    pausedBody: 'Sürdürülene kadar yeni indirme başlamayacak.',
+    pausedKept:
+      'Bekleyen şarkılar, Downtify yeniden başlasa veya güncellense bile kuyrukta kalır.',
     emptyTitle: 'Kuyrukta bir şey yok',
     emptyBody:
       'Müzik ara ya da bir bağlantı yapıştır — indirmeler burada görünür.',
@@ -320,14 +554,16 @@ export default {
     },
     showMore: '{count} tane daha göster',
     statusQueued: 'Bekliyor',
+    statusPaused: 'Duraklatıldı',
     statusDone: 'İndirildi',
     retry: 'Tekrar dene',
     remove: 'Kuyruktan kaldır',
     failedGeneric: 'İndirme başarısız oldu.',
     overridePlaceholder:
-      'Ses olarak kullanılacak YouTube bağlantısını yapıştır',
+      'Ses olarak kullanılacak YouTube veya SoundCloud bağlantısını yapıştır',
     useLink: 'Bu bağlantıyı kullan',
-    invalidYoutube: 'Bu bir YouTube video bağlantısına benzemiyor.',
+    invalidAudioLink:
+      'Bu bir YouTube video ya da SoundCloud parça bağlantısına benzemiyor.',
     playlistDownloads: 'Çalma listesi indirmeleri',
     sources: 'İndirme kaynağı',
     noSourcesYet: 'Tamamlanan indirmeler kaynaklarını burada gösterir.',
@@ -362,6 +598,8 @@ export default {
       artistDesc: 'Sanatçı (Z–A)',
       albumAsc: 'Albüm (A–Z)',
       albumDesc: 'Albüm (Z–A)',
+      releaseNewest: 'En yeni çıkanlar önce',
+      releaseOldest: 'En eski çıkanlar önce',
       longest: 'Önce en uzun',
       shortest: 'Önce en kısa',
     },
@@ -388,6 +626,7 @@ export default {
     downloadZip: 'ZIP olarak indir',
     saveToDevice: 'Bu cihaza kaydet',
     upgrade: 'Kitaplığı iyileştir',
+    storage: 'Depolama ve kullanım',
   },
   likes: {
     like: 'Beğenilen şarkılara ekle',
@@ -508,14 +747,142 @@ export default {
     stageWriting: 'Dosya yazılıyor',
     loadFailed: 'Kitaplık iyileştirmesi yüklenemedi',
   },
+  usage: {
+    title: 'Depolama ve kullanım',
+    subtitle:
+      'Kitaplığın ne kadar büyük olduğu, ne hızla büyüdüğü ve nereden geldiği.',
+    adminOnly: 'Bunu yalnızca yöneticiler görebilir',
+    adminOnlyHint:
+      'Depolama rakamlarını bu sunucunun bir yöneticisinden isteyin.',
+    loadFailed: 'Depolama rakamları yüklenemedi.',
+    tileLibrary: 'Kitaplık',
+    tileAdded: {
+      one: 'Son gün eklenen',
+      other: '{count} günde eklenen',
+    },
+    tileGrowth: 'Net değişim',
+    tileFree: 'Boş alan',
+    tileDownloads: 'İndirilen',
+    tileCleanup: 'Boşaltılabilir',
+    songs: {
+      one: '{count} şarkı',
+      other: '{count} şarkı',
+    },
+    files: {
+      one: '{count} dosya',
+      other: '{count} dosya',
+    },
+    perWeekRate: 'Haftada {size}',
+    ofTotal: '{total} içinden',
+    daysLeft: {
+      one: '{total} içinden · bu hızla yaklaşık {count} günde dolar',
+      other: '{total} içinden · bu hızla yaklaşık {count} günde dolar',
+    },
+    downloadsShort: '{skipped} atlandı · {failed} başarısız',
+    growthTitle: 'Kitaplık boyutu',
+    growthHint: 'Her günün sonunda kitaplık, slskd çalışma kopyaları hariç.',
+    estimated: 'Dosya tarihlerinden tahmin edildi',
+    estimatedNote:
+      '{date} öncesinde boyut, hâlâ kitaplıkta olan şarkıların tarihlerinden tahmin edilir; o zamandan beri silinen şarkılar dahil değildir.',
+    allEstimatedNote:
+      'Downtify bundan sonra kitaplık boyutunu her saat not eder. Önceki günler, hâlâ kitaplıkta olan şarkıların tarihlerinden tahmin edilir.',
+    addedPerDay: 'Günlük eklenen',
+    addedPerWeek: 'Haftalık eklenen',
+    sourcesTitle: 'Kaynağa göre',
+    sourcesHint: {
+      one: 'Sesin nereden geldiği ve her kaynağın son gün ne eklediği.',
+      other:
+        'Sesin nereden geldiği ve her kaynağın son {count} günde ne eklediği.',
+    },
+    addedInPeriod: {
+      one: '+{size} · dönemde {count} şarkı',
+      other: '+{size} · dönemde {count} şarkı',
+    },
+    emptyLibrary: 'Kitaplık boş.',
+    whereTitle: 'Nerede saklandığı',
+    byLocation: 'Klasör',
+    byFormat: 'Biçim',
+    location: {
+      downloads: 'İndirilenler klasörü',
+      slskd: 'slskd klasörü',
+      folders: 'Ek müzik klasörleri',
+    },
+    unknown: 'Bilinmiyor',
+    downloadsTitle: 'İndirmeler',
+    downloadsHint: {
+      one: 'Kuyruktan ve Çalma Listesi İzleyicisinden yapılan indirmelerin son gün nasıl sonuçlandığı. Her deneme sayılır.',
+      other:
+        'Kuyruktan ve Çalma Listesi İzleyicisinden yapılan indirmelerin son {count} günde nasıl sonuçlandığı. Her deneme sayılır.',
+    },
+    outcome: {
+      completed: 'Tamamlandı',
+      skipped: 'Atlandı',
+      failed: 'Başarısız',
+    },
+    perDay: 'Günlük',
+    perWeek: 'Haftalık',
+    downloadedBySource: 'Kaynağa göre indirilen · {size}',
+    noDownloads: 'Bu dönemde hiçbir şey indirilmedi.',
+    logEmptyNote:
+      'Henüz hiçbir indirme sayılmadı: Downtify bunları bu sürümden itibaren sayar.',
+    logSinceNote: 'İndirmeler {date} tarihinden beri sayılıyor.',
+    cleanupTitle: 'Temizlenebilir',
+    cleanupHint:
+      'Downtify’ın gereksiz ya da artakalan olarak tanıyabildiği alan. Buradan hiçbir şey silinmez.',
+    duplicatesTitle: 'Yinelenen şarkılar',
+    duplicatesHint:
+      '{exact} aynı dosya olarak iki kez saklanmış, {likely} büyük olasılıkla başka bir kaynaktan gelen aynı şarkı. Boyut, yalnızca en büyük kopyayı tutmanın boşaltacağı alandır.',
+    duplicateKind: {
+      exact: 'Aynı dosya',
+      likely: 'Büyük olasılıkla aynı şarkı',
+    },
+    workingTitle: 'slskd çalışma kopyaları',
+    workingHint:
+      'Downtify kitaplığa kopyaladıktan sonra slskd klasöründe kalan Soulseek aktarımları.',
+    workingInPlace:
+      'slskd dosyaları yerinde bırakılıyor, yani slskd klasörü kitaplığın bir parçası.',
+    leftoversTitle: 'Artakalan geçici dosyalar',
+    leftoversHint: 'Bir saatten eski yarım kalmış indirmeler ve dönüştürmeler.',
+    orphansTitle: 'Sahipsiz yan dosyalar',
+    orphansHint:
+      'Şarkıları artık olmayan şarkı sözü dosyaları ve albüm kapakları.',
+    foldersTitle: 'Klasörler',
+    foldersHint: 'Downtify’ın yazdığı klasörlerdeki her şey, türüne göre.',
+    rescan: 'Yeniden tara',
+    scanFailed: 'Klasörler taranamadı.',
+    scanning: 'Klasörler taranıyor…',
+    scannedAt: '{when} tarandı, {seconds} sn sürdü',
+    folder: {
+      downloads: 'İndirilenler klasörü',
+      slskd: 'slskd klasörü',
+      lyrics: 'Şarkı sözleri klasörü',
+    },
+    kind: {
+      audio: 'Şarkılar',
+      podcasts: 'Podcast’ler',
+      lyrics: 'Şarkı sözleri',
+      images: 'Görseller',
+      playlists: 'Çalma listeleri',
+      metadata: 'Sanatçı fotoğrafları ve profilleri',
+      temporary: 'Geçici dosyalar',
+      other: 'Diğer',
+    },
+  },
   album: {
     kicker: 'Albüm',
     notFound: 'Albüm bulunamadı',
     moreBy: '{artist} sanatçısından daha fazlası',
     searchMore: 'YouTube Music’te bul',
     delete: 'Albümü sil',
+    markCompilation: 'Çeşitli Sanatçılar olarak işaretle',
+    unmarkCompilation: 'Çeşitli Sanatçılar işaretini kaldır',
+    markedCompilation: 'Albüm Çeşitli Sanatçılar olarak işaretlendi',
+    unmarkedCompilation: 'Albüm artık Çeşitli Sanatçılar değil',
+    compilationPartial: 'Bazı parçalar değiştirilemedi',
+    compilationFailed: 'Albüm değiştirilemedi',
   },
   artist: {
+    guest: 'Konuk',
     kicker: 'Sanatçı',
     notFound: 'Sanatçı bulunamadı',
     findMore: 'Daha fazlasını bul',
@@ -582,6 +949,23 @@ export default {
   },
   playlists: {
     kicker: 'Çalma listesi',
+    diagnostics: {
+      title: 'Çalma listesi tanılaması',
+      check: 'Denetle',
+      refresh: 'Yenile',
+      unavailable: 'Bu çalma listesi için tanılama kullanılamıyor.',
+      items: {
+        spotify_tracks: 'Spotify parçaları',
+        downloaded: 'Downtify tarafından indirildi',
+        physical_files: 'Bulunan dosyalar',
+        track_index: 'TrackIndex eşlemeleri',
+        monitor_history: 'Monitor geçmişi',
+        navidrome_matched: 'Navidrome’da eşleşenler',
+        navidrome_rows: 'Navidrome çalma listesi satırları',
+        missing_files: 'Eksik dosyalar',
+        orphan_files: 'Bağlantısız dosyalar',
+      },
+    },
     notFound: 'Çalma listesi bulunamadı',
     progress: '{total} parçadan {have} tanesi indirildi',
     missingShort: { one: '{count} eksik', other: '{count} eksik' },
@@ -618,6 +1002,26 @@ export default {
     },
     alreadyIn: 'Zaten “{name}” içinde',
     removedTrack: '“{name}” listesinden çıkarıldı',
+    reorder: 'Yeniden sırala',
+    reorderHint:
+      'Şarkıları sürükle ya da okları kullan, ardından yeni sırayı kaydet.',
+    reorderSave: 'Sırayı kaydet',
+    reordered: 'Sıra kaydedildi',
+    reorderStale:
+      'Bu liste bu arada başka biri tarafından değiştirildi. Yeniden yüklendi: tekrar sırala.',
+    moveUp: 'Yukarı taşı',
+    moveDown: 'Aşağı taşı',
+    moveTop: 'En üste taşı',
+    moveBottom: 'En alta taşı',
+    repeatTitle: 'Zaten bu listede',
+    repeatBody: {
+      one: 'Bu şarkı zaten “{name}” içinde. Yeniden eklensin mi?',
+      other:
+        'Bu şarkılardan {count} tanesi zaten “{name}” içinde. Yeniden eklensin mi?',
+    },
+    repeatConfirm: 'Yine de ekle',
+    repeatCancel: 'Ekleme',
+    inPlaylist: 'Zaten eklendi',
     hideTrack: 'Listeden gizle',
     hiddenTrack: '“{name}” listesinden gizlendi',
     hiddenTitle: {
@@ -639,6 +1043,12 @@ export default {
     nothingYet: 'Henüz indirilen parça yok',
     nothingYetHint: 'Parçalar indirildikçe burada görünür.',
     nothingYetManualHint: 'Kitaplığından şarkı ekle.',
+    uploadCover: 'Kapak yükle',
+    removeCover: 'Kapağı kaldır',
+    coverSaved: 'Çalma listesi kapağı kaydedildi',
+    coverRemoved: 'Çalma listesi kapağı kaldırıldı',
+    coverInvalid: 'JPEG, PNG veya WebP görseli seç.',
+    coverTooLarge: 'Görsel en fazla 10 MiB olmalıdır.',
   },
   track: {
     title: 'Başlık',
@@ -646,6 +1056,7 @@ export default {
     album: 'Albüm',
     trackNumber: 'Parça',
     year: 'Yıl',
+    releaseDate: 'Çıkış tarihi',
     length: 'Süre',
     format: 'Biçim',
     size: 'Boyut',
@@ -653,12 +1064,23 @@ export default {
     file: 'Dosya',
   },
   player: {
+    unlockLayout: 'Oynatıcı düzeninin kilidini aç',
+    lockLayout: 'Oynatıcı düzenini kilitle',
+    resetLayout: 'Oynatıcı düzenini sıfırla',
+    resizeTrackSection: 'Parça bilgileri bölümünü yeniden boyutlandır',
+    resizeTransportSection: 'Oynatma kontrolleri bölümünü yeniden boyutlandır',
     nowPlaying: 'Şimdi çalıyor',
     openNowPlaying: 'Şimdi çalanı aç',
     closeNowPlaying: 'Şimdi çalanı kapat',
     queue: 'Kuyruk',
     upNext: 'Sıradaki',
     lyrics: 'Şarkı sözleri',
+    karaoke: 'Karaoke',
+    karaokeWindow: 'Yeni pencerede aç',
+    karaokeWindowBlocked:
+      'Tarayıcı yeni pencereyi engelledi. Downtify için açılır pencerelere izin verip yeniden deneyin.',
+    karaokeWaiting: 'Ana Downtify penceresinden şarkı bekleniyor',
+    fullscreen: 'Tam ekran',
     details: 'Ayrıntılar',
     playing: 'Çalıyor',
     play: 'Çal',
@@ -731,6 +1153,8 @@ export default {
     equalizerError: 'Ekolayzır başlatılamadı. Çalma onsuz devam ediyor.',
   },
   monitor: {
+    tableColumns: 'Sütunlar',
+    resetTableColumns: 'Sütunları sıfırla',
     releaseTypes: 'İndir',
     releaseTypesAtLeastOne: 'En az bir yayın türü bırakın',
     release: { album: 'Albümler', single: 'Single’lar', ep: 'EP’ler' },
@@ -782,7 +1206,7 @@ export default {
     urlLabelPlaylist: 'Çalma listesi bağlantısı',
     urlLabelArtist: 'Sanatçı bağlantısı',
     urlPlaceholderPlaylist:
-      'Spotify veya YouTube Music çalma listesi bağlantısı yapıştır',
+      'Spotify, Deezer veya YouTube Music çalma listesi bağlantısı yapıştır',
     urlPlaceholderArtist:
       'Spotify veya YouTube Music sanatçı bağlantısı yapıştır',
     watchPlaylist: 'Çalma listesini izle',
@@ -831,9 +1255,128 @@ export default {
     saved: 'İzleme güncellendi',
     retargeted: 'Artık {name} izleniyor',
   },
+  watchStats: {
+    colActivity: 'Etkinlik',
+    colStorage: 'Depolama',
+    period: 'Dönem',
+    days: { one: '{count} gün', other: '{count} gün' },
+    totalNew: { one: 'Son günde yeni', other: '{count} günde yeni' },
+    totalSongs: 'İzlemelerden gelen şarkılar',
+    totalSize: 'Diskte',
+    totalShared: 'Birden fazla izlemede',
+    statsFailed: 'İstatistikler yüklenemedi.',
+    rateWeekShort: '{rate}/hafta',
+    sharedShort: '+{count} ortak',
+    activityTooltip:
+      'Son {count} günde {added} yeni · haftada {rate} · {trend}',
+    storageTooltip:
+      '{unique} yalnızca bu izlemede · {shared} diğer izlemelerle ortak',
+    sortActivity: 'Son etkinlik',
+    sortRate: 'Ortalama hız',
+    sortGrowth: 'Depolama artışı',
+    sortStorage: 'Kendine ait depolama',
+    sortContributed: 'İndirilen şarkılar',
+    details: 'Etkinlik ve şarkılar',
+    openInLibrary: 'Kitaplıkta aç',
+    notFound: 'İzleme bulunamadı',
+    notFoundHint: 'Kaldırılmış ya da başka bir hesaba ait olabilir.',
+    since: '{date} tarihinden beri izleniyor',
+    tileSongs: 'Diskteki şarkılar',
+    tileDownloaded: 'Kendisi indirdi',
+    tileLinked: 'Zaten kitaplıkta',
+    tileUnique: 'Yalnızca bu izlemede',
+    tileUniqueHint: {
+      one: 'Başka hiçbir izlemede olmayan {count} şarkı',
+      other: 'Başka hiçbir izlemede olmayan {count} şarkı',
+    },
+    tileShared: 'Ortak',
+    tileSharedHint: '{size}, diğer izlemelerde de var, bir kez saklanır',
+    tileFailing: 'Başarısız',
+    unknownNote: {
+      one: '{count} şarkı, Downtify şarkıların bir izlemeye nasıl girdiğini kaydetmeden önce eklendi.',
+      other:
+        '{count} şarkı, Downtify şarkıların bir izlemeye nasıl girdiğini kaydetmeden önce eklendi.',
+    },
+    missingNote: {
+      one: 'Bu izlemenin kaydettiği {count} şarkı artık diskte değil.',
+      other: 'Bu izlemenin kaydettiği {count} şarkı artık diskte değil.',
+    },
+    activityTitle: 'Etkinlik',
+    activityHint:
+      'Eklediği yeni şarkılar: kitaplığında zaten olanlar ve ilk kontrolüyle gelenler hariç.',
+    newSongsLabel: { one: 'yeni şarkı eklendi', other: 'yeni şarkı eklendi' },
+    rateDay: 'Günde',
+    rateWeek: 'Haftada',
+    rateMonth: 'Ayda',
+    trendUp: 'Son zamanlarda daha çok ekliyor',
+    trendDown: 'Son zamanlarda daha az ekliyor',
+    trendSteady: 'Sabit hız',
+    trendIdle: 'Son zamanlarda yeni bir şey yok',
+    trendNew: 'Söylemek için çok yeni',
+    periodGrowth: '{size} yeni ses',
+    periodLinked: {
+      one: '{count} tanesi daha zaten kitaplığındaydı',
+      other: '{count} tanesi daha zaten kitaplığındaydı',
+    },
+    periodInitial: {
+      one: '{count} tanesi ilk kontrolle geldi',
+      other: '{count} tanesi ilk kontrolle geldi',
+    },
+    periodUnknown: {
+      one: 'Bunlardan {count} tanesi, Downtify nasıl geldiğini kaydetmeden önce kaydedildi',
+      other:
+        'Bunlardan {count} tanesi, Downtify nasıl geldiğini kaydetmeden önce kaydedildi',
+    },
+    barsPerDay: 'Günlük yeni şarkılar',
+    barsPerWeek: 'Haftalık yeni şarkılar',
+    providersTitle: 'Sesin geldiği yer',
+    failuresTitle: {
+      one: '{count} şarkı başarısız olmaya devam ediyor',
+      other: '{count} şarkı başarısız olmaya devam ediyor',
+    },
+    attempts: { one: '{count} deneme', other: '{count} deneme' },
+    lastTried: 'son deneme {when}',
+    songsTitle: 'Bu izlemeden gelen şarkılar',
+    songsHint:
+      'En yeniler önce, o zamandan beri listeden çıkan şarkılar dahil. Çalmak, bir listeye eklemek ya da silmek için bazılarını seç.',
+    filter: {
+      all: 'Tümü',
+      recent: { one: 'Son gün', other: 'Son {count} gün' },
+      downloaded: 'Kendisi indirdi',
+      linked: 'Zaten kitaplıkta',
+      unknown: 'Kayıttan önce',
+    },
+    noSongs: 'Diskte bu izlemeden şarkı yok',
+    noSongsHint:
+      'Bir kontrol onları indirdiğinde ya da kitaplığında bulduğunda burada görünürler.',
+  },
+  origin: {
+    menu: 'Nereden geldi',
+    title: 'Bu şarkı nereden geldi',
+    body: 'Onu kitaplığına getiren çalma listesi izlemeleri.',
+    failed: 'Bu şarkının nereden geldiği yüklenemedi.',
+    firstTitle: 'İlk indiren',
+    none: 'Hiçbir izleme indirmedi: elle indirildi ya da Downtify bunu kaydetmeden önce indirildi.',
+    otherAccount: 'Başka bir hesabın izlemesi',
+    backfill: 'İlk kontrol',
+    estimated: 'Muhtemelen',
+    gone: 'Bu izleme kaldırıldı ya da artık başka bir bağlantıyı izliyor.',
+    watchesTitle: { one: '{count} izlemede', other: '{count} izlemede' },
+    noWatches: 'Şu anda hiçbir izlemede yok.',
+    others: {
+      one: 'Bunlardan {count} tanesi başka bir hesaba ait.',
+      other: 'Bunlardan {count} tanesi başka hesaplara ait.',
+    },
+    oneFile: 'Tek bir dosya: tüm izlemeler aynı kopyayı gösteriyor.',
+    outcome: {
+      downloaded: 'İndirdi',
+      linked: 'Zaten kitaplıkta',
+      unknown: 'Kayıttan önce',
+    },
+  },
   sharing: {
     title: '“{name}” paylaş',
-    hint: 'Paylaştığın kişiler listeyi çalabilir, takip edebilir ve kopyasını kaydedebilir; ama değiştiremez.',
+    hint: 'Paylaştığın kişiler listeyi çalabilir, takip edebilir ve kopyasını kaydedebilir. Yalnızca düzenlemesine izin verdiklerin şarkı ekleyip çıkarabilir.',
     private: 'Özel',
     privateHint: 'Yalnızca sen görebilirsin.',
     shared: 'Belirli kişiler',
@@ -870,7 +1413,7 @@ export default {
     },
     sharedWithMe: 'Benimle paylaşılanlar',
     sharedWithMeHint:
-      'Başkalarının seninle paylaştığı listeler. Çalabilirsin ama değiştiremezsin.',
+      'Başkalarının seninle paylaştığı listeler. Çalabilirsin; sahibinin izin verdiği listelere şarkı ekleyip çıkarabilirsin.',
     publicPlaylists: 'Herkese açık listeler',
     publicPlaylistsHint:
       'Bu sunucudaki herkesle paylaşılır. Kenar çubuğunda tutmak için birini takip et.',
@@ -934,6 +1477,9 @@ export default {
     sourceYtmHint: 'En iyi meta veri eşleşmeleri',
     sourceYt: 'YouTube',
     sourceYtHint: 'YouTube Music’te olmayan şarkılar için yedek',
+    sourceSoundcloud: 'SoundCloud',
+    sourceSoundcloudHint:
+      'Başka yerde olmayan yüklemeler ve SoundCloud bağlantılarının kendi parçası',
     deemixTitle: 'Deemix',
     deemixHint:
       'Download from your own Deemix server. Requested quality requires the matching Deezer entitlement.',
@@ -945,6 +1491,20 @@ export default {
     deemixLocal: 'Same folder inside Downtify (read-only is supported)',
     deemixQuality: 'Audio quality',
     slskdTitle: 'slskd',
+    slskdFormats: 'Biçim önceliği',
+    slskdFormatsHint:
+      'Virgülle ayrılmış uzantıları en yüksek öncelikliden başlayarak yazın (ör. flac, mp3).',
+    slskdMinBitrate: 'Kayıplı biçimler için minimum bit hızı',
+    slskdMinBitrateHint:
+      'Katı modda bu değerin altındaki veya bit hızı bildirilmemiş kayıplı dosyalar reddedilir. FLAC etkilenmez.',
+    slskdAttempts: 'Aday denemeleri',
+    slskdAttemptsHint:
+      'Katı modda her biçim için bu kadar aday denenir; diğer durumda toplam sayıdır.',
+    slskdStrictPriority: 'Katı biçim önceliği',
+    slskdStrictPriorityHint:
+      'Listelenen biçimleri sırayla dene ve her biçimdeki eşleşmeleri puanla.',
+    slskdWhitelist: 'Yalnızca listelenen biçimlere izin ver',
+    slskdWhitelistHint: 'Uzantısı listede olmayan sonuçları reddet.',
     slskdHint:
       'Soulseek’ten slskd sunucun üzerinden indir. Bulunamayan parçalar sonraki kaynağa geçer.',
     slskdEnabled: 'slskd kullan',
@@ -957,7 +1517,7 @@ export default {
     slskdQueuedTimeout: 'Kuyruk zaman aşımı',
     slskdInPlace: 'Dosyaları slskd klasöründe bırak',
     slskdInPlaceHint:
-      'İndirme klasörüne kopyalamak yerine slskd’nin kaydettiği yerde etiketle.',
+      'Açık: dosyaları yerinde etiketle ve koru. Kapalı: İndirilenler klasörüne kopyalayıp etiketle; kaynak yalnızca içe aktarma başarılı olursa silinir. Hata olursa kaynak korunur.',
     youtubeTitle: 'YouTube',
     cookies: 'YouTube çerezleri',
     cookiesHint:
@@ -973,9 +1533,13 @@ export default {
     audioGroup: 'Ses',
     format: 'Biçim',
     formatHint: 'YouTube’dan indirilen dosyalar bu biçime dönüştürülür.',
+    formatOriginal: 'Orijinal',
+    formatOriginalHint:
+      'Yeniden kodlamadan kullanılabilen en iyi ses akışını korur. Dosya uzantısı kaynağa bağlıdır.',
     bitrate: 'Kalite',
     bitrateHint: 'Kayıplı biçimler için bit hızı.',
     bitrateLossless: 'Kayıpsız olan FLAC için kullanılmaz.',
+    bitrateOriginal: 'Orijinal ses biçimi korunurken kullanılmaz.',
     filesGroup: 'Dosyalar',
     template: 'Dosya adı',
     templateHint: 'Klasör oluşturmak için / kullan.',
@@ -1210,9 +1774,14 @@ export default {
   auth: {
     signInTitle: 'Downtify’a giriş yap',
     signInBody: 'Kullanıcı adınız ve parolanızla giriş yapın.',
+    signInBodyOidcOnly: 'Kimlik sağlayıcınızla giriş yapın.',
     username: 'Kullanıcı adı',
     password: 'Parola',
     signIn: 'Giriş yap',
+    oidcSignIn: 'Kimlik sağlayıcısıyla devam et',
+    or: 'veya',
+    oidcFailed:
+      'Kimlik sağlayıcısıyla giriş yapılamadı. Lütfen tekrar deneyin.',
     wrongPassword: 'Kullanıcı adı veya parola yanlış',
     tooMany: 'Çok fazla deneme. Birkaç dakika bekleyip tekrar deneyin.',
     forgotHint:
@@ -1271,6 +1840,12 @@ export default {
     androidUnreleased:
       'Henüz hiçbir sürüm yayımlanmadı: uygulama hâlâ geliştirme aşamasında, dolayısıyla şimdilik kurulacak bir şey yok.',
     androidRepo: 'Depoyu görüntüle',
+    iosGroup: 'iOS için Downtify',
+    iosHint:
+      'Bu sunucudaki kitaplığınıza göz atmanızı ve müzik çalmanızı sağlayan iPhone ve iPad uygulaması.',
+    iosBody:
+      'Hesabınızla giriş yapın veya uygulamayı bu sayfadaki bir kodla eşleştirin. Kitaplığınıza göz atın, müzik çalın, çevrimdışı dinlemek için şarkıları kaydedin ve kilit ekranından oynatmayı kontrol edin.',
+    iosRepo: 'Depoyu görüntüle',
   },
   replace: {
     menu: 'Sesi değiştir…',
@@ -1278,7 +1853,8 @@ export default {
     body: 'Yanlış şarkı ya da sürüm mü? Doğrusunu seçin. Dosya adını, etiketlerini, kapağını ve sözlerini korur, çalma listelerinde kalır.',
     current: 'Şu an',
     search: 'Ara',
-    searchHint: 'Ya da bir YouTube veya YouTube Music bağlantısı yapıştırın.',
+    searchHint:
+      'Ya da bir YouTube, YouTube Music veya SoundCloud bağlantısı yapıştırın.',
     searchButton: 'Ara',
     results: 'Seçilecek sürümler',
     none: 'Bir şey bulunamadı. Başka sözcükler deneyin ya da bağlantı yapıştırın.',
@@ -1440,6 +2016,7 @@ export default {
       unlike: 'Kaldırılan beğeniler',
       delete: 'Silinen dosyalar',
       audio_replaced: 'Değiştirilen sesler',
+      album_compilation: 'İşaretlenen derlemeler',
       library_hidden: 'Kullanıcılardan gizlenen öğeler',
       library_shown: 'Kullanıcılara gösterilen öğeler',
       device_paired: 'Eşlenen uygulamalar',
@@ -1460,6 +2037,8 @@ export default {
       unlike: 'beğeniyi kaldırdı: {what}',
       delete: 'sildi: {what}',
       audio_replaced: 'şunun sesini değiştirdi: {what}',
+      album_compilation:
+        '{what} albümünün Çeşitli Sanatçılar derlemesi olup olmadığını değiştirdi',
       library_hidden: '{what} öğesini kullanıcılardan gizledi',
       library_shown: '{what} öğesini kullanıcılara gösterdi',
       device_paired: 'eşledi: {what}',

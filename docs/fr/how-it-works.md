@@ -63,7 +63,9 @@ Un lien Deezer de titre/album/playlist/artiste collé (`deezer.com/track/…`) f
 | Tag | Écrit |
 |-----|---------|
 | Titre | Oui |
-| Artiste(s) | Oui |
+| Artiste(s) | Oui, tous les artistes crédités, aussi un par valeur dans un tag `ARTISTS` |
+| Artiste de l’album | Oui, l’artiste de l’album tel que la source le crédite, sinon le premier artiste |
+| Indicateur de compilation | Seulement pour un album que la source crédite à « Various Artists », ou qu’un administrateur marque comme tel |
 | Album | Oui |
 | Année | Oui |
 | Pochette (JPEG) | Oui |
@@ -80,4 +82,4 @@ Downtify diffuse la progression des téléchargements vers le navigateur via une
 
 Le nom du fichier de sortie est construit à partir du modèle configuré dans les Paramètres (par défaut : `{artists} - {title}`). Les caractères invalides dans les noms de fichiers sont supprimés.
 
-Quand *Classer par artiste* est activé, le fichier est placé dans un sous-dossier portant le nom de l’artiste principal. Sinon, les titres seuls vont à la racine du répertoire de téléchargements et les titres de playlists/albums vont dans un sous-dossier par playlist ou par album.
+Quand *Classer par artiste* est activé, le fichier est placé dans un sous-dossier portant le nom de l’artiste de l’album — ou, pour un titre d’une compilation multi-artistes, de son premier artiste. Sinon, les titres seuls vont à la racine du répertoire de téléchargements et les titres de playlists/albums vont dans un sous-dossier par playlist ou par album. Voir [Plusieurs artistes et compilations](features/file-organization.md#several-artists-and-compilations).

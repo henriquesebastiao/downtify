@@ -124,6 +124,30 @@ describe('applyVisibility', () => {
     ).toEqual(['artist', 'artist', ''])
   })
 
+  it('hides a compilation by its Various Artists album artist', () => {
+    const soundtrack = [
+      normalizeTrack(
+        row('d.mp3', {
+          album: 'Soundtrack',
+          album_artist: 'Various Artists',
+          compilation: true,
+        })
+      ),
+      normalizeTrack(
+        row('e.mp3', {
+          artist: 'Bo',
+          album: 'Soundtrack',
+          album_artist: 'Various Artists',
+          compilation: true,
+        })
+      ),
+    ]
+    const [album] = groupAlbums(soundtrack)
+    expect(
+      hiddenBy(applyVisibility(soundtrack, 'hide', [albumItem(album)]))
+    ).toEqual(['album', 'album'])
+  })
+
   it('keeps the widest rule', () => {
     const once = applyVisibility(tracks, 'hide', [artistItem({ name: 'Ana' })])
     const twice = applyVisibility(once, 'hide', [trackItem(tracks[0])])

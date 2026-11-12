@@ -1,9 +1,208 @@
 export default {
+  artistSuggestions: {
+    title: '팔로우할 아티스트',
+    listening: '감상 기록 기반',
+    library: '라이브러리 기반',
+    listeningHelp:
+      '가장 많이 듣는 아티스트입니다. 최근 재생일수록 더 크게 반영되며, 재생의 가중치는 {days}일마다 절반으로 줄어듭니다.',
+    libraryHelp:
+      '라이브러리에서 트랙이 가장 많은 아티스트, 그다음 앨범이 많은 순입니다.',
+    listens: { one: '재생 {count}회', other: '재생 {count}회' },
+    tracks: { one: '트랙 {count}개', other: '트랙 {count}개' },
+    albums: { one: '앨범 {count}개', other: '앨범 {count}개' },
+    follow: '팔로우',
+    more: '더 보기',
+    loading: '추천을 불러오는 중…',
+    empty: '아직 추천할 아티스트가 더 없습니다.',
+    failed: '추천을 불러오지 못했습니다.',
+    retry: '다시 시도',
+    choose: '{name}은(는) 어떤 아티스트인가요?',
+    chooseHelp:
+      'YouTube Music에서 {name}일 수 있는 아티스트가 여러 명입니다. 사진을 비교하거나 프로필을 열어 본 뒤 맞는 아티스트를 팔로우하세요.',
+    notFound:
+      'YouTube Music에서 {name}(이)라는 아티스트를 찾지 못했습니다. 대신 아티스트 링크를 붙여 넣으세요.',
+    lookupFailed:
+      '아티스트 검색을 사용할 수 없습니다. 링크는 여전히 붙여 넣을 수 있습니다.',
+    followProfile: '이 아티스트 팔로우',
+    inspect: 'YouTube Music에서 열기',
+    manual: '링크 붙여 넣기',
+    cancel: '취소',
+  },
+  trash: {
+    title: '휴지통',
+    subtitle:
+      '라이브러리에서 뺀 곡은 옮긴 뒤 {days}일 동안 보관됩니다. 그때까지 복원할 수 있습니다.',
+    adminOnly: '관리자만 볼 수 있습니다',
+    adminOnlyHint: '곡을 복원하려면 이 서버의 관리자에게 요청하세요.',
+    off: '휴지통이 꺼져 있습니다',
+    offHint:
+      '이 서버에서는 곡이 영구 삭제됩니다. 휴지통은 서버 설정(DOWNTIFY_TRASH)에서 켭니다.',
+    inTrash: '휴지통',
+    exclusions: '다운로드 제외',
+    search: '휴지통 검색',
+    restoreSelected: {
+      one: '{count}곡 복원',
+      other: '{count}곡 복원',
+    },
+    summary: {
+      one: '{count}곡 · {size}',
+      other: '{count}곡 · {size}',
+    },
+    empty: '휴지통이 비어 있습니다',
+    emptyHint:
+      '라이브러리에서 휴지통으로 옮긴 곡은 만료될 때까지 여기에 표시됩니다.',
+    noMatch: '휴지통에 일치하는 항목이 없습니다',
+    select: '“{title}” 선택',
+    keptUntil: '{date}까지 보관',
+    restore: '복원',
+    retry: '다시 시도',
+    previous: '이전',
+    next: '다음',
+    exclusionsHint:
+      '휴지통 보관 기간이 끝난 곡입니다. 다시 허용할 때까지 자동 다운로드(재생목록 모니터링, 팔로우)에서 계속 건너뜁니다.',
+    exclusionsEmpty: '다운로드에서 제외된 항목이 없습니다',
+    allowDownload: '다운로드 허용',
+    allowTitle: '“{title}”을(를) 다시 다운로드할 수 있게 할까요?',
+    allowBody:
+      '자동 다운로드가 이 곡을 다시 받을 수 있습니다. 지금 바로 다운로드되지는 않습니다.',
+    move: '휴지통으로 이동',
+    preparing: '파일 확인 중…',
+    confirmTitle: {
+      one: '{count}곡을 휴지통으로 옮길까요?',
+      other: '{count}곡을 휴지통으로 옮길까요?',
+    },
+    confirmBody:
+      '이 파일들만 가사 파일과 함께 옮겨집니다. 모든 사람의 라이브러리에서 사라지며 {days}일 동안 복원할 수 있습니다. 재생목록과 좋아요는 복원 시 함께 돌아오고, 그동안 자동 다운로드는 이 곡들을 건너뜁니다.',
+    confirmMore: {
+      one: '외 {count}곡',
+      other: '외 {count}곡',
+    },
+    pending: {
+      one: '{count}곡을 휴지통으로 옮기는 중',
+      other: '{count}곡을 휴지통으로 옮기는 중',
+    },
+    downloadBlocked: '음악 휴지통에 있음: 관리자가 다시 허용해야 합니다.',
+    states: {
+      preview: '확인 대기 중',
+      pending: '이동 대기 중',
+      moving: '이동 중',
+      trashed: '휴지통에 있음',
+      restore_pending: '복원 대기 중',
+      restoring: '복원 중',
+      restored: '복원됨',
+      purging: '만료 중',
+      purged: '만료됨',
+      error: '중단됨 — 파일 보존',
+    },
+    errors: {
+      unavailable:
+        '지금은 휴지통을 사용할 수 없습니다. 아무것도 옮겨지지 않았습니다.',
+      admin_required: '관리자만 휴지통을 사용할 수 있습니다.',
+      admin_access_revoked: '요청한 계정이 더 이상 관리자가 아닙니다.',
+      atomic_move_unsupported:
+        '이 저장소에서는 파일을 안전하게 옮길 수 없습니다. 아무것도 옮겨지지 않았습니다.',
+      confirmation_expired: '확인이 만료되었습니다. 곡을 다시 선택하세요.',
+      confirmation_invalid: '이 확인은 내 계정이나 선택과 일치하지 않습니다.',
+      file_changed:
+        '확인한 뒤 파일이 바뀌었습니다. 원래 자리에 그대로 있으니 다시 선택하세요.',
+      file_changed_during_move:
+        '옮기는 동안 파일이 바뀌었습니다. 확인할 수 있도록 휴지통에 보관합니다.',
+      file_missing: '파일이 없습니다. 저장소를 확인한 뒤 다시 시도하세요.',
+      filesystem_unavailable:
+        '저장소를 사용할 수 없습니다. 확인한 뒤 다시 시도하세요.',
+      identity_uncertain:
+        '이 곡의 태그 정보가 부족해 자동 다운로드에서 제외할 수 없습니다. 아무것도 옮겨지지 않았습니다.',
+      invalid_path: '이 파일은 휴지통이 다루는 폴더 밖에 있습니다.',
+      invalid_selection: '1곡에서 200곡 사이로 선택하세요.',
+      item_not_found: '이 곡은 더 이상 라이브러리에 없습니다.',
+      library_task_active:
+        '라이브러리 업그레이드가 실행 중입니다. 끝날 때까지 기다리거나 먼저 일시 정지하세요.',
+      nas_marker_changed:
+        '휴지통이 기대하는 저장소가 아닙니다. 아무것도 옮겨지지 않았습니다.',
+      nas_marker_missing:
+        '기대하는 저장소가 마운트되어 있지 않습니다. 아무것도 옮겨지지 않았습니다.',
+      operation_already_pending: '이 곡은 이미 처리 중입니다.',
+      operation_in_progress: '아직 옮기는 중입니다. 복원하기 전에 기다리세요.',
+      operation_not_complete: '현재 단계가 끝날 때까지 기다리세요.',
+      preview_busy: '다른 확인이 진행 중입니다. 끝날 때까지 기다리세요.',
+      preview_unavailable: '확인이 중단되었습니다. 곡을 다시 선택하세요.',
+      restore_collision:
+        '그 자리에 이미 다른 파일이 있습니다. 덮어쓰지 않았으며 곡은 휴지통에 남아 있습니다.',
+      retention_expired: '휴지통 보관 기간이 끝났습니다.',
+      root_unavailable: '음악 폴더를 사용할 수 없습니다.',
+      track_is_playing: '누군가 이 곡을 재생 중입니다. 먼저 일시 정지하세요.',
+      trash_file_changed: '휴지통의 사본이 바뀌었습니다. 삭제하지 않습니다.',
+      trash_file_missing: '휴지통의 파일이 없습니다.',
+      trash_ignore_invalid:
+        '휴지통 폴더의 .ignore 파일이 비어 있지 않습니다. 아무것도 옮겨지지 않았습니다.',
+      trash_not_configured: '이 서버에서는 휴지통이 꺼져 있습니다.',
+      trash_permissions_unsafe:
+        '다른 사용자가 휴지통 폴더를 읽을 수 있습니다. 권한을 확인하세요.',
+      unsafe_symlink: '경로에 심볼릭 링크가 있어 건드리지 않습니다.',
+      unsupported_collection: '이 곡의 폴더는 휴지통이 다루지 않습니다.',
+      unsupported_lyrics_location:
+        '가사 폴더는 휴지통이 다루지 않습니다. 아무것도 옮겨지지 않았습니다.',
+    },
+  },
+  downloadPolicy: {
+    block: 'Stop downloading',
+    blocked: 'Downloads suspended for this track.',
+    confirm: 'Suspend downloads for this track?',
+    confirmHelp:
+      'New attempts will be blocked. A shared transfer already started may finish. Existing files will not be deleted.',
+    exclusions: 'Suspended tracks',
+    empty: 'No suspended tracks.',
+    resume: 'Allow again',
+    timeout: 'Attempt time limit reached',
+    manual: 'Suspended manually',
+    error: 'Could not change the suspension.',
+    alreadyActive: 'An attempt for this track is already in progress.',
+    budget: 'Cumulative attempt limit',
+    budgetHelp:
+      'Automatically suspend a track after this cumulative attempt time. Time between attempts is excluded. 0 disables the limit.',
+  },
   playlistNames: { restore: 'Restore source name' },
+  libraryOnly: {
+    title: 'Library-only mode',
+    active: 'Only music in your server library is available.',
+    enable: 'Use only the library',
+    hint: 'Search and similar tracks use your library. External music, previews, downloads and automatic watches are disabled.',
+    serverHint:
+      'Applies to all accounts, browsers and Android clients. Wait for external work to finish before enabling it. The phone still needs access to the server unless tracks are downloaded.',
+    empty: 'No matching tracks in the accessible library.',
+    similar:
+      'Similar tracks from saved library tags. No external provider is contacted.',
+  },
   playlistFavorites: {
     title: '즐겨찾는 재생목록',
     add: '재생목록을 즐겨찾기에 추가',
     remove: '재생목록을 즐겨찾기에서 제거',
+  },
+  normalization: {
+    level: '재생 음량',
+    levelNormal: '보통',
+    levelLouder: '더 크게',
+    levelMaximum: '최대',
+    levelHint:
+      '각 곡의 측정된 한도 내에서 음량을 높입니다. 파일은 변경되지 않습니다.',
+    title: '볼륨 정규화',
+    hint: '오디오 파일을 바꾸지 않고 모든 곡을 비슷한 음량으로 재생합니다.',
+    enable: '재생 볼륨 정규화',
+    enableHint:
+      '곡마다 측정된 음량을 사용하며, 최대 12dB까지만 키우고 피크가 찌그러지지 않게 합니다. 아직 측정되지 않은 곡은 원래 음량으로 재생됩니다.',
+    analysisHint:
+      '분석은 백그라운드에서 각 곡을 한 번 읽으며, 이후 실행에서는 새로 추가되거나 변경된 파일만 측정합니다. 재시작 후에도 스스로 시작하지 않습니다.',
+    progress: '{done} / {total}곡 분석됨 · {failed}곡 실패',
+    analyze: '라이브러리 분석',
+    pause: '분석 일시 중지',
+    resume: '분석 재개',
+    pausing: '일시 중지 전에 현재 파일을 마무리하는 중…',
+    states: {
+      ready: '측정된 볼륨이 현재 곡에 적용되었습니다.',
+      silent: '무음 곡: 원래 음량을 유지합니다.',
+      unanalysed: '이 곡은 아직 측정되지 않았습니다: 원래 음량을 유지합니다.',
+      unavailable: '정규화를 사용할 수 없습니다: 원래 음량을 유지합니다.',
+    },
   },
   externalPlaylistImport: {
     open: 'Import folder playlists',
@@ -19,6 +218,13 @@ export default {
     add: 'Add selected playlists ({count})',
     result:
       '{added} added · {existing} already present · {failed} need a new preview or could not be imported',
+  },
+  collaboration: {
+    canEdit: '곡 추가 및 제거 가능',
+    copyHint:
+      '이 재생목록은 원본을 따라가므로 다른 사람이 곡을 편집할 수 없습니다. 대신 편집 가능한 사본을 공유하세요. 사본은 내 것으로 남고, 원래 재생목록은 계속 원본을 따라갑니다.',
+    copy: '편집 가능한 사본 공유',
+    byEditor: '{owner}님의 재생목록 · 곡을 추가하고 제거할 수 있습니다',
   },
   language: {
     name: '한국어',
@@ -117,6 +323,7 @@ export default {
     hintSpotify: '트랙, 앨범, 재생목록 및 아티스트',
     hintYoutube: 'YouTube Music 곡, 앨범, 재생목록 및 아티스트',
     hintDeezer: 'Deezer 트랙, 앨범, 재생목록 및 아티스트',
+    hintSoundcloud: 'SoundCloud 트랙',
     hintCsv: 'CSV 가져오기 (Soundiiz, Exportify…)',
     downloading: '현재 다운로드 중',
     waiting: { one: '{count}개 대기 중', other: '{count}개 대기 중' },
@@ -169,7 +376,7 @@ export default {
     typeSingle: '싱글',
     typeEp: 'EP',
     unsupportedLink:
-      'Downtify에서 지원하지 않는 링크입니다. Spotify 트랙, 앨범, 재생목록 또는 YouTube Music 링크를 입력하세요.',
+      'Downtify에서 지원하지 않는 링크입니다. Spotify 트랙, 앨범, 재생목록, YouTube Music 링크 또는 SoundCloud 트랙을 입력하세요.',
     tipSearchTitle: '이름으로 검색',
     tipSearchBody:
       '아티스트, 앨범 또는 곡명을 입력하세요 — 결과는 YouTube Music에서 가져옵니다.',
@@ -275,6 +482,7 @@ export default {
     openSpotify: 'Spotify에서 열기',
     openYoutube: 'YouTube Music에서 열기',
     openDeezer: 'Deezer에서 열기',
+    openSoundcloud: 'SoundCloud에서 열기',
     filterAll: '전체',
     filterNew: '신규',
     filterLibrary: '라이브러리 내',
@@ -290,6 +498,17 @@ export default {
     playCountYoutubeMusic: 'YouTube Music 재생 횟수 (근사치)',
   },
   queue: {
+    globalPause: '다운로드 및 모니터링 일시 중지',
+    globalResume: '다운로드 및 모니터링 재개',
+    globalTitle: '서버 활동',
+    globalHint:
+      '새 다운로드와 확인은 대기합니다. 진행 중인 작업은 완료되며 대기열은 유지됩니다.',
+    globalPaused: '다운로드 및 모니터링이 일시 중지되었습니다.',
+    globalDraining: '진행 중인 작업 완료 중…',
+    globalRetry: '상태 확인',
+    globalFailed: '변경 사항을 확인할 수 없습니다.',
+    globalAdmin: '웹 관리자 세션이 필요합니다.',
+    globalExpired: '세션이 만료되었습니다. 다시 로그인하세요.',
     title: '대기열',
     tabActive: '진행 중',
     tabQueued: '대기 중',
@@ -305,6 +524,19 @@ export default {
     retryFailed: '실패 항목 다시 시도 ({count})',
     clearDone: '완료 항목 지우기 ({count})',
     clearAll: '대기열 비우기',
+    pause: '다운로드 일시 중지',
+    resume: '다운로드 재개',
+    pauseFailed: '대기열을 변경하지 못했습니다. 다시 시도하세요.',
+    pausingTitle: '다운로드 일시 중지 중…',
+    pausingBody: {
+      one: '다운로드 {count}개가 끝나기를 기다리는 중입니다. 새 다운로드는 시작되지 않습니다.',
+      other:
+        '다운로드 {count}개가 끝나기를 기다리는 중입니다. 새 다운로드는 시작되지 않습니다.',
+    },
+    pausedTitle: '다운로드 일시 중지됨',
+    pausedBody: '재개할 때까지 새 다운로드가 시작되지 않습니다.',
+    pausedKept:
+      'Downtify를 다시 시작하거나 업데이트해도 대기 중인 곡은 대기열에 남아 있습니다.',
     emptyTitle: '대기열이 비어 있습니다',
     emptyBody:
       '음악을 검색하거나 링크를 붙여넣으면 다운로드 항목이 여기에 표시됩니다.',
@@ -322,13 +554,16 @@ export default {
     },
     showMore: '{count}개 더보기',
     statusQueued: '대기 중',
+    statusPaused: '일시 중지됨',
     statusDone: '다운로드 완료',
     retry: '다시 시도',
     remove: '대기열에서 제거',
     failedGeneric: '다운로드에 실패했습니다.',
-    overridePlaceholder: '음원으로 사용할 YouTube 링크 붙여넣기',
+    overridePlaceholder:
+      '음원으로 사용할 YouTube 또는 SoundCloud 링크 붙여넣기',
     useLink: '이 링크 사용',
-    invalidYoutube: '올바른 YouTube 영상 링크 형식이 아닙니다.',
+    invalidAudioLink:
+      '올바른 YouTube 영상 또는 SoundCloud 트랙 링크 형식이 아닙니다.',
     playlistDownloads: '재생목록 다운로드',
     sources: '다운로드 출처',
     noSourcesYet: '완료된 다운로드의 출처가 여기에 표시됩니다.',
@@ -362,6 +597,8 @@ export default {
       artistDesc: '아티스트 (하–가)',
       albumAsc: '앨범 (가–하)',
       albumDesc: '앨범 (하–가)',
+      releaseNewest: '최신 발매순',
+      releaseOldest: '오래된 발매순',
       longest: '긴 곡 먼저',
       shortest: '짧은 곡 먼저',
     },
@@ -388,6 +625,7 @@ export default {
     downloadZip: 'ZIP으로 다운로드',
     saveToDevice: '이 기기에 저장',
     upgrade: '라이브러리 업그레이드',
+    storage: '저장 공간 및 사용량',
   },
   likes: {
     like: '좋아요 표시한 곡에 추가',
@@ -508,14 +746,139 @@ export default {
     stageWriting: '파일 기록 중',
     loadFailed: '라이브러리 업그레이드 정보를 불러오지 못했습니다',
   },
+  usage: {
+    title: '저장 공간 및 사용량',
+    subtitle: '라이브러리 크기, 증가 속도, 출처를 보여줍니다.',
+    adminOnly: '관리자만 볼 수 있습니다',
+    adminOnlyHint: '이 서버의 관리자에게 저장 공간 수치를 요청하세요.',
+    loadFailed: '저장 공간 수치를 불러오지 못했습니다.',
+    tileLibrary: '라이브러리',
+    tileAdded: {
+      one: '최근 하루 동안 추가됨',
+      other: '{count}일 동안 추가됨',
+    },
+    tileGrowth: '순증감',
+    tileFree: '여유 공간',
+    tileDownloads: '다운로드됨',
+    tileCleanup: '확보 가능',
+    songs: {
+      one: '{count}곡',
+      other: '{count}곡',
+    },
+    files: {
+      one: '파일 {count}개',
+      other: '파일 {count}개',
+    },
+    perWeekRate: '주당 {size}',
+    ofTotal: '전체 {total}',
+    daysLeft: {
+      one: '전체 {total} · 이 속도라면 약 {count}일 후 가득 참',
+      other: '전체 {total} · 이 속도라면 약 {count}일 후 가득 참',
+    },
+    downloadsShort: '{skipped}개 건너뜀 · {failed}개 실패',
+    growthTitle: '라이브러리 크기',
+    growthHint:
+      '매일 끝 시점의 라이브러리 크기이며, slskd 작업 사본은 제외합니다.',
+    estimated: '파일 날짜로 추정함',
+    estimatedNote:
+      '{date} 이전의 크기는 라이브러리에 아직 남아 있는 곡의 날짜로 추정하므로, 그 후 삭제된 곡은 빠져 있습니다.',
+    allEstimatedNote:
+      'Downtify가 이제부터 매시간 라이브러리 크기를 기록합니다. 이전 날짜는 라이브러리에 아직 남아 있는 곡의 날짜로 추정합니다.',
+    addedPerDay: '일별 추가',
+    addedPerWeek: '주별 추가',
+    sourcesTitle: '출처별',
+    sourcesHint: {
+      one: '오디오의 출처와 최근 하루 동안 각 출처가 추가한 양입니다.',
+      other: '오디오의 출처와 최근 {count}일 동안 각 출처가 추가한 양입니다.',
+    },
+    addedInPeriod: {
+      one: '+{size} · 기간 중 {count}곡',
+      other: '+{size} · 기간 중 {count}곡',
+    },
+    emptyLibrary: '라이브러리가 비어 있습니다.',
+    whereTitle: '저장 위치',
+    byLocation: '폴더',
+    byFormat: '형식',
+    location: {
+      downloads: '다운로드 폴더',
+      slskd: 'slskd 폴더',
+      folders: '추가 음악 폴더',
+    },
+    unknown: '알 수 없음',
+    downloadsTitle: '다운로드',
+    downloadsHint: {
+      one: '최근 하루 동안 대기열과 플레이리스트 모니터에서 시작한 다운로드의 결과입니다. 모든 시도가 집계됩니다.',
+      other:
+        '최근 {count}일 동안 대기열과 플레이리스트 모니터에서 시작한 다운로드의 결과입니다. 모든 시도가 집계됩니다.',
+    },
+    outcome: {
+      completed: '완료',
+      skipped: '건너뜀',
+      failed: '실패',
+    },
+    perDay: '일별',
+    perWeek: '주별',
+    downloadedBySource: '출처별 다운로드 · {size}',
+    noDownloads: '이 기간에는 다운로드한 항목이 없습니다.',
+    logEmptyNote:
+      '아직 집계된 다운로드가 없습니다. Downtify는 이 버전부터 다운로드를 집계합니다.',
+    logSinceNote: '다운로드는 {date}부터 집계됩니다.',
+    cleanupTitle: '정리 가능',
+    cleanupHint:
+      'Downtify가 중복되거나 남은 것으로 판단할 수 있는 공간입니다. 여기서는 아무것도 삭제하지 않습니다.',
+    duplicatesTitle: '중복된 곡',
+    duplicatesHint:
+      '{exact}곡은 같은 파일로 두 번 저장되었고, {likely}곡은 다른 출처에서 온 같은 곡으로 보입니다. 크기는 가장 큰 사본만 남길 때 확보되는 공간입니다.',
+    duplicateKind: {
+      exact: '같은 파일',
+      likely: '같은 곡으로 추정',
+    },
+    workingTitle: 'slskd 작업 사본',
+    workingHint:
+      'Downtify가 라이브러리로 복사한 뒤 slskd 폴더에 남은 Soulseek 전송 파일입니다.',
+    workingInPlace:
+      'slskd 파일을 그 자리에 두도록 설정되어 있어 slskd 폴더도 라이브러리의 일부입니다.',
+    leftoversTitle: '남은 임시 파일',
+    leftoversHint: '한 시간 넘게 지난 미완료 다운로드와 변환 파일입니다.',
+    orphansTitle: '고아 부속 파일',
+    orphansHint: '곡이 사라진 가사 파일과 앨범 커버입니다.',
+    foldersTitle: '폴더',
+    foldersHint: 'Downtify가 기록하는 폴더의 모든 내용을 종류별로 보여줍니다.',
+    rescan: '다시 검사',
+    scanFailed: '폴더를 검사하지 못했습니다.',
+    scanning: '폴더 검사 중…',
+    scannedAt: '{when} 검사함 ({seconds}초 소요)',
+    folder: {
+      downloads: '다운로드 폴더',
+      slskd: 'slskd 폴더',
+      lyrics: '가사 폴더',
+    },
+    kind: {
+      audio: '곡',
+      podcasts: '팟캐스트',
+      lyrics: '가사',
+      images: '이미지',
+      playlists: '플레이리스트',
+      metadata: '아티스트 사진 및 프로필',
+      temporary: '임시 파일',
+      other: '기타',
+    },
+  },
   album: {
     kicker: '앨범',
     notFound: '앨범을 찾을 수 없습니다',
     moreBy: '{artist}의 다른 음악',
     searchMore: 'YouTube Music에서 찾기',
     delete: '앨범 삭제',
+    markCompilation: 'Various Artists로 표시',
+    unmarkCompilation: 'Various Artists 표시 해제',
+    markedCompilation: '앨범을 Various Artists로 표시함',
+    unmarkedCompilation: '이 앨범은 더 이상 Various Artists가 아닙니다',
+    compilationPartial: '일부 트랙을 변경하지 못했습니다',
+    compilationFailed: '앨범을 변경하지 못했습니다',
   },
   artist: {
+    guest: '게스트',
     kicker: '아티스트',
     notFound: '아티스트를 찾을 수 없습니다',
     findMore: '더 찾아보기',
@@ -581,6 +944,23 @@ export default {
   },
   playlists: {
     kicker: '재생목록',
+    diagnostics: {
+      title: '재생목록 진단',
+      check: '확인',
+      refresh: '새로고침',
+      unavailable: '이 재생목록의 진단 정보를 사용할 수 없습니다.',
+      items: {
+        spotify_tracks: 'Spotify 트랙',
+        downloaded: 'Downtify 다운로드',
+        physical_files: '찾은 파일',
+        track_index: 'TrackIndex 매핑',
+        monitor_history: 'Monitor 기록',
+        navidrome_matched: 'Navidrome 일치 항목',
+        navidrome_rows: 'Navidrome 재생목록 항목',
+        missing_files: '누락된 파일',
+        orphan_files: '연결되지 않은 파일',
+      },
+    },
     notFound: '재생목록을 찾을 수 없습니다',
     progress: '총 {total}개 중 {have}개 다운로드됨',
     missingShort: { one: '{count}개 누락', other: '{count}개 누락' },
@@ -621,6 +1001,25 @@ export default {
     },
     alreadyIn: '이미 “{name}”에 포함되어 있습니다',
     removedTrack: '“{name}”에서 제거됨',
+    reorder: '순서 변경',
+    reorderHint:
+      '곡을 끌어서 옮기거나 화살표를 사용한 다음 새 순서를 저장하세요.',
+    reorderSave: '순서 저장',
+    reordered: '순서를 저장했습니다',
+    reorderStale:
+      '그 사이에 누군가 이 재생목록을 변경했습니다. 다시 불러왔으니 순서를 다시 정해 주세요.',
+    moveUp: '위로 이동',
+    moveDown: '아래로 이동',
+    moveTop: '맨 위로 이동',
+    moveBottom: '맨 아래로 이동',
+    repeatTitle: '이미 이 재생목록에 있습니다',
+    repeatBody: {
+      one: '이 곡은 이미 “{name}”에 있습니다. 다시 추가할까요?',
+      other: '이 중 {count}곡은 이미 “{name}”에 있습니다. 다시 추가할까요?',
+    },
+    repeatConfirm: '그래도 추가',
+    repeatCancel: '추가 안 함',
+    inPlaylist: '이미 추가됨',
     hideTrack: '재생목록에서 숨기기',
     hiddenTrack: '“{name}”에서 숨김',
     hiddenTitle: {
@@ -642,6 +1041,12 @@ export default {
     nothingYet: '아직 트랙이 없습니다',
     nothingYetHint: '다운로드가 완료되면 트랙이 여기에 나타납니다.',
     nothingYetManualHint: '라이브러리에서 곡을 추가하세요.',
+    uploadCover: '커버 업로드',
+    removeCover: '커버 삭제',
+    coverSaved: '재생목록 커버를 저장했습니다',
+    coverRemoved: '재생목록 커버를 삭제했습니다',
+    coverInvalid: 'JPEG, PNG 또는 WebP 이미지를 선택하세요.',
+    coverTooLarge: '이미지 크기는 10MiB 이하여야 합니다.',
   },
   track: {
     title: '제목',
@@ -649,6 +1054,7 @@ export default {
     album: '앨범',
     trackNumber: '트랙 번호',
     year: '연도',
+    releaseDate: '발매일',
     length: '길이',
     format: '포맷',
     size: '크기',
@@ -656,12 +1062,23 @@ export default {
     file: '파일',
   },
   player: {
+    unlockLayout: '플레이어 레이아웃 잠금 해제',
+    lockLayout: '플레이어 레이아웃 잠금',
+    resetLayout: '플레이어 레이아웃 초기화',
+    resizeTrackSection: '트랙 정보 영역 크기 조절',
+    resizeTransportSection: '재생 컨트롤 영역 크기 조절',
     nowPlaying: '현재 재생 중',
     openNowPlaying: '현재 재생 화면 열기',
     closeNowPlaying: '현재 재생 화면 닫기',
     queue: '대기열',
     upNext: '다음 재생 곡',
     lyrics: '가사',
+    karaoke: '노래방',
+    karaokeWindow: '새 창에서 열기',
+    karaokeWindowBlocked:
+      '브라우저가 새 창을 차단했습니다. Downtify의 팝업을 허용한 후 다시 시도하세요.',
+    karaokeWaiting: 'Downtify 기본 창에서 노래를 기다리는 중',
+    fullscreen: '전체 화면',
     details: '세부정보',
     playing: '재생 중',
     play: '재생',
@@ -732,6 +1149,8 @@ export default {
       '이퀄라이저를 시작할 수 없습니다. 이퀄라이저 없이 재생을 계속합니다.',
   },
   monitor: {
+    tableColumns: '열',
+    resetTableColumns: '열 초기화',
     releaseTypes: '다운로드할 종류',
     releaseTypesAtLeastOne: '발매작 종류를 최소 하나 이상 유지해야 합니다',
     release: { album: '앨범', single: '싱글', ep: 'EP' },
@@ -784,7 +1203,7 @@ export default {
     urlLabelPlaylist: '재생목록 링크',
     urlLabelArtist: '아티스트 링크',
     urlPlaceholderPlaylist:
-      'Spotify 또는 YouTube Music 재생목록 링크를 붙여넣으세요',
+      'Spotify, Deezer 또는 YouTube Music 재생목록 링크를 붙여넣으세요',
     urlPlaceholderArtist:
       'Spotify 또는 YouTube Music 아티스트 링크를 붙여넣으세요',
     watchPlaylist: '재생목록 모니터링',
@@ -833,9 +1252,129 @@ export default {
     saved: '모니터링 설정이 업데이트되었습니다',
     retargeted: '이제 {name}을(를) 모니터링합니다',
   },
+  watchStats: {
+    colActivity: '활동',
+    colStorage: '저장 공간',
+    period: '기간',
+    days: { one: '{count}일', other: '{count}일' },
+    totalNew: { one: '지난 하루 동안 새 곡', other: '{count}일 동안 새 곡' },
+    totalSongs: '모니터링에서 온 곡',
+    totalSize: '디스크 사용량',
+    totalShared: '여러 모니터링에 있음',
+    statsFailed: '통계를 불러오지 못했습니다.',
+    rateWeekShort: '주당 {rate}',
+    sharedShort: '+{count} 공유',
+    activityTooltip:
+      '최근 {count}일 동안 {added}곡 추가 · 주당 {rate}곡 · {trend}',
+    storageTooltip: '이 모니터링에만 {unique} · 다른 모니터링과 공유 {shared}',
+    sortActivity: '최근 활동',
+    sortRate: '평균 속도',
+    sortGrowth: '저장 공간 증가',
+    sortStorage: '고유 저장 공간',
+    sortContributed: '다운로드한 곡',
+    details: '활동 및 곡',
+    openInLibrary: '라이브러리에서 열기',
+    notFound: '모니터링을 찾을 수 없습니다',
+    notFoundHint: '삭제되었거나 다른 계정의 모니터링일 수 있습니다.',
+    since: '{date}부터 모니터링 중',
+    tileSongs: '디스크에 있는 곡',
+    tileDownloaded: '직접 다운로드함',
+    tileLinked: '이미 라이브러리에 있음',
+    tileUnique: '이 모니터링에만',
+    tileUniqueHint: {
+      one: '다른 모니터링에 없는 곡 {count}개',
+      other: '다른 모니터링에 없는 곡 {count}개',
+    },
+    tileShared: '공유됨',
+    tileSharedHint: '{size}, 다른 모니터링에도 있으며 한 번만 저장됨',
+    tileFailing: '실패 중',
+    unknownNote: {
+      one: '곡 {count}개는 Downtify가 곡이 모니터링에 들어온 방식을 기록하기 전에 추가되었습니다.',
+      other:
+        '곡 {count}개는 Downtify가 곡이 모니터링에 들어온 방식을 기록하기 전에 추가되었습니다.',
+    },
+    missingNote: {
+      one: '이 모니터링이 기록한 곡 {count}개가 더 이상 디스크에 없습니다.',
+      other: '이 모니터링이 기록한 곡 {count}개가 더 이상 디스크에 없습니다.',
+    },
+    activityTitle: '활동',
+    activityHint:
+      '이 모니터링이 추가한 새 곡입니다. 이미 라이브러리에 있던 곡과 첫 확인에서 받은 곡은 제외합니다.',
+    newSongsLabel: { one: '곡이 새로 추가됨', other: '곡이 새로 추가됨' },
+    rateDay: '하루',
+    rateWeek: '일주일',
+    rateMonth: '한 달',
+    trendUp: '최근 더 많이 추가함',
+    trendDown: '최근 덜 추가함',
+    trendSteady: '꾸준한 속도',
+    trendIdle: '최근 새 곡 없음',
+    trendNew: '아직 판단하기 이릅니다',
+    periodGrowth: '새 오디오 {size}',
+    periodLinked: {
+      one: '{count}곡은 이미 라이브러리에 있었음',
+      other: '{count}곡은 이미 라이브러리에 있었음',
+    },
+    periodInitial: {
+      one: '{count}곡은 첫 확인에서 들어옴',
+      other: '{count}곡은 첫 확인에서 들어옴',
+    },
+    periodUnknown: {
+      one: '그중 {count}곡은 Downtify가 방식을 기록하기 전에 기록됨',
+      other: '그중 {count}곡은 Downtify가 방식을 기록하기 전에 기록됨',
+    },
+    barsPerDay: '하루 새 곡 수',
+    barsPerWeek: '주간 새 곡 수',
+    providersTitle: '오디오 출처',
+    failuresTitle: {
+      one: '{count}곡이 계속 실패함',
+      other: '{count}곡이 계속 실패함',
+    },
+    attempts: { one: '{count}회 시도', other: '{count}회 시도' },
+    lastTried: '마지막 시도 {when}',
+    songsTitle: '이 모니터링의 곡',
+    songsHint:
+      '최신순이며, 이미 재생목록에서 빠진 곡도 포함합니다. 곡을 선택해 재생하거나 재생목록에 추가하거나 삭제할 수 있습니다.',
+    filter: {
+      all: '전체',
+      recent: { one: '지난 하루', other: '최근 {count}일' },
+      downloaded: '직접 다운로드함',
+      linked: '이미 라이브러리에 있음',
+      unknown: '기록 이전',
+    },
+    noSongs: '디스크에 이 모니터링의 곡이 없습니다',
+    noSongsHint:
+      '확인 과정에서 곡을 다운로드하거나 라이브러리에서 찾으면 여기에 표시됩니다.',
+  },
+  origin: {
+    menu: '출처 보기',
+    title: '이 곡의 출처',
+    body: '이 곡을 라이브러리로 가져온 재생목록 모니터링입니다.',
+    failed: '이 곡의 출처를 불러오지 못했습니다.',
+    firstTitle: '처음 다운로드한 모니터링',
+    none: '이 곡을 다운로드한 모니터링이 없습니다. 직접 다운로드했거나 Downtify가 기록하기 전에 받은 곡입니다.',
+    otherAccount: '다른 계정의 모니터링',
+    backfill: '첫 확인',
+    estimated: '추정',
+    gone: '이 모니터링은 삭제되었거나 이제 다른 링크를 따릅니다.',
+    watchesTitle: {
+      one: '모니터링 {count}개에 있음',
+      other: '모니터링 {count}개에 있음',
+    },
+    noWatches: '현재 이 곡을 가진 모니터링이 없습니다.',
+    others: {
+      one: '그중 {count}개는 다른 계정의 모니터링입니다.',
+      other: '그중 {count}개는 다른 계정의 모니터링입니다.',
+    },
+    oneFile: '파일은 하나입니다. 모든 모니터링이 같은 사본을 가리킵니다.',
+    outcome: {
+      downloaded: '다운로드함',
+      linked: '이미 라이브러리에 있음',
+      unknown: '기록 이전',
+    },
+  },
   sharing: {
     title: '“{name}” 공유',
-    hint: '공유받은 사람은 재생하고, 팔로우하고, 사본을 저장할 수 있지만 변경할 수는 없습니다.',
+    hint: '공유받은 사람은 재생하고, 팔로우하고, 사본을 저장할 수 있습니다. 편집을 허용한 사람만 곡을 추가하거나 제거할 수 있습니다.',
     private: '비공개',
     privateHint: '나만 볼 수 있습니다.',
     shared: '특정 사용자',
@@ -872,7 +1411,7 @@ export default {
     },
     sharedWithMe: '나에게 공유됨',
     sharedWithMeHint:
-      '다른 사람이 나와 공유한 재생목록입니다. 재생할 수는 있지만 변경할 수는 없습니다.',
+      '다른 사람이 나와 공유한 재생목록입니다. 재생할 수 있고, 소유자가 허용한 재생목록에서는 곡을 추가하거나 제거할 수 있습니다.',
     publicPlaylists: '공개 재생목록',
     publicPlaylistsHint:
       '이 서버의 모든 사람과 공유됩니다. 팔로우하면 사이드바에 유지됩니다.',
@@ -936,6 +1475,9 @@ export default {
     sourceYtmHint: '가장 일치도가 높은 메타데이터 제공',
     sourceYt: 'YouTube',
     sourceYtHint: 'YouTube Music에 없는 곡을 위한 대체 출처',
+    sourceSoundcloud: 'SoundCloud',
+    sourceSoundcloudHint:
+      '다른 곳에 없는 업로드, 그리고 SoundCloud 링크의 원래 트랙',
     deemixTitle: 'Deemix',
     deemixHint:
       'Download from your own Deemix server. Requested quality requires the matching Deezer entitlement.',
@@ -947,6 +1489,20 @@ export default {
     deemixLocal: 'Same folder inside Downtify (read-only is supported)',
     deemixQuality: 'Audio quality',
     slskdTitle: 'slskd',
+    slskdFormats: '형식 우선순위',
+    slskdFormatsHint:
+      '쉼표로 구분한 확장자를 우선순위가 높은 순서로 입력하세요(예: flac, mp3).',
+    slskdMinBitrate: '손실 형식의 최소 비트레이트',
+    slskdMinBitrateHint:
+      '엄격 모드에서는 이 값보다 낮거나 비트레이트가 보고되지 않은 손실 파일을 거부합니다. FLAC은 제외됩니다.',
+    slskdAttempts: '후보 시도 횟수',
+    slskdAttemptsHint:
+      '엄격 모드에서는 형식별로 이 수만큼 시도하며, 그 외에는 전체 횟수입니다.',
+    slskdStrictPriority: '엄격한 형식 우선순위',
+    slskdStrictPriorityHint:
+      '나열된 형식을 순서대로 시도하고 각 형식 안에서 일치도를 기준으로 정렬합니다.',
+    slskdWhitelist: '나열된 형식만 허용',
+    slskdWhitelistHint: '목록에 없는 확장자의 결과를 거부합니다.',
     slskdHint:
       'slskd 서버를 통해 Soulseek에서 음원을 다운로드합니다. 찾지 못한 트랙은 다음 음원 출처로 넘어갑니다.',
     slskdEnabled: 'slskd 사용',
@@ -960,7 +1516,7 @@ export default {
     slskdQueuedTimeout: '대기 타임아웃',
     slskdInPlace: 'slskd 폴더에 파일 그대로 유지',
     slskdInPlaceHint:
-      '다운로드 폴더로 복사하지 않고 slskd가 저장한 원래 위치에서 바로 태그를 작성합니다.',
+      '켜짐: 원래 위치에서 태그를 작성하고 파일을 유지합니다. 꺼짐: 다운로드 폴더로 복사하고 태그를 작성한 뒤 가져오기가 성공해야 원본을 삭제합니다. 실패하면 원본을 유지합니다.',
     youtubeTitle: 'YouTube',
     cookies: 'YouTube 쿠키',
     cookiesHint:
@@ -977,9 +1533,13 @@ export default {
     audioGroup: '오디오',
     format: '포맷',
     formatHint: 'YouTube에서 다운로드한 파일은 이 포맷으로 변환됩니다.',
+    formatOriginal: '원본',
+    formatOriginalHint:
+      '재인코딩 없이 사용 가능한 최고 품질의 오디오 스트림을 유지합니다. 파일 확장자는 소스에 따라 달라집니다.',
     bitrate: '품질',
     bitrateHint: '손실 압축 포맷의 비트레이트입니다.',
     bitrateLossless: '무손실 포맷인 FLAC에는 적용되지 않습니다.',
+    bitrateOriginal: '원본 오디오 포맷을 유지할 때는 적용되지 않습니다.',
     filesGroup: '파일',
     template: '파일명 템플릿',
     templateHint: '/ 문자를 사용하여 하위 폴더를 구성할 수 있습니다.',
@@ -1218,9 +1778,13 @@ export default {
   auth: {
     signInTitle: 'Downtify 로그인',
     signInBody: '사용자 이름과 비밀번호를 입력하여 로그인하세요.',
+    signInBodyOidcOnly: 'ID 공급자를 통해 로그인하세요.',
     username: '사용자 이름',
     password: '비밀번호',
     signIn: '로그인',
+    oidcSignIn: 'ID 공급자로 계속하기',
+    or: '또는',
+    oidcFailed: 'ID 공급자를 통한 로그인에 실패했습니다. 다시 시도하세요.',
     wrongPassword: '사용자 이름 또는 비밀번호가 올바르지 않습니다',
     tooMany: '로그인 시도가 너무 많습니다. 몇 분 후 다시 시도하세요.',
     forgotHint:
@@ -1278,6 +1842,12 @@ export default {
     androidUnreleased:
       '아직 정식 버전이 출시되지 않았습니다. 현재 활발히 개발 중이므로 설치 가능한 파일이 아직 없습니다.',
     androidRepo: '저장소 보기',
+    iosGroup: 'iOS용 Downtify',
+    iosHint:
+      '이 서버의 라이브러리를 탐색하고 재생하는 iPhone 및 iPad 앱입니다.',
+    iosBody:
+      '계정으로 로그인하거나 이 페이지의 코드로 앱을 연결하세요. 라이브러리를 탐색하고 재생하며, 오프라인 감상을 위해 곡을 저장하고 잠금 화면에서 재생을 제어할 수 있습니다.',
+    iosRepo: '저장소 보기',
   },
   replace: {
     menu: '음원 교체…',
@@ -1285,7 +1855,8 @@ export default {
     body: '잘못된 곡이거나 다른 버전인가요? 올바른 음원을 선택하세요. 파일명, 태그, 커버 아트, 가사는 그대로 유지되며 기존 재생목록에도 보존됩니다.',
     current: '현재 곡',
     search: '검색',
-    searchHint: '또는 YouTube / YouTube Music 링크를 붙여넣으세요.',
+    searchHint:
+      '또는 YouTube / YouTube Music / SoundCloud 링크를 붙여넣으세요.',
     searchButton: '검색',
     results: '선택 가능한 버전',
     none: '결과가 없습니다. 다른 검색어를 입력하거나 링크를 붙여넣으세요.',
@@ -1444,6 +2015,7 @@ export default {
       unlike: '좋아요 해제',
       delete: '파일 삭제',
       audio_replaced: '음원 교체',
+      album_compilation: '컴필레이션 표시',
       library_hidden: '사용자에게서 숨긴 항목',
       library_shown: '사용자에게 표시한 항목',
       device_paired: '앱 연결',
@@ -1464,6 +2036,7 @@ export default {
       unlike: '{what} 좋아요 해제함',
       delete: '{what} 삭제함',
       audio_replaced: '{what}의 음원을 교체함',
+      album_compilation: '{what}의 Various Artists 컴필레이션 여부를 변경함',
       library_hidden: '{what}을(를) 사용자에게서 숨김',
       library_shown: '{what}을(를) 사용자에게 표시함',
       device_paired: '{what} 기기를 연결함',

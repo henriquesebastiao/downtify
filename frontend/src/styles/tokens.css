@@ -35,6 +35,7 @@
   --c-src-ytm: #ff4e45;
   --c-src-yt: #ff7a6b;
   --c-src-slskd: #5fc0f5;
+  --c-src-soundcloud: #ff7b33;
   --c-spotify: #1ed760;
   --c-deezer: #a238ff;
   --sh-float: 0 20px 50px rgb(0 0 0 / 0.5);
@@ -67,6 +68,7 @@
   --c-src-ytm: #c4001f;
   --c-src-yt: #a82014;
   --c-src-slskd: #12628f;
+  --c-src-soundcloud: #b83d00;
   --c-spotify: #13893f;
   --c-deezer: #7a1fd1;
   --sh-float: 0 16px 40px rgb(16 24 40 / 0.12);
@@ -101,6 +103,7 @@
   --color-src-ytm: var(--c-src-ytm);
   --color-src-yt: var(--c-src-yt);
   --color-src-slskd: var(--c-src-slskd);
+  --color-src-soundcloud: var(--c-src-soundcloud);
   --color-spotify: var(--c-spotify);
   --color-deezer: var(--c-deezer);
 

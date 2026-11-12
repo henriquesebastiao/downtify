@@ -63,7 +63,9 @@ A [mutagen](https://mutagen.readthedocs.io/) beleírja a metaadatokat az átalak
 | Címke | Beírja |
 |-----|---------|
 | Cím | Igen |
-| Előadó(k) | Igen |
+| Előadó(k) | Igen, minden közreműködő előadó, egy `ARTISTS` címkében értékenként egy is |
+| Album előadója | Igen, az album saját előadója, ahogy a forrás feltünteti, egyébként az első előadó |
+| Válogatás jelző | Csak olyan albumnál, amelyet a forrás „Various Artists” előadónak tulajdonít, vagy amelyet egy admin annak jelöl |
 | Album | Igen |
 | Év | Igen |
 | Albumborító (JPEG) | Igen |
@@ -80,4 +82,4 @@ A Downtify a letöltések előrehaladását **WebSocket**-kapcsolaton (`/api/ws`
 
 A kimeneti fájlnév a Beállításokban megadott sablonból épül fel (alapértelmezés: `{artists} - {title}`). A fájlnevekben érvénytelen karakterek eltávolításra kerülnek.
 
-Ha a *Rendezés előadó szerint* be van kapcsolva, a fájl a fő előadó nevét viselő almappába kerül. Egyébként az önálló számok a letöltési könyvtár gyökerébe, a lejátszási lista-/albumszámok pedig lejátszási listánkénti vagy albumonkénti almappába mennek.
+Ha a *Rendezés előadó szerint* be van kapcsolva, a fájl az album előadójának nevét viselő almappába kerül — több előadós válogatás számánál pedig az első előadójáéba. Egyébként az önálló számok a letöltési könyvtár gyökerébe, a lejátszási lista-/albumszámok pedig lejátszási listánkénti vagy albumonkénti almappába mennek. Lásd: [Több előadó és válogatások](features/file-organization.md#several-artists-and-compilations).

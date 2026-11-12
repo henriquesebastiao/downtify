@@ -21,8 +21,8 @@
         <AppIcon name="disc" :size="15" />{{ t('player.goToAlbum') }}
       </RouterLink>
       <RouterLink
-        v-if="track.albumArtist"
-        :to="{ name: 'Artist', query: { name: track.albumArtist } }"
+        v-if="groupingArtistName(track)"
+        :to="{ name: 'Artist', query: { name: groupingArtistName(track) } }"
         class="flex h-9 items-center gap-2 rounded-full bg-white/10 px-3.5 text-[13px] font-semibold text-white hover:bg-white/15"
       >
         <AppIcon name="user" :size="15" />{{ t('player.goToArtist') }}
@@ -43,6 +43,7 @@ import { computed } from 'vue'
 import AppIcon from '../ui/AppIcon.vue'
 import { usePlayer } from '/src/model/player'
 import { formatBytes, formatDuration, timeAgo } from '/src/lib/format'
+import { groupingArtistName } from '/src/lib/library'
 import { saveName } from '/src/lib/paths'
 import { useI18n } from '/src/i18n'
 

@@ -8,8 +8,10 @@
 // evaluates before init - the shipped app then dies on load with
 // `TypeError: e is not a function` in the vendor chunk.
 import API from '/src/model/api'
+import { libraryOnly } from '/src/model/musicPolicy'
 
 const VIDEO_ID_RE = /^[A-Za-z0-9_-]{11}$/
+const MAX_SEARCH_DURATION_DIFF_SECONDS = 10
 
 export function songArtist(song) {
   return String((song?.artists || [])[0] || song?.artist || '').trim()
@@ -27,12 +29,26 @@ export function rowKey(song) {
 export function directVideoId(song) {
   const direct = String(song?.youtube_id || '').trim()
   if (VIDEO_ID_RE.test(direct)) return direct
+  const playerVideoId = String(song?.video_id || '').trim()
+  if (VIDEO_ID_RE.test(playerVideoId)) return playerVideoId
   const sid = String(song?.song_id || '').trim()
   return VIDEO_ID_RE.test(sid) ? sid : ''
 }
 
-/** The video id to stream: the song's own, else the first search hit. */
+function durationMatches(song, candidate) {
+  const targetDuration = Number(song?.duration) || 0
+  const candidateDuration = Number(candidate?.duration) || 0
+  return (
+    !targetDuration ||
+    !candidateDuration ||
+    Math.abs(candidateDuration - targetDuration) <=
+      MAX_SEARCH_DURATION_DIFF_SECONDS
+  )
+}
+
+/** The video id to stream: the song's own, else a duration-compatible hit. */
 export async function videoIdFor(song) {
+  if (libraryOnly.value) throw new Error('Library-only mode')
   const direct = directVideoId(song)
   if (direct) return direct
   const artist = songArtist(song)
@@ -41,7 +57,7 @@ export async function videoIdFor(song) {
   const res = await API.search(`${artist} ${title}`)
   for (const row of res.data || []) {
     const candidate = directVideoId(row)
-    if (candidate) return candidate
+    if (candidate && durationMatches(song, row)) return candidate
   }
   throw new Error('nomatch')
 }
@@ -80,6 +96,7 @@ export async function prefetchServerCache(track) {
 
 /** Warm the server cache for a known video id (never throws). */
 export async function warmServerCache(videoId) {
+  if (libraryOnly.value) return
   try {
     await API.prefetchStream(videoId)
   } catch {

@@ -4,12 +4,14 @@ from __future__ import annotations
 
 from mutagen.id3 import ID3, TALB, TIT2, TPE1, TPE2
 
+from downtify import library_catalog
 from downtify.library_catalog import (
     LibraryContext,
     filter_library_entries,
     library_album_index,
     library_artist_index,
     library_home_summary,
+    list_entries_for_playlist,
     list_entries_for_stored_paths,
     list_library_entries,
     list_library_paths,
@@ -193,6 +195,55 @@ def test_list_entries_for_stored_paths_skips_unknown_files(tmp_path):
         ctx, ['Keep.mp3', 'Missing.mp3', 'Keep.mp3']
     )
     assert [item['file'] for item in rows] == ['Keep.mp3']
+
+
+def test_playlist_rows_come_from_the_snapshot_without_asking_the_disk(
+    tmp_path, monkeypatch
+):
+    """A playlist of 4000 songs took over a second on a NAS, stating each
+    file twice, when ``GET /tracks`` already holds the rows in memory."""
+
+    download_dir = tmp_path / 'downloads'
+    download_dir.mkdir()
+    (download_dir / 'A.mp3').write_bytes(b'a')
+    (download_dir / 'B.mp3').write_bytes(b'b')
+    invalidate_library_paths_cache()
+    ctx = LibraryContext(download_dir=download_dir)
+    list_library_entries(ctx)
+
+    def no_disk(*_args):
+        raise AssertionError('asked the disk for a row in the snapshot')
+
+    monkeypatch.setattr(library_catalog, 'resolve_library_file', no_disk)
+    rows = list_entries_for_playlist(ctx, ['B.mp3', 'A.mp3', 'B.mp3', ''])
+
+    assert [row['file'] for row in rows] == ['B.mp3', 'A.mp3']
+
+
+def test_playlist_rows_too_new_for_the_snapshot_come_from_the_disk(tmp_path):
+    download_dir = tmp_path / 'downloads'
+    download_dir.mkdir()
+    (download_dir / 'Old.mp3').write_bytes(b'o')
+    invalidate_library_paths_cache()
+    ctx = LibraryContext(download_dir=download_dir)
+    list_library_entries(ctx)
+    (download_dir / 'New.mp3').write_bytes(b'n')
+
+    rows = list_entries_for_playlist(ctx, ['New.mp3', 'Gone.mp3', 'Old.mp3'])
+
+    assert [row['file'] for row in rows] == ['New.mp3', 'Old.mp3']
+
+
+def test_playlist_rows_without_a_snapshot_come_from_the_disk(tmp_path):
+    download_dir = tmp_path / 'downloads'
+    download_dir.mkdir()
+    (download_dir / 'Song.mp3').write_bytes(b's')
+    invalidate_library_paths_cache()
+    ctx = LibraryContext(download_dir=download_dir)
+
+    rows = list_entries_for_playlist(ctx, ['Song.mp3', 'Gone.mp3'])
+
+    assert [row['file'] for row in rows] == ['Song.mp3']
 
 
 def test_list_library_entries_sees_a_new_file_without_invalidate(tmp_path):

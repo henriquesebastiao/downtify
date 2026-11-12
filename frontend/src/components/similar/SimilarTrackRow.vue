@@ -139,8 +139,10 @@ const overlayIcon = computed(() =>
   play.isCurrent.value && player.isPlaying.value ? 'pause' : 'play'
 )
 
-const inLibrary = computed(() =>
-  library.hasSong(artistName.value, props.song.name)
+const inLibrary = computed(
+  () =>
+    (props.song.source === 'library' && !!props.song.file) ||
+    library.hasSong(artistName.value, props.song.name)
 )
 
 // Every row already is a downloadable song (video id + link).

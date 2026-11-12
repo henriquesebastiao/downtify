@@ -17,6 +17,13 @@ Ouvrez **Classements** depuis la barre latérale (ou la feuille **Plus** sur té
 
 Un titre du classement n’a pas besoin d’étape de résolution pour être téléchargé : Deezer donne déjà son titre, son artiste et le nom de l’album, ce qui suffit pour le chercher et le faire correspondre sur YouTube, comme pour un résultat de recherche libre. Un album, un artiste ou une playlist en a besoin — transformer son lien en liste de titres —, si bien que sa carte ouvre cette page résolue au lieu de télécharger directement depuis la grille. Lire une ligne de titre le diffuse en entier depuis YouTube (jamais pour les albums, artistes ou playlists) — la même diffusion que toute ligne de titre, simplement alimentée avec le titre et l’artiste du classement.
 
+## Surveiller ou enregistrer une playlist du classement
+
+Chaque carte de playlist a un menu **⋯** sur sa pochette, avec les deux actions que sa page propose en plus du téléchargement :
+
+- **Surveiller les nouveaux titres** ajoute une surveillance au [Suivi de playlists](playlist-monitor.md#deezer-playlists), vérifiée toutes les 6 heures : la première vérification télécharge ce que la playlist contient maintenant, les suivantes ce qui y est ajouté. Changez l’intervalle, mettez en pause ou arrêtez la surveillance sur la page **Surveillance**.
+- **Ajouter à mes playlists** ouvre le choix de playlist avec les morceaux de la playlist qui sont **déjà dans votre bibliothèque**, pour les ajouter à l’une de vos playlists ou à une nouvelle portant son nom. Rien n’est téléchargé, et votre playlist ne suit pas la playlist du classement ensuite — utilisez pour cela le bouton de téléchargement ou **Surveiller les nouveaux titres**. Quand aucun de ses morceaux n’est encore dans la bibliothèque, un message vous le dit.
+
 ## API
 
 Voir [`GET /api/discover/chart`](../api-reference.md#get-apidiscoverchart) dans la Référence de l’API.

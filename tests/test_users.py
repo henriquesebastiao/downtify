@@ -129,6 +129,49 @@ def test_creating_users(tmp_path):
     assert [u['username'] for u in users.list()] == ['admin', 'maria']
 
 
+def test_oidc_identity_is_stable_and_does_not_link_by_username(tmp_path):
+    users = _users(tmp_path)
+    local = users.create('maria', PASSWORD)
+
+    external = users._get_or_create_oidc_user(
+        'https://id.example', 'subject-123', 'maria', 'user'
+    )
+    same = users._get_or_create_oidc_user(
+        'https://id.example', 'subject-123', 'new-display-name', 'user'
+    )
+
+    assert external['id'] != local['id']
+    assert external['username'].startswith('maria_')
+    assert same['id'] == external['id']
+    assert same['username'] == external['username']
+    assert users._get_or_create_oidc_user(
+        'https://other.example', 'subject-123', 'maria', 'user'
+    )['id'] not in {local['id'], external['id']}
+
+
+def test_oidc_group_roles_are_synchronized_without_removing_last_admin(
+    tmp_path,
+):
+    users = _users(tmp_path)
+    with users._connect() as conn:
+        conn.execute("UPDATE users SET role = 'user' WHERE username = 'admin'")
+    identity = users._get_or_create_oidc_user(
+        'https://id.example', 'subject-123', 'maria', 'admin'
+    )
+
+    with pytest.raises(UserError, match='last admin'):
+        users._get_or_create_oidc_user(
+            'https://id.example', 'subject-123', 'maria', 'user'
+        )
+
+    users.create('another-admin', PASSWORD, 'admin')
+    demoted = users._get_or_create_oidc_user(
+        'https://id.example', 'subject-123', 'maria', 'user'
+    )
+    assert demoted['id'] == identity['id']
+    assert demoted['role'] == 'user'
+
+
 def test_the_last_admin_stays(tmp_path):
     users = _users(tmp_path)
     admin = users.by_username('admin')
@@ -504,11 +547,17 @@ def test_with_auth_disabled_everyone_is_the_admin(open_client):
     assert open_client.get('/api/activity').status_code == 200
     info = open_client.get('/api/server/info').json()
     assert info['require_sign_in'] is False
+    assert info['capabilities']['password_sign_in'] is False
 
 
 def test_with_auth_disabled_accounts_cannot_be_managed(open_client):
     assert (
         open_client.post('/api/auth/login', json=DEFAULT_LOGIN).status_code
+        == 409
+    )
+    # Apps pair with a code instead.
+    assert (
+        open_client.post('/api/auth/token', json=DEFAULT_LOGIN).status_code
         == 409
     )
     assert open_client.get('/api/users').status_code == 409

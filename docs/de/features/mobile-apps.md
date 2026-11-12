@@ -12,7 +12,15 @@ Downtify kann Apps auf deinem Handy bedienen: Sie durchsuchen die Bibliothek und
 Die App wird offen unter [henriquesebastiao/downtify-android](https://github.com/henriquesebastiao/downtify-android) entwickelt. Alles andere lässt sich gegen dieselbe API bauen — siehe den [Vertrag für mobile Clients](../mobile-client-contract.md).
 :::
 
+## In der App anmelden
+
+Gib die Adresse des Servers ein (oder wähle ihn unter **In diesem Netzwerk gefunden**) und melde dich mit **demselben Benutzernamen und Passwort** wie auf der Webseite an. Das Handy erscheint unter **Verbundene Apps**, genau als hättest du es unten mit einem Code gekoppelt: Es spielt als du, behält einen eigenen Schlüssel (das Passwort wird nicht auf dem Handy gespeichert), und **Verbindung trennen** stoppt es.
+
+Falsche Passwörter sind zusammen mit der Anmeldung auf der Webseite ratenbegrenzt. Solange Konten ausgeschaltet sind (`DOWNTIFY_DISABLE_AUTH`), gibt es nichts, womit man sich anmelden könnte: Kopple dann mit einem Code.
+
 ## Ein Handy koppeln
+
+Koppeln braucht kein Passwort auf dem Handy: praktisch, wenn die Webseite schon offen ist, oder auf einem Handy, auf dem du dein Passwort lieber nicht eintippst.
 
 1. Öffne **Einstellungen → Apps** und drücke **Telefon koppeln**.
 2. Wähle in der App **Code scannen** und richte die Kamera auf den QR-Code — oder tippe den darunter angezeigten 8-stelligen Code ein (`K7QM-2XPD`; Groß-/Kleinschreibung und Bindestriche spielen keine Rolle).
@@ -47,6 +55,10 @@ Apps spielen die Dateien so ab, wie sie sind (**Original**), oder bitten den Ser
 - Eine Datei, die schon klein genug ist (eine verlustbehaftete Datei mit der angeforderten oder einer niedrigeren Bitrate), wird unverändert gestreamt, nie neu kodiert.
 - Kopien liegen in `/data/transcode_cache`, standardmäßig höchstens 2 GB; die am längsten nicht gespielten fliegen zuerst raus. Höchstens zwei werden gleichzeitig erstellt. Beide Grenzen sind [Umgebungsvariablen](../getting-started/environment-variables.md#mobile-apps-and-sign-in).
 - Gibt das Handy auf, während eine Kopie erstellt wird, hört der Server damit auf.
+
+## Lautstärkenormalisierung
+
+Die Android-App kann Songs mit denselben Messungen wie der Web-Player in ähnlicher Lautstärke abspielen: Schalte in ihren **Settings → Playback** die Option **Normalize volume** ein. Sie gilt ab dem nächsten Song; Songs ohne Messung spielen in ihrer ursprünglichen Lautstärke. Eine Offline-Kopie nutzt eine Messung nur, wenn sie vollständig heruntergeladen wurde und zur Datei passt, die der Server gemessen hat. Siehe [Lautstärkenormalisierung](playback-normalization.md).
 
 ## Casting
 

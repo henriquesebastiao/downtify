@@ -37,12 +37,16 @@
         <span :class="labelClass">{{ t(item.label) }}</span>
         <span
           v-if="item.name === 'Queue' && pending"
-          class="tabular flex h-5 min-w-5 items-center justify-center rounded-full bg-accent px-1.5 text-[11px] font-bold text-on-accent"
-          :class="
+          class="tabular flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[11px] font-bold"
+          :class="[
             collapsed
               ? 'absolute top-0.5 right-0.5 h-4 min-w-4 px-1 text-[10px]'
-              : 'absolute top-0.5 right-0.5 h-4 min-w-4 px-1 text-[10px] xl:static xl:ml-auto xl:h-5 xl:min-w-5 xl:px-1.5 xl:text-[11px]'
-          "
+              : 'absolute top-0.5 right-0.5 h-4 min-w-4 px-1 text-[10px] xl:static xl:ml-auto xl:h-5 xl:min-w-5 xl:px-1.5 xl:text-[11px]',
+            queuePaused
+              ? 'bg-surface-2 text-muted'
+              : 'bg-accent text-on-accent',
+          ]"
+          :title="queuePaused ? t('queue.pausedTitle') : undefined"
           >{{ pending }}</span
         >
       </RouterLink>
@@ -213,6 +217,7 @@ import { useI18n } from '/src/i18n'
 import { itemTrackCount } from '/src/lib/library'
 import { useAuth } from '/src/model/auth'
 import { useLibrary } from '/src/model/library'
+import { useQueuePause } from '/src/model/queuePause'
 import { useUpdateCheck } from '/src/model/updateCheck'
 import { usePendingCount } from './navState'
 
@@ -221,6 +226,7 @@ const route = useRoute()
 const library = useLibrary()
 const auth = useAuth()
 const pending = usePendingCount()
+const queuePaused = useQueuePause().paused
 const update = useUpdateCheck().status
 const collapsed = useLocalStorage('downtify-sidebar-collapsed', false)
 const version = computed(() => {
@@ -249,7 +255,12 @@ const items = [
     label: 'nav.discover',
     match: ['FinderBrowse'],
   },
-  { name: 'Monitor', icon: 'radar', label: 'nav.monitor' },
+  {
+    name: 'Monitor',
+    icon: 'radar',
+    label: 'nav.monitor',
+    match: ['MonitorWatch'],
+  },
   {
     name: 'Podcasts',
     icon: 'mic',

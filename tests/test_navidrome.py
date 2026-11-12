@@ -1,5 +1,7 @@
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from downtify.library_catalog import LibraryContext
 from downtify.library_delete import TagMismatchDeleteContext
 from downtify.navidrome import (
@@ -228,6 +230,65 @@ def test_search_song_id_matches_title_and_artist():
         'duration': 152,
     })
     assert sid == 'song-1'
+
+
+@pytest.mark.parametrize(
+    ('title', 'candidate_title', 'artist', 'filename'),
+    [
+        (
+            'Mad Sounds',
+            'Mad Sounds ([2156] PL)',
+            'Arctic Monkeys',
+            'slskd/AM (2013)/Arctic Monkeys - AM - 07 - Mad Sounds.mp3',
+        ),
+        (
+            'Watercolor Eyes - From Euphoria An HBO Original Series',
+            'Watercolor Eyes - From Euphoria An HBO Original Series (PMEDIA)',
+            'Lana Del Rey',
+            'Lana Del Rey - Watercolor Eyes.mp3',
+        ),
+    ],
+)
+def test_search_song_id_matches_navidrome_appended_title_suffix(
+    title, candidate_title, artist, filename
+):
+    client = NavidromeClient({
+        'url': 'https://navidrome.test',
+        'username': 'u',
+        'password': 'p',
+    })
+
+    def fake_request(endpoint, extra=None, **kwargs):
+        assert endpoint == 'search3'
+        return {
+            'searchResult3': {
+                'song': [
+                    {
+                        'id': 'wrong-recording',
+                        'title': f'{title} (Live)',
+                        'artist': artist,
+                        'duration': 400,
+                        'path': 'generated/unknown.mp3',
+                    },
+                    {
+                        'id': 'right',
+                        'title': candidate_title,
+                        'artist': artist,
+                        'duration': 200,
+                        'path': 'generated/renamed-track.mp3',
+                    },
+                ]
+            }
+        }
+
+    client._request = fake_request  # type: ignore[method-assign]
+    sid = client.search_song_id({
+        'name': title,
+        'artists': [artist],
+        'duration': 200,
+        'filename': filename,
+    })
+    assert sid == 'right'
 
 
 def test_path_matches_basename_when_parent_folder_differs():
@@ -620,3 +681,18 @@ def test_create_playlist_batches_many_songs(mock_post):
     assert 'updatePlaylist' in update_url
     assert update_kwargs['params']['playlistId'] == 'pl-big'
     assert len(update_kwargs['data']['songIdToAdd']) == 70
+
+
+def test_get_playlist_songs_handles_a_single_entry(monkeypatch):
+    client = NavidromeClient({})
+    monkeypatch.setattr(
+        client,
+        '_request',
+        lambda *_args, **_kwargs: {
+            'playlist': {'entry': {'id': 'song-1', 'title': 'First'}}
+        },
+    )
+
+    assert client.get_playlist_songs('playlist-1') == [
+        {'id': 'song-1', 'title': 'First'}
+    ]

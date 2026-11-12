@@ -63,7 +63,9 @@ O [mutagen](https://mutagen.readthedocs.io/) grava os metadados no arquivo conve
 | Tag | Gravada |
 |-----|---------|
 | Título | Sim |
-| Artista(s) | Sim |
+| Artista(s) | Sim, todos os artistas creditados, e também um por valor numa tag `ARTISTS` |
+| Artista do álbum | Sim, o artista do próprio álbum como a fonte o credita, senão o primeiro artista |
+| Marca de coletânea | Só num álbum que a fonte credita a "Various Artists", ou que um admin marca como tal |
 | Álbum | Sim |
 | Ano | Sim |
 | Capa do álbum (JPEG) | Sim |
@@ -80,4 +82,4 @@ O Downtify transmite o progresso dos downloads ao navegador por uma conexão **W
 
 O nome do arquivo de saída é montado a partir do modelo configurado nas Configurações (padrão: `{artists} - {title}`). Caracteres inválidos em nomes de arquivo são removidos.
 
-Quando *Organizar por artista* está ativado, o arquivo vai para uma subpasta com o nome do artista principal. Caso contrário, faixas avulsas vão para a raiz do diretório de downloads e as faixas de playlists/álbuns vão para uma subpasta por playlist ou álbum.
+Quando *Organizar por artista* está ativado, o arquivo vai para uma subpasta com o nome do artista do álbum — ou, numa faixa de uma coletânea de vários artistas, do seu primeiro artista. Caso contrário, faixas avulsas vão para a raiz do diretório de downloads e as faixas de playlists/álbuns vão para uma subpasta por playlist ou álbum. Veja [Vários artistas e coletâneas](features/file-organization.md#several-artists-and-compilations).

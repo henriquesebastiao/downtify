@@ -15,6 +15,7 @@ Kenar çubuğundan **Ayarlar**’ı açın (telefonda: **Daha fazla → Ayarlar*
 | M4A | `.m4a` | MPEG-4 kapsayıcısında AAC. Apple cihazları için iyi. |
 | OGG | `.ogg` | Ogg Vorbis. Açık biçim, iyi kalite/boyut oranı. |
 | OPUS | `.opus` | Düşük bit hızlarında en iyi sıkıştırma. |
+| Orijinal | varies | Yeniden kodlamadan kullanılabilen en iyi ses akışını korur. Dosya uzantısı kaynağa bağlıdır (ör. `.opus` veya `.m4a`). |
 
 ## Bit hızı
 
@@ -48,7 +49,8 @@ Kullanılabilir belirteçler:
 | Belirteç | Açıklama |
 |-------|-------------|
 | `{title}` | Parça başlığı |
-| `{artists}` | Virgülle ayrılmış sanatçı adları |
+| `{artists}` | Katkıda bulunan tüm sanatçılar, virgülle ayrılmış (örn. `Christina Aguilera, Lil' Kim, Mýa, P!nk`) |
+| `{artist}` | Yalnızca ilk sanatçı (örn. `Christina Aguilera`). `Earth, Wind & Fire` gibi virgül içeren bir ad bölünmez. |
 | `{album}` | Albüm adı |
 | `{tracknumber}` | Parçanın albümündeki sırası, 2 haneye sıfırla tamamlanmış (örn. `01`, `12`). Kaynakta parça numarası yoksa boştur (örn. serbest metin/YouTube arama sonucu). |
 | `{year}` | Yayın yılı (örn. `2025`). Kaynakta yayın tarihi yoksa boştur (örn. serbest metin/YouTube arama sonucu). |
@@ -56,11 +58,17 @@ Kullanılabilir belirteçler:
 Şablon, alt klasörler oluşturmak için `/` da içerebilir. Örneğin bir kitaplığı `Sanatçı/Albüm (2025)/01 - Başlık.mp3` olarak düzenlemek için — her albüm yayın yılıyla birlikte kendi klasörüne düştüğünden, tam bir diskografi indirirken işe yarar:
 
 ```
-{artists}/{album} ({year})/{tracknumber} - {title}
+{artist}/{album} ({year})/{tracknumber} - {title}
 ```
 
+Klasörde `{artists}` yerine `{artist}` kullanın: `{artists}` ile konuk sanatçılı bir şarkı, ilk sanatçının klasörüne gitmek yerine kendine ait bir klasör alır (`Christina Aguilera, Lil' Kim, Mýa, P!nk/`).
+
 ::: info
-Bu, aşağıdaki **Sanatçıya göre düzenle** / **Albüme göre düzenle** anahtarlarından bağımsızdır — onlar çalma listesi/albüm indirmelerini tüm kitaplığınızda paylaşılan sanatçı veya albüm klasörlerine yönlendirir. `{tracknumber}` ve `{year}`, yukarıdaki gibi bir şablonun aynı düzeni o anahtarları açmadan, parça parça elle kurmasına olanak tanır.
+Bu, **Sanatçıya göre düzenle** / **Albüme göre düzenle** anahtarlarından bağımsızdır — onlar çalma listesi/albüm indirmelerini tüm kitaplığınızda paylaşılan sanatçı veya albüm klasörlerine yönlendirir (bkz. [Dosya düzeni](file-organization.md)). `{tracknumber}` ve `{year}`, yukarıdaki gibi bir şablonun aynı düzeni o anahtarları açmadan, parça parça elle kurmasına olanak tanır.
+:::
+
+::: tip Derlemeler
+Şablon, çok sanatçılı bir derlemedeki parçaya da diğerleri gibi uygulanır: `{artist}` parçanın kendi ilk sanatçısıdır, asla "Various Artists" değildir. Bkz. [Birden çok sanatçı ve derlemeler](file-organization.md#several-artists-and-compilations).
 :::
 
 ## Eşzamanlı indirmeler

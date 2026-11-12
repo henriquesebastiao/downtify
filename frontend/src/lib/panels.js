@@ -2,10 +2,13 @@
 // a preference changes are unit-testable without mounting the view.
 
 /** Every panel, in tab order. */
-export const PANEL_IDS = ['lyrics', 'queue', 'details', 'equalizer']
+export const PANEL_IDS = ['lyrics', 'karaoke', 'queue', 'details', 'equalizer']
+
+/** The panels that only show a track's lyrics, in different layouts. */
+const LYRICS_PANELS = ['lyrics', 'karaoke']
 
 /**
- * The panels on offer: the lyrics one only while lyrics are shown, and
+ * The panels on offer: the lyrics ones only while lyrics are shown, and
  * never for a podcast episode — Downtify has no lyrics source for
  * those, so the tab would only ever show "no lyrics for this track".
  * A streamed track (not in the library) offers neither lyrics nor
@@ -18,7 +21,7 @@ export function availablePanels({
 } = {}) {
   return PANEL_IDS.filter(
     (id) =>
-      (id !== 'lyrics' || (lyrics && !isPodcast && !isStream)) &&
+      (!LYRICS_PANELS.includes(id) || (lyrics && !isPodcast && !isStream)) &&
       (id !== 'details' || !isStream)
   )
 }

@@ -63,7 +63,9 @@ Un enlace de canción/álbum/playlist/artista de Deezer pegado (`deezer.com/trac
 | Etiqueta | Escrita |
 |-----|---------|
 | Título | Sí |
-| Artista(s) | Sí |
+| Artista(s) | Sí, todos los artistas acreditados, y además uno por valor en una etiqueta `ARTISTS` |
+| Artista del álbum | Sí, el artista del propio álbum según la fuente, si no el primer artista |
+| Marca de recopilatorio | Solo en un álbum que la fuente acredita a "Various Artists", o que un administrador marca como tal |
 | Álbum | Sí |
 | Año | Sí |
 | Carátula (JPEG) | Sí |
@@ -80,4 +82,4 @@ Downtify transmite el progreso de las descargas al navegador mediante una conexi
 
 El nombre del archivo de salida se construye a partir de la plantilla configurada en Ajustes (por defecto: `{artists} - {title}`). Los caracteres no válidos en nombres de archivo se eliminan.
 
-Cuando *Organizar por artista* está activado, el archivo se coloca dentro de una subcarpeta con el nombre del artista principal. En caso contrario, las canciones sueltas van a la raíz del directorio de descargas y las canciones de playlists/álbumes van a una subcarpeta por playlist o álbum.
+Cuando *Organizar por artista* está activado, el archivo se coloca dentro de una subcarpeta con el nombre del artista del álbum — o, para una canción de un recopilatorio de varios artistas, de su primer artista. En caso contrario, las canciones sueltas van a la raíz del directorio de descargas y las canciones de playlists/álbumes van a una subcarpeta por playlist o álbum. Consulta [Varios artistas y recopilatorios](features/file-organization.md#several-artists-and-compilations).

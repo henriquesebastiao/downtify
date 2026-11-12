@@ -612,6 +612,29 @@ def delete_playlist_from_library(
         settings,
         track_index=state.track_index,
     )
+    if getattr(state, 'library_trash', None) is not None:
+        manual = _drop_manual_playlist_if_any(ctx, download_dir, pl_name)
+        if manual is not None:
+            return manual
+        if state.playlist_catalog is not None:
+            state.playlist_catalog.delete_playlist(pl_name)
+        remove_playlist_shell(
+            pl_name,
+            download_dir,
+            organize_by_artist=bool(
+                settings.get('organize_by_artist')
+                or settings.get('organize_by_album')
+            ),
+        )
+        return {
+            'ok': True,
+            'playlist': pl_name,
+            'files': [],
+            'deleted_count': 0,
+            'failed_count': 0,
+            'failed': [],
+            'playlists_affected': [pl_name],
+        }
     return _drop_manual_playlist_if_any(
         ctx, download_dir, pl_name
     ) or _delete_imported_playlist(pl_name, download_dir, settings, state, ctx)

@@ -11,7 +11,7 @@ from typing import Any, Callable, Optional
 
 from loguru import logger
 
-from . import spotify
+from . import library_only, spotify
 from .sqlite_utils import connect_sqlite
 from .track_index import normalize_spotify_track_id
 
@@ -443,6 +443,7 @@ async def playlist_spotify_cache_loop(
     *,
     delay_seconds: float = 1.0,
     idle_seconds: float = 300.0,
+    settings: Optional[dict[str, Any]] = None,
 ) -> None:
     """Background task: keep known playlists cached from Spotify."""
 
@@ -451,11 +452,17 @@ async def playlist_spotify_cache_loop(
             # SQLite lookups across the batch store, catalog and monitor:
             # off the event loop.
             ids = await asyncio.to_thread(list_spotify_ids)
-            warmed = await warm_uncached_playlists(
-                cache,
-                ids,
-                delay_seconds=delay_seconds,
-            )
+            if library_only.enabled(settings or {}):
+                warmed = 0
+            else:
+                with library_only.policy.external(
+                    settings if settings is not None else {}
+                ):
+                    warmed = await warm_uncached_playlists(
+                        cache,
+                        ids,
+                        delay_seconds=delay_seconds,
+                    )
             if warmed:
                 logger.info('Spotify cache: stored {} playlist(s)', warmed)
         except Exception:

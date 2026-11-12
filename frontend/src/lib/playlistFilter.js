@@ -7,7 +7,14 @@ const TRACK_FIELDS = ['title', 'artist', 'album', 'file']
 const SONG_FIELDS = ['name', 'artists', 'artist', 'album_name']
 
 // Most useful first; anything else (a future provider) comes after.
-const PROVIDER_ORDER = ['youtube-music', 'youtube', 'slskd', 'deemix', 'folder']
+const PROVIDER_ORDER = [
+  'youtube-music',
+  'youtube',
+  'soundcloud',
+  'slskd',
+  'deemix',
+  'folder',
+]
 
 /** The provider id of a library track: `providers[file]`, '' if unknown. */
 export function providerOf(track, providers) {

@@ -21,7 +21,7 @@ downloads/
 
 ## Organizar por artista
 
-Com **Configurações → Downloads e arquivos → Organizar por artista** ativado (o padrão), todas as faixas — inclusive os downloads de playlists e álbuns — são agrupadas em uma subpasta com o nome do artista principal:
+Com **Configurações → Downloads e arquivos → Organizar por artista** ativado (o padrão), todas as faixas — inclusive os downloads de playlists e álbuns — são agrupadas em uma subpasta com o nome do artista do álbum (veja [Vários artistas e coletâneas](#several-artists-and-compilations)):
 
 ```
 downloads/
@@ -35,6 +35,41 @@ downloads/
 ```
 
 Essa estrutura é compatível com servidores de mídia (Jellyfin, Navidrome, Plex) e gerenciadores de biblioteca (Beets) que esperam uma organização de pastas `Artista/Música.ext`.
+
+## Vários artistas e coletâneas
+
+Uma música costuma creditar vários artistas. O Downtify guarda todos na tag **Artista** do arquivo e também grava cada um separadamente numa tag **ARTISTS** (`TXXX:ARTISTS` no MP3), para que um player nunca precise dividir um nome como `Earth, Wind & Fire` na vírgula. A pasta, porém, pertence a um único artista: o **artista do álbum**, ou, numa coletânea, o primeiro artista da faixa.
+
+- O artista do álbum é o artista que a fonte (Spotify, YouTube Music ou Deezer) credita para o **álbum**, o mesmo em todas as faixas, e é gravado na tag **Artista do álbum**. Quando a fonte não diz, é o primeiro artista da faixa.
+- Uma dupla ou um grupo é um artista só. O YouTube Music credita alguns artistas pelos seus integrantes, um por entrada (`Henrique & Juliano` volta como `Henrique` e `Juliano`, no álbum e em cada faixa — às vezes na ordem inversa, `Mateus` e `Jorge` para `Jorge & Mateus`). Cada nome creditado aponta para um canal do YouTube Music; quando o link de um integrante leva a um canal com o nome do grupo inteiro, formado pelos nomes creditados ao lado dele, o Downtify junta esses nomes de volta no nome do grupo: a pasta e as tags **Artista do álbum**, **Artista** e **ARTISTS** dizem `Henrique & Juliano`. Uma colaboração de verdade (cada artista no próprio canal) mantém todos os artistas. Quando o YouTube Music não liga nenhum integrante ao canal do grupo, os nomes continuam separados; mesmo assim, a Biblioteca não dá página a um nome que só aparece creditado ao lado de outro (veja [Catálogo da biblioteca](library-catalog.md#library-page)).
+- Um convidado nunca muda isso. *The Girl Is Mine*, com um convidado no *Thriller* de Michael Jackson, fica em `Michael Jackson/Thriller/`, e o single *Lady Marmalade* (Christina Aguilera, Lil' Kim, Mýa, P!nk) vai para `Christina Aguilera/`.
+- Só um álbum que a própria fonte credita a **Various Artists** (uma trilha sonora, um "Now That's What I Call…") é uma coletânea — a menos que você [o marque](#marking-an-album-as-various-artists). Uma música avulsa do YouTube Music nunca é: o YouTube Music arquiva o mesmo áudio em vários lançamentos e pode mostrar qualquer um deles como álbum, muitas vezes uma coletânea, então só o download de um álbum inteiro do YouTube Music conta. As faixas dela recebem "Various Artists" como artista do álbum mais a marca de coletânea (`TCMP` no MP3, `COMPILATION` em FLAC/Ogg/Opus, `cpil` no M4A). Isso mantém o álbum inteiro no Navidrome e em outros servidores de mídia, que agrupam álbuns por essas tags e não por pasta. No disco, porém, **Organizar por artista** nunca cria uma pasta `Various Artists`: cada faixa vai para a pasta do seu primeiro artista.
+- Versões antigas do Downtify gravavam **Various Artists** em qualquer música com vários artistas, sem a marca de coletânea. A Biblioteca continua listando essa música no álbum do seu primeiro artista, como antes; **Marcar como Artistas Diversos** transforma o álbum numa coletânea de verdade.
+
+```
+downloads/
+├── Christina Aguilera/
+│   ├── Lady Marmalade/
+│   │   └── Christina Aguilera, Lil' Kim, Mýa, P!nk - Lady Marmalade.mp3
+│   └── Moulin Rouge/                  ← da trilha sonora (uma coletânea)
+│       └── Christina Aguilera, Lil' Kim, Mýa, P!nk - Lady Marmalade.mp3
+└── David Bowie/
+    └── Moulin Rouge/                  ← mesma trilha sonora
+        └── David Bowie - Nature Boy.mp3
+```
+
+*Lady Marmalade* do single e da trilha sonora de *Moulin Rouge* são dois lançamentos, cada um arquivado com o próprio álbum. As faixas da trilha sonora ficam espalhadas pelas pastas dos seus artistas, mas marcadas como uma coletânea "Various Artists", então a Biblioteca e os servidores de mídia ainda mostram *Moulin Rouge* como um álbum só.
+
+### Marcar um álbum como Artistas Diversos
+
+Uma fonte pode creditar um lançamento a um artista quando ele pertence a vários por igual — o Deezer lista o single *Lady Marmalade* só sob Christina Aguilera. Um admin corrige isso na página do álbum na Biblioteca, com o botão **Marcar como Artistas Diversos** ao lado de **Adicionar à fila**.
+
+- Cada faixa do álbum recebe "Various Artists" como artista do álbum e a marca de coletânea. Nada mais nos arquivos muda, e eles ficam onde estão (as faixas de uma coletânea já ficam na pasta do seu primeiro artista). Cada arquivo é reescrito por meio de uma cópia de trabalho, mantém a data de modificação e fica intacto se a reescrita falhar.
+- Na Biblioteca, o álbum passa a aparecer por **Various Artists** em **Álbuns** (cada faixa continua na página do seu artista), e a página do álbum o acompanha.
+- O Downtify lembra do álbum: uma faixa dele baixada depois recebe as mesmas tags.
+- Numa coletânea, o mesmo botão diz **Desmarcar como Artistas Diversos**: desfaz a marca e devolve o artista do álbum que ele tinha. Também funciona num álbum que a fonte transformou em coletânea; aí o artista do álbum passa a ser o artista que a maioria das faixas lista primeiro, e downloads posteriores desse álbum não são marcados de novo.
+
+Só admins veem o botão. Os servidores de mídia pegam a mudança na próxima varredura da biblioteca.
 
 ## M3U e pastas de artista
 

@@ -45,6 +45,7 @@ KINDS = (
     'unlike',
     'delete',
     'audio_replaced',
+    'album_compilation',
     'library_hidden',
     'library_shown',
     'device_paired',

@@ -12,6 +12,12 @@ Flows that rewrite or delete a file re-point or drop the row
 Files downloaded before this was kept have no row; :func:`guess_provider`
 still recognises the ones whose path says it - slskd files left in
 place (``slskd/...``) and files from extra music folders (``ext/...``).
+
+A row also keeps when the file was downloaded (``recorded_at``) and,
+for an slskd transfer copied into the library instead of left in place,
+the absolute path of the transfer it was copied from (``source``): that
+copy in slskd's folder is no library content of its own, which the
+library usage page (``downtify/library_usage.py``) tells apart.
 """
 
 from __future__ import annotations
@@ -51,6 +57,10 @@ def _chunked(values: list[str], size: int = 400):
         yield values[index : index + size]
 
 
+def _details(row: sqlite3.Row) -> dict[str, str]:
+    return {'provider': row['provider'], 'recorded_at': row['recorded_at']}
+
+
 class FileProviders:
     """``content key -> provider`` (plus the path), in the library database."""
 
@@ -68,17 +78,30 @@ class FileProviders:
                     content_key TEXT PRIMARY KEY,
                     path TEXT NOT NULL DEFAULT '',
                     provider TEXT NOT NULL,
-                    recorded_at TEXT NOT NULL
+                    recorded_at TEXT NOT NULL,
+                    source TEXT NOT NULL DEFAULT ''
                 )
             """)
+            columns = {
+                row['name']
+                for row in conn.execute('PRAGMA table_info(file_providers)')
+            }
+            if 'source' not in columns:
+                conn.execute(
+                    'ALTER TABLE file_providers '
+                    "ADD COLUMN source TEXT NOT NULL DEFAULT ''"
+                )
             conn.execute("""
                 CREATE INDEX IF NOT EXISTS idx_file_providers_path
                 ON file_providers (path)
             """)
 
-    def record(self, content_key: str, path: str, provider: str) -> None:
+    def record(
+        self, content_key: str, path: str, provider: str, source: str = ''
+    ) -> None:
         """Remember that *provider* fetched the file (the latest wins: a
-        file downloaded again replaced the old one)."""
+        file downloaded again replaced the old one) and, when it is a
+        copy, the absolute path of the transfer it was copied from."""
 
         key = str(content_key or '').strip()
         name = str(provider or '').strip()
@@ -87,13 +110,20 @@ class FileProviders:
         with self._connect() as conn:
             conn.execute(
                 """INSERT INTO file_providers
-                   (content_key, path, provider, recorded_at)
-                   VALUES (?, ?, ?, ?)
+                   (content_key, path, provider, recorded_at, source)
+                   VALUES (?, ?, ?, ?, ?)
                    ON CONFLICT(content_key) DO UPDATE SET
                    path = excluded.path,
                    provider = excluded.provider,
-                   recorded_at = excluded.recorded_at""",
-                (key, _norm_path(path), name, _now_iso()),
+                   recorded_at = excluded.recorded_at,
+                   source = excluded.source""",
+                (
+                    key,
+                    _norm_path(path),
+                    name,
+                    _now_iso(),
+                    str(source or '').strip(),
+                ),
             )
 
     def lookup(self, keys_by_path: dict[str, str]) -> dict[str, str]:
@@ -101,37 +131,59 @@ class FileProviders:
         key}`` - by content key, else by path; files nobody recorded are
         left out."""
 
+        return {
+            path: row['provider']
+            for path, row in self.recorded(keys_by_path).items()
+        }
+
+    def recorded(
+        self, keys_by_path: dict[str, str]
+    ) -> dict[str, dict[str, str]]:
+        """``{path: {provider, recorded_at}}`` for the library files
+        ``{path: content key}`` - by content key, else by path; files
+        nobody recorded are left out."""
+
         wanted = {_norm_path(p): str(k or '') for p, k in keys_by_path.items()}
         wanted.pop('', None)
         if not wanted:
             return {}
-        by_key: dict[str, str] = {}
-        by_path: dict[str, str] = {}
+        by_key: dict[str, dict[str, str]] = {}
+        by_path: dict[str, dict[str, str]] = {}
         keys = sorted({k for k in wanted.values() if k})
         paths = sorted(wanted)
         with self._connect() as conn:
             for chunk in _chunked(keys):
                 marks = ','.join('?' * len(chunk))
                 for row in conn.execute(
-                    'SELECT content_key, provider FROM file_providers '
-                    f'WHERE content_key IN ({marks})',
+                    'SELECT content_key, provider, recorded_at '
+                    f'FROM file_providers WHERE content_key IN ({marks})',
                     chunk,
                 ):
-                    by_key[row['content_key']] = row['provider']
+                    by_key[row['content_key']] = _details(row)
             for chunk in _chunked(paths):
                 marks = ','.join('?' * len(chunk))
                 for row in conn.execute(
-                    'SELECT path, provider FROM file_providers '
+                    'SELECT path, provider, recorded_at FROM file_providers '
                     f'WHERE path IN ({marks})',
                     chunk,
                 ):
-                    by_path.setdefault(row['path'], row['provider'])
-        found: dict[str, str] = {}
+                    by_path.setdefault(row['path'], _details(row))
+        found: dict[str, dict[str, str]] = {}
         for path, key in wanted.items():
-            provider = by_key.get(key) or by_path.get(path)
-            if provider:
-                found[path] = provider
+            details = by_key.get(key) or by_path.get(path)
+            if details:
+                found[path] = details
         return found
+
+    def sources(self) -> list[str]:
+        """The absolute paths library files were copied from (slskd
+        transfers not left in place), whether or not still on disk."""
+
+        with self._connect() as conn:
+            rows = conn.execute(
+                "SELECT DISTINCT source FROM file_providers WHERE source != ''"
+            ).fetchall()
+        return [str(row['source']) for row in rows]
 
     def rekey(self, old_key: str, new_key: str, stored_path: str = '') -> int:
         """Follow a file rewritten in place (upgrade, replaced audio)."""

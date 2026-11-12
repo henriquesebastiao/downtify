@@ -1,3 +1,4 @@
+import { localCatalogRoute } from '/src/lib/library'
 // Discover: what the page sends the server, and when a play counts as a
 // listen. Pure, so it's unit-testable.
 
@@ -83,6 +84,8 @@ export function appendNew(list, incoming) {
  * columns, anything else - a Spotify album, any playlist - on the Link page.
  */
 export function collectionRoute(item) {
+  const local = localCatalogRoute(item)
+  if (local) return local
   if (
     item?.source === 'deezer' &&
     item.deezer_album_id &&
@@ -98,6 +101,8 @@ export function collectionRoute(item) {
 
 /** Where a suggested artist's photo opens: the Finder, when Deezer knows it. */
 export function artistRoute(item) {
+  const local = localCatalogRoute(item, 'artist')
+  if (local) return local
   return item?.deezer_id
     ? { name: 'FinderBrowse', query: { artist: String(item.deezer_id) } }
     : { name: 'Search', params: { query: item?.name || '' } }

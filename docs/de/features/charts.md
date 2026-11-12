@@ -17,6 +17,13 @@ icon: lucide/trending-up
 
 Ein Chart-Titel braucht zum Herunterladen keinen Auflösungsschritt: Deezer liefert bereits Titel, Künstler und Albumnamen, und das genügt, um auf YouTube zu suchen und zuzuordnen — genau wie bei einem Freitext-Suchergebnis. Ein Album, ein Künstler oder eine Playlist braucht ihn schon — den Link in eine Titelliste verwandeln —, deshalb öffnet seine Karte diese aufgelöste Seite, statt direkt aus dem Raster herunterzuladen. Das Abspielen einer Titelzeile streamt vollständig von YouTube (nie bei Alben, Künstlern oder Playlists) — dasselbe Streaming wie bei jeder anderen Titelzeile, nur gespeist mit Titel und Künstler der Hitliste.
 
+## Eine Chart-Playlist beobachten oder speichern
+
+Jede Playlist-Karte hat ein Menü **⋯** über ihrem Cover, mit den zwei Dingen, die ihre Seite neben dem Herunterladen bietet:
+
+- **Auf neue Titel achten** fügt eine Beobachtung der [Playlist-Überwachung](playlist-monitor.md#deezer-playlists) hinzu, die alle 6 Stunden geprüft wird: Die erste Prüfung lädt herunter, was die Playlist jetzt enthält, spätere das, was hinzukommt. Intervall ändern, pausieren oder beenden kannst du auf der Seite **Überwachung**.
+- **Zu meinen Playlists hinzufügen** öffnet die Playlist-Auswahl mit den Titeln der Playlist, die **schon in deiner Bibliothek** sind, um sie zu einer deiner Playlists oder einer neuen, nach ihr benannten hinzuzufügen. Es wird nichts heruntergeladen, und deine Playlist folgt der Chart-Playlist danach nicht — dafür gibt es die Download-Schaltfläche oder **Auf neue Titel achten**. Ist noch keiner ihrer Titel in der Bibliothek, wird das stattdessen angezeigt.
+
 ## API
 
 Siehe [`GET /api/discover/chart`](../api-reference.md#get-apidiscoverchart) in der API-Referenz.

@@ -19,6 +19,7 @@ Ambas vêm desligadas por padrão e são configuradas em **Configurações**.
 |--------|-------------|
 | **YouTube Music** | O padrão. Pesquisa no YouTube Music, recorrendo ao YouTube comum quando não há correspondência aceitável — veja [Como funciona](../how-it-works.md#fallback-to-standard-youtube). |
 | **YouTube** | Pesquisa só no YouTube comum. |
+| **SoundCloud** | Desligada por padrão. Pesquisa no SoundCloud e baixa a faixa exata de um link do SoundCloud colado — [SoundCloud](soundcloud.md). |
 | **slskd** | Pesquisa no Soulseek pelo slskd e baixa o arquivo que melhor corresponder. |
 
 Ativar o slskd o coloca em primeiro na lista. Se o slskd acabar sendo a única fonte, o YouTube Music e o YouTube ainda são tentados depois dele, então uma faixa que o slskd não encontra ainda é baixada. A fila de downloads mostra qual fonte atendeu cada faixa.
@@ -63,6 +64,7 @@ Se nada aceitável aparecer, a transferência não terminar dentro do **Tempo li
 Com **Deixar os arquivos do slskd no lugar** ligado (o padrão), o arquivo baixado fica na pasta do slskd: o Downtify grava nele ali mesmo os metadados, a capa e a letra e o registra na biblioteca com um caminho `slskd/…`. A Biblioteca, o player e os arquivos M3U usam esse caminho, e ele é servido por `/media/slskd/…`.
 
 Desligue para copiar o arquivo ao lado dos seus outros downloads, seguindo o seu modelo de nome de arquivo e as configurações de [organização de arquivos](file-organization.md).
+A transferência em si continua na pasta do slskd; [Armazenamento e uso](storage-usage.md#the-library-not-its-working-copies) conta essas cópias à parte da biblioteca, como *cópias de trabalho do slskd*, para você ver quanto espaço elas ocupam.
 
 ::: info
 Os arquivos do slskd mantêm o formato original — não são transcodificados para o formato escolhido em Configurações.

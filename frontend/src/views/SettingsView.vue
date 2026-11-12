@@ -45,6 +45,21 @@
           <template v-if="section === 'general'">
             <AccountSettings v-if="!auth.authDisabled.value" />
             <SettingGroup
+              v-if="auth.isAdmin.value"
+              :title="t('libraryOnly.title')"
+              :description="t('libraryOnly.hint')"
+            >
+              <SettingRow
+                :label="t('libraryOnly.enable')"
+                :description="t('libraryOnly.serverHint')"
+              >
+                <UiSwitch
+                  v-model="s.library_only"
+                  :aria-label="t('libraryOnly.enable')"
+                />
+              </SettingRow>
+            </SettingGroup>
+            <SettingGroup
               :title="t('settings.appearance')"
               :description="t('settings.personalHint')"
             >
@@ -103,6 +118,7 @@
                 />
               </SettingRow>
             </SettingGroup>
+            <NormalizationSettings />
             <SettingGroup :title="t('settings.playlistsGroup')">
               <SettingRow
                 :label="t('settings.showPublicPlaylists')"
@@ -189,6 +205,32 @@
                     placeholder="/slskd"
                     mono
                   />
+                  <UiInput
+                    v-model.trim="slskdFormatsText"
+                    :label="t('settings.slskdFormats')"
+                    :hint="t('settings.slskdFormatsHint')"
+                    placeholder="flac, mp3"
+                    mono
+                  />
+                  <div class="grid grid-cols-2 gap-3">
+                    <UiInput
+                      v-model="s.slskd.min_bitrate"
+                      :label="t('settings.slskdMinBitrate')"
+                      :hint="t('settings.slskdMinBitrateHint')"
+                      type="number"
+                      min="0"
+                      max="10000"
+                      suffix="kbps"
+                    />
+                    <UiInput
+                      v-model="s.slskd.download_attempts"
+                      :label="t('settings.slskdAttempts')"
+                      :hint="t('settings.slskdAttemptsHint')"
+                      type="number"
+                      min="1"
+                      max="10"
+                    />
+                  </div>
                   <div class="grid grid-cols-2 gap-3">
                     <UiInput
                       v-model="s.slskd.download_timeout_seconds"
@@ -208,6 +250,24 @@
                     />
                   </div>
                 </div>
+                <SettingRow
+                  :label="t('settings.slskdStrictPriority')"
+                  :description="t('settings.slskdStrictPriorityHint')"
+                >
+                  <UiSwitch
+                    v-model="s.slskd.strict_format_priority"
+                    :aria-label="t('settings.slskdStrictPriority')"
+                  />
+                </SettingRow>
+                <SettingRow
+                  :label="t('settings.slskdWhitelist')"
+                  :description="t('settings.slskdWhitelistHint')"
+                >
+                  <UiSwitch
+                    v-model="s.slskd.extensions_whitelist"
+                    :aria-label="t('settings.slskdWhitelist')"
+                  />
+                </SettingRow>
                 <div class="px-5 py-4">
                   <ConnectionTest
                     kind="slskd"
@@ -289,10 +349,15 @@
 
           <!-- Downloads & files -->
           <template v-else-if="section === 'files'">
+            <GlobalQueueControl />
             <SettingGroup :title="t('settings.audioGroup')">
               <SettingRow
                 :label="t('settings.format')"
-                :description="t('settings.formatHint')"
+                :description="
+                  s.format === 'original'
+                    ? t('settings.formatOriginalHint')
+                    : t('settings.formatHint')
+                "
               >
                 <UiSegmented
                   v-model="s.format"
@@ -300,7 +365,10 @@
                   :options="
                     sm.settingsOptions.format.map((f) => ({
                       value: f,
-                      label: f.toUpperCase(),
+                      label:
+                        f === 'original'
+                          ? t('settings.formatOriginal')
+                          : f.toUpperCase(),
                     }))
                   "
                 />
@@ -308,16 +376,20 @@
               <SettingRow
                 :label="t('settings.bitrate')"
                 :description="
-                  s.format === 'flac'
-                    ? t('settings.bitrateLossless')
-                    : t('settings.bitrateHint')
+                  s.format === 'original'
+                    ? t('settings.bitrateOriginal')
+                    : s.format === 'flac'
+                      ? t('settings.bitrateLossless')
+                      : t('settings.bitrateHint')
                 "
               >
                 <UiSegmented
                   v-model="s.bitrate"
                   show-labels
                   :class="
-                    s.format === 'flac' ? 'pointer-events-none opacity-40' : ''
+                    s.format === 'flac' || s.format === 'original'
+                      ? 'pointer-events-none opacity-40'
+                      : ''
                   "
                   :options="
                     sm.settingsOptions.bitrate.map((b) => ({
@@ -440,6 +512,30 @@
             </SettingGroup>
 
             <SettingGroup :title="t('settings.pacingGroup')">
+              <SettingRow
+                :label="t('downloadPolicy.budget')"
+                :description="t('downloadPolicy.budgetHelp')"
+                stacked
+              >
+                <PresetPicker
+                  :model-value="s.download_retry_budget_minutes"
+                  :presets="[0, 30, 60, 120]"
+                  :min="0"
+                  :max="1440"
+                  unit="min"
+                  :format="
+                    (v) => (v === 0 ? t('settings.unlimited') : `${v} min`)
+                  "
+                  :custom-label="t('settings.custom')"
+                  @update:model-value="
+                    (v) =>
+                      (s.download_retry_budget_minutes = Math.max(
+                        0,
+                        Math.min(1440, Number(v) || 0)
+                      ))
+                  "
+                />
+              </SettingRow>
               <SettingRow
                 :label="t('settings.parallel')"
                 :description="t('settings.parallelHint')"
@@ -872,6 +968,7 @@
 </template>
 
 <script setup>
+import GlobalQueueControl from '/src/components/queue/GlobalQueueControl.vue'
 import { computed, ref } from 'vue'
 import { onBeforeRouteLeave, useRoute } from 'vue-router'
 import AppIcon from '/src/components/ui/AppIcon.vue'
@@ -891,6 +988,7 @@ import ExternalLibrarySettings from '/src/components/settings/ExternalLibrarySet
 import PathSuggestInput from '/src/components/settings/PathSuggestInput.vue'
 import PresetPicker from '/src/components/settings/PresetPicker.vue'
 import AccountSettings from '/src/components/settings/AccountSettings.vue'
+import NormalizationSettings from '/src/components/settings/NormalizationSettings.vue'
 import ActivitySettings from '/src/components/settings/ActivitySettings.vue'
 import AppsSettings from '/src/components/settings/AppsSettings.vue'
 import ServerPortSetting from '/src/components/settings/ServerPortSetting.vue'
@@ -932,6 +1030,19 @@ const update = useUpdateCheck().status
 
 const hasTrack = computed(() => !!player.currentTrack.value)
 const s = sm.settings
+const slskdFormatsText = computed({
+  get: () => (s.value.slskd.extensions || []).join(', '),
+  set: (value) => {
+    s.value.slskd.extensions = [
+      ...new Set(
+        String(value)
+          .split(',')
+          .map((extension) => extension.trim().toLowerCase().replace(/^\./, ''))
+          .filter(Boolean)
+      ),
+    ]
+  },
+})
 const version = localStorage.getItem('version')
 
 // Normal users see General, Apps and About; the rest is the server's,
@@ -1019,6 +1130,10 @@ function addToken(token) {
 
 const templatePreview = computed(() => {
   const template = String(s.value.output || sm.settingsOptions.output)
+  const previewTemplate =
+    s.value.format === 'original'
+      ? template.replace('.{output-ext}', '')
+      : template
   const values = {
     '{artists}': 'Kenji Aoki, Mira Kovač',
     '{artist}': 'Kenji Aoki',
@@ -1030,7 +1145,7 @@ const templatePreview = computed(() => {
   }
   return Object.entries(values).reduce(
     (text, [token, value]) => text.split(token).join(value),
-    template
+    previewTemplate
   )
 })
 

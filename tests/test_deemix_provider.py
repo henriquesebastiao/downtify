@@ -290,8 +290,11 @@ def test_deemix_finalize_preserves_native_tags_and_lrc(
         pytest.fail('Native Deemix metadata must not be rewritten')
 
     monkeypatch.setattr(downloader, '_tag_file', forbidden)
-    stored = downloader._finalize_local_source({}, path, 'deemix', None, None)
+    stored, copied_from = downloader._finalize_local_source(
+        {}, path, 'deemix', None, None
+    )
     assert stored.startswith('ext/')
+    assert copied_from is None
     assert (path.read_bytes(), sidecar.read_bytes()) == before
     result = lyrics.read_track_lyrics(path)
     assert result['synced'] == '[00:01.00]Native synced lyrics'

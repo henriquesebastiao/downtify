@@ -35,7 +35,8 @@
       <CollectionHero
         :title="details.name || t('link.untitled')"
         :kicker="kicker"
-        :cover="details.cover_url"
+        :cover="heroCover.cover"
+        :cover-fallback="heroCover.fallback"
         :covers="details.cover_url ? [] : mosaic"
         :name="details.name"
         :icon="
@@ -270,6 +271,7 @@ import UiEmpty from '/src/components/ui/UiEmpty.vue'
 import UiIconButton from '/src/components/ui/UiIconButton.vue'
 import UiSkeleton from '/src/components/ui/UiSkeleton.vue'
 import CollectionHero from '/src/components/library/CollectionHero.vue'
+import { knownArtistPhoto } from '/src/lib/artistPhotoProxy'
 import DownloadState from '/src/components/search/DownloadState.vue'
 import SimilarButton from '/src/components/similar/SimilarButton.vue'
 import ReleaseCard from '/src/components/search/ReleaseCard.vue'
@@ -300,6 +302,15 @@ const playlistActions = usePlaylistActions()
 const ui = useUi()
 
 const details = ref(null)
+// An artist link's photo: the one saved in the library when there is one,
+// else the platform's own (Spotify, Deezer or YouTube Music) relayed by the
+// photo proxy - and that picture straight from the platform if the proxy
+// can't answer. Any other link keeps its cover as it is.
+const heroCover = computed(() => {
+  const d = details.value
+  if (d?.kind !== 'artist') return { cover: d?.cover_url || '', fallback: '' }
+  return knownArtistPhoto(d.name, d.cover_url)
+})
 const loading = ref(false)
 const error = ref('')
 const submitting = ref(false)
@@ -335,6 +346,7 @@ const SOURCE_LABELS = {
   spotify: () => t('link.openSpotify'),
   youtube: () => t('link.openYoutube'),
   deezer: () => t('link.openDeezer'),
+  soundcloud: () => t('link.openSoundcloud'),
 }
 const sourceLabel = computed(() =>
   (SOURCE_LABELS[kind.value.source] || SOURCE_LABELS.youtube)()
@@ -345,6 +357,7 @@ const kicker = computed(() => {
     spotify: 'Spotify',
     youtube: 'YouTube Music',
     deezer: 'Deezer',
+    soundcloud: 'SoundCloud',
   }
   const source = names[kind.value.source] || kind.value.source
   return `${source} · ${t(`link.kind.${details.value?.kind || 'track'}`)}`
@@ -370,12 +383,13 @@ const playContext = computed(() =>
     : null
 )
 
-// Playlist Monitor has no Deezer support: watching a Deezer playlist or
-// artist for updates isn't offered, only downloading what's there now.
+// A Deezer playlist can be watched, a Deezer artist can't: an artist
+// watch follows a YouTube Music artist, found from a Spotify or YouTube
+// Music link.
 const watchable = computed(
   () =>
     (details.value?.kind === 'playlist' || details.value?.kind === 'artist') &&
-    kind.value.source !== 'deezer'
+    (kind.value.source !== 'deezer' || details.value?.kind === 'playlist')
 )
 
 const mosaic = computed(() =>

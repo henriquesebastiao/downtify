@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from downtify import m3u
 
 # --- sanitize_playlist_name ------------------------------------------------
@@ -390,3 +392,73 @@ def test_read_empty_playlist_returns_empty_list(tmp_path):
     m3u_path = tmp_path / 'Empty.m3u'
     m3u_path.write_text('#EXTM3U\n', encoding='utf-8')
     assert m3u.read_m3u_tracks(m3u_path, tmp_path) == []
+
+
+@pytest.mark.parametrize(
+    ('encoding', 'suffix', 'label'),
+    [
+        ('utf-8', '.m3u', 'Beyoncé - 東京 🎵'),
+        ('utf-8-sig', '.m3u', 'Beyoncé - 東京 🎵'),
+        ('utf-8-sig', '.m3u8', 'Beyoncé - 東京 🎵'),
+        ('cp1252', '.M3U', 'Beyoncé – “Déjà Vu”'),
+        ('latin-1', '.m3u', 'Beyoncé - Déjà Vu'),
+    ],
+)
+def test_read_preserves_encoded_paths_and_metadata(
+    tmp_path: Path, encoding: str, suffix: str, label: str
+) -> None:
+    filename = f'{label}.mp3'
+    audio = tmp_path / filename
+    audio.write_bytes(b'audio')
+    path = tmp_path / f'Mix{suffix}'
+    extinf = f'#EXTINF:196,{label}'
+    original = (
+        f'#EXTM3U\r\n{m3u.MANUAL_M3U_MARKER}\r\n{extinf}\r\n{filename}\r\n'
+    ).encode(encoding)
+    path.write_bytes(original)
+
+    assert m3u.is_manual_m3u(path)
+    assert m3u.read_m3u_tracks(path, tmp_path) == [filename]
+    assert m3u.read_m3u_entries(path, tmp_path) == [(filename, extinf)]
+    assert path.read_bytes() == original
+    assert audio.read_bytes() == b'audio'
+
+
+def test_read_legacy_playlist_from_report(tmp_path: Path) -> None:
+    path = tmp_path / 'Legacy.m3u'
+    original = (
+        b'#EXTM3U\r\n#EXTINF:196,Beyonc\xe9 - Pray You Catch Me\r\n'
+        b'01-track.mp3\r\n'
+    )
+    path.write_bytes(original)
+    (tmp_path / '01-track.mp3').write_bytes(b'audio')
+
+    assert not m3u.is_manual_m3u(path)
+    assert m3u.read_m3u_tracks(path, tmp_path) == ['01-track.mp3']
+    assert m3u.read_m3u_entries(path, tmp_path) == [
+        ('01-track.mp3', '#EXTINF:196,Beyoncé - Pray You Catch Me')
+    ]
+    assert path.read_bytes() == original
+
+
+@pytest.mark.parametrize(
+    ('suffix', 'body'),
+    [
+        ('.m3u', b'#EXTM3U\n#EXTDOWNTIFY:manual\n#bad\x81\nsong.mp3\n'),
+        ('.m3u8', b'#EXTM3U\n#EXTINF:196,Beyonc\xe9\nsong.mp3\n'),
+        ('.m3u', '#EXTM3U\nsong.mp3\n'.encode('utf-16-le')),
+    ],
+)
+def test_unreadable_playlists_are_not_partially_read_or_edited(
+    tmp_path: Path, suffix: str, body: bytes
+) -> None:
+    path = tmp_path / f'Bad{suffix}'
+    path.write_bytes(body)
+    (tmp_path / 'song.mp3').write_bytes(b'audio')
+
+    assert not m3u.is_manual_m3u(path)
+    assert m3u.read_m3u_tracks(path, tmp_path) == []
+    assert m3u.read_m3u_entries(path, tmp_path) == []
+    assert m3u.remove_m3u_tracks(path, ['song.mp3'], tmp_path) == 0
+    assert not m3u.insert_m3u_track(path, 'song.mp3', 0, '', tmp_path)
+    assert path.read_bytes() == body

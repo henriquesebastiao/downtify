@@ -63,7 +63,9 @@ Yapıştırılan bir Deezer parça/albüm/çalma listesi/sanatçı bağlantısı
 | Etiket | Yazılır |
 |-----|---------|
 | Başlık | Evet |
-| Sanatçı(lar) | Evet |
+| Sanatçı(lar) | Evet, katkıda bulunan tüm sanatçılar; ayrıca bir `ARTISTS` etiketinde değer başına bir tane |
+| Albüm sanatçısı | Evet, kaynağın albüm için belirttiği sanatçı, yoksa ilk sanatçı |
+| Derleme işareti | Yalnızca kaynağın "Various Artists" olarak belirttiği ya da bir yöneticinin derleme olarak işaretlediği albümde |
 | Albüm | Evet |
 | Yıl | Evet |
 | Albüm kapağı (JPEG) | Evet |
@@ -80,4 +82,4 @@ Downtify indirme ilerlemesini tarayıcıya bir **WebSocket** bağlantısı (`/ap
 
 Çıktı dosya adı, Ayarlar’da yapılandırılan şablondan oluşturulur (varsayılan: `{artists} - {title}`). Dosya adlarında geçersiz olan karakterler çıkarılır.
 
-*Sanatçıya göre düzenle* açıkken dosya, ana sanatçının adını taşıyan bir alt klasöre konur. Aksi halde tekil parçalar indirme dizininin köküne, çalma listesi/albüm parçaları çalma listesi veya albüm başına bir alt klasöre gider.
+*Sanatçıya göre düzenle* açıkken dosya, albüm sanatçısının adını taşıyan bir alt klasöre konur — çok sanatçılı bir derlemedeki parça içinse ilk sanatçısının. Aksi halde tekil parçalar indirme dizininin köküne, çalma listesi/albüm parçaları çalma listesi veya albüm başına bir alt klasöre gider. Bkz. [Birden çok sanatçı ve derlemeler](features/file-organization.md#several-artists-and-compilations).

@@ -76,6 +76,13 @@
               t('home.hintDeezer')
             }}
           </span>
+          <span class="flex items-center gap-1.5">
+            <AppIcon
+              name="soundcloud"
+              :size="14"
+              class="text-src-soundcloud"
+            />{{ t('home.hintSoundcloud') }}
+          </span>
           <button
             type="button"
             class="flex items-center gap-1.5 hover:text-fg"

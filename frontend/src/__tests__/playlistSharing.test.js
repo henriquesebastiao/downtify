@@ -54,6 +54,33 @@ describe('buildPlaylists sharing fields', () => {
     ])
     expect(playlist.sharedWith).toEqual(['bob', 'cyd'])
   })
+
+  it('says whose songs the user may add and remove', () => {
+    const [own, ours, theirs, imported] = build([
+      row('Mine', { manual: true }),
+      row('Ours', { manual: true, mine: false, can_edit_tracks: true }),
+      row('Theirs', { manual: true, mine: false, can_edit_tracks: false }),
+      row('Road', { can_edit_tracks: false }),
+    ])
+    expect(own.canEditTracks).toBe(true)
+    expect(ours.canEditTracks).toBe(true)
+    expect(theirs.canEditTracks).toBe(false)
+    expect(imported.canEditTracks).toBe(false)
+  })
+
+  it('lists the editors of the user’s own playlist', () => {
+    const [playlist] = build([
+      row('Mix', {
+        manual: true,
+        can_edit_tracks: true,
+        visibility: 'shared',
+        shared_with: ['bob', 'cyd'],
+        editors: ['bob'],
+      }),
+    ])
+    expect(playlist.editors).toEqual(['bob'])
+    expect(build([row('Solo')])[0].editors).toEqual([])
+  })
 })
 
 describe('splitPlaylists', () => {

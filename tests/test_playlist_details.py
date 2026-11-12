@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import asyncio
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
@@ -25,6 +26,10 @@ from downtify.library_cache_keys import file_content_key
 from downtify.library_catalog import LibraryContext, entry_content_key
 from downtify.library_paths_cache import invalidate_library_paths_cache
 from downtify.navidrome_index import NavidromeIndex
+from downtify.playlist_catalog import PlaylistCatalog
+from downtify.playlist_hidden import HiddenSongs
+from downtify.playlist_spotify_cache import PlaylistSpotifyCache
+from downtify.track_index import TrackIndex
 
 # ── The store ───────────────────────────────────────────────────────────
 
@@ -239,5 +244,86 @@ def test_without_navidrome_sync_nothing_is_unmatched(playlist, monkeypatch):
     assert _details()['navidrome'] == {'enabled': False, 'unmatched': []}
 
 
+def test_playlist_diagnostics_reports_pipeline_mismatches(
+    library, monkeypatch, tmp_path
+):
+    root, _providers = library
+    track_ids = ['A' * 22, 'B' * 22]
+    tracks = [
+        {'song_id': track_ids[0], 'name': 'First', 'artists': ['Artist']},
+        {'song_id': track_ids[1], 'name': 'Second', 'artists': ['Artist']},
+    ]
+    spotify_cache = PlaylistSpotifyCache(tmp_path / 'spotify.db')
+    spotify_cache.store('playlist-id', 'Road', tracks)
+    catalog = PlaylistCatalog(tmp_path / 'catalog.db')
+    catalog.ensure_playlist('Road', spotify_id='playlist-id', user_id=1)
+    first = root / 'Road' / 'first.mp3'
+    first.parent.mkdir()
+    first.write_bytes(b'audio')
+    catalog.upsert_track('Road', tracks[0], 'Road/first.mp3', first)
+    track_index = TrackIndex(tmp_path / 'track-index.db')
+    track_index.register(track_ids[0], 'Road/first.mp3', full_path=first)
+    nav_index = NavidromeIndex(tmp_path / 'nav-index.db')
+    nav_index.store('Road/first.mp3', 'nd-first', full_path=first)
+    monkeypatch.setattr(api.state, 'playlist_catalog', catalog)
+    monkeypatch.setattr(api.state, 'playlist_spotify_cache', spotify_cache)
+    monkeypatch.setattr(api.state, 'track_index', track_index)
+    monkeypatch.setattr(api.state, 'navidrome_index', nav_index)
+    monkeypatch.setattr(
+        api.state,
+        'settings',
+        {'sync_navidrome': True, 'navidrome': {'enabled': True}},
+    )
+    monkeypatch.setattr(api.state, 'monitor_db', None)
+    nav_songs = [
+        {'id': 'nd-first', 'title': 'First', 'artist': 'Artist'},
+        {'id': 'nd-extra', 'title': 'Extra', 'artist': 'Other'},
+    ]
+    monkeypatch.setattr(
+        api,
+        'NavidromeClient',
+        lambda _cfg: SimpleNamespace(
+            configured=lambda: True,
+            find_playlist_ids_by_name=lambda _name: ['nd-playlist'],
+            get_playlist_songs=lambda _playlist_id: nav_songs,
+        ),
+    )
+
+    result = api._playlist_diagnostics('Road', ['Road/first.mp3'], _admin())
+    items = {item['key']: item for item in result['items']}
+
+    assert result['available'] is True
+    assert items['spotify_tracks']['count'] == 2
+    assert items['downloaded']['count'] == 1
+    assert items['physical_files']['count'] == 1
+    assert items['track_index']['count'] == 1
+    assert items['monitor_history']['count'] is None
+    assert items['navidrome_matched']['count'] == 1
+    assert items['navidrome_rows']['count'] == 2
+    assert items['navidrome_rows']['issues'] == [
+        {'track_id': track_ids[1], 'label': 'Artist - Second'},
+        {'track_id': 'nd-extra', 'label': 'Other - Extra'},
+    ]
+    assert items['missing_files']['issues'] == [
+        {'track_id': track_ids[1], 'label': 'Artist - Second'}
+    ]
+
+    monkeypatch.setattr(
+        api.state,
+        'playlist_hidden',
+        SimpleNamespace(
+            songs=lambda _name: HiddenSongs(
+                track_ids=frozenset({track_ids[1]})
+            )
+        ),
+    )
+    monkeypatch.setattr(api, 'request_is_admin', lambda _request: False)
+    hidden_result = api._playlist_diagnostics(
+        'Road', ['Road/first.mp3'], _admin()
+    )
+    assert hidden_result['items'][0]['count'] == 1
+
+
 def test_the_route_is_for_signed_in_browsers():
     assert classify('GET', '/api/library/playlists/details') == USER
+    assert classify('GET', '/api/library/playlists/diagnostics') == USER

@@ -112,17 +112,56 @@ def test_fetch_photo_at_downloads_without_searching(monkeypatch):
         'https://evil.example/a.jpg',
         'http://cdn-images.dzcdn.net/images/artist/abc/250x250.jpg',
         'https://dzcdn.net.evil.example/a.jpg',
+        # Look-alikes of YouTube Music's image hosts.
+        'http://lh3.googleusercontent.com/a=w600',
+        'https://evil.googleusercontent.com/a=w600',
+        'https://lh3.googleusercontent.com.evil.example/a=w600',
+        'https://yt3.ggpht.com.evil.example/a=w600',
+        # Look-alikes of Spotify's.
+        'https://i.scdn.co.evil.example/image/ab67',
+        'https://image-cdn-ak.spotifycdn.com.evil.example/image/ab67',
+        'https://evil.spotifycdn.com/image/ab67',
+        'http://i.scdn.co/image/ab67',
         'file:///etc/passwd',
         '',
     ],
 )
-def test_fetch_photo_at_only_fetches_deezers_cdn(monkeypatch, url):
+def test_fetch_photo_at_only_fetches_known_image_cdns(monkeypatch, url):
     def boom(*a, **k):
         raise AssertionError('must not download')
 
     monkeypatch.setattr(artist_photo_proxy.httpx, 'get', boom)
-    with pytest.raises(ValueError, match='Not a Deezer image URL'):
+    with pytest.raises(ValueError, match='Not a Deezer, YouTube Music'):
         artist_photo_proxy.fetch_photo_at(url)
+
+
+@pytest.mark.parametrize(
+    'url',
+    [
+        'https://lh3.googleusercontent.com/abc=w600-h600-l90-rj',
+        'https://yt3.googleusercontent.com/abc=w600-h600-l90-rj',
+        'https://yt3.ggpht.com/abc=w600-h600-l90-rj',
+        'https://i.scdn.co/image/ab6761610000e5eb',
+        'https://image-cdn-ak.spotifycdn.com/image/ab6761610000e5eb',
+        'https://image-cdn-fa.spotifycdn.com/image/ab6761610000e5eb',
+    ],
+)
+def test_fetch_photo_at_relays_youtube_music_and_spotify_photos(
+    monkeypatch, url
+):
+    asked = []
+    monkeypatch.setattr(
+        artist_photo_proxy.httpx,
+        'get',
+        lambda u, **k: (
+            asked.append(u)
+            or _resp(
+                content=b'pngbytes', headers={'content-type': 'image/png'}
+            )
+        ),
+    )
+    assert artist_photo_proxy.fetch_photo_at(url) == (b'pngbytes', 'image/png')
+    assert asked == [url]
 
 
 def test_fetch_photo_at_failure_is_unavailable_not_a_miss(monkeypatch):

@@ -20,7 +20,7 @@
           </h2>
           <p
             v-if="dialog.body"
-            class="mt-2 text-sm text-pretty whitespace-pre-line text-muted"
+            class="mt-2 max-h-[55vh] overflow-y-auto text-sm text-pretty whitespace-pre-line text-muted"
           >
             {{ dialog.body }}
           </p>

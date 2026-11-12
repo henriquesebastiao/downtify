@@ -59,6 +59,10 @@ The generated file uses:
 
 This is compatible with Jellyfin, Navidrome, Plex, VLC, Kodi, Sonos and any other player or media server that consumes standard M3U playlists.
 
+When reading existing `.m3u` playlists in the Library, Downtify first tries strict UTF-8, accepting an optional UTF-8 BOM. If decoding fails, it tries strict Windows-1252, the same fallback used by the external-playlist importer. This also handles printable Latin-1 text, including names such as `Beyoncé`. It is a fallback policy, not automatic encoding detection: other legacy encodings may need conversion to UTF-8. `.m3u8` reads require UTF-8 and never use the legacy fallback; Library discovery still lists only `.m3u` files.
+
+If neither permitted encoding can decode a file, it contains NUL characters (for example, UTF-16 data), or it cannot be opened, Downtify skips that playlist and logs its path and a warning to check permissions or save a UTF-8 copy. Other playlists continue loading. Characters are never silently dropped or replaced, and reading does not rewrite playlists or audio files. Explicit playlist edits continue to write UTF-8.
+
 ## Playlists you create
 
 **Library → Playlists → New playlist** writes the same kind of M3U under `Playlists/`, with an extra `#EXTDOWNTIFY:manual` line so Downtify can tell it apart from a downloaded Spotify/YouTube playlist. You can rename it, and add or remove songs (including ones from [extra folders](external-library.md)). Deleting that playlist, deleting a track, or unmapping an extra folder updates the M3U; the audio is only deleted when you delete the track itself or an imported playlist.

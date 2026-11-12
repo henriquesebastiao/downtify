@@ -725,11 +725,17 @@ def test_update_settings_leaves_providers_untouched_when_key_absent(
 
 def test_effective_audio_providers_keeps_allowed_order():
     settings = {
-        'audio_providers': ['youtube', 'slskd', 'youtube-music'],
+        'audio_providers': [
+            'youtube',
+            'soundcloud',
+            'slskd',
+            'youtube-music',
+        ],
         'slskd': {'enabled': True},
     }
     assert _effective_audio_providers(settings) == [
         'youtube',
+        'soundcloud',
         'slskd',
         'youtube-music',
     ]
@@ -806,6 +812,27 @@ def test_effective_slskd_settings_normalizes_values():
     assert out['poll_interval_seconds'] == 2
     assert out['poll_max_attempts'] == 99
     assert out['search_retries'] == 5
+
+
+def test_effective_slskd_settings_normalizes_format_policy():
+    out = _effective_slskd_settings({
+        'slskd': {
+            'extensions': ['flac', 'mp3'],
+            'strict_format_priority': True,
+            'extensions_whitelist': True,
+            'min_bitrate': 320,
+        }
+    })
+
+    assert out['extensions'] == ['flac', 'mp3']
+    assert out['strict_format_priority'] is True
+    assert out['extensions_whitelist'] is True
+    assert out['min_bitrate'] == 320
+    assert _effective_slskd_settings({})['min_bitrate'] == 256
+    assert (
+        _effective_slskd_settings({'slskd': {'min_bitrate': 0}})['min_bitrate']
+        == 0
+    )
 
 
 def test_effective_slskd_settings_caps_parallelism_at_eight():

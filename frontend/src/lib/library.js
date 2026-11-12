@@ -14,15 +14,47 @@ export function compareText(a, b) {
   return collator.compare(String(a || ''), String(b || ''))
 }
 
-function splitArtists(artist) {
+// What sits between the members' names in an act's own name: "Henrique &
+// Juliano", "Simon + Garfunkel", "Sandy e Junior", "Zé Neto, Cristiano".
+// Not "x": "Anitta x Pedro Sampaio" names a collaboration, not an act.
+const ACT_NAME_JOINER = String.raw`\s*(?:&|\+|,|/|\b(?:e|and|y)\b)\s*`
+
+/** Whether `act` is the name of an act made of exactly `names` (two or
+ * more), joined the way an act's name joins its members, in any order.
+ * Mirrors is_act_of in downtify/album_artist.py. */
+export function isActOf(names, act) {
+  if (names.length < 2) return false
+  const members = String(act || '')
+    .toLowerCase()
+    .split(new RegExp(ACT_NAME_JOINER))
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .sort()
+  const wanted = names.map((name) => String(name).trim().toLowerCase()).sort()
+  return (
+    members.length === wanted.length &&
+    members.every((part, i) => part === wanted[i])
+  )
+}
+
+// The artists in an artist tag's text, when the server sent no list (a
+// file without an ARTISTS tag). A text that is the album artist too is one
+// name - "Earth, Wind & Fire" on its own album - and isn't split; so is a
+// split whose names make up the album artist ("Henrique; Juliano" on an
+// album by "Henrique, Juliano": an act YouTube Music credited as its
+// members). Mirrors split_artists in downtify/library_metadata.py.
+function splitArtists(artist, albumArtist = '') {
   const text = String(artist || '').trim()
   if (!text) return []
+  const owner = String(albumArtist || '').trim()
+  if (text.toLowerCase() === owner.toLowerCase()) return [text]
   for (const sep of [';', ' / ', ', ']) {
     if (text.includes(sep)) {
-      return text
+      const parts = text
         .split(sep)
         .map((part) => part.trim())
         .filter(Boolean)
+      return isActOf(parts, owner) ? [owner] : parts
     }
   }
   return [text]
@@ -30,7 +62,9 @@ function splitArtists(artist) {
 
 const VARIOUS_ARTISTS = new Set(['various artists', 'various'])
 
-function isVariousArtists(name) {
+/** Whether an album artist is the "Various Artists" of a compilation
+ * (see downtify/album_artist.py). */
+export function isVariousArtists(name) {
   return VARIOUS_ARTISTS.has(
     String(name || '')
       .trim()
@@ -68,12 +102,22 @@ export function normalizeTrack(row) {
   const file = String(raw.file || '')
   const fallback = basenameTitle(file)
   const artist = String(raw.artist || '').trim() || fallback.artist
-  const artists = splitArtists(artist)
-  const albumArtist = groupingArtistName({
-    albumArtist: String(raw.album_artist || '').trim(),
-    artists,
-    artist,
-  })
+  // Every credited artist: the server reads them one by one from the
+  // file's ARTISTS tag when it has one; only then is the text split here.
+  const listed = Array.isArray(raw.artists)
+    ? raw.artists.map((name) => String(name || '').trim()).filter(Boolean)
+    : []
+  const artists = listed.length
+    ? listed
+    : splitArtists(artist, raw.album_artist)
+  // "Various Artists" only names a compilation with the flag Downtify
+  // writes on one: older versions tagged any song with several artists
+  // that way, and such a track stays with its first artist's album.
+  // Mirrors album_owner_of in downtify/library_catalog.py.
+  const compilation = Boolean(raw.compilation)
+  const tagged = String(raw.album_artist || '').trim()
+  const albumArtist =
+    (isVariousArtists(tagged) && !compilation ? '' : tagged) || artists[0] || ''
   return {
     file,
     title: String(raw.title || '').trim() || fallback.title,
@@ -81,8 +125,11 @@ export function normalizeTrack(row) {
     artists,
     album: String(raw.album || '').trim(),
     albumArtist,
+    compilation,
     trackNumber: Number(raw.track_number) || 0,
     year: String(raw.year || ''),
+    releaseDate: String(raw.release_date || raw.year || ''),
+    genre: String(raw.genre || ''),
     duration: Number(raw.duration) || 0,
     explicit: Boolean(raw.explicit),
     // Admins only: why users can't see this track ('track', 'album' or
@@ -114,14 +161,17 @@ function byTrackOrder(a, b) {
 }
 
 /**
- * Group tracks into albums by album artist + album title. Tracks with no
- * album tag aren't an album; they stay reachable from Tracks and Artists.
+ * Group tracks into albums by album artist + album title - the album
+ * artist tag as it is, so a compilation ("Various Artists") stays one
+ * album; its tracks are on their own artists' pages (groupArtists).
+ * Tracks with no album tag aren't an album; they stay reachable from
+ * Tracks and Artists.
  */
 export function groupAlbums(tracks) {
   const map = new Map()
   for (const track of tracks) {
     if (!track.album) continue
-    const artist = groupingArtistName(track)
+    const artist = track.albumArtist
     const key = albumKey(artist, track.album)
     let album = map.get(key)
     if (!album) {
@@ -161,7 +211,85 @@ export function artistKey(name) {
   return String(name || '').toLowerCase()
 }
 
-/** Group tracks by (album) artist, with their albums attached. */
+/**
+ * Whether `track` is only a guest appearance for `name`: they're credited
+ * on it, but it belongs to another artist (see groupingArtistName).
+ */
+export function isGuestOn(track, name) {
+  return artistKey(groupingArtistName(track)) !== artistKey(name)
+}
+
+/**
+ * A track's credited artists as `{ name, to }` for a line of artist links:
+ * `to` is the artist's Library page, or `null` for plain text. Every name
+ * links to its page, unless `plain`; with `hasPage`, only the names it
+ * says have one (a song not in the Library yet) - and with `searchMissing`
+ * the others link to a search for them instead. No artists: just
+ * `fallback`, never a link.
+ */
+export function artistLinkItems(
+  artists,
+  { fallback = '', plain = false, hasPage = null, searchMissing = false } = {}
+) {
+  const names = (artists || [])
+    .map((name) => String(name || '').trim())
+    .filter(Boolean)
+  if (!names.length) return fallback ? [{ name: fallback, to: null }] : []
+  return names.map((name) => {
+    if (plain) return { name, to: null }
+    if (!hasPage || hasPage(name)) {
+      return { name, to: { name: 'Artist', query: { name } } }
+    }
+    return {
+      name,
+      to: searchMissing ? { name: 'Search', params: { query: name } } : null,
+    }
+  })
+}
+
+/**
+ * Where a song's album name links: the album's Library page when the
+ * Library has it - same title (ignoring case and accents), by the song's
+ * album artist or one of its artists, or a compilation of that title -
+ * else a search for the album, unless `search` is off (then `null`).
+ * `null` when the song names no album.
+ */
+export function albumLinkFor(albums, song, { search = true } = {}) {
+  const title = String(song?.album_name || '').trim()
+  if (!title) return null
+  const artists = [song?.album_artist, ...(song?.artists || [])]
+    .map((name) => fold(String(name || '').trim()))
+    .filter(Boolean)
+  const sameTitle = (albums || []).filter(
+    (album) => fold(album.title) === fold(title)
+  )
+  const found =
+    sameTitle.find((album) => artists.includes(fold(album.artist))) ||
+    sameTitle.find((album) => isVariousArtists(album.artist))
+  if (found) {
+    return {
+      name: 'Album',
+      query: { artist: found.artist, title: found.title },
+    }
+  }
+  if (!search) return null
+  const artist = (song?.artists || [])[0] || song?.album_artist || ''
+  return {
+    name: 'Search',
+    params: { query: [artist, title].filter(Boolean).join(' ') },
+  }
+}
+
+/**
+ * Group tracks by artist, with their albums attached. A track counts for
+ * the artist it belongs to (groupingArtistName) and for every other artist
+ * credited on it who has a page - an artist some track belongs to. A
+ * guest credit alone makes no page: tags can name a duo's members one by
+ * one ("Henrique; Juliano", as YouTube Music credits some duos), and a
+ * page per member would be an artist that doesn't exist. Albums only
+ * count for their album artist. "Various Artists" is never one of them.
+ * Mirrors library_artist_index in downtify/library_catalog.py.
+ */
 export function groupArtists(tracks, albums = groupAlbums(tracks)) {
   const map = new Map()
   const entry = (name) => {
@@ -180,18 +308,32 @@ export function groupArtists(tracks, albums = groupAlbums(tracks)) {
     }
     return map.get(key)
   }
+  const owners = new Set()
   for (const track of tracks) {
     const name = groupingArtistName(track)
-    if (!name) continue
-    const artist = entry(name)
-    artist.tracks.push(track)
-    artist.added = Math.max(artist.added, track.added)
-    artist.duration += track.duration
-    if (track.hiddenBy === 'artist') artist.hiddenBy = 'artist'
-    if (!artist.cover && track.hasCover) artist.cover = track.cover
+    if (name && !isVariousArtists(name)) owners.add(artistKey(name))
+  }
+  for (const track of tracks) {
+    const lead = artistKey(groupingArtistName(track))
+    const names = new Map()
+    for (const name of [groupingArtistName(track), ...track.artists]) {
+      const key = artistKey(name)
+      if (owners.has(key) && !names.has(key)) names.set(key, name)
+    }
+    for (const [key, name] of names) {
+      const artist = entry(name)
+      artist.tracks.push(track)
+      artist.added = Math.max(artist.added, track.added)
+      artist.duration += track.duration
+      // An artist rule hides the tracks that belong to that artist.
+      if (track.hiddenBy === 'artist' && key === lead) {
+        artist.hiddenBy = 'artist'
+      }
+      if (!artist.cover && track.hasCover) artist.cover = track.cover
+    }
   }
   for (const album of albums) {
-    if (!album.artist) continue
+    if (!album.artist || isVariousArtists(album.artist)) continue
     entry(album.artist).albums.push(album)
   }
   const artists = [...map.values()]
@@ -201,6 +343,34 @@ export function groupArtists(tracks, albums = groupAlbums(tracks)) {
     )
   }
   return artists
+}
+
+/**
+ * A Library playlist may hold a song more than once. From the second
+ * copy on it is an object of its own carrying `occurrence` (1, 2, …),
+ * so a sorted or filtered list still tells the copies apart; a song
+ * listed once stays the shared library object.
+ */
+export function withRepeats(tracks) {
+  const seen = new Map()
+  return tracks.map((track) => {
+    const occurrence = seen.get(track.file) || 0
+    seen.set(track.file, occurrence + 1)
+    return occurrence ? { ...track, occurrence } : track
+  })
+}
+
+/** A copy of `list` with the item at `from` moved to `to`. */
+export function moveItem(list, from, to) {
+  const next = [...list]
+  const [item] = next.splice(from, 1)
+  next.splice(to, 0, item)
+  return next
+}
+
+/** A row's identity in a list that may repeat a song (see withRepeats). */
+export function trackRowKey(track) {
+  return track.occurrence ? `${track.file}\n${track.occurrence}` : track.file
 }
 
 /**
@@ -215,7 +385,9 @@ export function buildPlaylists(playlists, tracksByFile, batches = []) {
   const names = new Set(playlists.map((playlist) => playlist.name))
   const fromM3u = playlists.map((playlist) => {
     const files = playlist.files || []
-    const tracks = files.map((file) => tracksByFile.get(file)).filter(Boolean)
+    const tracks = withRepeats(
+      files.map((file) => tracksByFile.get(file)).filter(Boolean)
+    )
     // Mosaic from the M3U paths so the sidebar does not wait for
     // GET /tracks rows. `/cover?file=` reads tags on its own.
     const covers = [...new Set(files.map((file) => coverURL(file)))].slice(0, 4)
@@ -228,6 +400,7 @@ export function buildPlaylists(playlists, tracksByFile, batches = []) {
       // The playlist of hearted songs, not a downloaded one.
       liked: Boolean(playlist.liked),
       manual: Boolean(playlist.manual),
+      explicitCover: Boolean(playlist.explicit_cover),
       fileCount: playlist.count != null ? Number(playlist.count) : files.length,
       tracks,
       // A manual playlist uses a live mosaic unless a source image was
@@ -245,11 +418,18 @@ export function buildPlaylists(playlists, tracksByFile, batches = []) {
       // Sharing (see downtify/playlist_shares.py). Without these fields a
       // playlist is the user's own and private.
       mine: playlist.mine !== false,
+      // Its songs can be added and removed: a Library playlist of the
+      // user's, or one shared with them as an editor.
+      canEditTracks:
+        playlist.can_edit_tracks != null
+          ? Boolean(playlist.can_edit_tracks)
+          : Boolean(playlist.manual) && playlist.mine !== false,
       owner: String(playlist.owner || ''),
       visibility: playlist.visibility || 'private',
       sharedWith: Array.isArray(playlist.shared_with)
         ? playlist.shared_with
         : [],
+      editors: Array.isArray(playlist.editors) ? playlist.editors : [],
       followed: Boolean(playlist.followed),
       favorite: Boolean(playlist.favorite),
       sharedWithMe: Boolean(playlist.shared_with_me),
@@ -276,9 +456,11 @@ export function buildPlaylists(playlists, tracksByFile, batches = []) {
       added: 0,
       batch,
       mine: true,
+      canEditTracks: false,
       owner: '',
       visibility: 'private',
       sharedWith: [],
+      editors: [],
       followed: false,
       sharedWithMe: false,
       isNew: false,
@@ -324,6 +506,9 @@ const SORTERS = {
     compareText(a.title ?? a.name, b.title ?? b.name),
   album: (a, b) => compareText(a.album, b.album) || byTrackOrder(a, b),
   year: (a, b) => compareText(b.year, a.year) || compareText(a.title, b.title),
+  releaseDate: (a, b) =>
+    compareText(b.releaseDate || b.year, a.releaseDate || a.year) ||
+    compareText(a.title, b.title),
   duration: (a, b) => b.duration - a.duration,
   count: (a, b) => itemTrackCount(b) - itemTrackCount(a),
 }
@@ -369,6 +554,8 @@ export const TRACK_SORTS = [
   ['artistDesc', 'artist', 'desc'],
   ['albumAsc', 'album', 'asc'],
   ['albumDesc', 'album', 'desc'],
+  ['releaseNewest', 'releaseDate', 'asc'],
+  ['releaseOldest', 'releaseDate', 'desc'],
   ['longest', 'duration', 'asc'],
   ['shortest', 'duration', 'desc'],
 ]
@@ -447,4 +634,21 @@ export function indexTracksBySong(tracks) {
     if (!index.has(key)) index.set(key, track)
   }
   return index
+}
+
+export function localCatalogRoute(item, kind = item?.kind) {
+  if (item?.source !== 'library') return null
+  if (kind === 'playlist')
+    return {
+      name: 'Playlist',
+      query: { name: item.playlist_name || item.name },
+    }
+  if (kind === 'artist') return { name: 'Artist', query: { name: item.name } }
+  return {
+    name: 'Album',
+    query: {
+      artist: item.album_artist || item.artist || item.artists?.[0] || '',
+      title: item.album_name || item.name || '',
+    },
+  }
 }
