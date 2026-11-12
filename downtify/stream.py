@@ -24,6 +24,7 @@ import asyncio
 import contextlib
 import os
 import re
+import time
 from pathlib import Path
 from typing import Any, Optional
 
@@ -243,10 +244,12 @@ class StreamCache:
             if path.name.endswith('.part') or not path.is_file():
                 continue
             try:
-                if path.stat().st_size <= 0:
+                stat = path.stat()
+                if stat.st_size <= 0:
                     continue
                 with contextlib.suppress(OSError):
-                    os.utime(path)
+                    # Track cache use without changing the HTTP file validator.
+                    os.utime(path, ns=(time.time_ns(), stat.st_mtime_ns))
             except OSError:
                 continue
             return path
@@ -409,10 +412,10 @@ class StreamCache:
                 with contextlib.suppress(OSError):
                     path.unlink()
                 continue
-            stats.append((st.st_mtime, st.st_size, path))
-        total = sum(size for _m, size, _p in stats)
+            stats.append((st.st_atime_ns, st.st_size, path))
+        total = sum(size for _, size, _ in stats)
         removed = 0
-        for _mtime, size, path in sorted(stats):
+        for _atime, size, path in sorted(stats):
             if total <= self._max_bytes:
                 break
             with contextlib.suppress(OSError):
