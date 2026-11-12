@@ -16,6 +16,7 @@ from mutagen.id3 import ID3
 from yt_dlp.postprocessor.ffmpeg import FFmpegExtractAudioPP
 
 from downtify import downloader as downloader_mod
+from downtify.cookies import CookiesStore
 from downtify.downloader import (
     Downloader,
     _album_artist_for_tags,
@@ -1001,6 +1002,59 @@ def test_existing_filename_for_fallback_handles_glob_characters(tmp_path):
     song = {'name': 'Song [Live]', 'artists': ['Artist']}
     (tmp_path / 'Artist - Song [Live].mp3').write_bytes(b'x')
     assert d.existing_filename_for(song) == 'Artist - Song [Live].mp3'
+
+
+_NETSCAPE_COOKIES = (
+    '# Netscape HTTP Cookie File\n'
+    '.youtube.com\tTRUE\t/\tTRUE\t1800000000\tSID\tsome-session-value\n'
+).encode()
+
+
+def test_fetch_audio_does_not_write_back_to_shared_cookie_file(
+    tmp_path, monkeypatch
+):
+    # yt-dlp rewrites `cookiefile` on exit (truncate then write). Several
+    # downloads from one playlist share a single cookies.txt, so a
+    # concurrent reader used to hit the half-written file and fail with
+    # "does not look like a Netscape format cookies file". fetch_audio
+    # must hand yt-dlp a private copy so the shared file is never the one
+    # being rewritten (henriquesebastiao/downtify#570).
+    shared = tmp_path / 'cookies.txt'
+    shared.write_bytes(_NETSCAPE_COOKIES)
+    store = CookiesStore(shared)
+    seen = {}
+
+    class _SaveBackYoutubeDL:
+        def __init__(self, opts):
+            self.opts = opts
+            self.params = opts
+            seen['cookiefile'] = opts.get('cookiefile')
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc_info):
+            # Mimic yt_dlp.YoutubeDL.save_cookies(): rewrite cookiefile.
+            Path(self.opts['cookiefile']).write_bytes(b'rewritten by yt-dlp')
+            return False
+
+        def add_post_processor(self, pp, when='post_process'):
+            pass
+
+        def download(self, urls):
+            _minimal_mp3(Path(self.opts['outtmpl'].replace('%(ext)s', 'mp3')))
+
+    monkeypatch.setattr(downloader_mod.yt_dlp, 'YoutubeDL', _SaveBackYoutubeDL)
+    d = _make(tmp_path / 'downloads', cookies_store=store)
+    d.fetch_audio(
+        'abc123def45',
+        tmp_path / 'downloads',
+        'Artist - Song',
+        song={'name': 'Song', 'artists': ['Artist']},
+    )
+
+    assert seen['cookiefile'] != str(shared)
+    assert shared.read_bytes() == _NETSCAPE_COOKIES
 
 
 def test_download_ydl_opts_enables_remote_ejs_component(tmp_path, monkeypatch):
