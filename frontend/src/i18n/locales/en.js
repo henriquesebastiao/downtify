@@ -1632,6 +1632,10 @@ export default {
     navidromeSync: 'Create playlists in Navidrome',
     navidromeSyncHint:
       'After playlist downloads and monitor checks, keep a Navidrome playlist with the same name.',
+    doctor: 'Doctor',
+    navidromeM3uImport: 'Let Navidrome import the M3U playlists',
+    navidromeM3uImportHint:
+      'Navidrome turns each M3U Downtify writes into a playlist with its cover. With this on, Downtify doesn’t create a second one through the API.',
     navidromePublic: 'Make Navidrome playlists public',
     primaryLibrary: 'Primary library folder',
     primaryLibraryHint:
@@ -2179,5 +2183,158 @@ export default {
   },
   source: {
     from: 'Downloaded from {source}',
+  },
+  doctor: {
+    title: 'Doctor',
+    intro:
+      'Newer versions of Downtify fix problems from then on, but files and playlists written by an older version keep the old shape. The Doctor finds that leftover state and repairs what it can prove is safe.',
+    checkup: 'Health check',
+    checkupHint:
+      'Looks at slskd leftovers, duplicate songs and playlists, and what Navidrome shows. Changes nothing.',
+    lastCheckup: 'Last checked {when}',
+    runCheckup: 'Run health check',
+    stop: 'Stop',
+    step: {
+      starting: 'Starting…',
+      library: 'Reading the library…',
+      playlists: 'Reading playlists…',
+      duplicates: 'Looking for duplicate songs…',
+      monitor: 'Checking monitored playlists…',
+      navidrome: 'Asking Navidrome…',
+      pausing: 'Waiting for running downloads to finish…',
+      listing: 'Listing slskd’s folder…',
+      verifying: 'Comparing audio with the library…',
+      deleting: 'Removing…',
+      navidrome_scan: 'Waiting for Navidrome to rescan…',
+      merging: 'Merging playlists…',
+    },
+    slskdTitle: 'slskd leftovers',
+    slskdHint:
+      'Older versions left each Soulseek file in slskd’s folder after copying it into the library. Only a file whose audio is identical to a library song is ever offered for deletion.',
+    slskdLeftovers: 'Files in slskd’s folder',
+    slskdNotChecked: 'Run the health check to count them.',
+    slskdInPlace:
+      'Files are left in the slskd folder, so it is part of the library. Nothing to clean up.',
+    slskdFound: 'Not library songs: {files} · {size}',
+    slskdCheck: 'Pause downloads and check',
+    slskdCheckTitle: 'Check slskd leftovers?',
+    slskdCheckBody:
+      'Downloads are paused first and running ones allowed to finish, so nothing is written while the files are compared. Nothing is deleted until you confirm.',
+    queueHeld:
+      'Downloads are paused while you decide. They resume by themselves after an hour.',
+    slskdKeepResume: 'Keep them and resume downloads',
+    status: {
+      verified: 'Identical in the library',
+      different: 'Similar, not identical',
+      unmatched: 'Not in the library',
+      unreadable: 'Unreadable',
+      recent: 'Changed recently',
+      missing: 'Gone',
+    },
+    slskdVerifiedHint:
+      'Each of these has bit-identical audio in the library file shown under it.',
+    showMore: 'Show more',
+    slskdDelete: 'Delete identical copies ({files} · {size})',
+    slskdDeleteTitle: 'Delete the identical copies?',
+    slskdDeleteBody:
+      'Files to remove from slskd’s folder: {files} ({size}). Each is checked again right before: unchanged, and its library copy still there. Downloads resume afterwards.',
+    slskdDeleteConfirm: 'Delete',
+    slskdCleaned: 'Removed: {files} · freed: {size}',
+    slskdKeptChanged:
+      'Kept because they changed or their library copy was gone: {files}',
+    checkGone: 'The files are gone from disk',
+    checkQueueResumed: 'Downloads resumed',
+    checkNavidromeScan: 'Navidrome rescanned',
+    playlistsTitle: 'Duplicate playlists',
+    playlistsHint:
+      'Two M3U files for one playlist, for example one left where an older version wrote it. Merging keeps every song once, the cover, and one file. The originals are backed up first.',
+    playlistsOk: 'Every playlist has one M3U file.',
+    groupReason: {
+      name: 'Same name',
+      songs: 'Same songs',
+      manual: 'Your choice',
+    },
+    songsCount: 'Songs: {count}',
+    hasCover: 'Has a cover',
+    keeps: 'Kept',
+    mergePlan: 'Merged: {songs} songs. They share {overlap}% of their songs.',
+    mergeUnsafe:
+      'Only {overlap}% of the songs match, so these may be different playlists. Not merged.',
+    merge: 'Merge',
+    mergeTitle: 'Merge these playlists?',
+    mergeBody:
+      '{keeper} will hold all {songs} songs and the cover; the other files are removed after a backup.',
+    merged: '{path} now holds {songs} songs.',
+    checkOthersGone: 'The other M3U files are gone',
+    checkCover: 'The cover is next to it',
+    checkNavidromeOne: 'Navidrome lists this playlist once (found: {count})',
+    backupAt: 'Backup: {path}',
+    manualTitle: 'Choose playlists yourself',
+    manualHint:
+      'Pick two or more M3U files that should be one playlist. They are only merged if most of their songs match.',
+    manualFilter: 'Filter playlists',
+    manualCompare: 'Compare',
+    navidromeHint:
+      'What Navidrome, and every app connected to it, actually shows.',
+    navidromeOff: 'Navidrome isn’t set up.',
+    navidromeDown: 'Navidrome didn’t answer.',
+    navidromeNoAdmin:
+      'Add a Navidrome admin login in Settings → Navidrome so the Doctor can see imported playlists and the files they come from.',
+    navidromeSummary: 'Playlists',
+    navidromeCounts:
+      'Duplicates: {duplicates} · M3U gone: {orphans} · Missing songs: {incomplete}',
+    navidromeFix: 'Fix',
+    navidromeFixTitle: 'Fix Navidrome playlists?',
+    navidromeFixBody:
+      'The playlists marked “will be removed” are deleted ({count}), then Navidrome rescans.',
+    navidromeFixImport:
+      'Downtify also stops creating its own copy of playlists Navidrome imports.',
+    navidromeSuggestImport:
+      'Navidrome imports Downtify’s M3U files (with their covers) and Downtify also creates the same playlists through the API, so each shows up twice.',
+    reason: {
+      m3u_and_api: 'Imported M3U and Downtify’s copy',
+      imports: 'Imported twice',
+      api: 'Created twice',
+      name: 'Same name',
+      orphan: 'Its M3U is gone',
+    },
+    kind: {
+      import: 'Imported from M3U',
+      downtify: 'Created by Downtify',
+      other: 'Other',
+    },
+    willRemove: 'will be removed',
+    wouldLoseSongs: 'kept: has songs the import is missing',
+    incomplete: 'Navidrome shows {songs} of the {m3u} songs in its M3U.',
+    incompleteOutside: 'Songs outside Navidrome’s music folder: {count}.',
+    navidromeSongDupes: 'Duplicate songs in Navidrome',
+    songDupesCounts:
+      'Songs listed more than once: {groups} · extra copies: {extra} · in an slskd folder: {slskd}',
+    ndRemoved: 'Playlists removed: {count}',
+    ndRemaining: 'Left: duplicates {duplicates}, M3U gone {orphans}',
+    duplicatesTitle: 'Duplicate songs',
+    duplicatesHint:
+      'Library files that hold the same song. Review them in the Library; the Doctor doesn’t delete library songs.',
+    duplicatesExact: 'Same file',
+    duplicatesLikely: 'Likely the same song',
+    duplicatesCounts: 'Songs: {groups} · extra files: {files} · {size}',
+    relinkedTitle: 'Downloaded again under a new Spotify ID',
+    relinkedHint:
+      'Spotify sometimes swaps a playlist’s track for the same song under a new ID. A monitored playlist then downloads it again.',
+    relinkedLabel: 'Same song, several IDs',
+    relinkedCounts: 'Songs: {songs} · extra files: {extra}',
+    error: {
+      doctor_busy: 'The Doctor is already working.',
+      doctor_failed: 'The Doctor stopped with an error. See the server log.',
+      queue_busy: 'Running downloads didn’t finish in time. Try again later.',
+      scan_first: 'Check the leftovers again first.',
+      m3u_not_found: 'That M3U file is gone. Run the health check again.',
+      m3u_manual: 'Playlists you created in the Library aren’t merged.',
+      need_two: 'Pick at least two playlists.',
+      playlists_differ:
+        'Too few songs match; these look like different playlists.',
+      not_flagged: 'Run the health check again first.',
+      navidrome_off: 'Navidrome isn’t set up.',
+    },
   },
 }

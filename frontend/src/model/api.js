@@ -907,6 +907,49 @@ function scanLibraryUsage(refresh = false) {
   return API.get('/api/library/usage/scan', { params: { refresh } })
 }
 
+// ── Doctor (admins): find and repair what older versions left ────────
+function doctorStatus() {
+  return API.get('/api/doctor')
+}
+
+function doctorScan() {
+  return API.post('/api/doctor/scan')
+}
+
+function doctorCancel() {
+  return API.post('/api/doctor/cancel')
+}
+
+// Pauses the download queue, then checks every slskd leftover.
+function doctorSlskdScan() {
+  return API.post('/api/doctor/slskd/scan')
+}
+
+function doctorSlskdFiles(params = {}) {
+  return API.get('/api/doctor/slskd/files', { params })
+}
+
+// Deletes the verified leftovers (all, or `files`) and resumes the queue.
+function doctorSlskdClean(files = []) {
+  return API.post('/api/doctor/slskd/clean', { files })
+}
+
+function doctorSlskdRelease() {
+  return API.post('/api/doctor/slskd/release')
+}
+
+function doctorPreview(paths) {
+  return API.post('/api/doctor/playlists/preview', { paths })
+}
+
+function doctorMerge(paths) {
+  return API.post('/api/doctor/playlists/merge', { paths })
+}
+
+function doctorNavidromeRepair(payload) {
+  return API.post('/api/doctor/navidrome/repair', payload)
+}
+
 function writePlaylistM3u(payload) {
   return API.post('/api/playlist/m3u', payload)
 }
@@ -1162,6 +1205,16 @@ export default {
   resumeLibraryUpgrade,
   cancelLibraryUpgrade,
   getLibraryUsage,
+  doctorStatus,
+  doctorScan,
+  doctorCancel,
+  doctorSlskdScan,
+  doctorSlskdFiles,
+  doctorSlskdClean,
+  doctorSlskdRelease,
+  doctorPreview,
+  doctorMerge,
+  doctorNavidromeRepair,
   scanLibraryUsage,
   writePlaylistM3u,
   getQueue,

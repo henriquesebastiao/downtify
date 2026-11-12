@@ -1674,6 +1674,10 @@ export default {
     navidromeSync: 'Criar playlists no Navidrome',
     navidromeSyncHint:
       'Após downloads de playlists e verificações do monitor, mantém uma playlist com o mesmo nome no Navidrome.',
+    doctor: 'Doutor',
+    navidromeM3uImport: 'Deixar o Navidrome importar as playlists M3U',
+    navidromeM3uImportHint:
+      'O Navidrome transforma cada M3U que o Downtify grava em uma playlist com capa. Com isto ativado, o Downtify não cria uma segunda pela API.',
     navidromePublic: 'Tornar públicas as playlists do Navidrome',
     primaryLibrary: 'Primary library folder',
     primaryLibraryHint:
@@ -2226,5 +2230,162 @@ export default {
   },
   source: {
     from: 'Baixado de {source}',
+  },
+  doctor: {
+    title: 'Doutor',
+    intro:
+      'Versões novas do Downtify corrigem problemas daqui para frente, mas arquivos e playlists gravados por versões antigas continuam como estavam. O Doutor encontra esses restos e repara o que consegue provar que é seguro.',
+    checkup: 'Verificação',
+    checkupHint:
+      'Analisa sobras do slskd, músicas e playlists duplicadas e o que o Navidrome mostra. Não altera nada.',
+    lastCheckup: 'Última verificação: {when}',
+    runCheckup: 'Verificar agora',
+    stop: 'Parar',
+    step: {
+      starting: 'Iniciando…',
+      library: 'Lendo a biblioteca…',
+      playlists: 'Lendo as playlists…',
+      duplicates: 'Procurando músicas duplicadas…',
+      monitor: 'Verificando playlists monitoradas…',
+      navidrome: 'Consultando o Navidrome…',
+      pausing: 'Aguardando os downloads em andamento…',
+      listing: 'Listando a pasta do slskd…',
+      verifying: 'Comparando o áudio com a biblioteca…',
+      deleting: 'Removendo…',
+      navidrome_scan: 'Aguardando o Navidrome reescanear…',
+      merging: 'Juntando playlists…',
+    },
+    slskdTitle: 'Sobras do slskd',
+    slskdHint:
+      'Versões antigas deixavam cada arquivo do Soulseek na pasta do slskd depois de copiá-lo para a biblioteca. Só é oferecido para exclusão um arquivo cujo áudio seja idêntico a uma música da biblioteca.',
+    slskdLeftovers: 'Arquivos na pasta do slskd',
+    slskdNotChecked: 'Faça a verificação para contá-los.',
+    slskdInPlace:
+      'Os arquivos ficam na pasta do slskd, então ela faz parte da biblioteca. Nada a limpar.',
+    slskdFound: 'Fora da biblioteca: {files} · {size}',
+    slskdCheck: 'Pausar downloads e verificar',
+    slskdCheckTitle: 'Verificar sobras do slskd?',
+    slskdCheckBody:
+      'Os downloads são pausados e os em andamento terminam antes, para que nada seja gravado durante a comparação. Nada é excluído sem sua confirmação.',
+    queueHeld:
+      'Os downloads estão pausados enquanto você decide. Eles voltam sozinhos depois de uma hora.',
+    slskdKeepResume: 'Manter e retomar downloads',
+    status: {
+      verified: 'Idêntico na biblioteca',
+      different: 'Parecido, não idêntico',
+      unmatched: 'Não está na biblioteca',
+      unreadable: 'Ilegível',
+      recent: 'Alterado há pouco',
+      missing: 'Sumiu',
+    },
+    slskdVerifiedHint:
+      'Cada um tem áudio idêntico, bit a bit, ao arquivo da biblioteca indicado abaixo.',
+    showMore: 'Mostrar mais',
+    slskdDelete: 'Excluir cópias idênticas ({files} · {size})',
+    slskdDeleteTitle: 'Excluir as cópias idênticas?',
+    slskdDeleteBody:
+      'Arquivos a remover da pasta do slskd: {files} ({size}). Cada um é conferido de novo antes: sem alterações e com a cópia ainda na biblioteca. Os downloads voltam em seguida.',
+    slskdDeleteConfirm: 'Excluir',
+    slskdCleaned: 'Removidos: {files} · liberados: {size}',
+    slskdKeptChanged:
+      'Mantidos porque mudaram ou a cópia da biblioteca sumiu: {files}',
+    checkGone: 'Os arquivos saíram do disco',
+    checkQueueResumed: 'Downloads retomados',
+    checkNavidromeScan: 'O Navidrome reescaneou',
+    playlistsTitle: 'Playlists duplicadas',
+    playlistsHint:
+      'Dois arquivos M3U para uma playlist, por exemplo um deixado onde uma versão antiga gravava. Juntar mantém cada música uma vez, a capa e um só arquivo. Os originais são copiados antes.',
+    playlistsOk: 'Cada playlist tem um único M3U.',
+    groupReason: {
+      name: 'Mesmo nome',
+      songs: 'Mesmas músicas',
+      manual: 'Sua escolha',
+    },
+    songsCount: 'Músicas: {count}',
+    hasCover: 'Tem capa',
+    keeps: 'Mantido',
+    mergePlan:
+      'Resultado: {songs} músicas. Elas têm {overlap}% das músicas em comum.',
+    mergeUnsafe:
+      'Só {overlap}% das músicas coincidem; podem ser playlists diferentes. Não serão juntadas.',
+    merge: 'Juntar',
+    mergeTitle: 'Juntar estas playlists?',
+    mergeBody:
+      '{keeper} ficará com as {songs} músicas e a capa; os outros arquivos são removidos após um backup.',
+    merged: '{path} agora tem {songs} músicas.',
+    checkOthersGone: 'Os outros M3U foram removidos',
+    checkCover: 'A capa está ao lado',
+    checkNavidromeOne:
+      'O Navidrome lista esta playlist uma vez (encontradas: {count})',
+    backupAt: 'Backup: {path}',
+    manualTitle: 'Escolher playlists',
+    manualHint:
+      'Escolha dois ou mais M3U que deveriam ser uma playlist só. Só são juntados se a maioria das músicas coincidir.',
+    manualFilter: 'Filtrar playlists',
+    manualCompare: 'Comparar',
+    navidromeHint:
+      'O que o Navidrome, e todo app ligado a ele, realmente mostra.',
+    navidromeOff: 'O Navidrome não está configurado.',
+    navidromeDown: 'O Navidrome não respondeu.',
+    navidromeNoAdmin:
+      'Adicione um login de administrador em Configurações → Navidrome para que o Doutor veja as playlists importadas e seus arquivos.',
+    navidromeSummary: 'Playlists',
+    navidromeCounts:
+      'Duplicadas: {duplicates} · M3U sumiu: {orphans} · Faltam músicas: {incomplete}',
+    navidromeFix: 'Corrigir',
+    navidromeFixTitle: 'Corrigir playlists do Navidrome?',
+    navidromeFixBody:
+      'As playlists marcadas como “será removida” são excluídas ({count}) e o Navidrome reescaneia.',
+    navidromeFixImport:
+      'O Downtify também deixa de criar a própria cópia das playlists que o Navidrome importa.',
+    navidromeSuggestImport:
+      'O Navidrome importa os M3U do Downtify (com capas) e o Downtify também cria as mesmas playlists pela API, então cada uma aparece duas vezes.',
+    reason: {
+      m3u_and_api: 'M3U importado e cópia do Downtify',
+      imports: 'Importada duas vezes',
+      api: 'Criada duas vezes',
+      name: 'Mesmo nome',
+      orphan: 'O M3U sumiu',
+    },
+    kind: {
+      import: 'Importada de M3U',
+      downtify: 'Criada pelo Downtify',
+      other: 'Outra',
+    },
+    willRemove: 'será removida',
+    wouldLoseSongs: 'mantida: tem músicas que a importada não tem',
+    incomplete: 'O Navidrome mostra {songs} das {m3u} músicas do M3U.',
+    incompleteOutside:
+      'Músicas fora da pasta de músicas do Navidrome: {count}.',
+    navidromeSongDupes: 'Músicas duplicadas no Navidrome',
+    songDupesCounts:
+      'Músicas listadas mais de uma vez: {groups} · cópias extras: {extra} · numa pasta slskd: {slskd}',
+    ndRemoved: 'Playlists removidas: {count}',
+    ndRemaining: 'Restam: duplicadas {duplicates}, M3U sumiu {orphans}',
+    duplicatesTitle: 'Músicas duplicadas',
+    duplicatesHint:
+      'Arquivos da biblioteca com a mesma música. Revise-os na Biblioteca; o Doutor não exclui músicas da biblioteca.',
+    duplicatesExact: 'Mesmo arquivo',
+    duplicatesLikely: 'Provavelmente a mesma música',
+    duplicatesCounts: 'Músicas: {groups} · arquivos extras: {files} · {size}',
+    relinkedTitle: 'Baixada de novo com outro ID do Spotify',
+    relinkedHint:
+      'Às vezes o Spotify troca uma faixa da playlist pela mesma música com outro ID. Uma playlist monitorada então baixa de novo.',
+    relinkedLabel: 'Mesma música, vários IDs',
+    relinkedCounts: 'Músicas: {songs} · arquivos extras: {extra}',
+    error: {
+      doctor_busy: 'O Doutor já está trabalhando.',
+      doctor_failed: 'O Doutor parou com um erro. Veja o log do servidor.',
+      queue_busy:
+        'Os downloads em andamento não terminaram a tempo. Tente mais tarde.',
+      scan_first: 'Verifique as sobras de novo primeiro.',
+      m3u_not_found: 'Esse M3U sumiu. Faça a verificação de novo.',
+      m3u_manual: 'Playlists criadas na Biblioteca não são juntadas.',
+      need_two: 'Escolha pelo menos duas playlists.',
+      playlists_differ:
+        'Poucas músicas coincidem; parecem playlists diferentes.',
+      not_flagged: 'Faça a verificação de novo primeiro.',
+      navidrome_off: 'O Navidrome não está configurado.',
+    },
   },
 }

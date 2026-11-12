@@ -1658,6 +1658,10 @@ export default {
     navidromeSync: 'Създавай плейлисти в Navidrome',
     navidromeSyncHint:
       'След изтегляния на плейлисти и проверки поддържа плейлист със същото име в Navidrome.',
+    doctor: 'Доктор',
+    navidromeM3uImport: 'Navidrome да импортира M3U плейлистите',
+    navidromeM3uImportHint:
+      'Navidrome превръща всеки M3U, записан от Downtify, в плейлист с обложка. Когато е включено, Downtify не създава втори през API.',
     navidromePublic: 'Направи плейлистите в Navidrome публични',
     primaryLibrary: 'Primary library folder',
     primaryLibraryHint:
@@ -2217,5 +2221,160 @@ export default {
   },
   source: {
     from: 'Изтеглено от {source}',
+  },
+  doctor: {
+    title: 'Доктор',
+    intro:
+      'Новите версии на Downtify поправят проблемите оттук нататък, но файловете и плейлистите от по-стара версия остават същите. Доктор намира тези остатъци и поправя това, за което може да докаже, че е безопасно.',
+    checkup: 'Проверка',
+    checkupHint:
+      'Преглежда остатъци от slskd, дублирани песни и плейлисти и какво показва Navidrome. Нищо не променя.',
+    lastCheckup: 'Последна проверка: {when}',
+    runCheckup: 'Провери сега',
+    stop: 'Спри',
+    step: {
+      starting: 'Започва…',
+      library: 'Четене на библиотеката…',
+      playlists: 'Четене на плейлистите…',
+      duplicates: 'Търсене на дублирани песни…',
+      monitor: 'Проверка на следените плейлисти…',
+      navidrome: 'Запитване към Navidrome…',
+      pausing: 'Изчакване на текущите изтегляния…',
+      listing: 'Преглед на папката на slskd…',
+      verifying: 'Сравняване на аудиото с библиотеката…',
+      deleting: 'Премахване…',
+      navidrome_scan: 'Изчакване Navidrome да сканира…',
+      merging: 'Обединяване на плейлисти…',
+    },
+    slskdTitle: 'Остатъци от slskd',
+    slskdHint:
+      'По-старите версии оставяха всеки файл от Soulseek в папката на slskd, след като го копират в библиотеката. Предлага се за изтриване само файл, чието аудио е идентично с песен от библиотеката.',
+    slskdLeftovers: 'Файлове в папката на slskd',
+    slskdNotChecked: 'Пуснете проверката, за да ги преброите.',
+    slskdInPlace:
+      'Файловете остават в папката на slskd, така че тя е част от библиотеката. Няма какво да се чисти.',
+    slskdFound: 'Не са песни от библиотеката: {files} · {size}',
+    slskdCheck: 'Пауза на изтеглянията и проверка',
+    slskdCheckTitle: 'Проверка на остатъците от slskd?',
+    slskdCheckBody:
+      'Първо изтеглянията се паузират и текущите завършват, за да не се записва нищо по време на сравнението. Нищо не се изтрива без потвърждение.',
+    queueHeld:
+      'Изтеглянията са на пауза, докато решите. Продължават сами след един час.',
+    slskdKeepResume: 'Запази ги и продължи изтеглянията',
+    status: {
+      verified: 'Идентичен в библиотеката',
+      different: 'Подобен, не идентичен',
+      unmatched: 'Не е в библиотеката',
+      unreadable: 'Нечетим',
+      recent: 'Променен наскоро',
+      missing: 'Липсва',
+    },
+    slskdVerifiedHint:
+      'Всеки има бит по бит идентично аудио с файла от библиотеката под него.',
+    showMore: 'Покажи още',
+    slskdDelete: 'Изтрий идентичните копия ({files} · {size})',
+    slskdDeleteTitle: 'Изтриване на идентичните копия?',
+    slskdDeleteBody:
+      'Файлове за премахване от папката на slskd: {files} ({size}). Всеки се проверява отново точно преди това: непроменен и с копие в библиотеката. После изтеглянията продължават.',
+    slskdDeleteConfirm: 'Изтрий',
+    slskdCleaned: 'Премахнати: {files} · освободени: {size}',
+    slskdKeptChanged:
+      'Запазени, защото са се променили или копието в библиотеката липсва: {files}',
+    checkGone: 'Файловете вече ги няма на диска',
+    checkQueueResumed: 'Изтеглянията продължиха',
+    checkNavidromeScan: 'Navidrome сканира отново',
+    playlistsTitle: 'Дублирани плейлисти',
+    playlistsHint:
+      'Два M3U файла за един плейлист, например един, останал където го пишеше стара версия. Обединяването пази всяка песен веднъж, обложката и един файл. Оригиналите се архивират преди това.',
+    playlistsOk: 'Всеки плейлист има един M3U файл.',
+    groupReason: {
+      name: 'Същото име',
+      songs: 'Същите песни',
+      manual: 'Ваш избор',
+    },
+    songsCount: 'Песни: {count}',
+    hasCover: 'Има обложка',
+    keeps: 'Запазва се',
+    mergePlan: 'Резултат: {songs} песни. Споделят {overlap}% от песните си.',
+    mergeUnsafe:
+      'Съвпадат само {overlap}% от песните; може да са различни плейлисти. Няма обединяване.',
+    merge: 'Обедини',
+    mergeTitle: 'Обединяване на тези плейлисти?',
+    mergeBody:
+      '{keeper} ще съдържа всички {songs} песни и обложката; другите файлове се премахват след архивиране.',
+    merged: '{path} вече съдържа {songs} песни.',
+    checkOthersGone: 'Другите M3U файлове ги няма',
+    checkCover: 'Обложката е до него',
+    checkNavidromeOne:
+      'Navidrome показва този плейлист веднъж (намерени: {count})',
+    backupAt: 'Архив: {path}',
+    manualTitle: 'Изберете плейлисти',
+    manualHint:
+      'Изберете два или повече M3U файла, които трябва да са един плейлист. Обединяват се само ако повечето песни съвпадат.',
+    manualFilter: 'Филтър на плейлистите',
+    manualCompare: 'Сравни',
+    navidromeHint:
+      'Какво наистина показва Navidrome и всяко приложение, свързано с него.',
+    navidromeOff: 'Navidrome не е настроен.',
+    navidromeDown: 'Navidrome не отговори.',
+    navidromeNoAdmin:
+      'Добавете администраторски вход в Настройки → Navidrome, за да вижда Доктор импортираните плейлисти и техните файлове.',
+    navidromeSummary: 'Плейлисти',
+    navidromeCounts:
+      'Дубликати: {duplicates} · Липсващ M3U: {orphans} · Липсващи песни: {incomplete}',
+    navidromeFix: 'Поправи',
+    navidromeFixTitle: 'Поправка на плейлистите в Navidrome?',
+    navidromeFixBody:
+      'Плейлистите, отбелязани с „ще бъде премахнат“, се изтриват ({count}), после Navidrome сканира отново.',
+    navidromeFixImport:
+      'Downtify спира и да създава собствено копие на плейлистите, които Navidrome импортира.',
+    navidromeSuggestImport:
+      'Navidrome импортира M3U файловете на Downtify (с обложки), а Downtify създава същите плейлисти и през API, затова всеки се появява два пъти.',
+    reason: {
+      m3u_and_api: 'Импортиран M3U и копие от Downtify',
+      imports: 'Импортиран два пъти',
+      api: 'Създаден два пъти',
+      name: 'Същото име',
+      orphan: 'M3U файлът му липсва',
+    },
+    kind: {
+      import: 'Импортиран от M3U',
+      downtify: 'Създаден от Downtify',
+      other: 'Друг',
+    },
+    willRemove: 'ще бъде премахнат',
+    wouldLoseSongs: 'запазва се: има песни, които липсват в импорта',
+    incomplete: 'Navidrome показва {songs} от {m3u} песни в своя M3U.',
+    incompleteOutside: 'Песни извън музикалната папка на Navidrome: {count}.',
+    navidromeSongDupes: 'Дублирани песни в Navidrome',
+    songDupesCounts:
+      'Песни, показани повече от веднъж: {groups} · излишни копия: {extra} · в папка slskd: {slskd}',
+    ndRemoved: 'Премахнати плейлисти: {count}',
+    ndRemaining: 'Остават: дубликати {duplicates}, липсващ M3U {orphans}',
+    duplicatesTitle: 'Дублирани песни',
+    duplicatesHint:
+      'Файлове в библиотеката със същата песен. Прегледайте ги в Библиотеката; Доктор не трие песни от библиотеката.',
+    duplicatesExact: 'Същият файл',
+    duplicatesLikely: 'Вероятно същата песен',
+    duplicatesCounts: 'Песни: {groups} · излишни файлове: {files} · {size}',
+    relinkedTitle: 'Изтеглена отново с нов Spotify ID',
+    relinkedHint:
+      'Понякога Spotify заменя песен в плейлист със същата песен с нов ID. Тогава следеният плейлист я изтегля отново.',
+    relinkedLabel: 'Една песен, няколко ID',
+    relinkedCounts: 'Песни: {songs} · излишни файлове: {extra}',
+    error: {
+      doctor_busy: 'Доктор вече работи.',
+      doctor_failed: 'Доктор спря с грешка. Вижте журнала на сървъра.',
+      queue_busy:
+        'Текущите изтегляния не приключиха навреме. Опитайте по-късно.',
+      scan_first: 'Първо проверете остатъците отново.',
+      m3u_not_found: 'Този M3U файл липсва. Пуснете проверката отново.',
+      m3u_manual: 'Плейлисти, създадени в Библиотеката, не се обединяват.',
+      need_two: 'Изберете поне два плейлиста.',
+      playlists_differ:
+        'Твърде малко песни съвпадат; изглеждат като различни плейлисти.',
+      not_flagged: 'Първо пуснете проверката отново.',
+      navidrome_off: 'Navidrome не е настроен.',
+    },
   },
 }
