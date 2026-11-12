@@ -2,49 +2,51 @@
 icon: lucide/audio-lines
 ---
 
-# Volume normalization
+# Нормализация громкости
 
-Songs come from many sources and are mastered at very different levels, so one song can be much louder than the next. **Volume normalization** plays each song at a similar loudness. It is off by default, and your audio files are never changed: the server only measures them, and the player turns each song up or down while it plays.
+Песни приходят из разных источников и мастеринг у них очень разный, поэтому одна песня может звучать намного громче следующей. **Нормализация громкости** играет каждую песню с похожей громкостью. По умолчанию она выключена, и ваши аудиофайлы никогда не меняются: сервер только измеряет их, а плеер делает каждую песню громче или тише во время воспроизведения.
 
-## Turning it on
+## Включение
 
-In the web app, open **Settings → General** (`/settings`) and switch on **Normalize playback volume** in the **Volume normalization** group. The choice is yours alone: it follows your account to other browsers and doesn't change anything for anyone else.
+В веб-приложении откройте **Настройки → Общие** (`/settings`) и включите **Нормализовать громкость воспроизведения** в группе **Нормализация громкости**. Выбор принадлежит только вам: он следует за вашим аккаунтом в другие браузеры и ничего не меняет для остальных.
 
-While a song plays, the line under the switch says what was applied to it:
+Когда функция включена, **Уровень воспроизведения** предлагает **Обычный**, **Громче** и **Максимум**. Выбор уровня запоминается в текущем браузере и не зависит от выбора на телефоне. Обычный сохраняет прежнюю цель; остальные варианты поднимают её в пределах измеренного пика каждой песни. Играющая песня меняет уровень плавно, не дожидаясь другого трека и не запуская анализ заново. Поэтому некоторые песни на Громче и Максимум звучат одинаково, когда запаса по пику мало.
 
-| Message | Meaning |
+Пока песня играет, строка под переключателем сообщает, что к ней применилось:
+
+| Сообщение | Значение |
 |---------|---------|
-| Measured volume applied to the current song. | The song has a measurement and plays at its normalized level |
-| No measurement for this song yet: original level kept. | It hasn't been analyzed (or it changed since) — see [Analyzing the library](#analyzing-the-library) |
-| Silent song: original level kept. | There was nothing loud enough to measure |
-| Normalization unavailable: original level kept. | The browser has no Web Audio, or the server didn't answer in time |
+| Измеренная громкость применена к текущей песне. | У песни есть измерение, и она играет на нормализованном уровне |
+| Измерения для этой песни ещё нет: исходный уровень. | Её ещё не анализировали (или она изменилась после этого) — см. [Анализ библиотеки](#analyzing-the-library) |
+| Тихая песня: исходный уровень сохранён. | Не нашлось ничего достаточно громкого для измерения |
+| Нормализация недоступна: исходный уровень сохранён. | В браузере нет Web Audio или сервер не ответил вовремя |
 
-Switched on mid-song, the current song is leveled at once, with a short fade. Songs that aren't in the library (previews and streams of songs you haven't downloaded) always play at their original level.
+Включённая посреди песни, она выравнивает текущую песню сразу, с коротким затуханием. Песни, которых нет в библиотеке (предпрослушивания и потоки песен, которые вы не скачивали), всегда играют на исходном уровне.
 
-The Android app has its own switch: **Settings → Playback → Normalize volume**. It applies from the next song and uses the same measurements, including for offline copies downloaded whole while the measurement already existed.
+В приложении для Android есть свой переключатель: **Настройки → Воспроизведение → Нормализовать громкость**. Он действует со следующей песни и использует те же измерения, в том числе для офлайн-копий, скачанных целиком, когда измерение уже существовало.
 
-## How the level is chosen
+## Как выбирается уровень
 
-Each song gets one constant gain for its whole length — there is no compression, and quiet and loud passages inside a song keep their balance:
+Каждая песня получает одно постоянное усиление на всю свою длину — сжатия нет, и тихие и громкие фрагменты внутри песни сохраняют баланс:
 
-- The target is **-18 LUFS** integrated loudness.
-- A quiet song is turned up by **at most 12 dB**.
-- The gain never pushes the song's peak above **-1 dBTP**, so it doesn't clip. The peak is measured on the song resampled to 192 kHz, which also catches peaks between samples.
+- Цели — интегрированная громкость **-18 LUFS** (Обычный), **-12 LUFS** (Громче) и **-6 LUFS** (Максимум); измеренный предел пика может оставить песню ниже выбранной цели.
+- Тихая песня повышается **не более чем на 12 дБ**.
+- Усиление никогда не поднимает пик песни выше **-1 dBTP**, поэтому она не клиппует. Пик измеряется на песне, пересэмплированной в 192 кГц, что ловит и пики между отсчётами.
 
-So a very quiet or very dynamic song can stay below the target. The web player applies the gain together with the [equalizer](player.md#equalizer); both use the Web Audio API, with the same [browser limits](player.md#browser-support) — on an iPhone or iPad, playback with the screen locked may stop while either is on.
+Так очень тихая или очень динамичная песня может остаться ниже цели. Веб-плеер применяет усиление вместе с [эквалайзером](player.md#equalizer); оба используют Web Audio API с одними и теми же [ограничениями браузера](player.md#browser-support) — на iPhone или iPad воспроизведение с заблокированным экраном может останавливаться, пока включён любой из них.
 
-## Analyzing the library
+## Анализ библиотеки
 
-Measuring takes reading every song once, so it only happens when an admin asks for it. Admins see the analysis controls in the same **Volume normalization** group:
+Измерение означает прочитать каждую песню один раз, поэтому оно происходит только когда администратор его запускает. Администраторы видят элементы управления анализом в той же группе **Нормализация громкости**:
 
-- **Analyze library** queues every song in the library. A song whose measurement is still valid is skipped, so running it again later (after new downloads, say) only measures songs that are new, moved, replaced or changed, and those that failed before.
-- **Pause analysis** lets the songs being measured finish, then stops. **Resume analysis** continues where it left off.
-- The counter shows how many songs are analyzed and how many failed (a file FFmpeg can't decode, or one that changed while it was being read).
+- **Проанализировать библиотеку** ставит в очередь каждую песню библиотеки. Песня, измерение которой всё ещё действительно, пропускается, поэтому повторный запуск позже (скажем, после новых загрузок) измеряет только новые, перемещённые, заменённые или изменённые песни, а также те, что раньше не удались.
+- **Приостановить анализ** даёт измеряемым песням завершиться, а затем останавливается. **Продолжить анализ** продолжает с того места, где остановился.
+- Счётчик показывает, сколько песен проанализировано и сколько не удалось (файл, который FFmpeg не может декодировать, или файл, изменившийся во время чтения).
 
-Analysis runs in the background with FFmpeg at a low priority: at most two songs at a time, fewer when the container has less than two CPUs (its CPU quota and affinity are respected), each with a single thread. It never starts on its own, not even after a restart — an interrupted analysis is kept and waits for **Resume analysis**.
+Анализ идёт в фоне с FFmpeg на низком приоритете: не более двух песен одновременно, меньше, если у контейнера меньше двух CPU (его квота и привязка соблюдаются), каждая в один поток. Он никогда не запускается сам, даже после перезапуска — прерванный анализ сохраняется и ждёт **Продолжить анализ**.
 
-A measurement belongs to the file as it was measured (its size, modification time and inode). When a file is replaced or rewritten — by a [library upgrade](library-upgrade.md), [replacing its audio](replace-audio.md) or by hand — the old measurement no longer applies, the song plays at its original level, and the next **Analyze library** measures it again.
+Измерение принадлежит файлу в том виде, в каком его измеряли (его размер, время изменения и inode). Когда файл заменяют или перезаписывают — через [обновление библиотеки](library-upgrade.md), [замену его аудио](replace-audio.md) или вручную — старое измерение больше не действует, песня играет на исходном уровне, а следующий **Проанализировать библиотеку** измерит её снова.
 
-## For developers
+## Для разработчиков
 
-A track's measurement is `GET /api/library/loudness?file=` for the web app and `GET /api/v1/tracks/{id}/loudness` for the apps; analysis is controlled with `GET /api/library/loudness/status` and `POST /api/library/loudness/{start,pause,resume}` (admins). See the [API reference](../api-reference.md#playback-normalization) and the [mobile client contract](../mobile-client-contract.md).
+Измерение трека — `GET /api/library/loudness?file=` для веб-приложения и `GET /api/v1/tracks/{id}/loudness` для приложений; анализ управляется через `GET /api/library/loudness/status` и `POST /api/library/loudness/{start,pause,resume}` (администраторы). См. [Справочник API](../api-reference.md#playback-normalization) и [контракт мобильного клиента](../mobile-client-contract.md).

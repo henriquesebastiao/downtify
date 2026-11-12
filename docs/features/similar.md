@@ -2,20 +2,20 @@
 icon: lucide/sparkles
 ---
 
-# Похожее
+# Similar
 
-**Похожее** находит треки, звучащие похоже на названный вами, — из собственного радио-микса YouTube Music, того, что YouTube играет после вашего трека. Без API-ключа, без настройки.
+**Similar** finds tracks that sound like one you name, from YouTube Music's own radio mix — what YouTube plays after your track. No API key, no setup.
 
-## Как этим пользоваться
+## How to use it
 
-Откройте **Похожее** в боковой панели (под **Чартами** или на листе **Ещё** на телефоне). Введите **Исполнителя** или **Трек** (достаточно одного — имя артиста без трека берёт его самую популярную песню), затем нажмите **Найти похожее**:
+Open **Similar** from the sidebar (under **Charts**, or the **More** sheet on phones). Type the **Artist** or the **Track** (either one is enough — a bare artist seeds from its top hit), then **Find similar**:
 
-Печатать тоже не обязательно: у каждой строки трека в приложении есть кнопка **Похожее** (иконка волшебной палочки рядом с кнопкой загрузки — на Поиске, Чартах и Discover она заполнена так же, как кнопка загрузки; в «Популярных песнях» и у вставленных ссылок это контурная иконка, а для треков Библиотеки, альбома, артиста и плейлиста — пункт контекстного меню). Она открывает эту страницу, сразу ведя поиск по этому треку. Результаты поиска также целиком проигрываются прямо со строки, ничего не скачивая.
+You don't have to type, either: every track row in the app carries a **Similar** button (the wand icon next to the download button, filled like it on Search, Charts and Discover — in Top songs and pasted links it is a ghost icon, and a context-menu item on Library, Album, Artist and Playlist tracks). It opens this page already searching for that track. Search results also play in full straight from the row, without downloading anything.
 
-- **Играть целиком** — коснитесь обложки, и трек стримится с этого сервера прямо во встроенный плеер, скачан он или нет.
-- **Скачать** — каждая строка уже несёт своё видео и скачивается сразу: Downtify ставит совпадение в очередь через тот же [конвейер подбора](../how-it-works.md), что и любая другая загрузка. С того момента строка показывает ход этой загрузки, а когда песня окажется в вашей библиотеке — галочку.
-- **Бесконечный список** — прокрутка до конца загружает следующую страницу из микса последнего трека, а воспроизведение за последней строкой так же бесконечно продолжает растить очередь.
+- **Play in full** — tap the cover and the track streams from this server straight into the built-in player, downloaded or not.
+- **Download** — every row already carries its video and downloads straight away: Downtify queues the match through the same [matching pipeline](../how-it-works.md) every other download uses. From then on the row shows that download's progress, and a check once the song is in your library.
+- **Endless list** — scrolling to the end loads the next page from the last track's own mix, and playback past the last row keeps the queue growing the same way, without end.
 
 ## API
 
-См. [`GET /api/similar/tracks`](../api-reference.md#get-apisimilartracks) в Справочнике API.
+See [`GET /api/similar/tracks`](../api-reference.md#get-apisimilartracks) in the API Reference.

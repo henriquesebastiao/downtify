@@ -2,32 +2,32 @@
 icon: lucide/hand-heart
 ---
 
-# Contributing
+# Участие в проекте
 
-Contributions are welcome — bug reports, feature requests, code and translations all help. Translations can be of the app, of this documentation, or of both: see [Translating](#translating).
+Вклад приветствуется: полезны и сообщения об ошибках, и запросы функций, и код, и переводы. Переводить можно приложение, эту документацию или и то и другое: см. [Перевод](#translating).
 
-## Issues and feature requests
+## Проблемы и запросы функций
 
-Use the [GitHub issue tracker](https://github.com/henriquesebastiao/downtify/issues). Before opening a new issue, search existing ones to avoid duplicates.
+Используйте [трекер задач GitHub](https://github.com/henriquesebastiao/downtify/issues). Прежде чем открывать новую задачу, поищите существующие, чтобы избежать дублей.
 
-For bug reports, include:
+Для сообщений об ошибках укажите:
 
-- Downtify version
-- How you installed it (Docker run, Docker Compose, Umbrel, …)
-- Steps to reproduce
-- What you expected vs. what happened
-- Any relevant logs
+- Версию Downtify
+- Как вы его установили (Docker run, Docker Compose, Umbrel, …)
+- Шаги воспроизведения
+- Что вы ожидали и что произошло
+- Любые относящиеся к делу журналы
 
-## Development setup
+## Настройка для разработки
 
-### Prerequisites
+### Требования
 
 - Python 3.15+
 - Node.js 20+
-- [uv](https://github.com/astral-sh/uv) (Python package manager)
-- ffmpeg (must be on `PATH`)
+- [uv](https://github.com/astral-sh/uv) (менеджер пакетов Python)
+- ffmpeg (должен быть в `PATH`)
 
-### Clone and install
+### Клонирование и установка
 
 ```bash
 git clone https://github.com/henriquesebastiao/downtify.git
@@ -40,7 +40,7 @@ uv sync
 cd frontend && npm install && cd ..
 ```
 
-### Run in development mode
+### Запуск в режиме разработки
 
 ```bash
 # Terminal 1 — backend
@@ -50,36 +50,36 @@ uv run python main.py
 cd frontend && npm run dev
 ```
 
-The frontend dev server proxies API requests to the backend, so you only need to open the Vite URL (usually `http://localhost:5173`).
+Сервер разработки фронтенда проксирует API-запросы к бэкенду, поэтому достаточно открыть URL Vite (обычно `http://localhost:5173`).
 
-### Run the tests
+### Запуск тестов
 
 ```bash
 uv run pytest
 ```
 
-### Build the frontend for production
+### Сборка фронтенда для продакшена
 
 ```bash
 cd frontend && npm run build
 ```
 
-The compiled assets land in `frontend/dist/` and are served by the backend.
+Скомпилированные файлы попадают в `frontend/dist/`, и их раздаёт бэкенд.
 
-### Work on the documentation
+### Работа над документацией
 
-The docs are Markdown files in `docs/`, built into a static site with [VitePress](https://vitepress.dev/) and a custom theme (in `docs/.vitepress/`) that shares its design tokens with the web app.
+Документация — это Markdown-файлы в `docs/`, которые собираются в статический сайт с помощью [VitePress](https://vitepress.dev/) и собственной темы (в `docs/.vitepress/`), разделяющей дизайн-токены с веб-приложением.
 
 ```bash
 make doc         # dev server with hot reload
 make doc-build   # production build into docs/.vitepress/dist
 ```
 
-Link to other pages with relative `.md` paths (`[Lyrics](lyrics.md)`), and use `::: tip Title` … `:::` for callouts (`info`, `tip`, `warning`, `danger`). New pages go in the sidebar in `docs/.vitepress/nav.mjs` (with their title in each language's file in `docs/.vitepress/locales/`). The build fails on dead links and on links to headings that don't exist.
+Ссылайтесь на другие страницы относительными путями `.md` (`[Тексты](lyrics.md)`), а для врезок используйте `::: tip Заголовок` … `:::` (`info`, `tip`, `warning`, `danger`). Новые страницы добавляются в боковую панель в `docs/.vitepress/nav.mjs` (с их заголовком в файле каждого языка в `docs/.vitepress/locales/`). Сборка падает на мёртвых ссылках и ссылках на несуществующие заголовки.
 
-The English pages in `docs/` are the source; every other language mirrors them in a folder of its own (`docs/pt-BR/…`). You don't have to update the translations when you change an English page — translators follow up — but do run `npm test` in `docs/`: a new page needs an English-only stub in each language (`npm run i18n -- stubs`), and the tests say so if it's missing.
+Английские страницы в `docs/` — источник; каждый другой язык повторяет их в собственной папке (`docs/pt-BR/…`). Меняя английскую страницу, вы не обязаны обновлять переводы — переводчики подхватят, — но запустите `npm test` в `docs/`: новой странице нужна англоязычная заглушка в каждом языке (`npm run i18n -- stubs`), и тесты скажут, если её нет.
 
-## Project structure
+## Структура проекта
 
 ```
 downtify/
@@ -104,18 +104,18 @@ downtify/
 └── docker-compose.yml
 ```
 
-## Translating
+## Перевод
 
-Downtify has two things to translate, and you can take either one — or both:
+В Downtify переводят две вещи, и вы можете взять любую из них — или обе:
 
-| You translate | Where | Guide |
+| Что вы переводите | Где | Руководство |
 |---------------|-------|-------|
-| **The app** (its interface) | `frontend/src/i18n/locales/<code>.js` | [Translating the app](features/internationalization.md#translating-the-app) |
-| **The documentation** (these pages) | `docs/<code>/` and `docs/.vitepress/locales/<code>.mjs` | [Translating the documentation](features/internationalization.md#translating-the-documentation) |
+| **Приложение** (его интерфейс) | `frontend/src/i18n/locales/<code>.js` | [Перевод приложения](features/internationalization.md#translating-the-app) |
+| **Документацию** (эти страницы) | `docs/<code>/` и `docs/.vitepress/locales/<code>.mjs` | [Перевод документации](features/internationalization.md#translating-the-documentation) |
 
-They are independent: a language can be in one and not yet in the other, and a pull request can contain just an app translation, just documentation, or both. Partial work is welcome — untranslated strings fall back to English in the app, and untranslated pages stay in English in the documentation.
+Они независимы: язык может быть в одном и ещё отсутствовать в другом, а pull request может содержать только перевод приложения, только документацию или и то и другое. Частичная работа приветствуется — непереведённые строки в приложении откатываются к английскому, а непереведённые страницы в документации остаются английскими.
 
-Quick start for the documentation, from `docs/`:
+Быстрый старт для документации, из `docs/`:
 
 ```bash
 npm run i18n -- status pt-BR                    # coverage of a language
@@ -123,14 +123,14 @@ npm run i18n -- start pt-BR features/users.md   # copy an English page to transl
 npm test                                        # check the structure of what you translated
 ```
 
-See [Internationalization](features/internationalization.md) for the details: what to keep as it is, how to add a whole new language, and how to translate button names so they match the app.
+Подробности — в разделе [Интернационализация](features/internationalization.md): что оставлять как есть, как добавить целый новый язык и как переводить названия кнопок в соответствии с приложением.
 
-## Pull requests
+## Pull request'ы
 
-- Fork the repository and create a branch from `main`
-- Keep changes focused — one feature or fix per PR
-- Add or update tests when touching backend logic
-- Run `uv run pytest` before submitting
-- Open the PR against `main`
+- Сделайте форк репозитория и создайте ветку от `main`
+- Не распыляйтесь — одна функция или исправление на PR
+- Добавляйте или обновляйте тесты, когда трогаете серверную логику
+- Запустите `uv run pytest` перед отправкой
+- Откройте PR против `main`
 
-If Downtify has been useful to you, consider leaving a star on GitHub — it helps the project grow.
+Если Downtify оказался полезен, поставьте звезду на GitHub — это помогает проекту расти.

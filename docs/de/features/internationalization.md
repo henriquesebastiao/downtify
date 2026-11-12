@@ -31,7 +31,7 @@ Eine noch nicht übersetzte Seite zeigt einen Hinweis und den englischen Text, s
 | `hu` | Magyar | ✓ | ✓ |
 | `bg` | Български | ✓ | ✓ |
 | `de` | Deutsch | ✓ | ✓ |
-| `ru` | Русский | ✓ | ✗ |
+| `ru` | Русский | ✓ | ✓ |
 | `ko` | 한국어 | ✓ | ✓ |
 | `zh-CN` | 简体中文 | ✓ | — |
 

@@ -3,75 +3,67 @@ title: Library-only mode
 icon: lucide/library
 ---
 
-# Режим «только библиотека»
+# Library-only mode
 
-Администратор может включить **Настройки → Общие → Использовать только библиотеку**.
-По умолчанию выключено. Это серверная музыкальная политика, действующая для всех
-аккаунтов, браузеров и сопряжённых Android-приложений.
+An administrator can enable **Settings → General → Use only the library**.
+The default is off. This is a server-wide music policy for every account,
+browser and paired Android app.
 
-Поиск сопоставляется с названиями, артистами и альбомами доступной серверной
-библиотеки. Существующие экраны, навигация и плеер сохраняют свою раскладку.
-Поиск, Discover и Чарты используют локальные треки, альбомы, артистов и плейлисты.
-Похожие треки ранжируются по сохранённым тегам артиста, альбома и (когда доступен)
-жанра: это сопоставление по метаданным, а не акустический анализ. Зерно и
-дубликаты записей исключаются; неизвестное зерно или библиотека без родственных
-треков возвращают пустой результат, не переходя на внешний радио-сервис.
-Существующие правила видимости библиотеки по-прежнему действуют. Локальные папки
-с музыкой, добавленные на сервер, входят в библиотеку, включая монтирования
-в режиме «только чтение».
+Search matches the titles, artists and albums of the accessible server library.
+The existing screens, navigation and player keep their layout. Search,
+Discover and Charts use local tracks, albums, artists and playlists. Similar
+tracks are ranked from saved artist, album and (when available) genre tags:
+this is a metadata match, not an acoustic analysis. The seed and duplicate
+recordings are excluded; an unknown seed or a library without related tracks
+returns an empty result without falling back to an external radio service.
+The existing library visibility rules still apply. Local music folders added
+to the server are part of the library, including read-only mounts.
 
-Внешний поиск музыки, разрешение ссылок, предпросмотры, потоки (включая файлы
-кеша потоков), загрузки, замены и онлайн-обновления библиотеки отклоняются.
-Автоматическое отслеживание плейлистов и прогрев кеша Spotify прекращает
-получение данных, не удаляя подписки, не меняя время последней проверки и не
-расходуя отложенную работу. Они возобновляются, когда режим выключен. Эта
-настройка не удаляет аудио и не очищает библиотеку, а также не запускает
-новых загрузок.
+External music search, link resolution, previews, streams (including stream
+cache files), downloads, replacements and online library upgrades are refused.
+Automatic watched playlists and Spotify cache warming stop fetching, without
+deleting subscriptions, changing their last-check time or consuming their
+pending work. They resume when the mode is disabled. This setting does not
+delete audio or clear the library, and it does not start any new downloads.
 
-## Безопасное переключение
+## Switching safely
 
-Завершите активные загрузки, проверки и онлайн-обновления перед включением режима.
-Активация возвращает HTTP 409, пока идёт внешняя музыкальная работа; она не
-отменяет эту работу и не сохраняет настройку частично. Сохраните снова после её
-окончания. Сохранённая настройка JSON — это `library_only`, принимающая только
-логическое значение.
+Finish active downloads, checks or online upgrades before enabling the mode.
+Activation returns HTTP 409 while external music work is in progress; it does
+not cancel that work or partially save the setting. Save again after it ends.
+The saved JSON setting is `library_only` and accepts only a boolean.
 
-Сервер применяет политику немедленно. Текущие клиенты получают WebSocket-событие
-`music_policy_changed` и обновляют политику периодически (каждые 15 секунд)
-и при переподключении. Они сбрасывают результаты внешнего поиска и элементы
-очереди потоков; локальное воспроизведение и порядок оставшихся локальных треков
-сохраняются. Ранее буферизованное внешнее аудио останавливается, как только
-клиент получает политику. Старые клиенты не могут использовать внешние
-музыкальные конечные пункты сервера, но и только обновлённые клиенты могут
-очистить уже буферизованное ими аудио.
+The server enforces the policy immediately. Current clients receive a
+`music_policy_changed` WebSocket event and refresh the policy periodically
+(15 seconds) and on reconnect. They drop external search results and stream
+queue entries; local playback and the order of remaining local tracks are
+preserved. Previously buffered external audio stops when the client receives
+the policy. Old clients cannot use the server's external music endpoints,
+but only updated clients can clear audio they have already buffered.
 
-## Android и требования к соединению
+## Android and connection requirements
 
-Приложение читает `library_only` из `GET /api/server/info` и сохраняет его вместе
-со сведениями о сопряжённом сервере. Отсутствующие поля у старых серверов
-означают «выключено». Android-приложение ищет в своей синхронизированной
-библиотеке, получает локальные результаты похожих треков и всё ещё может
-проигрывать файлы, скачанные из этой библиотеки.
+The app reads `library_only` from `GET /api/server/info` and retains it with
+the paired server information. Missing fields on older servers mean off.
+The Android app searches its synced library, receives local similar-track
+results and can still play files downloaded from that library.
 
-Телефону нужно соединение с сервером, чтобы стримить файлы библиотеки или
-запрашивать похожие треки. Хранение файлов на телефоне — отдельная функция
-офлайн-загрузки. Этот режим не превращает сервер в интернет-межсетевой экран:
-проверки обновлений и прочее не музыкальное администрирование остаются
-обособленными.
+The phone needs a connection to its server to stream library files or request
+similar tracks. Keeping files on the phone is the separate offline-download
+feature. This mode does not turn the server into an Internet firewall: update
+checks and other non-music administration remain separate.
 
-## Совместимость по API
+## API compatibility
 
-`POST /api/settings/update` принимает `{"library_only": true}` (только
-администратор). `GET /api/settings` возвращает сохранённое логическое значение.
-`GET /api/server/info` добавляет то же логическое значение, не меняя
-`api_version`.
+`POST /api/settings/update` accepts `{"library_only": true}` (admin only).
+`GET /api/settings` returns the persisted boolean. `GET /api/server/info`
+adds the same boolean without changing `api_version`.
 
-Маршруты поиска и похожих треков сохраняют свои контейнеры ответов. Локальные
-строки песен несут `source: "library"`, `file` и `song_id: "library:<file>"`;
-`url` пусто и внешнего предпросмотра не включено. Используйте существующий файл
-библиотеки или сопоставьте его с лентой мобильной синхронизации, но никогда
-не разрешайте строку через провайдера. Конечные пункты поиска артистов и
-альбомов возвращают локальные карточки в тех же формах ответа; карточки
-открывают существующие страницы артиста и альбома библиотеки. Блокированные
-внешние музыкальные конечные пункты возвращают HTTP 409 с пояснительной деталью.
-Выключение настройки возвращает их прежнее поведение и настройки провайдеров.
+Search and similar-track routes keep their response containers. Local song
+rows carry `source: "library"`, `file` and `song_id: "library:<file>"`; `url`
+is empty and no external preview is included. Use the existing library file
+or match it to the mobile sync feed, never resolve the row through a provider.
+The artist/album search endpoints return local cards in the same response
+shapes; the cards open the existing library artist and album pages.
+Blocked external music endpoints return HTTP 409 with an explanatory detail.
+Disabling the setting restores their previous behavior and provider settings.

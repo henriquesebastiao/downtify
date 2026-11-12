@@ -2,36 +2,36 @@
 icon: lucide/eye-off
 ---
 
-# Hidden playlist songs
+# Скрытые песни плейлиста
 
-A playlist downloaded from a Spotify, YouTube Music or Deezer link follows its source, and one a [Playlist Monitor](playlist-monitor.md) watch keeps up to date follows it on every sweep. Playlists made by generators and radios bring songs you don't want, and taking one out of the M3U by hand doesn't last: the next sweep writes it back. **Hide from playlist** takes the song out and keeps it out.
+Плейлист, скачанный по ссылке на Spotify, YouTube Music или Deezer, следует за своим источником, а плейлист, который поддерживает в актуальном состоянии [монитор плейлистов](playlist-monitor.md), следует за ним при каждом обходе. Плейлисты от генераторов и радио приносят песни, которых вам не нужно, а если убрать такую песню из M3U вручную, это не сохранится: следующий обход запишет её обратно. **Скрыть из плейлиста** убирает песню и не даёт ей вернуться.
 
-## Hiding a song
+## Скрытие песни
 
-On the playlist's page, open a song's **⋯** menu and pick **Hide from playlist**. The message that confirms it has **Undo**.
+На странице плейлиста откройте меню **⋯** у песни и выберите **Скрыть из плейлиста**. В сообщении с подтверждением есть **Отменить**.
 
-From then on:
+С этого момента:
 
-- **The song leaves the playlist right away**: its line goes from the playlist's [M3U file](m3u-export.md), so it also leaves the media servers that read it, and the Navidrome playlist when [Navidrome sync](slskd-navidrome.md) is on.
-- **The file stays in your library**, searchable and playable from its album, its artist and any other playlist. To get rid of the file too, use **Delete** on the song in the Library.
-- **Watch sweeps leave it out.** It isn't put back into the M3U and it isn't downloaded again, not even after you delete its file.
-- **It is not missing any more.** **Download missing** skips it, and the playlist can be complete without it.
-- **Downloading the playlist again from its link** keeps hidden songs out of the playlist.
+- **Песня сразу исчезает из плейлиста**: её строка пропадает из [M3U-файла](m3u-export.md) плейлиста, поэтому она исчезает и из медиасерверов, которые его читают, и из плейлиста Navidrome, если включена [синхронизация с Navidrome](slskd-navidrome.md).
+- **Файл остаётся в вашей библиотеке**, его можно найти и проиграть из его альбома, у его артиста и в любом другом плейлисте. Чтобы избавиться и от файла, воспользуйтесь **Удалить** у песни в Библиотеке.
+- **Обходы монитора её пропускают.** Она не возвращается в M3U и не скачивается снова, даже если вы удалите её файл.
+- **Она больше не считается недостающей.** **Скачать недостающие** её пропускает, и плейлист может считаться полным без неё.
+- **Повторная загрузка плейлиста по ссылке** не включает скрытые песни в плейлист.
 
-The original playlist on Spotify or YouTube Music isn't changed: Downtify reads them without an account and can't edit them.
+Оригинальный плейлист на Spotify или YouTube Music не меняется: Downtify читает их без аккаунта и не может редактировать.
 
-Only the playlist's owner (or an admin) hides songs. People it is [shared with](users.md#sharing-playlists) see the playlist as the owner keeps it. A playlist has to keep at least one song: to get rid of all of them, delete the playlist.
+Скрывать песни может только владелец плейлиста (или администратор). Те, кому плейлист [открыт](users.md#sharing-playlists), видят его таким, каким его держит владелец. В плейлисте должна остаться хотя бы одна песня: чтобы избавиться от всех, удалите плейлист.
 
-::: info Playlists you created in the Library
-A Library playlist has no source to bring a song back, so it is edited directly with **Remove from playlist**. **Detach from source** on an imported playlist forgets its hidden songs the same way: they simply aren't in it any more, and can be added again like any other song.
+::: info Плейлисты, созданные вами в Библиотеке
+У плейлиста Библиотеки нет источника, который мог бы вернуть песню, поэтому его редактируют напрямую через **Убрать из плейлиста**. **Отвязать от источника** у импортированного плейлиста точно так же забывает его скрытые песни: их просто больше в нём нет, и их можно добавить снова, как любую другую песню.
 :::
 
-## Showing a song again
+## Снова показать песню
 
-A playlist that hides songs lists them under its tracks, in **N hidden songs**. **Show tracks** opens the list, and **Show again** puts a song back where it was in the playlist.
+Плейлист, в котором есть скрытые песни, перечисляет их под своими треками в разделе **N скрытых песен**. **Показать треки** открывает список, а **Вернуть** возвращает песню на её прежнее место в плейлисте.
 
-A song whose file was deleted in the meantime reads **No longer in your library**. Showing it again only forgets that it was hidden: the next watch sweep, or **Download missing**, downloads it like any other missing song.
+Песня, чей файл за это время был удалён, отмечена **Больше нет в вашей библиотеке**. Возвращение лишь забывает, что она была скрыта: следующий обход монитора или **Скачать недостающие** скачает её, как любую другую недостающую песню.
 
-## In the apps
+## В приложениях
 
-The apps hide songs by track id with the same rules, and list and show them again the same way: see [`POST /api/v1/playlists/hidden`](../api-reference.md#post-apiv1playlistshidden) and the [mobile client contract](../mobile-client-contract.md).
+Приложения скрывают песни по id трека по тем же правилам, а показывают список и возвращают песни так же: см. [`POST /api/v1/playlists/hidden`](../api-reference.md#post-apiv1playlistshidden) и [контракт мобильного клиента](../mobile-client-contract.md).

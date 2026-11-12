@@ -2,58 +2,60 @@
 icon: lucide/image
 ---
 
-# Playlist cover art
+# Обложки плейлистов
 
-Downtify can save a playlist's own cover next to its [M3U file](m3u-export.md), so media servers and file browsers show the real artwork for the playlist instead of a generic icon.
+Downtify может сохранить собственную обложку плейлиста рядом с его [M3U-файлом](m3u-export.md), чтобы медиасерверы и файловые менеджеры показывали настоящую обложку плейлиста вместо общего значка.
 
-On by default. Turn it off in **Settings → Downloads & files → Save playlist cover art**.
+Включено по умолчанию. Выключить можно в **Настройки → Загрузки и файлы → Сохранять обложки плейлистов**.
 
-## Where the file goes
+## Куда попадает файл
 
-The cover is written with the **same name and in the same folder as the playlist's M3U**, with a `.jpg` extension instead:
+Обложка записывается с **тем же именем и в той же папке, что и M3U плейлиста**, только с расширением `.jpg`:
 
 ```
 <downloads>/<playlist-name>/<playlist-name>.m3u
 <downloads>/<playlist-name>/<playlist-name>.jpg
 ```
 
-With *Organize by artist* or *Organize by album* on, tracks are spread across artist folders and the M3U goes to a central `Playlists/` directory (see [File organization](file-organization.md)) — the cover follows it:
+Когда включено *Сортировать по артистам* или *Сортировать по альбомам*, треки раскладываются по папкам артистов, а M3U попадает в общий каталог `Playlists/` (см. [Организацию файлов](file-organization.md)) — обложка следует за ним:
 
 ```
 <downloads>/Playlists/<playlist-name>.m3u
 <downloads>/Playlists/<playlist-name>.jpg
 ```
 
-::: info It needs the M3U
-With **Write M3U playlists** off, no cover is saved either: Downtify places the image by the M3U's path, so without one there is nowhere to put it. The setting is hidden while M3U writing is off.
+::: info Нужен M3U
+Если **Записывать плейлисты M3U** выключено, обложка тоже не сохраняется: Downtify размещает изображение по пути M3U, поэтому без него класть его некуда. Пока запись M3U выключена, настройка скрыта.
 :::
 
-## Sources and resolution
+## Источники и разрешение
 
-| Source | Resolution |
+| Источник | Разрешение |
 |--------|-----------|
-| **Spotify** | The largest image its public embed page offers for the playlist — the same one already used for the tracks' cover art |
-| **YouTube Music** | Always requested at 1200×1200, independently of [Cover art resolution](download-settings.md#cover-art-resolution), which only affects per-track covers |
+| **Spotify** | Самое крупное изображение, которое публичная встроенная страница плейлиста предлагает для него — то же, что уже используется для обложек треков |
+| **YouTube Music** | Всегда запрашивается в 1200×1200, независимо от [Размера обложек](download-settings.md#cover-art-resolution), который влияет только на обложки отдельных треков |
 
-Both services serve JPEG for these URLs even when the original artwork was a PNG, so the file is always saved as `.jpg`.
+Оба сервиса отдают JPEG по этим URL, даже если оригинальная обложка была PNG, поэтому файл всегда сохраняется как `.jpg`.
 
-## When it downloads
+## Когда она скачивается
 
-**Before the tracks**, in both cases — the folder already looks like the playlist while it fills up, and a media server that scans mid-download finds the artwork rather than a bare folder:
+**До треков**, в обоих случаях — папка уже выглядит как плейлист, пока наполняется, а медиасервер, сканирующий посреди загрузки, находит обложку, а не пустую папку:
 
-- **A manual playlist download** — once, as soon as the playlist name is resolved, before the first track starts.
-- **[Playlist Monitor](playlist-monitor.md)** — once per sweep that has something to download, before that sweep's first track. A sweep that finds nothing new doesn't re-fetch it.
+- **Загрузка плейлиста вручную** — один раз, как только определено имя плейлиста, до начала первого трека.
+- **[Монитор плейлистов](playlist-monitor.md)** — один раз за обход, в котором есть что скачивать, до первого трека этого обхода. Обход, не нашедший ничего нового, не запрашивает её заново.
 
-Failing to resolve or download the cover (a network error, a playlist with no artwork) is logged and skipped — it never holds up or fails the download itself.
+Неудача при получении или загрузке обложки (сетевая ошибка, плейлист без обложки) записывается в журнал и пропускается — она никогда не задерживает и не срывает саму загрузку.
 
-## In the Downtify interface
+## В интерфейсе Downtify
 
-A playlist that has its own artwork (downloaded with a Spotify or YouTube playlist) shows it everywhere the Library lists playlists — the grid, the playlist page, the sidebar and the player. Playlists without one, and playlists you create in the Library, show a mosaic of up to four distinct track covers: two side by side, three as a tall left tile plus two stacked on the right, four as a 2×2 grid. The same collage is written as `<playlist-name>.jpg` beside a manual playlist's M3U so Navidrome sees it too, and it is rebuilt whenever you add or remove songs.
+Плейлист, у которого есть собственная обложка (скачанная вместе с плейлистом Spotify или YouTube), показывает её везде, где Библиотека перечисляет плейлисты — в сетке, на странице плейлиста, в боковой панели и в плеере. Плейлисты без неё и плейлисты, созданные вами в Библиотеке, показывают мозаику из до четырёх разных обложек треков: две рядом, три — высокий левый блок плюс два справа друг над другом, четыре — сетка 2×2. Та же коллажная обложка записывается как `<playlist-name>.jpg` рядом с M3U ручного плейлиста, чтобы её видел и Navidrome, и пересобирается всякий раз, когда вы добавляете или убираете песни.
+
+На плейлисте, созданном вами, выберите **Загрузить обложку**, чтобы использовать своё изображение JPEG, PNG или WebP (до 10 MiB). Downtify преобразует его в спутник `.jpg` рядом с M3U и показывает в Библиотеке, на странице плейлиста и в контексте плейлиста в плеере. Загружать или удалять её могут только владелец плейлиста и администраторы. **Убрать обложку** возвращает сгенерированную мозаику треков.
 
 ## Navidrome
 
-Nothing to configure: Navidrome resolves playlist artwork from a **sidecar image** — a file named after the playlist, in the same folder — which is exactly what Downtify writes. As long as Navidrome's music folder covers your downloads folder, the artwork appears on its next scan. No API call from Downtify is involved. See [slskd & Navidrome](slskd-navidrome.md#navidrome).
+Настраивать ничего не нужно: Navidrome берёт обложку плейлиста из **спутникового изображения** — файла, названного по плейлисту, в той же папке, — а это именно то, что пишет Downtify. Пока музыкальная папка Navidrome охватывает вашу папку загрузок, обложка появится при следующем сканировании. Никаких API-вызовов от Downtify не требуется. См. [slskd и Navidrome](slskd-navidrome.md#navidrome).
 
-## Cleanup
+## Очистка
 
-Deleting a playlist from the Library page removes its cover along with its M3U and tracks — see [Deleting a playlist](slskd-navidrome.md#deleting-a-playlist).
+Удаление плейлиста со страницы Библиотеки удаляет его обложку вместе с M3U и треками — см. [Удаление плейлиста](slskd-navidrome.md#deleting-a-playlist).

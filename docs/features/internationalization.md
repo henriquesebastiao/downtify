@@ -32,7 +32,7 @@ A page that has not been translated yet shows a note and the English text, so ev
 | `bg`    | Български          | ✓   | ✓    |
 | `de`    | Deutsch            | ✓   | ✓    |
 | `ko`    | 한국어             | ✓   | ✓    |
-| `ru`    | Русский            | ✓   | ✗    |
+| `ru`    | Русский            | ✓   | ✓    |
 | `zh-CN` | 简体中文           | ✓   | ✓    |
 
 The reference pages meant for developers — the [API reference](../api-reference.md) and the changelog — stay in English in every language. The [mobile client contract](../mobile-client-contract.md) may be translated where a locale provides a translation.
@@ -41,11 +41,11 @@ The reference pages meant for developers — the [API reference](../api-referenc
 
 You can translate the app, the documentation, or both. They are separate pieces of work with separate files, so a pull request can contain either one — or a language can be added to one of them first and to the other later.
 
-| You translate | Where the files are | Done when |
-| ------------- | ------------------- | --------- |
-| **The app only** | `frontend/src/i18n/locales/<code>.js` | the language appears in **Settings → Language** |
-| **The documentation only** | `docs/.vitepress/locales/<code>.mjs` and the Markdown pages in `docs/<code>/` | the language appears in the docs' globe menu |
-| **Both** | all of the above | both |
+| You translate              | Where the files are                                                           | Done when                                       |
+| -------------------------- | ----------------------------------------------------------------------------- | ----------------------------------------------- |
+| **The app only**           | `frontend/src/i18n/locales/<code>.js`                                         | the language appears in **Settings → Language** |
+| **The documentation only** | `docs/.vitepress/locales/<code>.mjs` and the Markdown pages in `docs/<code>/` | the language appears in the docs' globe menu    |
+| **Both**                   | all of the above                                                              | both                                            |
 
 A language doesn't have to exist in the app to be added to the documentation, or the other way round.
 

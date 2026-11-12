@@ -2,38 +2,38 @@
 icon: lucide/heart-handshake
 ---
 
-# Support the Artist
+# Поддержать артиста
 
-Downtify downloads music from YouTube. When you find something you love, **Support the artist** shows where to buy it, so the money reaches the people who made it.
+Downtify скачивает музыку с YouTube. Когда вы находите то, что вам нравится, **Поддержать артиста** показывает, где это купить, чтобы деньги дошли до тех, кто это создал.
 
-## Where to find it
+## Где это найти
 
-| Where | What it opens |
+| Где | Что открывается |
 |-------|---------------|
-| Search results and charts | The **tag** button on a song row, next to the link to YouTube Music (it shows on hover on a large screen) |
-| A song's **⋯** menu in the Library, and the now playing screen | That song |
-| An album's **⋯** menu | The album |
-| An artist's **⋯** menu | Everything by the artist |
+| Результаты поиска и чарты | Кнопка **Поддержать артиста** (ярлык) в строке песни, рядом со ссылкой на YouTube Music (появляется при наведении на большом экране) |
+| Меню **⋯** песни в Библиотеке и экран «Играет сейчас» | Эта песня |
+| Меню **⋯** альбома | Альбом |
+| Меню **⋯** артиста | Всё у артиста |
 
-## The links
+## Ссылки
 
-For a song, an album or an artist the dialog lists:
+Для песни, альбома или артиста диалог перечисляет:
 
-| Store | Link |
+| Магазин | Ссылка |
 |-------|------|
-| **iTunes Store** | The item itself, with its price, when the store clearly has it — the same artist and title. Otherwise a search on Apple Music. |
-| **Bandcamp** | A search. Bandcamp passes most of each sale on to the artist, and many artists sell there directly. |
-| **Qobuz** | A search. Qobuz sells lossless (and hi-res) downloads. |
-| **Official website** | The artist's own site, when their [artist profile](artist-images.md) has one. |
+| **iTunes Store** | Сам товар с его ценой, когда магазин явно его имеет — тот же артист и название. Иначе поиск в Apple Music. |
+| **Bandcamp** | Поиск. Bandcamp передаёт артисту большую часть каждой продажи, и многие артисты продают там напрямую. |
+| **Qobuz** | Поиск. Qobuz продаёт загрузки без потерь (и hi-res). |
+| **Официальный сайт** | Собственный сайт артиста, когда у его [профиля артиста](artist-images.md) он указан. |
 
-The iTunes Store link opens the store of your country, taken from the browser's language (`pt-BR` opens the Brazilian store, with prices in reais; a language without a region opens the US store). A song that is only sold as part of its album shows no price of its own.
+Ссылка на iTunes Store открывает магазин вашей страны, определённой по языку браузера (`pt-BR` открывает бразильский магазин с ценами в реалах; язык без региона открывает магазин США). Песня, которая продаётся только в составе альбома, не показывает своей цены.
 
-Bandcamp and Qobuz have no public way to look something up, so their links are searches for the artist and the title (or the album, or the artist alone): check the result is the right release before you buy.
+У Bandcamp и Qobuz нет публичного способа что-то найти, поэтому их ссылки — это поиск по артисту и названию (или по альбому, или только по артисту): проверьте, что результат — нужный релиз, прежде чем покупать.
 
-::: info Plain links
-Downtify doesn't sell anything and doesn't earn from these links. To fill in the dialog it makes one request to Apple's public iTunes Search API, with the artist and title only, and remembers the answer while the server runs. Nothing else leaves your server until you open a link.
+::: info Обычные ссылки
+Downtify ничего не продаёт и не зарабатывает на этих ссылках. Чтобы заполнить диалог, он делает один запрос к публичному iTunes Search API Apple, только с артистом и названием, и запоминает ответ, пока работает сервер. Ничего другого с вашего сервера не уходит, пока вы не откроете ссылку.
 :::
 
-## In the apps
+## В приложениях
 
-The apps get the same links from [`GET /api/buy`](../api-reference.md#get-apibuy).
+Приложения получают те же ссылки через [`GET /api/buy`](../api-reference.md#get-apibuy).

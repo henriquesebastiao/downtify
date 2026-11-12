@@ -2,38 +2,43 @@
 icon: lucide/circle-pause
 ---
 
-# Download Queue
+# Очередь загрузок
 
-Everything you download goes through the **Queue** page: what is downloading (**In progress**), what is **Waiting** for a free slot, what is **Done** and what **Failed**. How many songs download at once is [Parallel downloads](download-settings.md#parallel-downloads).
+Всё, что вы скачиваете, проходит через страницу **Очередь**: что скачивается (**В работе**), что **Ожидает** свободного места, что **Готово** и что **С ошибками**. Сколько песен скачивается одновременно, задают [Параллельные загрузки](download-settings.md#parallel-downloads).
 
-## Pausing and resuming
+## Пауза и продолжение
 
-**Pause downloads**, at the top of the Queue page, stops the queue from starting anything new — handy before you change settings, look into a problem, or update and restart Downtify while a long queue is waiting.
+**Пауза загрузок** в верхней части страницы Очереди не даёт очереди начинать что-то новое — удобно перед изменением настроек, разбором проблемы или обновлением и перезапуском Downtify, пока ждёт длинная очередь.
 
-- Downloads already running finish normally; nothing is cancelled. Until the last of them is done, the page reads **Pausing downloads…** with how many are left.
-- Then it reads **Downloads paused**: no new downloads will start until resumed. The waiting songs stay queued, in the same order, they read **Paused**, and the Queue badge in the sidebar turns grey.
-- **Resume downloads** carries on with the waiting songs, with the settings and the [audio source order](download-settings.md#audio-provider) as they are by then.
-- Songs added while the queue is paused join it and wait too. A waiting song you remove (or **Clear queue**) never starts.
-- [Playlist Monitor](playlist-monitor.md) sweeps wait as well, before each track, and so do [Replace Audio](replace-audio.md) jobs.
+- Уже идущие загрузки завершаются обычным образом; ничего не отменяется. Пока не завершится последняя из них, страница показывает **Ставим загрузки на паузу…** и сколько осталось.
+- Затем она показывает **Загрузки на паузе**: новые загрузки не начнутся, пока вы не продолжите. Ожидающие песни остаются в очереди в том же порядке и отмечены **Пауза**, а значок Очереди в боковой панели становится серым.
+- **Продолжить загрузки** берётся за ожидающие песни с теми настройками и тем [порядком аудиоисточников](download-settings.md#audio-provider), какие есть к этому моменту.
+- Песни, добавленные на паузе, тоже встают в очередь и ждут. Ожидающая песня, которую вы убрали (или **Очистить очередь**), никогда не начнётся.
+- Обходы [монитора плейлистов](playlist-monitor.md) тоже ждут, перед каждым треком, как и задания [Замены аудио](replace-audio.md).
+- Новые проверки монитора и обходы сверки ждут перед запуском. Мониторинг подкастов останавливается между эпизодами; загрузки эпизодов вручную тоже ждут. Активная работа завершается обычным образом.
+- Улучшение библиотеки получает собственную паузу и завершает текущий трек. После продолжения глобальной очереди улучшение продолжают отдельно на его существующем экране. Новые запуски и восстановление после сбоя учитывают глобальную паузу.
 
-Everyone sees whether the queue is paused; only an admin can pause or resume it, since it holds everyone's downloads.
+Все видят, стоит ли очередь на паузе; ставить и снимать паузу может только администратор, поскольку в ней лежат загрузки всех.
 
-## Restarting or updating
+То же глобальное управление доступно в верхней части **Настройки → Загрузки и файлы** (`/settings/files`) и в мониторе плейлистов (`/monitor`), рядом с «Проверить все сейчас». Оба элемента читают подтверждённое состояние сервера. Им нужна веб-сессия администратора; токен привязанного телефона не даёт администрирования сервера. Если подтверждение потеряно, воспользуйтесь «Проверить состояние», прежде чем отправлять ещё одно изменение.
 
-The queue outlives a restart, a crash or a container update. The songs that were waiting — and the ones that were mid-download when Downtify stopped, which start over — are queued again on the next start, and a paused queue comes back paused. So with a long queue:
+## Перезапуск и обновление
 
-1. **Pause downloads** and wait for **Downloads paused**.
-2. Restart or update Downtify, change what you needed to.
-3. **Resume downloads**.
+Очередь переживает перезапуск, сбой или обновление контейнера. Песни, которые ждали, — и те, что скачивались в момент остановки Downtify и начинаются заново, — снова встают в очередь при следующем запуске, а очередь на паузе возвращается на паузе. Поэтому при длинной очереди:
 
-When the songs of a playlist download finish after a restart, its [M3U](m3u-export.md) and Navidrome playlist are refreshed once, as at the end of the original download.
+1. Нажмите **Пауза загрузок** и дождитесь **Загрузки на паузе**.
+2. Перезапустите или обновите Downtify, поменяйте то, что нужно.
+3. Нажмите **Продолжить загрузки**.
 
-::: info What isn't kept
-- Finished and failed songs: after a restart the queue lists only what is still to do.
-- [Replace Audio](replace-audio.md) jobs: replace the song again.
-- In [library-only mode](library-only.md) nothing is started: the saved songs wait for a start with it off.
-:::
+Когда загрузка песен плейлиста завершается после перезапуска, его [M3U](m3u-export.md) и плейлист Navidrome обновляются один раз, как в конце исходной загрузки.
+
+::: info Что не сохраняется
+
+- Завершённые и неудавшиеся песни: после перезапуска очередь перечисляет только то, что ещё предстоит сделать.
+- Задания [Замены аудио](replace-audio.md): замените песню снова.
+- В [режиме только библиотеки](library-only.md) ничего не запускается: сохранённые песни ждут запуска с выключенным режимом.
+  :::
 
 ## API
 
-[`GET /api/queue/state`](../api-reference.md#get-apiqueuestate), [`POST /api/queue/pause`](../api-reference.md#post-apiqueuepause) and [`POST /api/queue/resume`](../api-reference.md#post-apiqueueresume); every change is also a `queue_state` [WebSocket](../api-reference.md#websocket) frame.
+[`GET /api/queue/state`](../api-reference.md#get-apiqueuestate), [`POST /api/queue/pause`](../api-reference.md#post-apiqueuepause) и [`POST /api/queue/resume`](../api-reference.md#post-apiqueueresume); каждое изменение — ещё и кадр `queue_state` [WebSocket](../api-reference.md#websocket).
