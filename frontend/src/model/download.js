@@ -435,11 +435,32 @@ export function useDownloadManager() {
     removeItems((item) => item.isDownloaded())
   }
 
-  function retry(song) {
+  async function retry(song) {
     if (song.replace) return replaceAgain(song, song.replace.video_id)
     const item = findItem(song)
-    if (item) item.resetForRetry()
-    return download(song)
+    if (song.url?.trim()) {
+      if (item) item.resetForRetry()
+      return download(song)
+    }
+
+    // CSV imports can have metadata but no URL. Submit them to the same
+    // provider search queue as the import instead of the URL endpoint.
+    const queuedItem = upsertSong(song)
+    ensureQueuePoll()
+    try {
+      await API.downloadBatch({
+        songs: [
+          { ...song, _match_by_metadata: true, soundcloud_url: undefined },
+        ],
+        generate_m3u: false,
+      })
+      await syncQueueFromServer().catch(() => {})
+    } catch (err) {
+      queuedItem.patch({
+        message: err?.response?.data?.detail || err?.message || '',
+      })
+      queuedItem.setError()
+    }
   }
 
   function retryAllFailed() {
