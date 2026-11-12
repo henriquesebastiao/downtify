@@ -65,6 +65,19 @@ By default, formats not in the list remain eligible as a final catch-all tier. T
 
 For example, `flac, mp3` with strict priority and the whitelist enabled, a minimum lossy bitrate of `320`, and five candidate attempts per format tries FLAC first, then MP3 at 320 kbps or higher. If neither tier succeeds, the next configured provider is tried.
 
+Without strict priority, **Minimum lossy bitrate** still skips files that report a lower bitrate, but files that don't report one are allowed.
+
+**Quality profile** fills in the format list for you: **Default** (`mp3, flac`), **Lossless first** (`flac, mp3`) or **Lossy only** (`mp3, m4a, ogg, opus` with **Only allow listed formats** on). Editing the list afterwards is fine; no profile is highlighted when the list matches none of them.
+
+Turn on **Fine-tune quality and matching** for extra rules. While it is off, the rules below are not used, but their values are kept:
+
+- **Files with no listed bitrate** — **Default** keeps the rule above (rejected only in strict mode with a minimum). **Allow** keeps them in strict mode too; **Reject** skips them everywhere.
+- **Try the highest bitrate first** — among files that pass the match score, tries the highest bitrate first instead of the closest file name.
+- **Minimum bitrate per format** — overrides the minimum for one lossy format, e.g. `192` for `m4a` while MP3 keeps `256`. Blank uses the main minimum.
+- **Maximum bitrate** — skips files above it. `0` turns it off; around `400` skips lossless ALAC hidden in `.m4a` files.
+
+**Candidate attempts**, **Total timeout** and **Queued timeout** also live in this section. They apply whether it is on or off.
+
 If nothing acceptable turns up, the transfer doesn't finish within **Total timeout**, or it sits queued on the remote peer without progress for longer than **Queued timeout**, Downtify moves on to the next audio source.
 
 **Polling and resource use.**

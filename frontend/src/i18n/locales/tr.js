@@ -1496,7 +1496,7 @@ export default {
       'Virgülle ayrılmış uzantıları en yüksek öncelikliden başlayarak yazın (ör. flac, mp3).',
     slskdMinBitrate: 'Kayıplı biçimler için minimum bit hızı',
     slskdMinBitrateHint:
-      'Katı modda bu değerin altındaki veya bit hızı bildirilmemiş kayıplı dosyalar reddedilir. FLAC etkilenmez.',
+      'Daha düşük bit hızı bildiren kayıplı dosyalar atlanır. Bit hızı bildirmeyen dosyalara, katı biçim önceliği açık değilse izin verilir. Katı modda FLAC etkilenmez.',
     slskdAttempts: 'Aday denemeleri',
     slskdAttemptsHint:
       'Katı modda her biçim için bu kadar aday denenir; diğer durumda toplam sayıdır.',
@@ -1515,6 +1515,34 @@ export default {
     slskdFolderHint: 'Ana makinedeki değil, Downtify kapsayıcısındaki yol.',
     slskdTimeout: 'Toplam zaman aşımı',
     slskdQueuedTimeout: 'Kuyruk zaman aşımı',
+    slskdTimeoutHint:
+      'Bir indirmenin, sonraki adaya geçmeden önce ne kadar sürebileceği.',
+    slskdQueuedTimeoutHint:
+      'Başka bir kullanıcının yükleme kuyruğunda, vazgeçmeden önce ne kadar bekleneceği.',
+    slskdProfile: 'Kalite profili',
+    slskdProfileHint:
+      'Biçim listesi için bir başlangıç noktası. Aşağıdaki alanları dilediğin gibi değiştir.',
+    slskdProfileDefault: 'Varsayılan',
+    slskdProfileLossless: 'Önce kayıpsız',
+    slskdProfileLossy: 'Yalnızca kayıplı',
+    slskdAdvanced: 'Kalite ve eşleşmeyi ince ayarla',
+    slskdAdvancedHint:
+      'Ek bit hızı kuralları, aday denemeleri ve zaman aşımları. Kapalıyken ek bit hızı kuralları kullanılmaz.',
+    slskdUnknownBitrate: 'Bit hızı belirtilmeyen dosyalar',
+    slskdUnknownBitrateHint:
+      'Bazı Soulseek kullanıcıları bit hızı paylaşmaz. Varsayılan, bunları yalnızca minimum bit hızlı katı modda reddeder.',
+    slskdUnknownAuto: 'Varsayılan',
+    slskdUnknownAllow: 'İzin ver',
+    slskdUnknownReject: 'Reddet',
+    slskdPreferBitrate: 'Önce en yüksek bit hızını dene',
+    slskdPreferBitrateHint:
+      'Yeterince eşleşen dosyalar arasında en yakın dosya adı yerine en iyi kaliteyle başla.',
+    slskdFormatFloors: 'Biçime göre minimum bit hızı',
+    slskdFormatFloorsHint:
+      'Yukarıdaki minimumu kullanmak için boş bırak. AAC (m4a) ve Opus gibi verimli biçimler MP3’ten daha düşük bit hızlarında iyi ses verir.',
+    slskdMaxBitrate: 'Maksimum bit hızı',
+    slskdMaxBitrateHint:
+      '0 her şeye izin verir. Yaklaşık 400, .m4a dosyalarındaki kayıpsız sesi (ALAC) atlar ve dosyaları küçük tutar.',
     slskdInPlace: 'Dosyaları slskd klasöründe bırak',
     slskdInPlaceHint:
       'Açık: dosyaları yerinde etiketle ve koru. Kapalı: İndirilenler klasörüne kopyalayıp etiketle; kaynak yalnızca içe aktarma başarılı olursa silinir. Hata olursa kaynak korunur.',

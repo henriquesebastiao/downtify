@@ -1422,7 +1422,7 @@ export default {
       '以逗號分隔副檔名，優先順序最高的放最前面（例如 flac, mp3）。',
     slskdMinBitrate: '失真格式最低位元率',
     slskdMinBitrateHint:
-      '在嚴格模式下，低於此值或未回報位元率的失真檔案都會被拒絕。FLAC 不受此限制。',
+      '回報位元率較低的失真檔案會被略過。未回報位元率的檔案仍會被接受，除非開啟了嚴格格式優先順序。嚴格模式下 FLAC 不受此限制。',
     slskdAttempts: '候選嘗試次數',
     slskdAttemptsHint:
       '在嚴格模式下，每種格式會嘗試這麼多個候選項目；否則這是總數。',
@@ -1441,6 +1441,32 @@ export default {
     slskdFolderHint: 'Downtify 容器內的路徑，不是主機上的路徑。',
     slskdTimeout: '總逾時時間',
     slskdQueuedTimeout: '排隊逾時時間',
+    slskdTimeoutHint: '單次下載允許的最長時間，逾時後嘗試下一個候選。',
+    slskdQueuedTimeoutHint:
+      '在其他使用者的上傳佇列中等待的最長時間，逾時後換下一個。',
+    slskdProfile: '品質設定檔',
+    slskdProfileHint: '格式清單的起點。可隨意修改下方任何欄位。',
+    slskdProfileDefault: '預設',
+    slskdProfileLossless: '無損優先',
+    slskdProfileLossy: '僅失真格式',
+    slskdAdvanced: '微調品質與比對',
+    slskdAdvancedHint:
+      '額外的位元率規則、候選嘗試次數和逾時設定。關閉時不使用額外的位元率規則。',
+    slskdUnknownBitrate: '未標示位元率的檔案',
+    slskdUnknownBitrateHint:
+      '部分 Soulseek 使用者不分享位元率。預設僅在設定了最低位元率的嚴格模式下拒絕這些檔案。',
+    slskdUnknownAuto: '預設',
+    slskdUnknownAllow: '允許',
+    slskdUnknownReject: '拒絕',
+    slskdPreferBitrate: '優先嘗試最高位元率',
+    slskdPreferBitrateHint:
+      '在比對度足夠的檔案中，優先選擇音質最好的，而不是檔名最接近的。',
+    slskdFormatFloors: '各格式最低位元率',
+    slskdFormatFloorsHint:
+      '留空則使用上方的最低值。AAC (m4a) 和 Opus 等高效格式在比 MP3 更低的位元率下也有好音質。',
+    slskdMaxBitrate: '最高位元率',
+    slskdMaxBitrateHint:
+      '0 表示不限制。設為約 400 可略過 .m4a 檔案中的無損音訊 (ALAC)，並讓檔案保持較小。',
     slskdInPlace: '將檔案留在 slskd 資料夾',
     slskdInPlaceHint:
       '開啟：直接在原處寫入標籤並保留檔案。關閉：複製到下載資料夾並寫入標籤，成功匯入後移除來源檔案。複製、寫入標籤或驗證失敗時會保留來源檔案。',

@@ -171,6 +171,50 @@ def _int_setting(
     return min(maximum, max(minimum, value))
 
 
+SLSKD_UNKNOWN_BITRATE_MODES = ('auto', 'allow', 'reject')
+
+
+def _bitrate_value(value: Any) -> int:
+    """A kbps value clamped to 0-10000; anything unreadable is 0 (off)."""
+    try:
+        number = int(value)
+    except (TypeError, ValueError):
+        return 0
+    return min(10000, max(0, number))
+
+
+def normalize_slskd_quality(raw: dict[str, Any]) -> dict[str, Any]:
+    """The fine-tune quality fields of the slskd settings, normalized.
+
+    ``advanced`` switches them on; while it is off, candidate selection
+    ignores them, so turning it off restores the basic behaviour without
+    losing what was set. ``unknown_bitrate`` decides files that report no
+    bitrate (``auto`` keeps the basic rule: rejected in strict mode with a
+    minimum, allowed otherwise). ``format_min_bitrate`` overrides the
+    minimum per extension, ``max_bitrate`` (0 = off) skips files above it,
+    such as lossless audio in an ``.m4a``, and ``prefer_bitrate`` tries the
+    highest bitrate first among files that match well enough.
+    """
+
+    floors_raw = raw.get('format_min_bitrate')
+    floors: dict[str, int] = {}
+    if isinstance(floors_raw, dict):
+        for ext, value in floors_raw.items():
+            key = str(ext or '').strip().lower().lstrip('.')
+            if key and value not in {None, ''}:
+                floors[key] = _bitrate_value(value)
+    unknown = str(raw.get('unknown_bitrate') or 'auto').strip().lower()
+    if unknown not in SLSKD_UNKNOWN_BITRATE_MODES:
+        unknown = 'auto'
+    return {
+        'advanced': bool(raw.get('advanced', False)),
+        'unknown_bitrate': unknown,
+        'format_min_bitrate': floors,
+        'max_bitrate': _bitrate_value(raw.get('max_bitrate')),
+        'prefer_bitrate': bool(raw.get('prefer_bitrate', False)),
+    }
+
+
 def _slskd_deadline(settings: dict[str, Any]) -> float:
     seconds = _int_setting(
         settings,
@@ -907,12 +951,21 @@ def _select_download_candidates(
     max_files = int(settings.get('download_attempts') or 5)
     strict_priority = bool(settings.get('strict_format_priority', False))
     whitelist = bool(settings.get('extensions_whitelist', False))
+    quality = normalize_slskd_quality(settings)
+    if not quality['advanced']:
+        quality = normalize_slskd_quality({})
 
     def bitrate_of(file_row: dict[str, Any]) -> int:
         try:
             return int(file_row.get('bitRate') or file_row.get('bitrate') or 0)
         except (TypeError, ValueError):
             return 0
+
+    def rank_key(file_row: dict[str, Any]) -> tuple[int, int]:
+        score = int(file_row.get('match_score') or 0)
+        if quality['prefer_bitrate']:
+            return (-bitrate_of(file_row), -score)
+        return (-score, -bitrate_of(file_row))
 
     candidates = [
         row
@@ -924,13 +977,18 @@ def _select_download_candidates(
     def passes_bitrate(file_row: dict[str, Any]) -> bool:
         bitrate = bitrate_of(file_row)
         ext = _file_extension(str(file_row.get('filename') or ''))
+        if quality['max_bitrate'] and bitrate > quality['max_bitrate']:
+            return False
         if strict_priority and ext == 'flac':
             return True
-        if not min_bitrate:
-            return True
-        if strict_priority:
-            return bitrate >= min_bitrate
-        return not bitrate or bitrate >= min_bitrate
+        floor = quality['format_min_bitrate'].get(ext, min_bitrate)
+        if not bitrate:
+            if quality['unknown_bitrate'] == 'allow':
+                return True
+            if quality['unknown_bitrate'] == 'reject':
+                return False
+            return not (strict_priority and floor)
+        return bitrate >= floor
 
     if strict_priority:
         selected: list[dict[str, Any]] = []
@@ -952,22 +1010,19 @@ def _select_download_candidates(
 
         for tier in tiers:
             accepted = [row for row in tier if passes_bitrate(row)]
-            accepted.sort(
-                key=lambda row: (
-                    -int(row.get('match_score') or 0),
-                    -bitrate_of(row),
-                )
-            )
+            accepted.sort(key=rank_key)
             selected.extend(accepted[:max_files])
         return selected
 
-    by_score: dict[int, list[dict[str, Any]]] = {}
-    for row in candidates:
-        by_score.setdefault(int(row.get('match_score') or 0), []).append(row)
+    # Grouped by match score, so the format order breaks ties; with
+    # ``prefer_bitrate`` grouped by bitrate instead (best match first).
+    by_group: dict[int, list[dict[str, Any]]] = {}
+    for row in sorted(candidates, key=rank_key):
+        by_group.setdefault(rank_key(row)[0], []).append(row)
 
     selected: list[dict[str, Any]] = []
-    for score in sorted(by_score.keys(), reverse=True):
-        bucket = by_score[score]
+    for group in sorted(by_group.keys()):
+        bucket = by_group[group]
         for ext in extensions:
             for file_row in bucket:
                 if _file_extension(str(file_row.get('filename') or '')) != ext:

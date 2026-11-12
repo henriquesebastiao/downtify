@@ -67,7 +67,7 @@ from .providers import (
     soundcloud_track_url,
 )
 from .release_files import matches_release
-from .slskd_provider import download_from_slskd
+from .slskd_provider import download_from_slskd, normalize_slskd_quality
 
 # Extensions that count as "this song is already downloaded". Deliberately
 # excludes sidecars written next to the audio (.lrc, cover.jpg, .m3u) so a
@@ -529,6 +529,7 @@ class Downloader:
                 raw.get('extensions_whitelist', False)
             ),
             'min_bitrate': _int(raw.get('min_bitrate'), 256, 0, 10000),
+            **normalize_slskd_quality(raw),
             'leave_in_place': bool(raw.get('leave_in_place', True)),
             'max_parallel_downloads': _int(
                 raw.get('max_parallel_downloads'), 3, 1, 8

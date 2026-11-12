@@ -1494,7 +1494,7 @@ export default {
       '쉼표로 구분한 확장자를 우선순위가 높은 순서로 입력하세요(예: flac, mp3).',
     slskdMinBitrate: '손실 형식의 최소 비트레이트',
     slskdMinBitrateHint:
-      '엄격 모드에서는 이 값보다 낮거나 비트레이트가 보고되지 않은 손실 파일을 거부합니다. FLAC은 제외됩니다.',
+      '보고된 비트레이트가 더 낮은 손실 파일은 건너뜁니다. 비트레이트를 보고하지 않은 파일은 엄격한 형식 우선순위가 켜져 있지 않으면 허용됩니다. 엄격 모드에서 FLAC은 제외됩니다.',
     slskdAttempts: '후보 시도 횟수',
     slskdAttemptsHint:
       '엄격 모드에서는 형식별로 이 수만큼 시도하며, 그 외에는 전체 횟수입니다.',
@@ -1514,6 +1514,34 @@ export default {
       '호스트 경로가 아닌 Downtify 컨테이너 내부 경로를 입력해야 합니다.',
     slskdTimeout: '전체 타임아웃',
     slskdQueuedTimeout: '대기 타임아웃',
+    slskdTimeoutHint:
+      '다음 후보로 넘어가기 전에 다운로드 하나에 허용되는 시간입니다.',
+    slskdQueuedTimeoutHint:
+      '다른 사용자의 업로드 대기열에서 기다리는 시간입니다. 지나면 다음으로 넘어갑니다.',
+    slskdProfile: '품질 프로필',
+    slskdProfileHint:
+      '형식 목록의 시작점입니다. 아래 항목을 자유롭게 바꿔 맞추세요.',
+    slskdProfileDefault: '기본값',
+    slskdProfileLossless: '무손실 우선',
+    slskdProfileLossy: '손실 형식만',
+    slskdAdvanced: '품질 및 매칭 세부 조정',
+    slskdAdvancedHint:
+      '추가 비트레이트 규칙, 후보 시도 횟수, 타임아웃입니다. 꺼져 있으면 추가 비트레이트 규칙은 사용되지 않습니다.',
+    slskdUnknownBitrate: '비트레이트가 없는 파일',
+    slskdUnknownBitrateHint:
+      '일부 Soulseek 사용자는 비트레이트를 공유하지 않습니다. 기본값은 최소 비트레이트가 있는 엄격 모드에서만 거부합니다.',
+    slskdUnknownAuto: '기본값',
+    slskdUnknownAllow: '허용',
+    slskdUnknownReject: '거부',
+    slskdPreferBitrate: '가장 높은 비트레이트부터 시도',
+    slskdPreferBitrateHint:
+      '충분히 일치하는 파일 중에서 가장 비슷한 파일 이름 대신 가장 좋은 품질부터 시도합니다.',
+    slskdFormatFloors: '형식별 최소 비트레이트',
+    slskdFormatFloorsHint:
+      '비워 두면 위의 최소값을 사용합니다. AAC(m4a)와 Opus 같은 효율적인 형식은 MP3보다 낮은 비트레이트에서도 좋은 음질을 냅니다.',
+    slskdMaxBitrate: '최대 비트레이트',
+    slskdMaxBitrateHint:
+      '0은 모두 허용합니다. 약 400으로 설정하면 .m4a 파일 안의 무손실 오디오(ALAC)를 건너뛰고 파일 크기를 작게 유지합니다.',
     slskdInPlace: 'slskd 폴더에 파일 그대로 유지',
     slskdInPlaceHint:
       '켜짐: 원래 위치에서 태그를 작성하고 파일을 유지합니다. 꺼짐: 다운로드 폴더로 복사하고 태그를 작성한 뒤 가져오기가 성공해야 원본을 삭제합니다. 실패하면 원본을 유지합니다.',

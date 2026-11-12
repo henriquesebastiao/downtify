@@ -1541,7 +1541,7 @@ export default {
       'Extensions séparées par des virgules, de la plus prioritaire à la moins prioritaire (ex. flac, mp3).',
     slskdMinBitrate: 'Débit minimum des formats avec perte',
     slskdMinBitrateHint:
-      'En mode strict, les fichiers avec perte sous cette valeur ou sans débit indiqué sont refusés. FLAC est exempté.',
+      'Les fichiers avec perte qui indiquent un débit inférieur sont ignorés. Ceux qui n’en indiquent aucun restent acceptés, sauf avec la priorité stricte des formats. En mode strict, FLAC est exempté.',
     slskdAttempts: 'Tentatives de candidats',
     slskdAttemptsHint:
       'En mode strict, ce nombre de candidats est essayé par format ; sinon, il s’applique au total.',
@@ -1561,6 +1561,34 @@ export default {
     slskdFolderHint: 'Le chemin dans le conteneur Downtify, pas sur l’hôte.',
     slskdTimeout: 'Délai total',
     slskdQueuedTimeout: 'Délai en file',
+    slskdTimeoutHint:
+      'Durée maximale d’un téléchargement avant de passer au candidat suivant.',
+    slskdQueuedTimeoutHint:
+      'Durée d’attente dans la file d’envoi d’un autre utilisateur avant de passer à autre chose.',
+    slskdProfile: 'Profil de qualité',
+    slskdProfileHint:
+      'Un point de départ pour la liste des formats. Modifiez n’importe quel champ ci-dessous pour l’adapter.',
+    slskdProfileDefault: 'Par défaut',
+    slskdProfileLossless: 'Sans perte d’abord',
+    slskdProfileLossy: 'Avec perte uniquement',
+    slskdAdvanced: 'Réglage fin de la qualité et de la correspondance',
+    slskdAdvancedHint:
+      'Règles de débit supplémentaires, tentatives et délais. Désactivé, les règles de débit supplémentaires ne sont pas utilisées.',
+    slskdUnknownBitrate: 'Fichiers sans débit indiqué',
+    slskdUnknownBitrateHint:
+      'Certains utilisateurs de Soulseek ne partagent pas le débit. Par défaut, ces fichiers ne sont refusés qu’en mode strict avec un débit minimum.',
+    slskdUnknownAuto: 'Par défaut',
+    slskdUnknownAllow: 'Autoriser',
+    slskdUnknownReject: 'Refuser',
+    slskdPreferBitrate: 'Essayer d’abord le débit le plus élevé',
+    slskdPreferBitrateHint:
+      'Parmi les fichiers suffisamment proches, commencer par la meilleure qualité plutôt que par le nom de fichier le plus proche.',
+    slskdFormatFloors: 'Débit minimum par format',
+    slskdFormatFloorsHint:
+      'Laissez vide pour utiliser le minimum ci-dessus. Les formats efficaces comme AAC (m4a) et Opus sonnent bien à des débits plus faibles que le MP3.',
+    slskdMaxBitrate: 'Débit maximum',
+    slskdMaxBitrateHint:
+      '0 accepte tout. Environ 400 ignore l’audio sans perte dans les fichiers .m4a (ALAC) et garde des fichiers légers.',
     slskdInPlace: 'Laisser les fichiers dans le dossier slskd',
     slskdInPlaceHint:
       'Activé : tague les fichiers sur place et conserve-les. Désactivé : copie et tague dans Téléchargements ; la source est supprimée uniquement après un import réussi. En cas d’échec, la source est conservée.',

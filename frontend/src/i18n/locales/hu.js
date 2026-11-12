@@ -1507,7 +1507,7 @@ export default {
       'Vesszővel elválasztott kiterjesztések, prioritás szerint (például flac, mp3).',
     slskdMinBitrate: 'Minimális bitráta veszteséges formátumoknál',
     slskdMinBitrateHint:
-      'Szigorú módban elutasítja az ennél kisebb vagy nem jelzett bitrátájú veszteséges fájlokat. A FLAC kivétel.',
+      'A kisebb bitrátát jelző veszteséges fájlok kimaradnak. A bitrátát nem jelző fájlok engedélyezettek, kivéve szigorú formátumsorrendnél. Szigorú módban a FLAC kivétel.',
     slskdAttempts: 'Jelöltek próbálkozásai',
     slskdAttemptsHint:
       'Szigorú módban formátumonként ennyi jelöltet próbál; egyébként ez az összesített szám.',
@@ -1528,6 +1528,34 @@ export default {
       'Az útvonal a Downtify konténeren belül, nem a gazdagépen.',
     slskdTimeout: 'Teljes időkorlát',
     slskdQueuedTimeout: 'Sorban állási időkorlát',
+    slskdTimeoutHint:
+      'Mennyi ideig tarthat egy letöltés, mielőtt a következő jelölt jön.',
+    slskdQueuedTimeoutHint:
+      'Mennyit várjon egy másik felhasználó feltöltési sorában, mielőtt továbblép.',
+    slskdProfile: 'Minőségi profil',
+    slskdProfileHint:
+      'Kiindulópont a formátumlistához. Módosíts bármely mezőt lent.',
+    slskdProfileDefault: 'Alapértelmezett',
+    slskdProfileLossless: 'Veszteségmentes először',
+    slskdProfileLossy: 'Csak veszteséges',
+    slskdAdvanced: 'Minőség és egyeztetés finomhangolása',
+    slskdAdvancedHint:
+      'További bitrátaszabályok, próbálkozások és időkorlátok. Kikapcsolva a további bitrátaszabályok nem érvényesek.',
+    slskdUnknownBitrate: 'Bitrátát nem jelző fájlok',
+    slskdUnknownBitrateHint:
+      'Néhány Soulseek-felhasználó nem osztja meg a bitrátát. Alapértelmezetten ezek csak szigorú módban, minimális bitrátával kerülnek elutasításra.',
+    slskdUnknownAuto: 'Alapértelmezett',
+    slskdUnknownAllow: 'Engedélyez',
+    slskdUnknownReject: 'Elutasít',
+    slskdPreferBitrate: 'Először a legnagyobb bitráta',
+    slskdPreferBitrateHint:
+      'Az elég jól egyező fájlok közül a legjobb minőséggel kezd a leghasonlóbb fájlnév helyett.',
+    slskdFormatFloors: 'Minimális bitráta formátumonként',
+    slskdFormatFloorsHint:
+      'Hagyd üresen a fenti minimum használatához. A hatékony formátumok, mint az AAC (m4a) és az Opus, kisebb bitrátán is jól szólnak, mint az MP3.',
+    slskdMaxBitrate: 'Maximális bitráta',
+    slskdMaxBitrateHint:
+      'A 0 bármit enged. Kb. 400 kihagyja a .m4a fájlokban lévő veszteségmentes hangot (ALAC), és kicsin tartja a fájlokat.',
     slskdInPlace: 'Fájlok hagyása az slskd mappában',
     slskdInPlaceHint:
       'Bekapcsolva: címkézés a helyükön, a fájlok megtartásával. Kikapcsolva: másolás és címkézés a Letöltések mappába; a forrás csak sikeres import után törlődik. Hiba esetén megmarad.',

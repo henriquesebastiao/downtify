@@ -38,6 +38,11 @@ const settings = ref({
     strict_format_priority: false,
     extensions_whitelist: false,
     min_bitrate: 256,
+    advanced: false,
+    unknown_bitrate: 'auto',
+    format_min_bitrate: {},
+    max_bitrate: 0,
+    prefer_bitrate: false,
   },
   external_library: {
     primary_folder: '',
