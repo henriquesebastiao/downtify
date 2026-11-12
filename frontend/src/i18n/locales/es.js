@@ -1605,6 +1605,10 @@ export default {
     coverArt: 'Incrustar portada',
     coverArtHint:
       'Desactívalo para archivos más pequeños y descargas más rápidas.',
+    coverMin: 'Tamaño mínimo de portada',
+    coverMinHint:
+      'Por debajo, se pide a Spotify, iTunes y YouTube Music una portada más grande del mismo lanzamiento y se usa la mayor. Desactivado conserva la portada de la fuente de la pista.',
+    coverMinOff: 'Desactivado',
     coverSize: 'Tamaño de portada',
     coverSizeHint:
       'Para portadas de YouTube Music y Deezer. Las de Spotify siempre usan el mayor tamaño disponible.',

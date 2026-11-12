@@ -662,6 +662,8 @@ MAX_TRACK_DURATION_SETTING_SECONDS = 6 * 3600
 
 MIN_COVER_RESOLUTION = 300
 MAX_COVER_RESOLUTION = 1200
+#: iTunes serves up to 3000px; nothing larger is ever offered.
+MAX_COVER_MIN_RESOLUTION = 3000
 
 
 def _clamp_retry_budget(value: Any) -> int:
@@ -696,6 +698,9 @@ DEFAULT_SETTINGS: dict[str, Any] = {
     'max_track_duration_seconds': MAX_TRACK_DURATION_SECONDS,
     'external_sync_delay_seconds': 0,
     'cover_resolution': providers.DEFAULT_COVER_RESOLUTION,
+    # Smallest acceptable cover (px, short side); 0 = off. Below it a
+    # larger one is looked for (downloader._download_cover_meeting).
+    'cover_min_resolution': 0,
     'download_cover_art': True,
     'overwrite_existing_files': True,
     'organize_by_artist': True,
@@ -874,6 +879,17 @@ def _clamp_cover_resolution(value: Any) -> int:
     except (TypeError, ValueError):
         px = DEFAULT_SETTINGS['cover_resolution']
     return min(MAX_COVER_RESOLUTION, max(MIN_COVER_RESOLUTION, px))
+
+
+def _clamp_cover_min_resolution(value: Any) -> int:
+    """The minimum cover size in pixels: ``0`` (off) up to
+    :data:`MAX_COVER_MIN_RESOLUTION`."""
+
+    try:
+        px = int(value)
+    except (TypeError, ValueError):
+        return 0
+    return min(MAX_COVER_MIN_RESOLUTION, max(0, px))
 
 
 def _setting_int(
@@ -8798,6 +8814,8 @@ async def update_settings_endpoint(
                 state.settings[key] = _clamp_download_delay(raw_value)
             elif key == 'cover_resolution':
                 state.settings[key] = _clamp_cover_resolution(raw_value)
+            elif key == 'cover_min_resolution':
+                state.settings[key] = _clamp_cover_min_resolution(raw_value)
             elif key == 'ui_language':
                 # Not a language code: the saved one stays.
                 state.settings[key] = _clean_ui_language(raw_value) or (
@@ -8877,6 +8895,10 @@ async def update_settings_endpoint(
                 state.downloader.download_cover_art = bool(
                     payload['download_cover_art']
                 )
+            if 'cover_min_resolution' in payload:
+                state.downloader.cover_min_resolution = state.settings[
+                    'cover_min_resolution'
+                ]
             if 'overwrite_existing_files' in payload:
                 state.downloader.overwrite_existing_files = bool(
                     payload['overwrite_existing_files']

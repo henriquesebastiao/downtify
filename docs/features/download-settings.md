@@ -124,6 +124,8 @@ The two sources apply the setting differently, since only one of them can actual
 Downtify already embeds the **largest** cover Spotify's public embed API offers for Spotify-resolved tracks/albums/playlists — there's no larger size to request. This setting only raises the ceiling for tracks resolved through YouTube Music (free-text search, YouTube URLs, and any Spotify track re-matched to YouTube Music for the actual audio) or Deezer (a pasted Deezer link, or a track from [Charts](charts.md)).
 :::
 
+**Minimum cover size** (off by default) works the other way round: it is a floor, not a fixed size. When the cover a track's source offers is smaller than it — Spotify's largest is usually 640 px — Downtify asks Spotify, iTunes and YouTube Music for the same release's artwork, as **Upgrade library** does, and embeds the largest. If none reaches the minimum, the largest one found is still embedded rather than none, and the log says so.
+
 Changing this value in Settings takes effect immediately, including for the currently-open search page — it does not require re-downloading anything already on disk.
 
 ## Overwrite existing files

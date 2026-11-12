@@ -1576,6 +1576,10 @@ export default {
     coverArt: '커버 아트 포함',
     coverArtHint:
       '비활성화하면 파일 크기가 줄어들고 다운로드 속도가 빨라집니다.',
+    coverMin: '최소 커버 크기',
+    coverMinHint:
+      '이보다 작으면 Spotify, iTunes, YouTube Music에 같은 발매의 더 큰 커버를 요청하고 가장 큰 것을 씁니다. 끄면 곡 출처의 커버를 그대로 씁니다.',
+    coverMinOff: '끔',
     coverSize: '커버 해상도',
     coverSizeHint:
       'YouTube Music 및 Deezer에서 가져오는 커버에 적용됩니다. Spotify 커버는 항상 사용 가능한 최대 해상도로 저장됩니다.',

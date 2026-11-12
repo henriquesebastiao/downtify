@@ -1497,6 +1497,10 @@ export default {
     artGroup: '封面',
     coverArt: '嵌入封面',
     coverArtHint: '關閉後檔案較小、下載較快。',
+    coverMin: '最小封面尺寸',
+    coverMinHint:
+      '低於此尺寸時，會向 Spotify、iTunes 和 YouTube Music 要求同一發行的較大封面，並使用最大的。關閉則保留曲目來源提供的封面。',
+    coverMinOff: '關閉',
     coverSize: '封面尺寸',
     coverSizeHint:
       '適用於 YouTube Music 和 Deezer 的封面。Spotify 封面一律使用可取得的最大尺寸。',
