@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import base64
+import contextlib
 import os
 import re
 import shutil
+import tempfile
 import threading
 from concurrent.futures import Future, ThreadPoolExecutor
 from pathlib import Path
@@ -1512,6 +1514,33 @@ class Downloader:
 
         return ydl_opts, bool(cookies_file or cookies_browser)
 
+    @staticmethod
+    @contextlib.contextmanager
+    def _private_cookiefile(ydl_opts: dict[str, Any]):
+        """Point ``cookiefile`` at a per-download copy of the cookie jar.
+
+        yt-dlp rewrites ``cookiefile`` on exit (truncate then write), so
+        when a playlist runs several downloads in parallel they all
+        clobber the one shared cookies.txt and a concurrent reader hits a
+        half-written file ("does not look like a Netscape format cookies
+        file"). A private copy keeps the save-back off the shared path.
+        """
+
+        shared = ydl_opts.get('cookiefile')
+        if not shared or not os.path.isfile(shared):
+            yield
+            return
+        fd, tmp = tempfile.mkstemp(prefix='cookies-', suffix='.txt')
+        os.close(fd)
+        try:
+            shutil.copyfile(shared, tmp)
+            ydl_opts['cookiefile'] = tmp
+            yield
+        finally:
+            ydl_opts['cookiefile'] = shared
+            with contextlib.suppress(OSError):
+                os.remove(tmp)
+
     def fetch_audio(
         self,
         video_id: str,
@@ -1546,7 +1575,10 @@ class Downloader:
         else:
             url = f'https://music.youtube.com/watch?v={video_id}'
         try:
-            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            with (
+                self._private_cookiefile(ydl_opts),
+                yt_dlp.YoutubeDL(ydl_opts) as ydl,
+            ):
                 # Registered directly: `ydl_opts['postprocessors']` only
                 # accepts yt-dlp's built-in postprocessors by name.
                 ydl.add_post_processor(
