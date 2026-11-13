@@ -830,6 +830,9 @@ def build_app() -> FastAPI:
         download_cover_art=bool(
             api.state.settings.get('download_cover_art', True)
         ),
+        cover_min_resolution=api._clamp_cover_min_resolution(
+            api.state.settings.get('cover_min_resolution', 0)
+        ),
         overwrite_existing_files=bool(
             api.state.settings.get('overwrite_existing_files', True)
         ),

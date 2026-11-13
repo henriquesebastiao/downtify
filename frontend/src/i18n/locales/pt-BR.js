@@ -1619,6 +1619,10 @@ export default {
     artGroup: 'Capa',
     coverArt: 'Incorporar capa',
     coverArtHint: 'Desative para arquivos menores e downloads mais rápidos.',
+    coverMin: 'Tamanho mínimo da capa',
+    coverMinHint:
+      'Abaixo disto, Spotify, iTunes e YouTube Music são consultados por uma capa maior do mesmo lançamento, e a maior é usada. Desativado mantém a capa da fonte da faixa.',
+    coverMinOff: 'Desativado',
     coverSize: 'Tamanho da capa',
     coverSizeHint:
       'Para capas do YouTube Music e Deezer. Capas do Spotify sempre usam o maior tamanho disponível.',

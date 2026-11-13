@@ -1603,6 +1603,10 @@ export default {
     artGroup: 'Kapak',
     coverArt: 'Kapağı göm',
     coverArtHint: 'Daha küçük dosyalar ve daha hızlı indirmeler için kapat.',
+    coverMin: 'En küçük kapak boyutu',
+    coverMinHint:
+      'Bunun altında Spotify, iTunes ve YouTube Music’ten aynı yayının daha büyük kapağı istenir ve en büyüğü kullanılır. Kapalıyken parçanın kaynağının kapağı kalır.',
+    coverMinOff: 'Kapalı',
     coverSize: 'Kapak boyutu',
     coverSizeHint:
       'YouTube Music ve Deezer kapakları için. Spotify kapakları her zaman en büyük boyuttadır.',

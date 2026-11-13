@@ -1618,6 +1618,10 @@ export default {
     artGroup: 'Borító',
     coverArt: 'Borító beágyazása',
     coverArtHint: 'Kapcsold ki a kisebb fájlokért és gyorsabb letöltésért.',
+    coverMin: 'Borító minimális mérete',
+    coverMinHint:
+      'Ez alatt a Spotify, az iTunes és a YouTube Music nagyobb borítót ad ugyanahhoz a kiadáshoz, és a legnagyobb lesz használva. Kikapcsolva a dal forrásának borítója marad.',
+    coverMinOff: 'Ki',
     coverSize: 'Borító mérete',
     coverSizeHint:
       'YouTube Music és Deezer borítókhoz. A Spotify borítók mindig a legnagyobb méretűek.',

@@ -757,6 +757,23 @@
                   "
                 />
               </SettingRow>
+              <SettingRow
+                v-if="s.download_cover_art"
+                :label="t('settings.coverMin')"
+                :description="t('settings.coverMinHint')"
+                stacked
+              >
+                <PresetPicker
+                  :model-value="s.cover_min_resolution || 0"
+                  :presets="sm.settingsOptions.cover_min_resolution_presets"
+                  :min="0"
+                  :max="3000"
+                  unit="px"
+                  :custom-label="t('settings.custom')"
+                  :format="(v) => (v ? String(v) : t('settings.coverMinOff'))"
+                  @update:model-value="(v) => (s.cover_min_resolution = v)"
+                />
+              </SettingRow>
             </SettingGroup>
             <SettingGroup :title="t('settings.lyricsGroup')">
               <SettingRow

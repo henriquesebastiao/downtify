@@ -36,6 +36,7 @@ from mutagen.oggopus import OggOpus
 from mutagen.oggvorbis import OggVorbis
 from yt_dlp.postprocessor.ffmpeg import FFmpegExtractAudioPP
 
+from . import cover_sources
 from . import deezer as deezer_mod
 from . import lyrics as lyrics_mod
 from . import spotify as spotify_mod
@@ -54,6 +55,7 @@ from .download_log import (
 )
 from .download_policy import DownloadPolicyBlocked
 from .file_naming import sanitize_file_name
+from .image_size import image_short_side
 from .itunes import fetch_genre as _fetch_itunes_genre
 from .library_paths import library_stored_path, slskd_dir_from_downloader
 from .m3u import sanitize_playlist_name
@@ -423,6 +425,7 @@ class Downloader:
         organize_by_artist: bool = False,
         organize_by_album: bool = False,
         download_cover_art: bool = True,
+        cover_min_resolution: int = 0,
         overwrite_existing_files: bool = True,
         cookies_store: Optional[CookiesStore] = None,
         audio_providers: Optional[list[str]] = None,
@@ -432,6 +435,9 @@ class Downloader:
     ):
         self.download_dir = Path(download_dir)
         self.download_dir.mkdir(parents=True, exist_ok=True)
+        # The smallest cover (short side, px) worth embedding; 0 = take
+        # what the track's source offers (see _download_cover_meeting).
+        self.cover_min_resolution = max(0, int(cover_min_resolution or 0))
         self.deemix_settings = normalize_settings(deemix_settings)
         self.audio_providers = self._normalize_audio_providers(audio_providers)
         self.slskd_settings = self._normalize_slskd_settings(slskd_settings)
@@ -1633,7 +1639,11 @@ class _MetadataLookups:
             else self._pool.submit(_fetch_itunes_genre, song)
         )
         self._cover = (
-            self._pool.submit(_download_cover, song.get('cover_url', ''))
+            self._pool.submit(
+                _download_cover_meeting,
+                song,
+                getattr(downloader, 'cover_min_resolution', 0),
+            )
             if downloader.download_cover_art
             else None
         )
@@ -1710,6 +1720,49 @@ def _download_cover(url: str) -> Optional[bytes]:
         logger.opt(exception=True).warning('Failed to fetch cover art {}', url)
         return None
     return response.content
+
+
+def _download_cover_meeting(
+    song: dict[str, Any], minimum: int
+) -> Optional[bytes]:
+    """The track's cover, or a larger one when it is under *minimum*.
+
+    The cover the song's source offers (``song['cover_url']``) is used
+    as long as its short side reaches *minimum* pixels (0 = always).
+    Below that, Spotify, iTunes and YouTube Music are asked for the same
+    release's art (:func:`downtify.cover_sources.best_cover`) and the
+    largest image wins - the minimum is a floor, not a fixed size. When
+    no source reaches it, the largest found is still embedded rather
+    than none.
+    """
+
+    data = _download_cover(song.get('cover_url', ''))
+    if minimum <= 0:
+        return data
+    have = image_short_side(data) if data else 0
+    if have >= minimum:
+        return data
+    current = (
+        cover_sources.CoverCandidate(source='download', data=data, width=have)
+        if data
+        else None
+    )
+    try:
+        better = cover_sources.best_cover(song, current=current)
+    except Exception:
+        logger.opt(exception=True).info('Larger cover lookup failed')
+        better = None
+    if better is not None:
+        data, have = better.data, better.width
+    if have < minimum:
+        logger.info(
+            'No cover of at least {}px for {} - {}; using {}px',
+            minimum,
+            ', '.join(song.get('artists') or []),
+            song.get('name', ''),
+            have,
+        )
+    return data
 
 
 def save_playlist_cover(cover_url: str, m3u_path: Path) -> Optional[Path]:

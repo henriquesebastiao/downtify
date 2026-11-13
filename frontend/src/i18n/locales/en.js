@@ -1580,6 +1580,10 @@ export default {
     artGroup: 'Cover art',
     coverArt: 'Embed cover art',
     coverArtHint: 'Turn off for smaller files and faster downloads.',
+    coverMin: 'Minimum cover size',
+    coverMinHint:
+      'Below this, Spotify, iTunes and YouTube Music are asked for a larger cover of the same release, and the largest is used. Off keeps the cover the track’s source offers.',
+    coverMinOff: 'Off',
     coverSize: 'Cover size',
     coverSizeHint:
       'For art from YouTube Music and Deezer. Spotify art is always the largest available.',

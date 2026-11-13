@@ -1654,6 +1654,10 @@ export default {
     coverArt: 'Cover einbetten',
     coverArtHint:
       'Deaktiviere die Option für kleinere Dateien und schnellere Downloads.',
+    coverMin: 'Mindestgröße des Covers',
+    coverMinHint:
+      'Darunter werden Spotify, iTunes und YouTube Music nach einem größeren Cover derselben Veröffentlichung gefragt, und das größte wird verwendet. Aus behält das Cover der Quelle des Titels.',
+    coverMinOff: 'Aus',
     coverSize: 'Covergröße',
     coverSizeHint:
       'Für Cover von YouTube Music und Deezer. Spotify-Cover werden immer in der größten verfügbaren Auflösung geladen.',
