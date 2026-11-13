@@ -1963,6 +1963,17 @@ export default {
     running: 'Audio wird ersetzt …',
     done: 'Audio ersetzt',
     failed: 'Audio konnte nicht ersetzt werden',
+    handReplaced:
+      'Du hast dieses Audio am {date} von Hand ersetzt. Downloads lassen die Datei, wie sie ist.',
+    unprotect: 'Downloads dürfen sie ersetzen',
+    unprotected: 'Downloads können diese Datei wieder ersetzen',
+    uploading: 'Datei wird hochgeladen…',
+    fileTitle: 'Oder eine Datei von deinem Gerät verwenden',
+    fileHint:
+      'Eine {format}-Datei wird unverändert verwendet. Andere Audiodateien (MP3, FLAC, M4A, WAV…) werden in {format} umgewandelt.',
+    fileChoose: 'Datei auswählen…',
+    fileOther: 'Andere Datei auswählen…',
+    fileConverted: 'In {format} umgewandelt',
     source: {
       'youtube-music': 'YouTube Music',
       youtube: 'YouTube',

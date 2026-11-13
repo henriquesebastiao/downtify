@@ -1773,6 +1773,16 @@ export default {
     running: '正在替换音频…',
     done: '音频已替换',
     failed: '无法替换音频',
+    handReplaced: '你已于 {date} 手动替换此音频。下载不会改动此文件。',
+    unprotect: '允许下载替换它',
+    unprotected: '下载现在可以再次替换此文件',
+    uploading: '正在上传文件…',
+    fileTitle: '或使用设备上的文件',
+    fileHint:
+      '{format} 文件会原样使用。其他音频文件（MP3、FLAC、M4A、WAV…）会转换为 {format}。',
+    fileChoose: '选择文件…',
+    fileOther: '选择其他文件…',
+    fileConverted: '已转换为 {format}',
     source: {
       'youtube-music': 'YouTube Music',
       youtube: 'YouTube',

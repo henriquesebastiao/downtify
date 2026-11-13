@@ -17,6 +17,21 @@ Only admins can replace audio (see [Users & Sign-in](users.md#admins-and-users))
 
 If it fails (the video is unavailable, or YouTube asks to sign in — see [YouTube cookies](youtube-cookies.md)), your file is left exactly as it was. **Retry** in the Queue tries the same video again, and pasting another link there replaces with that one instead.
 
+## Using a file from your device
+
+When the right version isn't on YouTube (a CD rip, a Soulseek download, a file someone sent you), use your own file:
+
+1. In the dialog, under **Or use a file from your device**, press **Choose a file…** and pick the audio file.
+2. Press **Replace audio**. The file is uploaded, checked to be readable audio, and given the old file's tags.
+
+A file in the track's own format (an `.mp3` for an `.mp3`) is used exactly as it is. Another format (`.mp3`, `.flac`, `.m4a`, `.ogg`, `.opus`, `.wav`, `.aiff`, `.aac` or `.webm`) is converted to the track's format at the bitrate chosen in [Download settings](download-settings.md), so use the same format when you have it. This works in library-only mode too, since nothing is fetched from the internet.
+
+## Downloads leave a replaced file alone
+
+With **Download again if the file exists** on, a later download of the same song (from another monitored playlist, an artist watch or a playlist download) would write over your replacement with whatever the automatic match finds. So Downtify remembers every file whose audio you replaced, either way, and such a download counts it as already downloaded instead. [Library upgrade](library-upgrade.md) doesn't swap its audio either; its cover, lyrics and tags can still be upgraded.
+
+The dialog says when a track's audio was replaced by hand. **Let downloads replace it** lifts this for that file.
+
 ## What stays the same
 
 - **The file.** The new audio is written to the same path, in the same format: an `.mp3` stays MP3 (at the bitrate chosen in [Download settings](download-settings.md)), a `.flac` stays FLAC, and so on. So every playlist, M3U file, liked song, Navidrome entry and paired app that points at the file keeps pointing at it.

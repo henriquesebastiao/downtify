@@ -1637,7 +1637,25 @@ Admin. Versions of a library track to [replace its audio](features/replace-audio
 
 Admin. Replace a library track's audio with a YouTube video: `{ "file": "…", "video_id": "7nxWP9BhI7w" }`. `video_id` may also be a SoundCloud track URL (as a SoundCloud candidate carries it). **Response:** `{ "job_id": "replace:<file>", "file": "…" }`.
 
-It runs as a queue job, with the usual [WebSocket](#websocket) progress messages (`song.song_id` is `job_id`, and `song.replace` is `{file, video_id}`), ending in `done` or `error`. The file keeps its path, format, tags and modification date; a failure leaves it untouched. `400` for an invalid video id or file type, `404` for an unknown file, `409` while the same file is already being replaced.
+It runs as a queue job, with the usual [WebSocket](#websocket) progress messages (`song.song_id` is `job_id`, and `song.replace` is `{file, video_id}`), ending in `done` or `error`. The file keeps its path, format, tags and modification date; a failure leaves it untouched. `400` for an invalid video id or file type, `404` for an unknown file, `409` while the same file is already being replaced. Once replaced, the file is [kept from downloads](#get-apilibraryreplaceprotected).
+
+---
+
+### `POST /api/library/replace/upload`
+
+Admin. Replace a library track's audio with an audio file from the admin's device, sent as the raw request body (not multipart). Query: `file` (the track's library path) and `name` (the uploaded file's name, which gives its format: `.mp3`, `.flac`, `.m4a`, `.ogg`, `.opus`, `.wav`, `.aiff`, `.aif`, `.aac` or `.webm`). At most 400 MB.
+
+**Response:** `{ "file", "duration_before", "duration_after", "converted", "hand_replaced": { "file", "source": "file", "replaced_at" } }`.
+
+A file in the track's own format is used as it is; another is converted to it (`converted: true`) at the chosen bitrate. The track keeps its path, tags and modification date, and is then kept from downloads. Works in library-only mode. `400` for a file that isn't readable audio, an empty body or an unsupported type, `404` for an unknown track, `409` while it is already being replaced, `413` above the size limit.
+
+---
+
+### `GET /api/library/replace/protected`
+
+Admin. Whether downloads leave a track alone because its audio was replaced by hand (either way above): `?file=` → `{ "file", "hand_replaced": { "file", "source", "replaced_at" } | null }`. `source` is `youtube`, `soundcloud` or `file`; `replaced_at` is a Unix time.
+
+With **Download again if the file exists** on, a download that would write over such a file counts it as already downloaded instead, and Library upgrade's audio replacement skips it. **`DELETE`** with the same `?file=` lifts that: `{ "file", "forgotten": true | false }`.
 
 ---
 

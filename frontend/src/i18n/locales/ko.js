@@ -1901,6 +1901,17 @@ export default {
     running: '음원 교체 중…',
     done: '음원이 교체되었습니다',
     failed: '음원을 교체하지 못했습니다',
+    handReplaced:
+      '{date}에 이 오디오를 직접 교체했습니다. 다운로드는 이 파일을 그대로 둡니다.',
+    unprotect: '다운로드가 교체하도록 허용',
+    unprotected: '이제 다운로드가 이 파일을 다시 교체할 수 있습니다',
+    uploading: '파일 업로드 중…',
+    fileTitle: '또는 기기의 파일 사용',
+    fileHint:
+      '{format} 파일은 그대로 사용됩니다. 다른 오디오 파일(MP3, FLAC, M4A, WAV…)은 {format}(으)로 변환됩니다.',
+    fileChoose: '파일 선택…',
+    fileOther: '다른 파일 선택…',
+    fileConverted: '{format}(으)로 변환됨',
     source: {
       'youtube-music': 'YouTube Music',
       youtube: 'YouTube',

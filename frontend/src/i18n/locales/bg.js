@@ -1903,6 +1903,17 @@ export default {
     running: 'Аудиото се заменя…',
     done: 'Аудиото е заменено',
     failed: 'Аудиото не можа да бъде заменено',
+    handReplaced:
+      'Заменихте това аудио ръчно на {date}. Изтеглянията оставят файла такъв, какъвто е.',
+    unprotect: 'Нека изтеглянията го заменят',
+    unprotected: 'Изтеглянията отново могат да заменят този файл',
+    uploading: 'Файлът се качва…',
+    fileTitle: 'Или използвайте файл от устройството си',
+    fileHint:
+      'Файл {format} се използва както е. Другите аудио файлове (MP3, FLAC, M4A, WAV…) се преобразуват в {format}.',
+    fileChoose: 'Изберете файл…',
+    fileOther: 'Изберете друг файл…',
+    fileConverted: 'Преобразуван в {format}',
     source: {
       'youtube-music': 'YouTube Music',
       youtube: 'YouTube',

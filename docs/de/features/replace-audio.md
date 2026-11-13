@@ -17,6 +17,21 @@ Nur Admins können Audio ersetzen (siehe [Benutzer und Anmeldung](users.md#admin
 
 Schlägt es fehl (das Video ist nicht verfügbar oder YouTube verlangt eine Anmeldung — siehe [YouTube-Cookies](youtube-cookies.md)), bleibt deine Datei genau so, wie sie war. **Erneut versuchen** in der Warteschlange probiert dasselbe Video noch einmal, und das Einfügen eines anderen Links dort ersetzt stattdessen mit diesem.
 
+## Eine Datei von deinem Gerät verwenden
+
+Ist die richtige Version nicht auf YouTube (ein CD-Rip, ein Soulseek-Download, eine Datei, die dir jemand geschickt hat), verwende deine eigene Datei:
+
+1. Drücke im Dialog unter **Oder eine Datei von deinem Gerät verwenden** auf **Datei auswählen…** und wähle die Audiodatei.
+2. Drücke **Audio ersetzen**. Die Datei wird hochgeladen, darauf geprüft, dass sie lesbares Audio ist, und bekommt die Tags der alten Datei.
+
+Eine Datei im eigenen Format des Titels (eine `.mp3` für eine `.mp3`) wird genau so verwendet, wie sie ist. Ein anderes Format (`.mp3`, `.flac`, `.m4a`, `.ogg`, `.opus`, `.wav`, `.aiff`, `.aac` oder `.webm`) wird mit der in den [Download-Einstellungen](download-settings.md) gewählten Bitrate in das Format des Titels umgewandelt; nimm also dasselbe Format, wenn du es hast. Das funktioniert auch im Nur-Bibliothek-Modus, da nichts aus dem Internet geholt wird.
+
+## Downloads lassen eine ersetzte Datei in Ruhe
+
+Ist **Bei vorhandener Datei erneut herunterladen** an, würde ein späterer Download desselben Songs (aus einer anderen überwachten Playlist, einer Künstlerbeobachtung oder einem Playlist-Download) deinen Ersatz mit dem überschreiben, was die automatische Suche findet. Deshalb merkt sich Downtify jede Datei, deren Audio du ersetzt hast, egal auf welchem Weg, und ein solcher Download zählt sie stattdessen als bereits heruntergeladen. Auch [Bibliothek verbessern](library-upgrade.md) tauscht ihr Audio nicht aus; Cover, Songtexte und Tags können weiterhin verbessert werden.
+
+Der Dialog zeigt an, wenn das Audio eines Titels von Hand ersetzt wurde. **Downloads dürfen sie ersetzen** hebt das für diese Datei auf.
+
 ## Was gleich bleibt
 
 - **Die Datei.** Das neue Audio wird im selben Pfad und im selben Format geschrieben: Eine `.mp3` bleibt MP3 (mit der in den [Download-Einstellungen](download-settings.md) gewählten Bitrate), eine `.flac` bleibt FLAC und so weiter. So zeigen alle Playlists, M3U-Dateien, gelikten Songs, Navidrome-Einträge und gekoppelten Apps, die auf die Datei verweisen, weiterhin auf sie.

@@ -17,6 +17,21 @@ Seuls les administrateurs peuvent remplacer l’audio (voir [Utilisateurs et con
 
 En cas d’échec (la vidéo est indisponible, ou YouTube demande de se connecter — voir [Cookies YouTube](youtube-cookies.md)), votre fichier reste exactement tel qu’il était. **Réessayer** dans la File retente la même vidéo, et coller un autre lien à cet endroit remplace avec celui-là.
 
+## Utiliser un fichier de votre appareil
+
+Si la bonne version n’est pas sur YouTube (un rip de CD, un téléchargement Soulseek, un fichier qu’on vous a envoyé), utilisez votre propre fichier :
+
+1. Dans la boîte de dialogue, sous **Ou utilisez un fichier de votre appareil**, appuyez sur **Choisir un fichier…** et choisissez le fichier audio.
+2. Appuyez sur **Remplacer l’audio**. Le fichier est envoyé, vérifié comme audio lisible, et reçoit les tags de l’ancien fichier.
+
+Un fichier dans le format du morceau (un `.mp3` pour un `.mp3`) est utilisé exactement tel quel. Un autre format (`.mp3`, `.flac`, `.m4a`, `.ogg`, `.opus`, `.wav`, `.aiff`, `.aac` ou `.webm`) est converti dans le format du morceau, au débit choisi dans les [Paramètres de téléchargement](download-settings.md) : utilisez donc le même format quand vous l’avez. Cela fonctionne aussi en mode bibliothèque seule, puisque rien n’est récupéré sur Internet.
+
+## Les téléchargements laissent un fichier remplacé tranquille
+
+Avec **Retélécharger si le fichier existe** activé, un téléchargement ultérieur de la même chanson (depuis une autre playlist surveillée, le suivi d’un artiste ou le téléchargement d’une playlist) écraserait votre remplacement par ce que trouve la recherche automatique. Downtify retient donc chaque fichier dont vous avez remplacé l’audio, d’une façon ou de l’autre, et un tel téléchargement le compte comme déjà téléchargé. [Améliorer la bibliothèque](library-upgrade.md) ne remplace pas non plus son audio ; sa pochette, ses paroles et ses tags peuvent toujours être améliorés.
+
+La boîte de dialogue indique quand l’audio d’un morceau a été remplacé à la main. **Laisser les téléchargements le remplacer** lève cette protection pour ce fichier.
+
 ## Ce qui reste identique
 
 - **Le fichier.** Le nouvel audio est écrit au même chemin, dans le même format : un `.mp3` reste du MP3 (au débit choisi dans les [Réglages de téléchargement](download-settings.md)), un `.flac` reste du FLAC, et ainsi de suite. Ainsi, chaque playlist, fichier M3U, titre liké, entrée Navidrome et application associée qui pointe vers le fichier continue d’y pointer.

@@ -17,6 +17,21 @@ Solo los administradores pueden reemplazar audio (consulta [Usuarios e inicio de
 
 Si falla (el vídeo no está disponible, o YouTube pide iniciar sesión — consulta [Cookies de YouTube](youtube-cookies.md)), tu archivo queda exactamente como estaba. **Reintentar** en la Cola prueba el mismo vídeo otra vez, y pegar otro enlace allí reemplaza con ese.
 
+## Usar un archivo de tu dispositivo
+
+Si la versión correcta no está en YouTube (un rip de CD, una descarga de Soulseek, un archivo que alguien te envió), usa tu propio archivo:
+
+1. En el diálogo, en **O usa un archivo de tu dispositivo**, pulsa **Elegir un archivo…** y elige el archivo de audio.
+2. Pulsa **Reemplazar audio**. El archivo se sube, se comprueba que sea audio legible y recibe las etiquetas del archivo anterior.
+
+Un archivo en el formato propio de la pista (un `.mp3` para un `.mp3`) se usa exactamente como está. Otro formato (`.mp3`, `.flac`, `.m4a`, `.ogg`, `.opus`, `.wav`, `.aiff`, `.aac` o `.webm`) se convierte al formato de la pista con la tasa de bits elegida en [Ajustes de descarga](download-settings.md), así que usa el mismo formato cuando lo tengas. También funciona en el modo solo biblioteca, porque no se descarga nada de internet.
+
+## Las descargas no tocan un archivo reemplazado
+
+Con **Descargar de nuevo si el archivo existe** activado, una descarga posterior de la misma canción (de otra playlist monitorizada, del seguimiento de un artista o de la descarga de una playlist) sobrescribiría tu reemplazo con lo que encuentre la búsqueda automática. Por eso Downtify recuerda cada archivo cuyo audio reemplazaste, de cualquiera de las dos formas, y esa descarga lo cuenta como ya descargado. [Mejorar biblioteca](library-upgrade.md) tampoco cambia su audio; su portada, letras y etiquetas se pueden seguir mejorando.
+
+El diálogo indica cuándo el audio de una pista se reemplazó a mano. **Dejar que las descargas lo reemplacen** lo quita para ese archivo.
+
 ## Qué permanece igual
 
 - **El archivo.** El audio nuevo se escribe en la misma ruta, en el mismo formato: un `.mp3` sigue siendo MP3 (con la tasa de bits elegida en [Ajustes de descarga](download-settings.md)), un `.flac` sigue siendo FLAC, y así sucesivamente. Así, toda playlist, archivo M3U, canción favorita, entrada de Navidrome y app vinculada que apunta al archivo sigue apuntando a él.
