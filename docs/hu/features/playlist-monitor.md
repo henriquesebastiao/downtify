@@ -284,6 +284,12 @@ Egy figyelés oldala ezeket is mutatja:
 
 A figyelés azonosítója (`#12`) a neve mellett látszik, így ugyanannak a linknek két figyelése — például két fiók, amely ugyanazt a listát követi — megkülönböztethető.
 
+### Egy előadó kiadványai
+
+Egy előadó-figyelés oldala az előadó teljes katalógusát is mutatja a legutóbbi ellenőrzés szerint: minden kiadványt, amelyet a YouTube Music, a Deezer és a MusicBrainz listáz (ugyanaz az album két forrásból egyszer jelenik meg), albumok, mixtape-ek, EP-k, kislemezek, valamint élő, válogatás- és remixkiadványok szerint. Mindegyiknél látszik, mi van belőle a könyvtárban: **Teljes** a számok számával, **Részben**, **Letöltendő**, **A figyelés előtt jelent meg** (egy **Csak új kiadványok** figyelés kihagyta), **Nem figyelt** (olyan típus vagy fajta, amelyet a figyelés nem tölt le) vagy **Kikapcsolva**. A vendégszereplések és a bootlegek saját szűrőt kapnak, és soha nem töltődnek le.
+
+A kiadvány melletti kapcsoló felülírja a figyelést, mint a Lidarr albumonkénti figyelése. Bekapcsolva letölti akkor is, ha a típusát nem figyeled, vagy a figyelés kezdete előtt jelent meg, és azonnal indul egy ellenőrzés. Kikapcsolva többé nem tölti le. A könyvtárban már meglévő dalok mindkét esetben megmaradnak. A **MusicBrainzről töltsd le ezeket is** csak ennél az előadónál választja ki, mely, csak a MusicBrainz által megkülönböztetett kiadványfajták töltődjenek le: alapból a mixtape-ek és a filmzenék; az élő albumok, válogatások, remixek, DJ-mixek és demók bekapcsolva.
+
 ## Honnan jött egy szám
 
 A szám menüjében (bárhol a könyvtárban) a **Honnan jött** megmondja, melyik figyelés töltötte le először, mikor és melyik szolgáltatóval — **Első ellenőrzés**, ha az első ellenőrzéssel jött —, és felsorolja az összes figyelést, amely most tartalmazza, mindegyiket az azonosítójával, a tulajdonosával (adminnak), azzal, hogy mikor kapta meg a számot, és hogyan: **Letöltötte**, **Már a könyvtárban** vagy **A rögzítés előtt**. Ez egyetlen fájl: a számot megosztó figyelések mind ugyanarra a példányra mutatnak.

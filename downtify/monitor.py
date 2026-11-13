@@ -15,6 +15,8 @@ from typing import Any, Callable, Optional
 from loguru import logger
 
 from . import deezer, m3u, musicbrainz, providers, spotify
+from .artist_catalogue import ArtistCatalogue, release_key, watch_kinds
+from .artist_catalogue import wanted as release_wanted
 from .artist_release_store import ArtistReleaseStore
 from .cover_cache import CoverArtCache
 from .download_policy import DownloadPolicy, DownloadPolicyBlocked
@@ -335,6 +337,10 @@ class MonitoredPlaylist:
     # Artist watches: the artist's MusicBrainz id, whose release groups
     # fill in what the other catalogues miss ('' until found).
     musicbrainz_id: str = ''
+    # Artist watches: the MusicBrainz secondary types this watch lets in
+    # (``musicbrainz.KINDS`` names, comma-separated); ``None`` follows
+    # the ``artist_watch_musicbrainz_kinds`` setting.
+    musicbrainz_kinds: Optional[str] = None
 
     @property
     def source(self) -> str:
@@ -353,6 +359,8 @@ class PlaylistMonitorDB:
         self._lock = asyncio.Lock()
         self._init_db()
         self.releases = ArtistReleaseStore(self._connect)
+        # Each artist's whole catalogue, and the user's per-release choice.
+        self.catalogue = ArtistCatalogue(self._connect)
         self.download_policy = DownloadPolicy(self._connect)
         # What each watch added and failed to (provenance and statistics).
         self.history = WatchHistoryStore(self._connect)
@@ -503,6 +511,15 @@ class PlaylistMonitorDB:
                 )
             except sqlite3.OperationalError:
                 pass
+            # Migration: a watch's own MusicBrainz release kinds (NULL:
+            # the setting's).
+            try:
+                conn.execute(
+                    'ALTER TABLE monitored_playlists ADD COLUMN '
+                    'musicbrainz_kinds TEXT'
+                )
+            except sqlite3.OperationalError:
+                pass
 
     def add_playlist(
         self,
@@ -619,6 +636,7 @@ class PlaylistMonitorDB:
             'baseline_pending',
             'deezer_id',
             'musicbrainz_id',
+            'musicbrainz_kinds',
         }
         updates = {k: v for k, v in kwargs.items() if k in allowed}
         if not updates:
@@ -675,6 +693,10 @@ class PlaylistMonitorDB:
             )
             conn.execute(
                 'DELETE FROM artist_release_tracks WHERE playlist_id = ?',
+                (playlist_id,),
+            )
+            conn.execute(
+                'DELETE FROM artist_catalogue WHERE playlist_id = ?',
                 (playlist_id,),
             )
             row = conn.execute(
@@ -956,6 +978,9 @@ def _row_to_playlist(row: sqlite3.Row) -> MonitoredPlaylist:
             str(row['musicbrainz_id'] or '')
             if 'musicbrainz_id' in keys
             else ''
+        ),
+        musicbrainz_kinds=(
+            row['musicbrainz_kinds'] if 'musicbrainz_kinds' in keys else None
         ),
     )
 
@@ -1672,9 +1697,10 @@ def _musicbrainz_releases(
     Deezer artist found just before, the YouTube Music channel, or an
     unambiguous name (:func:`musicbrainz.artist_id_for`) - and kept on
     the watch. Only the artist's own groups are kept, not the ones they
-    are a guest on, and only groups whose secondary types are all let in
-    by ``artist_watch_musicbrainz_kinds`` (mixtapes and soundtracks by
-    default; live albums, compilations, remixes... when asked).
+    are a guest on. Groups of every kind are listed; the sweep downloads
+    those whose secondary types the watch lets in (``musicbrainz_kinds``,
+    else ``artist_watch_musicbrainz_kinds``: mixtapes and soundtracks by
+    default) or the user switched on (see :mod:`downtify.artist_catalogue`).
 
     A group another catalogue lists under the same name and type is left
     to that catalogue: MusicBrainz fills gaps, it doesn't fetch every
@@ -1698,9 +1724,9 @@ def _musicbrainz_releases(
             )
             return []
         linked = True
-    kinds = musicbrainz.kinds_from_setting(
-        settings.get('artist_watch_musicbrainz_kinds')
-    )
+    # Every kind is listed (the watch's page shows them all); which ones
+    # download is the sweep's call (artist_catalogue.wanted).
+    every_kind = set(musicbrainz.KINDS.values())
     releases = [
         {
             **musicbrainz.release_summary(group),
@@ -1708,7 +1734,7 @@ def _musicbrainz_releases(
         }
         for group in musicbrainz.release_groups(artist_id)
         if musicbrainz.wanted(
-            group, artist_id, musicbrainz.PRIMARY_TYPES, kinds
+            group, artist_id, musicbrainz.PRIMARY_TYPES, every_kind
         )
     ]
     if linked:
@@ -1723,13 +1749,13 @@ def _musicbrainz_releases(
         if playlist.new_only and not playlist.baseline_pending:
             db.mark_albums_skipped(playlist.id, releases)
     known = {
-        (file_name_key(str(a.get('name') or '')), release_type_of(a))
+        (release_key(str(a.get('name') or '')), release_type_of(a))
         for a in listed
     }
     return [
         r
         for r in releases
-        if (file_name_key(r['name']), release_type_of(r)) not in known
+        if (release_key(r['name']), release_type_of(r)) not in known
     ]
 
 
@@ -1927,6 +1953,8 @@ async def check_artist(  # noqa: PLR0914  # one sweep: discography, releases, tr
             db.update_playlist, playlist.id, last_checked=_now_iso()
         )
         return 0
+    # The watch's page lists the whole catalogue from this listing.
+    await asyncio.to_thread(db.catalogue.record, playlist.id, albums)
 
     if playlist.baseline_pending:
         if not albums:
@@ -1964,12 +1992,16 @@ async def check_artist(  # noqa: PLR0914  # one sweep: discography, releases, tr
     seen.discard(
         await asyncio.to_thread(db.releases.next_release, playlist.id)
     )
+    # The watch's types (and MusicBrainz kinds), unless the user switched
+    # a release on or off on the watch's page.
+    kinds = watch_kinds(playlist, settings or {})
+    choices = await asyncio.to_thread(db.catalogue.choices, playlist.id)
     new_albums = [
         a
         for a in albums
         if a.get('album_id')
         and a['album_id'] not in seen
-        and release_type_of(a) in wanted_types
+        and release_wanted(a, wanted_types, kinds, choices)
     ]
     if new_albums:
         logger.info(
@@ -2005,11 +2037,18 @@ async def check_artist(  # noqa: PLR0914  # one sweep: discography, releases, tr
             )
             continue
         if tracks is None:
-            # Another artist's release this one is only featured on.
+            # Another artist's release this one is only featured on, or
+            # a bootleg.
             await asyncio.to_thread(
                 db.mark_albums_skipped, playlist.id, [album]
             )
+            await asyncio.to_thread(
+                db.catalogue.set_not_own, playlist.id, album_id
+            )
             continue
+        await asyncio.to_thread(
+            db.catalogue.set_total, playlist.id, album_id, len(tracks)
+        )
 
         complete = bool(tracks) and max(
             (int(s.get('album_track_total') or 0) for s in tracks), default=0

@@ -522,8 +522,9 @@ def test_musicbrainz_fills_in_what_the_other_catalogues_miss(
     assert refreshed.musicbrainz_id == DRAKE
     # Found through the Deezer artist found just before.
     assert mb.lookups == [('Drake', '246791', watch.spotify_id)]
-    # Certified Lover Boy, Views and the mixtape.
-    assert refreshed.last_track_count == 3
+    # Certified Lover Boy, Views, the mixtape and the live album (listed
+    # on the watch's page, not downloaded).
+    assert refreshed.last_track_count == 4
 
 
 def test_the_musicbrainz_artist_is_looked_up_once(monkeypatch, tmp_path):

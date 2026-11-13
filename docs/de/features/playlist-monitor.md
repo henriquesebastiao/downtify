@@ -284,6 +284,12 @@ Die Seite einer Beobachtung zeigt außerdem:
 
 Die Id der Beobachtung (`#12`) steht neben ihrem Namen, damit sich zwei Beobachtungen desselben Links — etwa zwei Konten, die derselben Playlist folgen — unterscheiden lassen.
 
+### Die Veröffentlichungen eines Künstlers
+
+Die Seite einer Künstlerbeobachtung listet auch den ganzen Katalog des Künstlers, Stand der letzten Prüfung: jede Veröffentlichung, die YouTube Music, Deezer und MusicBrainz listen (dasselbe Album aus zwei Quellen erscheint einmal), unter Alben, Mixtapes, EPs, Singles sowie Live-, Compilation- und Remix-Veröffentlichungen. Jede zeigt, was die Bibliothek davon hat: **Vollständig** mit ihrer Titelzahl, **Teilweise**, **Herunterzuladen**, **Vor der Beobachtung erschienen** (eine Beobachtung mit **Nur neue Veröffentlichungen** hat sie übersprungen), **Nicht beobachtet** (ein Typ oder eine Art, die die Beobachtung nicht herunterlädt) oder **Aus**. Gastauftritte und Bootlegs haben einen eigenen Filter und werden nie heruntergeladen.
+
+Der Schalter neben einer Veröffentlichung hat Vorrang vor der Beobachtung, wie Lidarrs Überwachung pro Album. Ein lädt sie herunter, auch wenn ihr Typ nicht beobachtet wird oder sie vor Beginn der Beobachtung erschien, und eine Prüfung startet sofort. Aus lädt sie nicht mehr herunter. Songs, die schon in der Bibliothek sind, bleiben in beiden Fällen. **Von MusicBrainz auch herunterladen** wählt, nur für diesen Künstler, welche Arten von Veröffentlichungen, die nur MusicBrainz unterscheidet, heruntergeladen werden: standardmäßig Mixtapes und Soundtracks; Live-Alben, Compilations, Remixe, DJ-Mixe und Demos, wenn eingeschaltet.
+
 ## Woher ein Titel kommt
 
 **Woher er kommt** im Menü eines Titels (überall in der Bibliothek) sagt, welche Beobachtung ihn zuerst heruntergeladen hat, wann und mit welchem Anbieter — **Erste Prüfung**, wenn er mit der ersten Prüfung kam — und listet jede Beobachtung auf, die ihn jetzt hat, jeweils mit Id, Besitzer (für einen Admin), wann sie den Titel bekam und wie: **Hat ihn geladen**, **Schon in der Bibliothek** oder **Vor der Erfassung**. Es ist eine Datei: Beobachtungen, die einen Titel teilen, zeigen alle auf dieselbe Kopie.
