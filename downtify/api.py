@@ -2090,6 +2090,7 @@ def library_stores() -> LibraryStores:
         playlist_spotify_cache=state.playlist_spotify_cache,
         track_owners=state.track_owners,
         playlist_hidden=state.playlist_hidden,
+        listing=lambda: listing_for_request(library_context()),
     )
 
 
