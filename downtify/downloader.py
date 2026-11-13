@@ -744,8 +744,14 @@ class Downloader:
             rendered = f'{values["artists"]} - {values["title"]}'
 
         parts = [_sanitize(part) for part in re.split(r'[\\/]+', rendered)]
-        parts = [part for part in parts if part]
-        return parts or ['unknown']
+        parts = [part for part in parts if part] or ['unknown']
+        # An artist watch whose file name is taken by a different
+        # recording saves the track as "<name> (<album>)" instead (see
+        # monitor._download_release_track).
+        suffix = str(song.get('_output_suffix') or '').strip()
+        if suffix:
+            parts[-1] = f'{parts[-1]} ({_sanitize(suffix)})'
+        return parts
 
     def _format_basename(self, song: dict[str, Any]) -> str:
         return '/'.join(self._format_output_parts(song))

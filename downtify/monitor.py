@@ -30,6 +30,7 @@ from .library_metadata_cache import LibraryMetadataCache
 from .library_only import enabled, policy
 from .library_paths import locate_library_file, slskd_dir_from_downloader
 from .library_paths_cache import invalidate_library_paths_cache
+from .library_songs import LibrarySongs, same_recording
 from .navidrome import (
     _effective_navidrome_settings,
     cache_navidrome_song_id,
@@ -72,6 +73,10 @@ class LibraryStores:
     track_owners: Optional[TrackOwners] = None
     # Songs the owner hid from a playlist: never listed or fetched again.
     playlist_hidden: Optional[PlaylistHiddenSongs] = None
+    # The library listing rows (file, artist, title, duration): an artist
+    # watch links a song the library already holds under another name
+    # instead of downloading it again (see downtify.library_songs).
+    listing: Optional[Callable[[], list[dict[str, Any]]]] = None
 
 
 def _now_iso() -> str:
@@ -1495,20 +1500,88 @@ def _progress_cb(
     return _cb
 
 
+def _locate(
+    filename: str, downloader: Downloader, settings: dict[str, Any]
+) -> Optional[Path]:
+    root = Path(downloader.download_dir)
+    slskd = slskd_dir_from_downloader(downloader)
+    extras = extra_dirs_from_settings(settings, root, slskd)
+    return locate_library_file(filename, root, slskd, extras)
+
+
 def _release_file_present(
     filename: str,
     song: dict[str, Any],
     downloader: Downloader,
     settings: dict[str, Any],
 ) -> bool:
-    root = Path(downloader.download_dir)
-    slskd = slskd_dir_from_downloader(downloader)
-    extras = extra_dirs_from_settings(settings, root, slskd)
-    path = locate_library_file(filename, root, slskd, extras)
+    path = _locate(filename, downloader, settings)
     return path is not None and matches_release(path, song)
 
 
-async def check_artist(
+def _library_file_exists(
+    filename: str, downloader: Downloader, settings: dict[str, Any]
+) -> bool:
+    return _locate(filename, downloader, settings) is not None
+
+
+def _library_songs(library: Optional[LibraryStores]) -> Optional[LibrarySongs]:
+    """The library by song, for an artist sweep; ``None`` without it."""
+
+    if library is None or library.listing is None:
+        return None
+    try:
+        return LibrarySongs(library.listing())
+    except Exception:
+        logger.opt(exception=True).warning(
+            'Could not read the library to match artist watch tracks'
+        )
+        return None
+
+
+def _download_release_track(
+    downloader: Downloader,
+    song: dict[str, Any],
+    album: dict[str, Any],
+    progress: Optional[ProgressCallback],
+    observed: dict[str, Any],
+) -> str:
+    """Download one track of a watched artist's release.
+
+    Its file name can already be taken by another release's file, which
+    the downloader refuses rather than overwrite. When that file holds
+    this very song (a single that is also on the album, a deluxe
+    edition) it is linked: *observed* gets ``reused`` and ``other_release``
+    and its name is returned. When it is a *different* recording of the
+    same name - another album's ``Intro``, with files organized by
+    artist but not by album - the track is saved as ``<name> (<album>)``
+    instead, so both songs are kept and the release can be completed.
+    """
+
+    try:
+        return downloader.download(song, progress)
+    except FileExistsError:
+        taken = downloader.existing_filename_for(song)
+        if taken and same_recording(
+            Path(downloader.download_dir) / taken, song
+        ):
+            observed.update(reused=True, other_release=True)
+            return taken
+        suffix = str(album.get('name') or song.get('album_name') or '').strip()
+        if not suffix:
+            raise
+        logger.info(
+            'The file name of "{}" is taken by another recording; '
+            'saving this one with "({})" added',
+            song.get('name', ''),
+            suffix,
+        )
+        return downloader.download(
+            {**song, '_output_suffix': suffix}, progress
+        )
+
+
+async def check_artist(  # noqa: PLR0914  # one sweep: discography, releases, tracks
     playlist: MonitoredPlaylist,
     db: PlaylistMonitorDB,
     downloader: Downloader,
@@ -1605,6 +1678,14 @@ async def check_artist(
 
     delay_seconds = (settings or {}).get('download_delay_seconds', 0) or 0
     known_tracks = await asyncio.to_thread(db.get_track_filenames, playlist.id)
+    # Songs the library already holds under another name - a playlist
+    # download named from Spotify, another release of this artist - are
+    # linked rather than downloaded again.
+    songs = (
+        await asyncio.to_thread(_library_songs, library)
+        if new_albums
+        else None
+    )
 
     downloaded = 0
     for album in new_albums:
@@ -1652,6 +1733,30 @@ async def check_artist(
                     filename,
                 )
                 continue
+            same = songs.find(song) if songs is not None else None
+            if same and await asyncio.to_thread(
+                _library_file_exists, same, downloader, settings or {}
+            ):
+                await asyncio.to_thread(
+                    functools.partial(
+                        db.mark_track_downloaded,
+                        playlist.id,
+                        track_id,
+                        same,
+                        outcome=OUTCOME_LINKED,
+                        initial=playlist.last_checked is None,
+                    )
+                )
+                await asyncio.to_thread(
+                    db.releases.record,
+                    playlist.id,
+                    album_id,
+                    position,
+                    track_id,
+                    same,
+                )
+                known_tracks[track_id] = same
+                continue
             if await asyncio.to_thread(db.download_policy.blocked, song):
                 complete = False
                 continue
@@ -1661,9 +1766,11 @@ async def check_artist(
                 async with queue_pause.running():
                     filename = await loop.run_in_executor(
                         DOWNLOAD_EXECUTOR,
-                        lambda s=song, progress_state=observed: (
-                            downloader.download(
-                                {**s, '_monitor_release': album_id},
+                        lambda s=song, a=album, progress_state=observed: (
+                            _download_release_track(
+                                downloader,
+                                {**s, '_monitor_release': a['album_id']},
+                                a,
                                 _progress_cb(
                                     s,
                                     playlist.name,
@@ -1671,15 +1778,19 @@ async def check_artist(
                                     loop,
                                     progress_state,
                                 ),
+                                progress_state,
                             )
                         ),
                     )
-                if not filename or not await asyncio.to_thread(
-                    _release_file_present,
-                    filename,
-                    song,
-                    downloader,
-                    settings or {},
+                if not filename or not (
+                    observed.get('other_release')
+                    or await asyncio.to_thread(
+                        _release_file_present,
+                        filename,
+                        song,
+                        downloader,
+                        settings or {},
+                    )
                 ):
                     raise ValueError(
                         'Downloaded file does not validate against the requested release'
@@ -1707,6 +1818,8 @@ async def check_artist(
                 await asyncio.to_thread(db.download_policy.succeeded, song)
                 invalidate_library_paths_cache()
                 known_tracks[track_id] = filename
+                if songs is not None:
+                    songs.add(filename, song)
                 downloaded += int(not observed.get('reused'))
                 if library is not None and filename:
                     await asyncio.to_thread(
