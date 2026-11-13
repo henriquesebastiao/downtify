@@ -14,7 +14,7 @@ from typing import Any, Callable, Optional
 
 from loguru import logger
 
-from . import deezer, m3u, providers, spotify
+from . import deezer, m3u, musicbrainz, providers, spotify
 from .artist_release_store import ArtistReleaseStore
 from .cover_cache import CoverArtCache
 from .download_policy import DownloadPolicy, DownloadPolicyBlocked
@@ -332,6 +332,9 @@ class MonitoredPlaylist:
     # Artist watches: the artist's Deezer id, whose discography is read
     # alongside YouTube Music's ('' until found).
     deezer_id: str = ''
+    # Artist watches: the artist's MusicBrainz id, whose release groups
+    # fill in what the other catalogues miss ('' until found).
+    musicbrainz_id: str = ''
 
     @property
     def source(self) -> str:
@@ -491,6 +494,15 @@ class PlaylistMonitorDB:
                 )
             except sqlite3.OperationalError:
                 pass
+            # Migration: the same artist on MusicBrainz (see
+            # _musicbrainz_releases).
+            try:
+                conn.execute(
+                    'ALTER TABLE monitored_playlists ADD COLUMN '
+                    "musicbrainz_id TEXT NOT NULL DEFAULT ''"
+                )
+            except sqlite3.OperationalError:
+                pass
 
     def add_playlist(
         self,
@@ -606,6 +618,7 @@ class PlaylistMonitorDB:
             'new_only',
             'baseline_pending',
             'deezer_id',
+            'musicbrainz_id',
         }
         updates = {k: v for k, v in kwargs.items() if k in allowed}
         if not updates:
@@ -640,7 +653,8 @@ class PlaylistMonitorDB:
                 """UPDATE monitored_playlists
                    SET spotify_id = ?, name = ?, url = ?,
                        last_checked = NULL, last_track_count = 0,
-                       baseline_pending = new_only, deezer_id = ''
+                       baseline_pending = new_only, deezer_id = '',
+                       musicbrainz_id = ''
                    WHERE id = ?""",
                 (spotify_id, name, url, playlist_id),
             )
@@ -938,6 +952,11 @@ def _row_to_playlist(row: sqlite3.Row) -> MonitoredPlaylist:
             else False
         ),
         deezer_id=str(row['deezer_id'] or '') if 'deezer_id' in keys else '',
+        musicbrainz_id=(
+            str(row['musicbrainz_id'] or '')
+            if 'musicbrainz_id' in keys
+            else ''
+        ),
     )
 
 
@@ -1547,6 +1566,8 @@ def _progress_cb(
 #: Prefix of a release id from Deezer, telling it apart from a YouTube
 #: Music browse id in ``seen_albums`` and ``artist_release_tracks``.
 DEEZER_RELEASE = 'deezer:'
+#: Prefix of a release id from MusicBrainz (a release group's id).
+MUSICBRAINZ_RELEASE = 'mb:'
 
 
 def _artist_discography(
@@ -1556,35 +1577,44 @@ def _artist_discography(
 ) -> list[dict[str, Any]]:
     """Every release of a watched artist that a catalogue lists.
 
-    YouTube Music's artist page doesn't always list everything - Drake's
-    shows only his albums from 2021 on - so, with ``artist_watch_deezer``
-    on, Deezer's discography of the same artist is read too. A release
-    both list is processed twice, but its songs are downloaded once: the
-    sweep links a song the library (or this sweep) already has. Raises
-    only when no source answered.
+    YouTube Music's artist page doesn't always list everything - it
+    leaves out Drake's *Views* - so, with ``artist_watch_deezer`` on,
+    Deezer's discography of the same artist is read too, and with
+    ``artist_watch_musicbrainz`` on, MusicBrainz's release groups that
+    neither of them lists (mixtapes, older or rarer releases - see
+    :func:`_musicbrainz_releases`). A release two catalogues list is
+    processed twice, but its songs are downloaded once: the sweep links
+    a song the library (or this sweep) already has. Raises only when no
+    source answered.
     """
 
     found: list[dict[str, Any]] = []
-    failed = 0
-    try:
-        found += providers.artist_albums_from_channel_id(playlist.spotify_id)
-    except Exception:
-        failed += 1
-        logger.opt(exception=True).warning(
-            'YouTube Music discography failed for artist "{}"', playlist.name
+    asked = failed = 0
+    sources = [
+        (
+            'YouTube Music',
+            lambda: providers.artist_albums_from_channel_id(
+                playlist.spotify_id
+            ),
         )
-    if not settings.get('artist_watch_deezer'):
-        if failed:
-            raise RuntimeError('No discography source answered')
-        return found
-    try:
-        found += _deezer_releases(playlist, db)
-    except Exception:
-        failed += 1
-        logger.opt(exception=True).warning(
-            'Deezer discography failed for artist "{}"', playlist.name
-        )
-    if failed == 2:
+    ]
+    if settings.get('artist_watch_deezer'):
+        sources.append(('Deezer', lambda: _deezer_releases(playlist, db)))
+    if settings.get('artist_watch_musicbrainz'):
+        sources.append((
+            'MusicBrainz',
+            lambda: _musicbrainz_releases(playlist, db, settings, found),
+        ))
+    for name, read in sources:
+        asked += 1
+        try:
+            found += read()
+        except Exception:
+            failed += 1
+            logger.opt(exception=True).warning(
+                '{} discography failed for artist "{}"', name, playlist.name
+            )
+    if failed == asked:
         raise RuntimeError('No discography source answered')
     return found
 
@@ -1629,17 +1659,99 @@ def _deezer_releases(
     return releases
 
 
+def _musicbrainz_releases(
+    playlist: MonitoredPlaylist,
+    db: PlaylistMonitorDB,
+    settings: dict[str, Any],
+    listed: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """The watched artist's MusicBrainz release groups that the other
+    catalogues (*listed*) don't have, as release summaries.
+
+    The MusicBrainz artist is found on the first check - through the
+    Deezer artist found just before, the YouTube Music channel, or an
+    unambiguous name (:func:`musicbrainz.artist_id_for`) - and kept on
+    the watch. Only the artist's own groups are kept, not the ones they
+    are a guest on, and only groups whose secondary types are all let in
+    by ``artist_watch_musicbrainz_kinds`` (mixtapes and soundtracks by
+    default; live albums, compilations, remixes... when asked).
+
+    A group another catalogue lists under the same name and type is left
+    to that catalogue: MusicBrainz fills gaps, it doesn't fetch every
+    release a third time. When a "new releases only" watch first finds
+    the artist, every group is recorded as already there, as for Deezer.
+    """
+
+    artist_id = playlist.musicbrainz_id
+    linked = False
+    if not artist_id:
+        artist_id = musicbrainz.artist_id_for(
+            playlist.name,
+            deezer_id=playlist.deezer_id,
+            channel_id=playlist.spotify_id,
+        )
+        if not artist_id:
+            logger.info(
+                'No MusicBrainz artist settled for "{}" (none, or several '
+                'of that name)',
+                playlist.name,
+            )
+            return []
+        linked = True
+    kinds = musicbrainz.kinds_from_setting(
+        settings.get('artist_watch_musicbrainz_kinds')
+    )
+    releases = [
+        {
+            **musicbrainz.release_summary(group),
+            'album_id': MUSICBRAINZ_RELEASE + group['id'],
+        }
+        for group in musicbrainz.release_groups(artist_id)
+        if musicbrainz.wanted(
+            group, artist_id, musicbrainz.PRIMARY_TYPES, kinds
+        )
+    ]
+    if linked:
+        db.update_playlist(playlist.id, musicbrainz_id=artist_id)
+        playlist.musicbrainz_id = artist_id
+        logger.info(
+            'Artist "{}" is MusicBrainz artist {} ({} release groups)',
+            playlist.name,
+            artist_id,
+            len(releases),
+        )
+        if playlist.new_only and not playlist.baseline_pending:
+            db.mark_albums_skipped(playlist.id, releases)
+    known = {
+        (file_name_key(str(a.get('name') or '')), release_type_of(a))
+        for a in listed
+    }
+    return [
+        r
+        for r in releases
+        if (file_name_key(r['name']), release_type_of(r)) not in known
+    ]
+
+
 def _release_tracks(
     album: dict[str, Any], artist_name: str
 ) -> Optional[list[dict[str, Any]]]:
     """A release's tracks, from the catalogue that listed it.
 
-    ``None`` for a Deezer release that isn't this artist's: Deezer lists
-    the singles an artist is a guest on among their own (see
-    :func:`_credited_release`).
+    ``None`` for a release not to download, recorded as skipped: a
+    Deezer release that isn't this artist's (Deezer lists the singles an
+    artist is a guest on among their own - see :func:`_credited_release`),
+    or a MusicBrainz group without an official edition (a bootleg).
+    MusicBrainz groups were already narrowed to the artist's own
+    (:func:`musicbrainz.wanted`).
     """
 
     album_id = str(album['album_id'])
+    if album_id.startswith(MUSICBRAINZ_RELEASE):
+        edition, songs = musicbrainz.release_group_tracks(
+            album_id[len(MUSICBRAINZ_RELEASE) :]
+        )
+        return songs if edition else None
     if not album_id.startswith(DEEZER_RELEASE):
         return providers.album_tracks_from_browse_id(album_id)
     owner, main, songs = deezer.album_credits_from_id(

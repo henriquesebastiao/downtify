@@ -699,6 +699,11 @@ DEFAULT_SETTINGS: dict[str, Any] = {
     # YouTube Music's artist page doesn't list every release of every
     # artist (see ``monitor._artist_discography``).
     'artist_watch_deezer': True,
+    # ...and MusicBrainz's release groups that neither lists (mixtapes,
+    # older releases), with the secondary types let in by
+    # ``artist_watch_musicbrainz_kinds`` (``musicbrainz.KINDS`` names).
+    'artist_watch_musicbrainz': True,
+    'artist_watch_musicbrainz_kinds': ['mixtape', 'soundtrack'],
     'max_parallel_downloads': 3,
     'download_delay_seconds': 0,
     'download_retry_budget_minutes': 0,

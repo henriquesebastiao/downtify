@@ -407,3 +407,20 @@ def test_library_songs_folds_the_album_version_tags_deezer_adds():
         assert songs.find({**over, 'name': title}) == 'Drake/Drake - Over.mp3'
     for title in ('Over (Clean)', 'Over (Radio Edit)', 'Over (Live)'):
         assert songs.find({**over, 'name': title}) is None
+
+
+def test_library_songs_folds_the_film_a_song_is_from():
+    # Indian labels name the film on one catalogue and not another.
+    path = 'Arijit Singh/Arijit Singh - Tum Hi Ho.mp3'
+    songs = LibrarySongs([_row(path, 'Tum Hi Ho', 262, 'Arijit Singh')])
+    song = {'artists': ['Arijit Singh'], 'duration': 262}
+
+    for title in (
+        'Tum Hi Ho (From "Aashiqui 2")',
+        'Tum Hi Ho [From "Aashiqui 2"]',
+        'Tum Hi Ho (From the Motion Picture "Aashiqui 2")',
+    ):
+        assert songs.find({**song, 'name': title}) == path
+    # Another recording of it is still another song.
+    assert songs.find({**song, 'name': 'Tum Hi Ho (Unplugged)'}) is None
+    assert songs.find({**song, 'name': 'Tum Hi Ho', 'duration': 320}) is None
