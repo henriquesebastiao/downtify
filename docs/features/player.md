@@ -14,6 +14,8 @@ Next to the title there is a heart to [like the song](liked-songs.md); phones le
 
 Click the title or cover, or the expand button, to open **Now playing**.
 
+When you're done listening, the **Close** button at the right end of the bar stops playback, clears the queue and puts the bar away. It stays closed after a reload, until you play something again.
+
 ## Now playing
 
 A full-screen view tinted with colours picked from the current album cover:

@@ -165,6 +165,15 @@
         >
           <AppIcon name="check" :size="18" />
         </span>
+        <!-- Phones hide the utility buttons, so the close button ends
+             this row there. -->
+        <UiIconButton
+          icon="x"
+          :label="t('common.close')"
+          size="sm"
+          class="md:hidden"
+          @click="player.stop()"
+        />
       </div>
 
       <PlayerDivider
@@ -223,6 +232,14 @@
           :label="t('player.openNowPlaying')"
           size="sm"
           @click="nowPlaying.open()"
+        />
+        <!-- Stops playback and forgets the queue, so the bar stays closed
+             after a reload until something plays again. -->
+        <UiIconButton
+          icon="x"
+          :label="t('common.close')"
+          size="sm"
+          @click="player.stop()"
         />
       </div>
 
