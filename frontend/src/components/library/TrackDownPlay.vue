@@ -110,8 +110,9 @@
             class="hover:text-fg hover:underline"
             @click.stop
             @dblclick.stop
-            >{{ song.album_name }}</RouterLink
-          ><template v-else>{{ song.album_name }}</template></span
+            >{{ song.album_name }}</RouterLink><template v-else>{{
+            song.album_name
+          }}</template></span
         >
       </p>
     </div>
