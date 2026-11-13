@@ -95,6 +95,7 @@ export default {
       'features/library-upgrade.md': 'Könyvtár javítása',
       'features/storage-usage.md': 'Tárhely és használat',
       'features/music-trash.md': 'Zenekuka',
+      'features/doctor.md': 'Doktor',
       'features/replace-audio.md': 'Hang cseréje',
       'features/external-playlists.md': 'Import existing playlists',
       'features/m3u-export.md': 'M3U-exportálás',

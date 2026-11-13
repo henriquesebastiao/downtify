@@ -874,6 +874,15 @@
                     :aria-label="t('settings.navidromePublic')"
                   />
                 </SettingRow>
+                <SettingRow
+                  :label="t('settings.navidromeM3uImport')"
+                  :description="t('settings.navidromeM3uImportHint')"
+                >
+                  <UiSwitch
+                    v-model="s.navidrome.m3u_import"
+                    :aria-label="t('settings.navidromeM3uImport')"
+                  />
+                </SettingRow>
               </template>
             </SettingGroup>
           </template>
@@ -955,6 +964,10 @@
 
           <template v-else-if="section === 'activity'">
             <ActivitySettings />
+          </template>
+
+          <template v-else-if="section === 'doctor'">
+            <DoctorSettings />
           </template>
 
           <template v-else-if="section === 'server'">
@@ -1093,6 +1106,7 @@ import PresetPicker from '/src/components/settings/PresetPicker.vue'
 import AccountSettings from '/src/components/settings/AccountSettings.vue'
 import NormalizationSettings from '/src/components/settings/NormalizationSettings.vue'
 import ActivitySettings from '/src/components/settings/ActivitySettings.vue'
+import DoctorSettings from '/src/components/settings/DoctorSettings.vue'
 import AppsSettings from '/src/components/settings/AppsSettings.vue'
 import ServerPortSetting from '/src/components/settings/ServerPortSetting.vue'
 import HiddenLibrarySettings from '/src/components/settings/HiddenLibrarySettings.vue'
@@ -1220,6 +1234,12 @@ const sections = computed(() =>
         id: 'activity',
         icon: 'activity',
         label: t('settings.activity'),
+        admin: true,
+      },
+      {
+        id: 'doctor',
+        icon: 'stethoscope',
+        label: t('settings.doctor'),
         admin: true,
       },
       {

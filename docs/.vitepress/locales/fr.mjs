@@ -95,6 +95,7 @@ export default {
       'features/library-upgrade.md': 'Améliorer la bibliothèque',
       'features/storage-usage.md': 'Stockage et utilisation',
       'features/music-trash.md': 'Corbeille musicale',
+      'features/doctor.md': 'Docteur',
       'features/replace-audio.md': 'Remplacer l’audio',
       'features/external-playlists.md': 'Importer des playlists existantes',
       'features/m3u-export.md': 'Export M3U',

@@ -1685,6 +1685,10 @@ export default {
     navidromeSync: 'Navidrome’da çalma listesi oluştur',
     navidromeSyncHint:
       'Çalma listesi indirmeleri ve izleyici kontrollerinden sonra Navidrome’da aynı adlı bir liste tut.',
+    doctor: 'Doktor',
+    navidromeM3uImport: 'M3U çalma listelerini Navidrome içe aktarsın',
+    navidromeM3uImportHint:
+      'Navidrome, Downtify’ın yazdığı her M3U’dan kapaklı bir çalma listesi yapar. Bu açıkken Downtify API üzerinden ikinci bir liste oluşturmaz.',
     navidromePublic: 'Navidrome çalma listelerini herkese açık yap',
     primaryLibrary: 'Primary library folder',
     primaryLibraryHint:
@@ -2244,5 +2248,163 @@ export default {
   },
   source: {
     from: '{source} kaynağından indirildi',
+  },
+  doctor: {
+    title: 'Doktor',
+    intro:
+      'Downtify’ın yeni sürümleri sorunları o andan itibaren düzeltir, ancak eski bir sürümün yazdığı dosyalar ve listeler olduğu gibi kalır. Doktor bu kalıntıları bulur ve güvenli olduğunu kanıtlayabildiklerini onarır.',
+    checkup: 'Sağlık kontrolü',
+    checkupHint:
+      'slskd kalıntılarına, yinelenen şarkı ve listelere ve Navidrome’un gösterdiklerine bakar. Hiçbir şeyi değiştirmez.',
+    lastCheckup: 'Son kontrol: {when}',
+    runCheckup: 'Şimdi kontrol et',
+    stop: 'Durdur',
+    step: {
+      starting: 'Başlıyor…',
+      library: 'Kitaplık okunuyor…',
+      playlists: 'Çalma listeleri okunuyor…',
+      duplicates: 'Yinelenen şarkılar aranıyor…',
+      monitor: 'İzlenen listeler kontrol ediliyor…',
+      navidrome: 'Navidrome’a soruluyor…',
+      pausing: 'Süren indirmelerin bitmesi bekleniyor…',
+      listing: 'slskd klasörü listeleniyor…',
+      verifying: 'Ses kitaplıkla karşılaştırılıyor…',
+      deleting: 'Kaldırılıyor…',
+      navidrome_scan: 'Navidrome’un yeniden taraması bekleniyor…',
+      merging: 'Listeler birleştiriliyor…',
+    },
+    slskdTitle: 'slskd kalıntıları',
+    slskdHint:
+      'Eski sürümler her Soulseek dosyasını kitaplığa kopyaladıktan sonra slskd klasöründe bırakırdı. Yalnızca sesi bir kitaplık şarkısıyla aynı olan dosya silinmek üzere önerilir.',
+    slskdLeftovers: 'slskd klasöründeki dosyalar',
+    slskdNotChecked: 'Saymak için sağlık kontrolünü çalıştırın.',
+    slskdInPlace:
+      'Dosyalar slskd klasöründe bırakılıyor, yani klasör kitaplığın parçası. Temizlenecek bir şey yok.',
+    slskdFound: 'Kitaplık şarkısı değil: {files} · {size}',
+    slskdCheck: 'İndirmeleri duraklat ve kontrol et',
+    slskdCheckTitle: 'slskd kalıntıları kontrol edilsin mi?',
+    slskdCheckBody:
+      'Önce indirmeler duraklatılır ve süren indirmeler tamamlanır, böylece karşılaştırma sırasında hiçbir şey yazılmaz. Onayınız olmadan hiçbir şey silinmez.',
+    queueHeld:
+      'Siz karar verirken indirmeler duraklatıldı. Bir saat sonra kendiliğinden devam eder.',
+    slskdKeepResume: 'Koru ve indirmelere devam et',
+    status: {
+      verified: 'Kitaplıkta aynısı var',
+      different: 'Benzer, aynı değil',
+      unmatched: 'Kitaplıkta yok',
+      unreadable: 'Okunamıyor',
+      recent: 'Yakın zamanda değişti',
+      missing: 'Yok',
+    },
+    slskdVerifiedHint:
+      'Her birinin sesi altında gösterilen kitaplık dosyasıyla bit bit aynı.',
+    showMore: 'Daha fazla',
+    slskdDelete: 'Aynı kopyaları sil ({files} · {size})',
+    slskdDeleteTitle: 'Aynı kopyalar silinsin mi?',
+    slskdDeleteBody:
+      'slskd klasöründen kaldırılacak dosyalar: {files} ({size}). Her biri hemen öncesinde yeniden kontrol edilir: değişmemiş ve kitaplık kopyası hâlâ yerinde. Ardından indirmeler devam eder.',
+    slskdDeleteConfirm: 'Sil',
+    slskdCleaned: 'Kaldırılan: {files} · açılan yer: {size}',
+    slskdKeptChanged:
+      'Değiştiği ya da kitaplık kopyası olmadığı için korunan: {files}',
+    checkGone: 'Dosyalar diskten kalktı',
+    checkQueueResumed: 'İndirmeler devam ediyor',
+    checkNavidromeScan: 'Navidrome yeniden taradı',
+    playlistsTitle: 'Yinelenen çalma listeleri',
+    playlistsHint:
+      'Bir liste için iki M3U dosyası; örneğin eski bir sürümün yazdığı yerde kalmış bir dosya. Birleştirme her şarkıyı bir kez, kapağı ve tek dosyayı korur. Özgün dosyalar önce yedeklenir.',
+    playlistsOk: 'Her listenin tek bir M3U dosyası var.',
+    groupReason: {
+      name: 'Aynı ad',
+      songs: 'Aynı şarkılar',
+      manual: 'Sizin seçiminiz',
+    },
+    songsCount: 'Şarkılar: {count}',
+    hasCover: 'Kapağı var',
+    keeps: 'Korunur',
+    mergePlan: 'Sonuç: {songs} şarkı. Şarkılarının %{overlap} kadarı ortak.',
+    mergeUnsafe:
+      'Şarkıların yalnızca %{overlap} kadarı eşleşiyor; farklı listeler olabilir. Birleştirilmez.',
+    merge: 'Birleştir',
+    mergeTitle: 'Bu listeler birleştirilsin mi?',
+    mergeBody:
+      '{keeper} tüm {songs} şarkıyı ve kapağı tutacak; diğer dosyalar yedeklendikten sonra kaldırılır.',
+    merged: '{path} artık {songs} şarkı içeriyor.',
+    checkOthersGone: 'Diğer M3U dosyaları kalktı',
+    checkCover: 'Kapak yanında',
+    checkNavidromeOne:
+      'Navidrome bu listeyi bir kez gösteriyor (bulunan: {count})',
+    backupAt: 'Yedek: {path}',
+    manualTitle: 'Listeleri kendin seç',
+    manualHint:
+      'Tek liste olması gereken iki ya da daha fazla M3U dosyası seçin. Yalnızca şarkıların çoğu eşleşirse birleştirilir.',
+    manualFilter: 'Listeleri süz',
+    manualCompare: 'Karşılaştır',
+    navidromeHint:
+      'Navidrome’un ve ona bağlı her uygulamanın gerçekten gösterdikleri.',
+    navidromeOff: 'Navidrome ayarlanmamış.',
+    navidromeDown: 'Navidrome yanıt vermedi.',
+    navidromeNoAdmin:
+      'Doktor’un içe aktarılan listeleri ve dosyalarını görebilmesi için Ayarlar → Navidrome’a bir yönetici girişi ekleyin.',
+    navidromeSummary: 'Çalma listeleri',
+    navidromeCounts:
+      'Yinelenen: {duplicates} · M3U yok: {orphans} · Eksik şarkı: {incomplete}',
+    navidromeFix: 'Düzelt',
+    navidromeFixTitle: 'Navidrome listeleri düzeltilsin mi?',
+    navidromeFixBody:
+      '“kaldırılacak” işaretli listeler silinir ({count}), ardından Navidrome yeniden tarar.',
+    navidromeFixImport:
+      'Downtify ayrıca Navidrome’un içe aktardığı listelerin kendi kopyasını oluşturmayı bırakır.',
+    navidromeSuggestImport:
+      'Navidrome, Downtify’ın M3U dosyalarını (kapaklarıyla) içe aktarıyor ve Downtify aynı listeleri API ile de oluşturuyor; bu yüzden her biri iki kez görünüyor.',
+    reason: {
+      m3u_and_api: 'İçe aktarılan M3U ve Downtify kopyası',
+      imports: 'İki kez içe aktarıldı',
+      api: 'İki kez oluşturuldu',
+      name: 'Aynı ad',
+      orphan: 'M3U dosyası yok',
+    },
+    kind: {
+      import: 'M3U’dan içe aktarıldı',
+      downtify: 'Downtify oluşturdu',
+      other: 'Diğer',
+    },
+    willRemove: 'kaldırılacak',
+    wouldLoseSongs: 'korunur: içe aktarmada olmayan şarkıları var',
+    incomplete:
+      'Navidrome, M3U’daki {m3u} şarkının {songs} tanesini gösteriyor.',
+    incompleteOutside:
+      'Navidrome müzik klasörünün dışındaki şarkılar: {count}.',
+    navidromeSongDupes: 'Navidrome’da yinelenen şarkılar',
+    songDupesCounts:
+      'Birden çok kez listelenen şarkılar: {groups} · fazla kopyalar: {extra} · bir slskd klasöründe: {slskd}',
+    ndRemoved: 'Kaldırılan listeler: {count}',
+    ndRemaining: 'Kalan: yinelenen {duplicates}, M3U yok {orphans}',
+    duplicatesTitle: 'Yinelenen şarkılar',
+    duplicatesHint:
+      'Aynı şarkıyı içeren kitaplık dosyaları. Kitaplık’ta gözden geçirin; Doktor kitaplık şarkılarını silmez.',
+    duplicatesExact: 'Aynı dosya',
+    duplicatesLikely: 'Muhtemelen aynı şarkı',
+    duplicatesCounts: 'Şarkılar: {groups} · fazla dosyalar: {files} · {size}',
+    relinkedTitle: 'Yeni bir Spotify kimliğiyle yeniden indirildi',
+    relinkedHint:
+      'Spotify bazen listedeki bir parçayı aynı şarkının başka bir kimliğiyle değiştirir. İzlenen liste de onu yeniden indirir.',
+    relinkedLabel: 'Aynı şarkı, birkaç kimlik',
+    relinkedCounts: 'Şarkılar: {songs} · fazla dosyalar: {extra}',
+    error: {
+      doctor_busy: 'Doktor zaten çalışıyor.',
+      doctor_failed: 'Doktor bir hatayla durdu. Sunucu günlüğüne bakın.',
+      queue_busy:
+        'Süren indirmeler zamanında bitmedi. Daha sonra yeniden deneyin.',
+      scan_first: 'Önce kalıntıları yeniden kontrol edin.',
+      m3u_not_found:
+        'Bu M3U dosyası yok. Sağlık kontrolünü yeniden çalıştırın.',
+      m3u_manual: 'Kitaplık’ta oluşturduğunuz listeler birleştirilmez.',
+      need_two: 'En az iki liste seçin.',
+      playlists_differ:
+        'Çok az şarkı eşleşiyor; farklı listeler gibi görünüyor.',
+      not_flagged: 'Önce sağlık kontrolünü yeniden çalıştırın.',
+      navidrome_off: 'Navidrome ayarlanmamış.',
+    },
   },
 }

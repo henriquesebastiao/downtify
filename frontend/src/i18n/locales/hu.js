@@ -1701,6 +1701,10 @@ export default {
     navidromeSync: 'Listák létrehozása a Navidrome-ban',
     navidromeSyncHint:
       'Listaletöltések és figyelő-ellenőrzések után azonos nevű listát tart fenn a Navidrome-ban.',
+    doctor: 'Doktor',
+    navidromeM3uImport: 'A Navidrome importálja az M3U lejátszási listákat',
+    navidromeM3uImportHint:
+      'A Navidrome minden M3U-ból, amit a Downtify ír, borítóval ellátott listát készít. Bekapcsolva a Downtify nem hoz létre másodikat az API-n keresztül.',
     navidromePublic: 'Navidrome listák nyilvánossá tétele',
     primaryLibrary: 'Primary library folder',
     primaryLibraryHint:
@@ -2265,5 +2269,159 @@ export default {
   },
   source: {
     from: 'Letöltve innen: {source}',
+  },
+  doctor: {
+    title: 'Doktor',
+    intro:
+      'A Downtify újabb verziói onnantól javítják a hibákat, de a régebbi verzió által írt fájlok és listák változatlanok maradnak. A Doktor megkeresi ezeket a maradványokat, és megjavítja, amiről igazolni tudja, hogy biztonságos.',
+    checkup: 'Állapotfelmérés',
+    checkupHint:
+      'Átnézi az slskd-maradványokat, a duplikált dalokat és listákat, és hogy mit mutat a Navidrome. Semmit nem módosít.',
+    lastCheckup: 'Utolsó felmérés: {when}',
+    runCheckup: 'Felmérés most',
+    stop: 'Leállítás',
+    step: {
+      starting: 'Indul…',
+      library: 'Könyvtár beolvasása…',
+      playlists: 'Listák beolvasása…',
+      duplicates: 'Duplikált dalok keresése…',
+      monitor: 'Figyelt listák ellenőrzése…',
+      navidrome: 'A Navidrome lekérdezése…',
+      pausing: 'Várakozás a futó letöltésekre…',
+      listing: 'Az slskd mappájának listázása…',
+      verifying: 'Hang összevetése a könyvtárral…',
+      deleting: 'Eltávolítás…',
+      navidrome_scan: 'Várakozás a Navidrome újraolvasására…',
+      merging: 'Listák egyesítése…',
+    },
+    slskdTitle: 'slskd-maradványok',
+    slskdHint:
+      'A régebbi verziók minden Soulseek-fájlt az slskd mappájában hagytak, miután a könyvtárba másolták. Törlésre csak olyan fájl kerül, amelynek hangja azonos egy könyvtárbeli dallal.',
+    slskdLeftovers: 'Fájlok az slskd mappájában',
+    slskdNotChecked: 'Futtasd a felmérést a megszámolásukhoz.',
+    slskdInPlace:
+      'A fájlok az slskd mappájában maradnak, így az a könyvtár része. Nincs mit takarítani.',
+    slskdFound: 'Nem könyvtárbeli dalok: {files} · {size}',
+    slskdCheck: 'Letöltések szüneteltetése és ellenőrzés',
+    slskdCheckTitle: 'Ellenőrzöd az slskd-maradványokat?',
+    slskdCheckBody:
+      'Előbb a letöltések szünetelnek, a futók befejeződnek, hogy összevetés közben semmi ne íródjon. Megerősítés nélkül semmi sem törlődik.',
+    queueHeld:
+      'A letöltések szünetelnek, amíg döntesz. Egy óra múlva maguktól folytatódnak.',
+    slskdKeepResume: 'Megtartás és a letöltések folytatása',
+    status: {
+      verified: 'Azonos a könyvtárban',
+      different: 'Hasonló, nem azonos',
+      unmatched: 'Nincs a könyvtárban',
+      unreadable: 'Olvashatatlan',
+      recent: 'Nemrég változott',
+      missing: 'Eltűnt',
+    },
+    slskdVerifiedHint:
+      'Mindegyik hangja bitre azonos az alatta látható könyvtárbeli fájléval.',
+    showMore: 'Továbbiak',
+    slskdDelete: 'Azonos másolatok törlése ({files} · {size})',
+    slskdDeleteTitle: 'Törlöd az azonos másolatokat?',
+    slskdDeleteBody:
+      'Az slskd mappájából törlendő fájlok: {files} ({size}). Mindegyiket közvetlenül előtte újra ellenőrzi: változatlan, és a könyvtárbeli másolat még megvan. Utána a letöltések folytatódnak.',
+    slskdDeleteConfirm: 'Törlés',
+    slskdCleaned: 'Eltávolítva: {files} · felszabadult: {size}',
+    slskdKeptChanged:
+      'Megtartva, mert megváltozott vagy hiányzott a könyvtárbeli másolat: {files}',
+    checkGone: 'A fájlok eltűntek a lemezről',
+    checkQueueResumed: 'A letöltések folytatódtak',
+    checkNavidromeScan: 'A Navidrome újraolvasott',
+    playlistsTitle: 'Duplikált listák',
+    playlistsHint:
+      'Két M3U-fájl egy listához, például egy, ami ott maradt, ahová egy régi verzió írt. Az egyesítés minden dalt egyszer tart meg, a borítót és egy fájlt. Az eredetiekről előbb mentés készül.',
+    playlistsOk: 'Minden listának egy M3U-fájlja van.',
+    groupReason: {
+      name: 'Azonos név',
+      songs: 'Azonos dalok',
+      manual: 'Saját választás',
+    },
+    songsCount: 'Dalok: {count}',
+    hasCover: 'Van borítója',
+    keeps: 'Megmarad',
+    mergePlan: 'Eredmény: {songs} dal. A dalaik {overlap}%-a közös.',
+    mergeUnsafe:
+      'A dalok csak {overlap}%-a egyezik; lehet, hogy különböző listák. Nincs egyesítés.',
+    merge: 'Egyesítés',
+    mergeTitle: 'Egyesíted ezeket a listákat?',
+    mergeBody:
+      'A(z) {keeper} tartalmazza majd mind a(z) {songs} dalt és a borítót; a többi fájl mentés után törlődik.',
+    merged: 'A(z) {path} most {songs} dalt tartalmaz.',
+    checkOthersGone: 'A többi M3U-fájl eltűnt',
+    checkCover: 'A borító mellette van',
+    checkNavidromeOne:
+      'A Navidrome egyszer mutatja ezt a listát (talált: {count})',
+    backupAt: 'Mentés: {path}',
+    manualTitle: 'Listák kiválasztása',
+    manualHint:
+      'Válassz két vagy több M3U-fájlt, amelyek egy listát kellene alkossanak. Csak akkor egyesülnek, ha a dalok többsége egyezik.',
+    manualFilter: 'Listák szűrése',
+    manualCompare: 'Összevetés',
+    navidromeHint:
+      'Amit a Navidrome és minden hozzá kapcsolt alkalmazás valóban mutat.',
+    navidromeOff: 'A Navidrome nincs beállítva.',
+    navidromeDown: 'A Navidrome nem válaszolt.',
+    navidromeNoAdmin:
+      'Adj meg rendszergazdai belépést a Beállítások → Navidrome alatt, hogy a Doktor lássa az importált listákat és fájljaikat.',
+    navidromeSummary: 'Listák',
+    navidromeCounts:
+      'Duplikált: {duplicates} · Hiányzó M3U: {orphans} · Hiányzó dalok: {incomplete}',
+    navidromeFix: 'Javítás',
+    navidromeFixTitle: 'Javítod a Navidrome-listákat?',
+    navidromeFixBody:
+      'A „törlésre kerül” jelölésű listák törlődnek ({count}), majd a Navidrome újraolvas.',
+    navidromeFixImport:
+      'A Downtify azt is abbahagyja, hogy saját másolatot készítsen a Navidrome által importált listákról.',
+    navidromeSuggestImport:
+      'A Navidrome importálja a Downtify M3U-fájljait (borítóval), és a Downtify ugyanezeket a listákat az API-n is létrehozza, így mindegyik kétszer jelenik meg.',
+    reason: {
+      m3u_and_api: 'Importált M3U és a Downtify másolata',
+      imports: 'Kétszer importálva',
+      api: 'Kétszer létrehozva',
+      name: 'Azonos név',
+      orphan: 'Hiányzik az M3U-ja',
+    },
+    kind: {
+      import: 'M3U-ból importálva',
+      downtify: 'A Downtify hozta létre',
+      other: 'Egyéb',
+    },
+    willRemove: 'törlésre kerül',
+    wouldLoseSongs:
+      'megmarad: olyan dalai vannak, amelyek az importból hiányoznak',
+    incomplete: 'A Navidrome {songs} dalt mutat az M3U {m3u} dalából.',
+    incompleteOutside: 'Dalok a Navidrome zenemappáján kívül: {count}.',
+    navidromeSongDupes: 'Duplikált dalok a Navidrome-ban',
+    songDupesCounts:
+      'Többször listázott dalok: {groups} · felesleges másolatok: {extra} · slskd mappában: {slskd}',
+    ndRemoved: 'Törölt listák: {count}',
+    ndRemaining: 'Maradt: duplikált {duplicates}, hiányzó M3U {orphans}',
+    duplicatesTitle: 'Duplikált dalok',
+    duplicatesHint:
+      'Ugyanazt a dalt tartalmazó könyvtárbeli fájlok. Nézd át őket a Könyvtárban; a Doktor nem töröl dalokat.',
+    duplicatesExact: 'Azonos fájl',
+    duplicatesLikely: 'Valószínűleg ugyanaz a dal',
+    duplicatesCounts: 'Dalok: {groups} · felesleges fájlok: {files} · {size}',
+    relinkedTitle: 'Új Spotify-azonosítóval újra letöltve',
+    relinkedHint:
+      'A Spotify néha egy lista dalát ugyanazzal a dallal cseréli új azonosítóval. A figyelt lista ekkor újra letölti.',
+    relinkedLabel: 'Ugyanaz a dal, több azonosító',
+    relinkedCounts: 'Dalok: {songs} · felesleges fájlok: {extra}',
+    error: {
+      doctor_busy: 'A Doktor már dolgozik.',
+      doctor_failed: 'A Doktor hibával leállt. Lásd a szervernaplót.',
+      queue_busy: 'A futó letöltések nem fejeződtek be időben. Próbáld később.',
+      scan_first: 'Előbb ellenőrizd újra a maradványokat.',
+      m3u_not_found: 'Ez az M3U eltűnt. Futtasd újra a felmérést.',
+      m3u_manual: 'A Könyvtárban létrehozott listák nem egyesülnek.',
+      need_two: 'Válassz legalább két listát.',
+      playlists_differ: 'Túl kevés dal egyezik; különböző listáknak tűnnek.',
+      not_flagged: 'Előbb futtasd újra a felmérést.',
+      navidrome_off: 'A Navidrome nincs beállítva.',
+    },
   },
 }

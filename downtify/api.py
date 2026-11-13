@@ -754,6 +754,9 @@ DEFAULT_SETTINGS: dict[str, Any] = {
         'admin_username': '',
         'admin_password': '',
         'public_playlist': False,
+        # Let Navidrome build playlists from the M3U files (see
+        # navidrome.sync_playlist_to_navidrome) instead of creating them.
+        'm3u_import': False,
         'scan_after_download': True,
         'scan_full': False,
         'scan_wait_seconds': 120,

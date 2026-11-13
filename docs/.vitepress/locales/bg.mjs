@@ -95,6 +95,7 @@ export default {
       'features/library-upgrade.md': 'Подобряване на библиотеката',
       'features/storage-usage.md': 'Хранилище и използване',
       'features/music-trash.md': 'Кошче за музика',
+      'features/doctor.md': 'Доктор',
       'features/replace-audio.md': 'Замяна на аудио',
       'features/external-playlists.md': 'Import existing playlists',
       'features/m3u-export.md': 'M3U експорт',

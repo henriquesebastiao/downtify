@@ -69,6 +69,7 @@ const settings = ref({
     admin_username: '',
     admin_password: '',
     public_playlist: false,
+    m3u_import: false,
     scan_after_download: true,
     scan_wait_seconds: 120,
     scan_poll_seconds: 30,
