@@ -391,3 +391,19 @@ def test_same_recording_reads_the_files_own_tags(tmp_path):
     assert same_recording(path, {**over, 'name': 'Over'})
     assert not same_recording(path, {**over, 'duration': 300})
     assert not same_recording(path, {**over, 'artists': ['Someone Else']})
+
+
+def test_library_songs_folds_the_album_version_tags_deezer_adds():
+    songs = LibrarySongs([_row('Drake/Drake - Over.mp3', 'Over', 233)])
+    over = {'artists': ['Drake'], 'duration': 233}
+
+    for title in (
+        'Over (Album Version)',
+        'Over (Explicit Version)',
+        'Over [Explicit]',
+        'Over - Album Version',
+        'Over (Original Mix)',
+    ):
+        assert songs.find({**over, 'name': title}) == 'Drake/Drake - Over.mp3'
+    for title in ('Over (Clean)', 'Over (Radio Edit)', 'Over (Live)'):
+        assert songs.find({**over, 'name': title}) is None

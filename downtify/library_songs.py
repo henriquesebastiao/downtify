@@ -17,10 +17,17 @@ folded away - plus its length: two files of one key whose lengths
 differ by more than :data:`SAME_SONG_SECONDS` are different recordings
 (a live version, an extended mix) and are never taken for each other.
 A file or a track whose length is unknown never matches.
+
+Deezer adds a few more spellings of the very same recording: ``(Album
+Version)``, ``(Explicit Version)``, ``(Explicit)``, ``- Original Mix``
+and the like are folded away too (:data:`_SAME_RECORDING_TAG`). Words
+that name another recording - ``Clean``, ``Radio Edit``, ``Live``,
+``Remix`` - are kept, and the length must agree as well.
 """
 
 from __future__ import annotations
 
+import re
 from collections import defaultdict
 from collections.abc import Iterable
 from pathlib import Path
@@ -33,6 +40,14 @@ from .library_paths import SLSKD_LIBRARY_PREFIX
 #: Lengths (seconds) of one song in two sources differ by a second or
 #: two (encoder padding, rounding); a different recording by far more.
 SAME_SONG_SECONDS = 3.0
+
+#: Title tags that name no other recording: the album's (explicit)
+#: version, as one catalogue spells it and another leaves out.
+_SAME_RECORDING_TAG = re.compile(
+    r'\s*(?:[([]\s*(?:album|explicit|original|lp)(?:\s+(?:version|mix))?\s*'
+    r'[)\]]|\s-\s(?:album|explicit|original|lp)\s+(?:version|mix)\s*$)',
+    re.IGNORECASE,
+)
 
 
 def _length(value: Any) -> float:
@@ -47,7 +62,7 @@ def _key(artists: Any, title: Any) -> str:
         first = str(artists[0]) if artists else ''
     else:
         first = str(artists or '')
-    key = song_key(first, str(title or ''))
+    key = song_key(first, _SAME_RECORDING_TAG.sub('', str(title or '')))
     # Both halves are needed: a title alone matches too much.
     return '' if key.startswith('|') or key.endswith('|') else key
 
