@@ -1393,7 +1393,7 @@ export default {
       '用逗号分隔扩展名，并按优先级从高到低排列（例如 flac, mp3）。',
     slskdMinBitrate: '有损格式的最低比特率',
     slskdMinBitrateHint:
-      '严格模式下，低于此值或未报告比特率的有损文件会被拒绝。FLAC 不受此限制。',
+      '报告的比特率较低的有损文件会被跳过。未报告比特率的文件仍会被接受，除非开启了严格格式优先级。严格模式下 FLAC 不受此限制。',
     slskdAttempts: '候选尝试次数',
     slskdAttemptsHint: '严格模式下每种格式尝试此数量的候选；否则为总数。',
     slskdStrictPriority: '严格格式优先级',
@@ -1411,6 +1411,32 @@ export default {
     slskdFolderHint: '填写 Downtify 容器内的路径，而非宿主机路径。',
     slskdTimeout: '总超时',
     slskdQueuedTimeout: '排队超时',
+    slskdTimeoutHint: '单次下载允许的最长时间，超时后尝试下一个候选。',
+    slskdQueuedTimeoutHint:
+      '在其他用户的上传队列中等待的最长时间，超时后换下一个。',
+    slskdProfile: '质量方案',
+    slskdProfileHint: '格式列表的起点。可随意修改下方任何字段。',
+    slskdProfileDefault: '默认',
+    slskdProfileLossless: '无损优先',
+    slskdProfileLossy: '仅有损',
+    slskdAdvanced: '微调质量与匹配',
+    slskdAdvancedHint:
+      '额外的比特率规则、候选尝试次数和超时设置。关闭时不使用额外的比特率规则。',
+    slskdUnknownBitrate: '未标明比特率的文件',
+    slskdUnknownBitrateHint:
+      '部分 Soulseek 用户不共享比特率。默认仅在设置了最低比特率的严格模式下拒绝这些文件。',
+    slskdUnknownAuto: '默认',
+    slskdUnknownAllow: '允许',
+    slskdUnknownReject: '拒绝',
+    slskdPreferBitrate: '优先尝试最高比特率',
+    slskdPreferBitrateHint:
+      '在匹配度足够的文件中，优先选择音质最好的，而不是文件名最接近的。',
+    slskdFormatFloors: '各格式最低比特率',
+    slskdFormatFloorsHint:
+      '留空则使用上方的最低值。AAC (m4a) 和 Opus 等高效格式在比 MP3 更低的比特率下也有好音质。',
+    slskdMaxBitrate: '最高比特率',
+    slskdMaxBitrateHint:
+      '0 表示不限制。设为约 400 可跳过 .m4a 文件中的无损音频 (ALAC)，并让文件保持较小。',
     slskdInPlace: '将文件保留在 slskd 文件夹中',
     slskdInPlaceHint:
       '开启：在原位置写入标签并保留文件。关闭：复制并标记到下载文件夹；仅在成功导入后删除源文件。复制、标记或验证失败时会保留源文件。',

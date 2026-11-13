@@ -1538,7 +1538,7 @@ export default {
       'Kommagetrennte Dateiendungen, zuerst die höchste Priorität (z. B. flac, mp3).',
     slskdMinBitrate: 'Minimale Bitrate für verlustbehaftete Formate',
     slskdMinBitrateHint:
-      'Im strikten Modus werden verlustbehaftete Dateien unter diesem Wert oder ohne gemeldete Bitrate abgelehnt. FLAC ist ausgenommen.',
+      'Verlustbehaftete Dateien mit niedrigerer gemeldeter Bitrate werden übersprungen. Dateien ohne Angabe bleiben erlaubt, außer die strikte Formatpriorität ist an. Im strikten Modus ist FLAC ausgenommen.',
     slskdAttempts: 'Kandidatenversuche',
     slskdAttemptsHint:
       'Im strikten Modus wird diese Anzahl je Format versucht, sonst insgesamt.',
@@ -1560,6 +1560,34 @@ export default {
       'Der Pfad innerhalb des Downtify-Containers, nicht auf dem Host.',
     slskdTimeout: 'Gesamtzeitlimit',
     slskdQueuedTimeout: 'Zeitlimit in Warteschlange',
+    slskdTimeoutHint:
+      'Wie lange ein Download dauern darf, bevor der nächste Kandidat versucht wird.',
+    slskdQueuedTimeoutHint:
+      'Wie lange in der Upload-Warteschlange eines anderen Nutzers gewartet wird, bevor es weitergeht.',
+    slskdProfile: 'Qualitätsprofil',
+    slskdProfileHint:
+      'Ein Ausgangspunkt für die Formatliste. Passe beliebige Felder unten an.',
+    slskdProfileDefault: 'Standard',
+    slskdProfileLossless: 'Verlustfrei zuerst',
+    slskdProfileLossy: 'Nur verlustbehaftet',
+    slskdAdvanced: 'Qualität und Abgleich feinabstimmen',
+    slskdAdvancedHint:
+      'Zusätzliche Bitrate-Regeln, Kandidatenversuche und Zeitlimits. Ausgeschaltet werden die zusätzlichen Bitrate-Regeln nicht verwendet.',
+    slskdUnknownBitrate: 'Dateien ohne angegebene Bitrate',
+    slskdUnknownBitrateHint:
+      'Manche Soulseek-Nutzer geben keine Bitrate an. Standard lehnt diese nur im strikten Modus mit Mindestbitrate ab.',
+    slskdUnknownAuto: 'Standard',
+    slskdUnknownAllow: 'Erlauben',
+    slskdUnknownReject: 'Ablehnen',
+    slskdPreferBitrate: 'Höchste Bitrate zuerst versuchen',
+    slskdPreferBitrateHint:
+      'Unter ausreichend passenden Dateien mit der besten Qualität beginnen statt mit dem ähnlichsten Dateinamen.',
+    slskdFormatFloors: 'Mindestbitrate pro Format',
+    slskdFormatFloorsHint:
+      'Leer lassen, um das Minimum oben zu verwenden. Effiziente Formate wie AAC (m4a) und Opus klingen schon bei niedrigeren Bitraten gut als MP3.',
+    slskdMaxBitrate: 'Maximale Bitrate',
+    slskdMaxBitrateHint:
+      '0 erlaubt alles. Etwa 400 überspringt verlustfreies Audio in .m4a-Dateien (ALAC) und hält Dateien klein.',
     slskdInPlace: 'Dateien im slskd-Ordner belassen',
     slskdInPlaceHint:
       'Ein: Dateien am Speicherort taggen und behalten. Aus: in Downloads kopieren und taggen; die Quelle wird erst nach erfolgreichem Import entfernt. Bei Fehlern bleibt sie erhalten.',

@@ -626,7 +626,10 @@ from .podcasts import (
     search_shows,
 )
 from .server_identity import ServerIdentity
-from .slskd_provider import reset_slskd_parallelism
+from .slskd_provider import (
+    normalize_slskd_quality,
+    reset_slskd_parallelism,
+)
 from .storage_scan import plan_folders, scan_folders
 from .stream import StreamCache
 from .track_index import (
@@ -731,6 +734,12 @@ DEFAULT_SETTINGS: dict[str, Any] = {
         'strict_format_priority': False,
         'extensions_whitelist': False,
         'min_bitrate': 256,
+        # Fine-tune quality (see slskd_provider.normalize_slskd_quality).
+        'advanced': False,
+        'unknown_bitrate': 'auto',
+        'format_min_bitrate': {},
+        'max_bitrate': 0,
+        'prefer_bitrate': False,
     },
     # Navidrome (Subsonic API) playlist sync after playlist downloads.
     'sync_navidrome': True,
@@ -964,6 +973,7 @@ def _effective_slskd_settings(settings: dict[str, Any]) -> dict[str, Any]:
         ),
         'extensions_whitelist': bool(raw.get('extensions_whitelist', False)),
         'min_bitrate': min_bitrate,
+        **normalize_slskd_quality(raw),
         'max_parallel_downloads': _setting_int(
             settings, 'max_parallel_downloads', 3, minimum=1, maximum=8
         ),

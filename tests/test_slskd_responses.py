@@ -219,6 +219,120 @@ def test_select_candidates_can_whitelist_extensions():
     assert [row['filename'] for row in selected] == ['Artist - Track.mp3']
 
 
+def _lossy_candidates() -> list[dict[str, Any]]:
+    return [
+        {'filename': 'A - T (128).mp3', 'match_score': 10, 'bitRate': 128},
+        {'filename': 'A - T (unknown).mp3', 'match_score': 10},
+        {'filename': 'A - T (256).mp3', 'match_score': 10, 'bitRate': 256},
+        {'filename': 'A - T (320).mp3', 'match_score': 8, 'bitRate': 320},
+        {'filename': 'A - T (alac).m4a', 'match_score': 9, 'bitRate': 900},
+        {'filename': 'A - T (aac).m4a', 'match_score': 9, 'bitRate': 192},
+        {'filename': 'A - T.flac', 'match_score': 10, 'bitRate': 900},
+    ]
+
+
+def _names(selected: list[dict[str, Any]]) -> list[str]:
+    return [row['filename'] for row in selected]
+
+
+def test_select_candidates_ignores_fine_tune_while_advanced_is_off():
+    settings = {
+        'extensions': ['mp3', 'm4a'],
+        'extensions_whitelist': True,
+        'min_bitrate': 224,
+        'download_attempts': 10,
+        'unknown_bitrate': 'reject',
+        'format_min_bitrate': {'m4a': 128},
+        'max_bitrate': 400,
+        'prefer_bitrate': True,
+    }
+
+    assert _names(
+        _select_download_candidates(_lossy_candidates(), settings)
+    ) == [
+        'A - T (256).mp3',
+        'A - T (unknown).mp3',
+        'A - T (alac).m4a',
+        'A - T (320).mp3',
+    ]
+
+
+def test_select_candidates_can_allow_unknown_bitrate_in_strict_mode():
+    selected = _select_download_candidates(
+        _lossy_candidates(),
+        {
+            'extensions': ['mp3'],
+            'extensions_whitelist': True,
+            'strict_format_priority': True,
+            'min_bitrate': 224,
+            'download_attempts': 5,
+            'advanced': True,
+            'unknown_bitrate': 'allow',
+        },
+    )
+
+    assert _names(selected) == [
+        'A - T (256).mp3',
+        'A - T (unknown).mp3',
+        'A - T (320).mp3',
+    ]
+
+
+def test_select_candidates_can_reject_unknown_bitrate_without_strict():
+    selected = _select_download_candidates(
+        _lossy_candidates(),
+        {
+            'extensions': ['mp3'],
+            'extensions_whitelist': True,
+            'min_bitrate': 224,
+            'download_attempts': 5,
+            'advanced': True,
+            'unknown_bitrate': 'reject',
+        },
+    )
+
+    assert _names(selected) == ['A - T (256).mp3', 'A - T (320).mp3']
+
+
+def test_select_candidates_per_format_floor_and_max_bitrate():
+    selected = _select_download_candidates(
+        _lossy_candidates(),
+        {
+            'extensions': ['mp3', 'm4a'],
+            'extensions_whitelist': True,
+            'strict_format_priority': True,
+            'min_bitrate': 256,
+            'download_attempts': 5,
+            'advanced': True,
+            'format_min_bitrate': {'m4a': 160},
+            'max_bitrate': 400,
+        },
+    )
+
+    assert _names(selected) == [
+        'A - T (256).mp3',
+        'A - T (320).mp3',
+        'A - T (aac).m4a',
+    ]
+
+
+def test_select_candidates_prefer_bitrate_tries_highest_first():
+    selected = _select_download_candidates(
+        _lossy_candidates(),
+        {
+            'extensions': ['mp3'],
+            'extensions_whitelist': True,
+            'strict_format_priority': True,
+            'min_bitrate': 224,
+            'download_attempts': 5,
+            'advanced': True,
+            'prefer_bitrate': True,
+        },
+    )
+
+    assert _names(selected) == ['A - T (320).mp3', 'A - T (256).mp3']
+
+
 def test_rank_accepts_title_and_artist_from_parent_folders():
     song = {
         'artists': ['Daft Punk'],
