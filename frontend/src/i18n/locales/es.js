@@ -2311,6 +2311,9 @@ export default {
       verifying: 'Comparando el audio con la biblioteca…',
       deleting: 'Eliminando…',
       navidrome_scan: 'Esperando a que Navidrome vuelva a escanear…',
+      dedupe_check: 'Comprobando las copias…',
+      dedupe_relink: 'Moviendo listas, me gusta y seguimientos…',
+      dedupe_remove: 'Eliminando las demás copias…',
       merging: 'Uniendo listas…',
     },
     slskdTitle: 'Restos de slskd',
@@ -2422,10 +2425,32 @@ export default {
     ndRemaining: 'Quedan: duplicadas {duplicates}, M3U desaparecido {orphans}',
     duplicatesTitle: 'Canciones duplicadas',
     duplicatesHint:
-      'Archivos de la biblioteca con la misma canción. Revísalos en la Biblioteca; el Doctor no borra canciones de la biblioteca.',
+      'Archivos de la biblioteca con la misma canción. Escucha cada copia y quédate con la mejor: sus listas, me gusta y seguimientos reemplazan los de las demás, así que no falta nada ni se descarga de nuevo. Las copias que de verdad son versiones distintas se pueden conservar todas.',
     duplicatesExact: 'Mismo archivo',
     duplicatesLikely: 'Probablemente la misma canción',
     duplicatesCounts: 'Canciones: {groups} · archivos de más: {files} · {size}',
+    dupeKeep: 'Conservar esta copia',
+    dupeIn: 'En {playlists}',
+    dupeInNone: 'En ninguna lista',
+    dupeTags: 'Etiquetas: {title} · {album}',
+    dupeMerge: 'Conservar la copia elegida',
+    dupeKeepAll: 'Conservar todas, son distintas',
+    dupeMergeTitle: '¿Conservar solo esta copia?',
+    dupeMergeBody:
+      '{keep} se queda. Las demás copias ({count}) se eliminan {where}. Cada lista, me gusta y seguimiento que las usaba ahora usa la que conservas, así que nada se descarga de nuevo.',
+    dupeToTrash: 'a la papelera de música, durante 30 días',
+    dupeForGood: 'para siempre',
+    dupeMergeConfirm: 'Conservar y eliminar las demás',
+    dupeMerged: 'Conservada {keep} · copias eliminadas: {count}',
+    dupeMergedPlaylists: 'Listas actualizadas: {playlists}',
+    dupeCheckClean: 'Ya nada apunta a las copias eliminadas',
+    dupeLeftovers:
+      'Algo aún apunta a una copia eliminada ({where}). Haz la revisión de nuevo.',
+    dupeFailed: 'No eliminadas: {files}',
+    dupeKeptApart: 'Conservadas como canciones distintas: {count}',
+    dupeListAgain: 'Volver a mostrarlas',
+    dupeKeptAllDone:
+      'Conservadas todas. No vuelven a aparecer salvo que surja otra copia.',
     relinkedTitle: 'Descargada otra vez con un nuevo ID de Spotify',
     relinkedHint:
       'A veces Spotify cambia una pista de la lista por la misma canción con otro ID. Una lista vigilada la descarga entonces otra vez.',
@@ -2444,6 +2469,16 @@ export default {
       playlists_differ:
         'Coinciden muy pocas canciones; parecen listas distintas.',
       not_flagged: 'Haz la revisión de nuevo primero.',
+      dedupe_rescan: 'La lista está desactualizada. Haz la revisión de nuevo.',
+      dedupe_missing:
+        'Uno de los archivos ya no está. Haz la revisión de nuevo.',
+      dedupe_invalid: 'Elige una copia para conservar.',
+      dedupe_trash:
+        'La papelera de música no puede recibir una de las copias (su carpeta no está cubierta o se está reproduciendo). No se cambió nada.',
+      dedupe_replacement_pending:
+        'Reemplazar audio aún está trabajando en uno de estos archivos.',
+      doctor_not_ready:
+        'Downtify todavía se está iniciando. Inténtalo de nuevo en un momento.',
       navidrome_off: 'Navidrome no está configurado.',
     },
   },

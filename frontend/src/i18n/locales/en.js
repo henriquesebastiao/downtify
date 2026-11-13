@@ -2238,6 +2238,9 @@ export default {
       verifying: 'Comparing audio with the library…',
       deleting: 'Removing…',
       navidrome_scan: 'Waiting for Navidrome to rescan…',
+      dedupe_check: 'Checking the copies…',
+      dedupe_relink: 'Moving playlists, likes and watches…',
+      dedupe_remove: 'Removing the other copies…',
       merging: 'Merging playlists…',
     },
     slskdTitle: 'slskd leftovers',
@@ -2346,10 +2349,32 @@ export default {
     ndRemaining: 'Left: duplicates {duplicates}, M3U gone {orphans}',
     duplicatesTitle: 'Duplicate songs',
     duplicatesHint:
-      'Library files that hold the same song. Review them in the Library; the Doctor doesn’t delete library songs.',
+      'Library files that hold the same song. Listen to each copy and keep the best one: its playlists, likes and watches take over the others’, so nothing goes missing or downloads again. Copies that really are different versions can all be kept.',
     duplicatesExact: 'Same file',
     duplicatesLikely: 'Likely the same song',
     duplicatesCounts: 'Songs: {groups} · extra files: {files} · {size}',
+    dupeKeep: 'Keep this copy',
+    dupeIn: 'In {playlists}',
+    dupeInNone: 'In no playlist',
+    dupeTags: 'Tagged {title} · {album}',
+    dupeMerge: 'Keep the selected copy',
+    dupeKeepAll: 'Keep all, they’re different',
+    dupeMergeTitle: 'Keep only this copy?',
+    dupeMergeBody:
+      '{keep} stays. The other copies ({count}) are removed {where}. Every playlist, like and watch that used them now uses the one you keep, so nothing is downloaded again.',
+    dupeToTrash: 'to the music trash, for 30 days',
+    dupeForGood: 'for good',
+    dupeMergeConfirm: 'Keep and remove the others',
+    dupeMerged: 'Kept {keep} · copies removed: {count}',
+    dupeMergedPlaylists: 'Playlists updated: {playlists}',
+    dupeCheckClean: 'Nothing points at the removed copies anymore',
+    dupeLeftovers:
+      'Something still points at a removed copy ({where}). Run the health check again.',
+    dupeFailed: 'Not removed: {files}',
+    dupeKeptApart: 'Kept as different songs: {count}',
+    dupeListAgain: 'List them again',
+    dupeKeptAllDone:
+      'Kept them all. They aren’t listed again unless another copy turns up.',
     relinkedTitle: 'Downloaded again under a new Spotify ID',
     relinkedHint:
       'Spotify sometimes swaps a playlist’s track for the same song under a new ID. A monitored playlist then downloads it again.',
@@ -2366,6 +2391,14 @@ export default {
       playlists_differ:
         'Too few songs match; these look like different playlists.',
       not_flagged: 'Run the health check again first.',
+      dedupe_rescan: 'The list is out of date. Run the health check again.',
+      dedupe_missing: 'One of the files is gone. Run the health check again.',
+      dedupe_invalid: 'Choose one copy to keep.',
+      dedupe_trash:
+        'The music trash can’t take one of the copies (its folder isn’t covered, or it’s playing). Nothing was changed.',
+      dedupe_replacement_pending:
+        'Replace audio is still working on one of these files.',
+      doctor_not_ready: 'Downtify is still starting. Try again in a moment.',
       navidrome_off: 'Navidrome isn’t set up.',
     },
   },

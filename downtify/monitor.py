@@ -885,6 +885,33 @@ def delete_user_watches(db: PlaylistMonitorDB, user_id: int) -> None:
         db.delete_playlist(watch.id)
 
 
+def repoint_downloaded_file(db: PlaylistMonitorDB, old: str, new: str) -> int:
+    """Point every record naming the file *old* at *new*: the tracks
+    watches downloaded, the artist releases they recorded and the watch
+    history. For a merged duplicate (see downtify.duplicate_merge), so a
+    watch doesn't take its track for missing and download it again.
+    Returns how many downloaded tracks moved."""
+
+    old_name = str(old or '').strip().replace('\\', '/')
+    new_name = str(new or '').strip().replace('\\', '/')
+    if not old_name or not new_name or old_name == new_name:
+        return 0
+    with db._connect() as conn:
+        moved = conn.execute(
+            'UPDATE downloaded_tracks SET filename = ? WHERE filename = ?',
+            (new_name, old_name),
+        ).rowcount
+        conn.execute(
+            'UPDATE artist_release_tracks SET filename = ? WHERE filename = ?',
+            (new_name, old_name),
+        )
+        conn.execute(
+            'UPDATE watch_events SET filename = ? WHERE filename = ?',
+            (new_name, old_name),
+        )
+    return moved
+
+
 def _row_to_playlist(row: sqlite3.Row) -> MonitoredPlaylist:
     keys = row.keys()
     return MonitoredPlaylist(
