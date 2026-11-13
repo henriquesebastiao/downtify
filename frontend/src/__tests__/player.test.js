@@ -242,3 +242,51 @@ describe('usePlayer queue', () => {
     expect(player.sleepAt.value).toBe(null)
   })
 })
+
+// Closing the player bar calls stop(): what it leaves saved must not bring
+// the bar back on the next page load.
+describe('usePlayer stop', () => {
+  let saved
+
+  // A fresh import is a page load: it restores whatever was saved. The
+  // previous load's watcher has saved its last change by then.
+  async function load() {
+    vi.resetModules()
+    const { usePlayer } = await import('../model/player.js')
+    return usePlayer()
+  }
+
+  beforeEach(() => {
+    saved = new Map()
+    globalThis.window = {
+      innerWidth: 1280,
+      location: { protocol: 'http:', hostname: 'localhost', port: '' },
+      addEventListener: () => {},
+    }
+    globalThis.localStorage = {
+      getItem: (key) => saved.get(key) ?? null,
+      setItem: (key, value) => saved.set(key, String(value)),
+      removeItem: (key) => saved.delete(key),
+    }
+    globalThis.Audio = FakeAudio
+  })
+
+  afterEach(() => {
+    delete globalThis.Audio
+  })
+
+  it('forgets the session so a reload keeps the player closed', async () => {
+    let player = await load()
+    player.setPlaylist(['A - One.mp3', 'A - Two.mp3'], {
+      startIndex: 0,
+      context: { type: 'album', title: 'Numbers' },
+    })
+    player = await load()
+    expect(player.currentTrack.value.title).toBe('One')
+
+    player.stop()
+    expect(player.currentTrack.value).toBeFalsy()
+    player = await load()
+    expect(player.currentTrack.value).toBeFalsy()
+  })
+})

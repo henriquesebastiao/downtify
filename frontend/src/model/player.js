@@ -334,6 +334,7 @@ function stop() {
   playlist.value = []
   currentIndex.value = -1
   currentTime.value = 0
+  restoreTime = 0
   duration.value = 0
   context.value = null
 }
