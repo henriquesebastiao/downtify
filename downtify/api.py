@@ -693,6 +693,10 @@ DEFAULT_SETTINGS: dict[str, Any] = {
     # picker on an artist's Library page never checks these.
     'download_cover_art_artist': True,
     'download_cover_art_artist_banner': False,
+    # Artist Watch also reads Deezer's discography of a watched artist:
+    # YouTube Music's artist page doesn't list every release of every
+    # artist (see ``monitor._artist_discography``).
+    'artist_watch_deezer': True,
     'max_parallel_downloads': 3,
     'download_delay_seconds': 0,
     'download_retry_budget_minutes': 0,
