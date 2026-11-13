@@ -9,7 +9,7 @@ Downtify telefonunuzdaki uygulamalara hizmet verebilir: kitaplığa göz atar ve
 ::: warning Uygulama hâlâ geliştirme aşamasında
 **Ayarlar → Uygulamalar** *Deneysel* olarak işaretlidir. Bu sayfada anlatılan sunucu tarafı bitmiştir ve çalışır, ama **Android uygulamasının hiçbir sürümü henüz yayımlanmadı**; bu yüzden şimdilik kurulacak bir şey yok ve eşleştirme ile akışın ayrıntıları Downtify sürümleri arasında hâlâ değişebilir.
 
-Uygulama [henriquesebastiao/downtify-android](https://github.com/henriquesebastiao/downtify-android) adresinde açık biçimde geliştirilir. Başka her şey aynı API üzerine kurulabilir — bkz. [mobil istemci sözleşmesi](../mobile-client-contract.md).
+Uygulama [henriquesebastiao/downtify-android](https://github.com/henriquesebastiao/downtify-android) adresinde açık biçimde geliştirilir. iPhone ve iPad uygulaması [michaelmoskie/Downtify-IOS-Client](https://github.com/michaelmoskie/Downtify-IOS-Client) adresindedir. Başka her şey aynı API üzerine kurulabilir — bkz. [mobil istemci sözleşmesi](../mobile-client-contract.md).
 :::
 
 ## Uygulamadan oturum açma

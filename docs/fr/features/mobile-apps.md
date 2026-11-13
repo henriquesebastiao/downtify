@@ -9,7 +9,7 @@ Downtify peut servir des applications sur votre téléphone : elles parcourent l
 ::: warning L’application est encore en développement
 **Paramètres → Applications** est marqué *Expérimental*. La partie serveur décrite sur cette page est terminée et fonctionne, mais **aucune version de l’application Android n’a encore été publiée** ; il n’y a donc rien à installer pour l’instant, et les détails de l’association et de la diffusion peuvent encore changer d’une version de Downtify à l’autre.
 
-L’application est développée en ouvert sur [henriquesebastiao/downtify-android](https://github.com/henriquesebastiao/downtify-android). Tout autre client peut être construit sur la même API — voir le [contrat du client mobile](../mobile-client-contract.md).
+L’application est développée en ouvert sur [henriquesebastiao/downtify-android](https://github.com/henriquesebastiao/downtify-android). L’application pour iPhone et iPad se trouve sur [michaelmoskie/Downtify-IOS-Client](https://github.com/michaelmoskie/Downtify-IOS-Client). Tout autre client peut être construit sur la même API — voir le [contrat du client mobile](../mobile-client-contract.md).
 :::
 
 ## Se connecter depuis l’application

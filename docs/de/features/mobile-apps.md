@@ -9,7 +9,7 @@ Downtify kann Apps auf deinem Handy bedienen: Sie durchsuchen die Bibliothek und
 ::: warning Die App ist noch in Entwicklung
 **Einstellungen → Apps** ist als *Experimentell* gekennzeichnet. Die auf dieser Seite beschriebene Serverseite ist fertig und funktioniert, aber **es wurde noch keine Version der Android-App veröffentlicht**, es gibt also vorerst nichts zu installieren, und Details zum Koppeln und Streamen können sich zwischen Downtify-Versionen noch ändern.
 
-Die App wird offen unter [henriquesebastiao/downtify-android](https://github.com/henriquesebastiao/downtify-android) entwickelt. Alles andere lässt sich gegen dieselbe API bauen — siehe den [Vertrag für mobile Clients](../mobile-client-contract.md).
+Die App wird offen unter [henriquesebastiao/downtify-android](https://github.com/henriquesebastiao/downtify-android) entwickelt. Die App für iPhone und iPad ist unter [michaelmoskie/Downtify-IOS-Client](https://github.com/michaelmoskie/Downtify-IOS-Client) verfügbar. Alles andere lässt sich gegen dieselbe API bauen — siehe den [Vertrag für mobile Clients](../mobile-client-contract.md).
 :::
 
 ## In der App anmelden
