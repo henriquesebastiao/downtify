@@ -23,11 +23,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from loguru import logger
 from pydantic import BaseModel, Field
 
-from . import api, m3u
+from . import api, m3u, trash_routes
 from .admin_access import admin_user
 from .doctor import (
     STATUS_VERIFIED,
@@ -47,9 +47,21 @@ from .doctor import (
     working_copy_rows,
 )
 from .doctor_audio import AudioHashCache
-from .library_catalog import drop_library_listing_files
+from .duplicate_merge import (
+    KeptApart,
+    MergeError,
+    MergePlan,
+    MergeStores,
+    finish_merge,
+    leftover_references,
+    plan_merge,
+    relink_duplicates,
+)
+from .library_catalog import drop_library_listing_files, list_library_entries
+from .library_delete import delete_library_file
 from .library_paths import locate_library_file
 from .library_paths_cache import invalidate_library_paths_cache
+from .library_trash import TrashError
 from .library_usage import duplicates
 from .navidrome import NavidromeClient, _effective_navidrome_settings
 from .playlist_identity import made_by_downtify, playlist_key
@@ -62,6 +74,10 @@ DRAIN_TIMEOUT = 30 * 60
 PAUSE_EXPIRY = 60 * 60
 #: Examples returned per finding; counts always cover everything.
 EXAMPLES = 50
+#: Duplicate groups the review lists (the counts cover all of them).
+REVIEW_GROUPS = 500
+#: Copies one merge may remove.
+MERGE_MAX = 20
 
 _lock = threading.Lock()
 _job: dict[str, Any] = {}
@@ -72,6 +88,7 @@ _last: dict[str, Any] = {}
 #: the last health check flagged (``flagged``).
 _state: dict[str, Any] = {}
 _hashes: Optional[AudioHashCache] = None
+_kept: Optional[KeptApart] = None
 
 
 # ---------------------------------------------------------------------------
@@ -93,6 +110,13 @@ def _hash_cache() -> AudioHashCache:
     if _hashes is None:
         _hashes = AudioHashCache(_data_dir() / 'doctor' / 'audio_hashes.db')
     return _hashes
+
+
+def _kept_apart() -> KeptApart:
+    global _kept
+    if _kept is None:
+        _kept = KeptApart(_data_dir() / 'doctor' / 'duplicates.db')
+    return _kept
 
 
 def _busy() -> bool:
@@ -299,7 +323,7 @@ def _health(job: dict[str, Any]) -> dict[str, Any]:
         referenced=referenced,
     )
     _step(job, 'duplicates')
-    dupes = duplicates(library, inputs['providers'])
+    dupes = duplicates(library, inputs['providers'], limit=None)
     groups = m3u_duplicate_groups(infos)
     report: dict[str, Any] = {
         'scanned_at': _now(),
@@ -308,12 +332,7 @@ def _health(job: dict[str, Any]) -> dict[str, Any]:
             'leftovers': len(leftovers),
             'bytes': sum(int(r.get('size') or 0) for r in leftovers),
         },
-        'duplicates': {
-            'totals': {
-                kind: dupes.get(kind, {}) for kind in ('exact', 'likely')
-            },
-            'groups': dupes.get('examples', [])[:EXAMPLES],
-        },
+        'duplicates': _duplicate_review(dupes.get('examples', []), infos),
         'playlists': {
             'm3u': len(infos),
             'groups': [g.as_dict() for g in groups],
@@ -330,6 +349,55 @@ def _health(job: dict[str, Any]) -> dict[str, Any]:
         for m in g['members']
     } | {o['id'] for o in report['navidrome'].get('orphans', [])}
     return report
+
+
+def _duplicate_review(
+    found: list[dict[str, Any]], infos: list[M3UInfo]
+) -> dict[str, Any]:
+    """The duplicate groups to decide on: all but those kept apart, each
+    file with the playlists it is in (from the M3U files)."""
+
+    kept = _kept_apart()
+    pairs = kept.pairs()
+    review = [
+        g
+        for g in found
+        if not kept.settled([f['file'] for f in g['files']], pairs)
+    ]
+    playlists: dict[str, list[str]] = {}
+    for info in infos:
+        for stored in info.entries:
+            names = playlists.setdefault(norm(stored), [])
+            if info.name not in names:
+                names.append(info.name)
+    for group in review:
+        for item in group['files']:
+            item['playlists'] = sorted(playlists.get(norm(item['file']), []))
+    _state['duplicates'] = {
+        norm(item['file']): index
+        for index, group in enumerate(review)
+        for item in group['files']
+    }
+    return {
+        'totals': _duplicate_totals(review),
+        'groups': review[:REVIEW_GROUPS],
+        'kept_apart': len(found) - len(review),
+        # Where a merge's extra copies go: the music trash, or for good.
+        'trash': api.state.library_trash is not None,
+    }
+
+
+def _duplicate_totals(groups: list[dict[str, Any]]) -> dict[str, Any]:
+    return {
+        kind: {
+            'groups': sum(1 for g in groups if g['kind'] == kind),
+            'files': sum(
+                len(g['files']) - 1 for g in groups if g['kind'] == kind
+            ),
+            'bytes': sum(g['bytes'] for g in groups if g['kind'] == kind),
+        }
+        for kind in ('exact', 'likely')
+    }
 
 
 def _relinked(entries: list[dict[str, Any]]) -> dict[str, Any]:
@@ -809,3 +877,210 @@ def _navidrome_repair(job: dict[str, Any], payload: NavidromeRepair) -> dict:
             'incomplete': len(findings['incomplete']),
         },
     }
+
+
+# ---------------------------------------------------------------------------
+# Duplicate songs: merge, keep both
+# ---------------------------------------------------------------------------
+
+
+class DuplicateMerge(BaseModel):
+    keep: str = Field(min_length=1, max_length=4096)
+    remove: list[str] = Field(min_length=1, max_length=MERGE_MAX)
+
+
+class DuplicateFiles(BaseModel):
+    files: list[str] = Field(min_length=2, max_length=MERGE_MAX + 1)
+
+
+def _same_group(files: list[str]) -> None:
+    """Only files the last health check grouped together are merged or
+    kept apart: a stale page can't act on files it never saw grouped."""
+
+    groups = _state.get('duplicates')
+    if groups is None:
+        raise HTTPException(409, detail={'code': 'dedupe_rescan'})
+    found = {groups.get(norm(f)) for f in files}
+    if None in found or len(found) != 1:
+        raise HTTPException(409, detail={'code': 'dedupe_rescan'})
+
+
+def _settle_review(gone: list[str], kept_apart: list[str]) -> None:
+    """Take merged files (*gone*) and groups kept apart out of the last
+    health check's list, so the page doesn't need a new scan."""
+
+    last = (_last.get('health') or {}).get('result') or {}
+    review = last.get('duplicates')
+    if not review:
+        return
+    gone_set = {norm(f) for f in gone}
+    apart = {norm(f) for f in kept_apart}
+    groups = []
+    for group in review['groups']:
+        names = {norm(f['file']) for f in group['files']}
+        if apart and names <= apart:
+            review['kept_apart'] = review.get('kept_apart', 0) + 1
+            continue
+        group['files'] = [
+            f for f in group['files'] if norm(f['file']) not in gone_set
+        ]
+        if len(group['files']) > 1:
+            sizes = [int(f.get('bytes') or 0) for f in group['files']]
+            group['bytes'] = sum(sizes) - max(sizes)
+            groups.append(group)
+    review['groups'] = groups
+    review['totals'] = _duplicate_totals(groups)
+    for name in gone_set:
+        _state.get('duplicates', {}).pop(name, None)
+
+
+@router.post('/duplicates/keep')
+async def duplicates_keep(payload: DuplicateFiles) -> dict[str, Any]:
+    """Keep both (or all): the files are different songs. The Doctor
+    stops listing them until another look-alike turns up."""
+
+    _same_group(payload.files)
+    added = await asyncio.to_thread(_kept_apart().keep, payload.files)
+    _settle_review([], payload.files)
+    return {'pairs': added}
+
+
+@router.post('/duplicates/keep/reset')
+async def duplicates_keep_reset() -> dict[str, Any]:
+    """List every group kept apart again (on the next health check)."""
+
+    return {'forgotten': await asyncio.to_thread(_kept_apart().forget)}
+
+
+@router.post('/duplicates/merge')
+async def duplicates_merge(
+    payload: DuplicateMerge, request: Request
+) -> dict[str, Any]:
+    """Keep *keep*, move every reference to the copies in *remove* onto
+    it, then remove them - to the music trash when it is on."""
+
+    user_id = admin_user(request)
+    _same_group([payload.keep, *payload.remove])
+
+    async def work(job: dict[str, Any]) -> dict[str, Any]:
+        return await _merge_duplicates(job, payload, user_id)
+
+    return _start('dedupe', work)
+
+
+def _merge_stores(ctx) -> MergeStores:
+    if api.state.audio_replacements is None:
+        raise HTTPException(503, detail={'code': 'doctor_not_ready'})
+    return MergeStores(
+        ctx=ctx,
+        replacements=api.state.audio_replacements,
+        monitor_db=api.state.monitor_db,
+        library_visibility=api.state.library_visibility,
+        playlist_hidden=api.state.playlist_hidden,
+        file_providers=api.state.file_providers,
+        playlist_catalog=api.state.playlist_catalog,
+    )
+
+
+async def _merge_duplicates(
+    job: dict[str, Any], payload: DuplicateMerge, user_id: int
+) -> dict[str, Any]:
+    ctx = _ctx()
+    stores = _merge_stores(ctx)
+    _step(job, 'dedupe_check')
+    try:
+        plan = await asyncio.to_thread(
+            plan_merge, payload.keep, payload.remove, ctx
+        )
+    except MergeError as exc:
+        raise HTTPException(
+            409, detail={'code': exc.code, 'file': exc.file}
+        ) from None
+    extras = [name for name, _path in plan.extras]
+    trash = api.state.library_trash
+    batch = ''
+    if trash is not None:
+        # Checked before anything moves: a copy the trash can't take
+        # (a folder it doesn't cover, a song playing) stops the merge.
+        try:
+            tracks = await asyncio.to_thread(
+                trash_routes._selection, trash_routes.Selection(files=extras)
+            )
+            batch = (await asyncio.to_thread(trash.preview, user_id, tracks))[
+                'confirmation'
+            ]
+        except TrashError as exc:
+            raise HTTPException(
+                409, detail={'code': 'dedupe_trash', 'reason': str(exc)}
+            ) from None
+    _step(job, 'dedupe_relink')
+    try:
+        await asyncio.to_thread(relink_duplicates, plan, stores)
+    except MergeError as exc:
+        raise HTTPException(
+            409, detail={'code': exc.code, 'file': exc.file}
+        ) from None
+    _step(job, 'dedupe_remove')
+    removed, failed = await _remove_copies(plan, ctx, user_id, batch)
+    await asyncio.to_thread(finish_merge, plan, stores, removed)
+    await asyncio.to_thread(_kept_apart().forget_files, removed)
+    await asyncio.to_thread(_publish_library, ctx)
+    if plan.playlists:
+        await api._schedule_playlist_refresh_after_delete(set(plan.playlists))
+    await api.announce_playlists_changed()
+    leftovers = await asyncio.to_thread(leftover_references, plan, stores)
+    _settle_review(removed, [])
+    return {
+        'kept': plan.keep,
+        'removed': removed,
+        'failed': failed,
+        'playlists': sorted(plan.playlists),
+        'trash': bool(batch),
+        'leftovers': leftovers,
+    }
+
+
+async def _remove_copies(
+    plan: MergePlan, ctx, user_id: int, batch: str
+) -> tuple[list[str], list[dict[str, str]]]:
+    extras = [name for name, _path in plan.extras]
+    if batch:
+        trash = api.state.library_trash
+        try:
+            await asyncio.to_thread(trash.confirm, user_id, batch)
+        except TrashError as exc:
+            return [], [{'file': f, 'error': str(exc)} for f in extras]
+        await trash_routes.publish_changes()
+        trash_routes.wake_worker()
+        return extras, []
+    removed, failed = [], []
+    for name in extras:
+        result = await asyncio.to_thread(
+            delete_library_file,
+            name,
+            ctx,
+            cover_cache=api.state.cover_cache,
+            metadata_cache=api.state.metadata_cache,
+            playlist_catalog=api.state.playlist_catalog,
+            track_index=api.state.track_index,
+            navidrome_index=api.state.navidrome_index,
+        )
+        if result.get('deleted'):
+            removed.append(name)
+        else:
+            failed.append({
+                'file': name,
+                'error': str(result.get('error') or 'Delete failed'),
+            })
+    return removed, failed
+
+
+def _publish_library(ctx) -> None:
+    """What Replace audio does after publishing: hidden songs, listings
+    and the mobile apps' library see the change."""
+
+    if api.state.library_visibility is not None:
+        api.state.library_visibility.invalidate()
+    invalidate_library_paths_cache(drop_entries=True)
+    if api.state.library_sync is not None:
+        api.state.library_sync.refresh(list_library_entries(ctx))

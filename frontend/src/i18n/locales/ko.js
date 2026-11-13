@@ -2267,6 +2267,9 @@ export default {
       verifying: '라이브러리와 오디오 비교 중…',
       deleting: '삭제하는 중…',
       navidrome_scan: 'Navidrome 재검색 기다리는 중…',
+      dedupe_check: '사본 확인 중…',
+      dedupe_relink: '플레이리스트, 좋아요, 모니터링 옮기는 중…',
+      dedupe_remove: '나머지 사본 제거 중…',
       merging: '재생목록 합치는 중…',
     },
     slskdTitle: 'slskd 잔여 파일',
@@ -2375,10 +2378,32 @@ export default {
     ndRemaining: '남음: 중복 {duplicates}, M3U 없음 {orphans}',
     duplicatesTitle: '중복 노래',
     duplicatesHint:
-      '같은 노래를 담은 라이브러리 파일입니다. 라이브러리에서 확인하세요. 닥터는 라이브러리 노래를 삭제하지 않습니다.',
+      '같은 곡이 들어 있는 라이브러리 파일입니다. 각 사본을 들어 보고 가장 좋은 것을 남기세요. 다른 사본의 플레이리스트, 좋아요, 모니터링이 남긴 사본으로 옮겨지므로 아무것도 사라지거나 다시 다운로드되지 않습니다. 실제로 다른 버전인 사본은 모두 남길 수 있습니다.',
     duplicatesExact: '같은 파일',
     duplicatesLikely: '같은 노래로 보임',
     duplicatesCounts: '노래: {groups} · 여분 파일: {files} · {size}',
+    dupeKeep: '이 사본 남기기',
+    dupeIn: '포함된 곳: {playlists}',
+    dupeInNone: '어느 플레이리스트에도 없음',
+    dupeTags: '태그: {title} · {album}',
+    dupeMerge: '선택한 사본 남기기',
+    dupeKeepAll: '모두 남기기(서로 다름)',
+    dupeMergeTitle: '이 사본만 남길까요?',
+    dupeMergeBody:
+      '{keep}이(가) 남습니다. 다른 사본 {count}개는 {where} 제거됩니다. 이를 사용하던 모든 플레이리스트, 좋아요, 모니터링은 이제 남긴 사본을 사용하므로 다시 다운로드되지 않습니다.',
+    dupeToTrash: '음악 휴지통으로(30일 보관)',
+    dupeForGood: '영구적으로',
+    dupeMergeConfirm: '남기고 나머지 제거',
+    dupeMerged: '{keep} 남김 · 제거된 사본: {count}',
+    dupeMergedPlaylists: '업데이트된 플레이리스트: {playlists}',
+    dupeCheckClean: '제거된 사본을 가리키는 항목이 더 이상 없습니다',
+    dupeLeftovers:
+      '아직 제거된 사본을 가리키는 항목이 있습니다({where}). 상태 점검을 다시 실행하세요.',
+    dupeFailed: '제거되지 않음: {files}',
+    dupeKeptApart: '다른 곡으로 남김: {count}',
+    dupeListAgain: '다시 표시',
+    dupeKeptAllDone:
+      '모두 남겼습니다. 다른 사본이 생기지 않는 한 다시 표시되지 않습니다.',
     relinkedTitle: '새 Spotify ID로 다시 다운로드됨',
     relinkedHint:
       'Spotify는 가끔 재생목록의 곡을 같은 노래의 다른 ID로 바꿉니다. 그러면 모니터링 중인 재생목록이 그 노래를 다시 다운로드합니다.',
@@ -2396,6 +2421,15 @@ export default {
       playlists_differ:
         '겹치는 노래가 너무 적어 서로 다른 재생목록으로 보입니다.',
       not_flagged: '먼저 상태 점검을 다시 실행하세요.',
+      dedupe_rescan: '목록이 오래되었습니다. 상태 점검을 다시 실행하세요.',
+      dedupe_missing: '파일 하나가 없어졌습니다. 상태 점검을 다시 실행하세요.',
+      dedupe_invalid: '남길 사본 하나를 선택하세요.',
+      dedupe_trash:
+        '음악 휴지통이 사본 하나를 받을 수 없습니다(폴더가 포함되지 않았거나 재생 중). 아무것도 바뀌지 않았습니다.',
+      dedupe_replacement_pending:
+        '오디오 교체가 아직 이 파일 중 하나를 처리하고 있습니다.',
+      doctor_not_ready:
+        'Downtify가 아직 시작 중입니다. 잠시 후 다시 시도하세요.',
       navidrome_off: 'Navidrome이 설정되지 않았습니다.',
     },
   },

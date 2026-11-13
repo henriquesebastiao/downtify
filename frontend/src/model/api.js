@@ -946,6 +946,21 @@ function doctorMerge(paths) {
   return API.post('/api/doctor/playlists/merge', { paths })
 }
 
+// Keeps `keep` and moves every reference to the copies in `remove` onto
+// it before removing them (to the music trash when it is on).
+function doctorDuplicatesMerge(keep, remove) {
+  return API.post('/api/doctor/duplicates/merge', { keep, remove })
+}
+
+// "Keep all": the files are different songs; not listed again.
+function doctorDuplicatesKeep(files) {
+  return API.post('/api/doctor/duplicates/keep', { files })
+}
+
+function doctorDuplicatesKeepReset() {
+  return API.post('/api/doctor/duplicates/keep/reset')
+}
+
 function doctorNavidromeRepair(payload) {
   return API.post('/api/doctor/navidrome/repair', payload)
 }
@@ -1214,6 +1229,9 @@ export default {
   doctorSlskdRelease,
   doctorPreview,
   doctorMerge,
+  doctorDuplicatesMerge,
+  doctorDuplicatesKeep,
+  doctorDuplicatesKeepReset,
   doctorNavidromeRepair,
   scanLibraryUsage,
   writePlaylistM3u,

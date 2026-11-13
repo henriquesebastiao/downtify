@@ -403,33 +403,71 @@
           :label="t('doctor.duplicatesLikely')"
           :description="dupeText('likely')"
         />
-        <ul
-          v-if="health.duplicates.groups.length"
-          class="flex flex-col gap-1.5 px-5 py-4 text-[13px]"
+        <div v-if="deduped" class="flex flex-col gap-1.5 px-5 py-4 text-[13px]">
+          <p class="text-fg">
+            {{
+              t('doctor.dupeMerged', {
+                keep: deduped.kept,
+                count: deduped.removed.length,
+              })
+            }}
+          </p>
+          <p v-if="deduped.playlists.length" class="text-muted">
+            {{
+              t('doctor.dupeMergedPlaylists', {
+                playlists: deduped.playlists.join(', '),
+              })
+            }}
+          </p>
+          <CheckLine
+            :ok="!deduped.leftovers.length"
+            :text="
+              deduped.leftovers.length
+                ? t('doctor.dupeLeftovers', {
+                    where: deduped.leftovers.join(', '),
+                  })
+                : t('doctor.dupeCheckClean')
+            "
+          />
+          <p v-if="deduped.failed.length" class="text-warn">
+            {{
+              t('doctor.dupeFailed', {
+                files: deduped.failed.map((f) => f.file).join(', '),
+              })
+            }}
+          </p>
+        </div>
+        <DuplicateGroupCard
+          v-for="group in health.duplicates.groups.slice(0, dupesShown)"
+          :key="group.files.map((f) => f.file).join('|')"
+          :group="group"
+          :busy="busy"
+          @merge="mergeDuplicates"
+          @keep-all="keepAllDuplicates"
+        />
+        <div
+          v-if="health.duplicates.groups.length > dupesShown"
+          class="px-5 pb-4"
         >
-          <li
-            v-for="group in health.duplicates.groups.slice(0, dupesShown)"
-            :key="group.files[0].file"
-            class="rounded-control bg-surface-2 px-3 py-2"
-          >
-            <p class="text-fg">{{ group.artist }} — {{ group.title }}</p>
-            <p
-              v-for="file in group.files"
-              :key="file.file"
-              class="truncate text-muted"
-            >
-              {{ file.file }} · {{ formatBytes(file.bytes) }}
-            </p>
-          </li>
-          <UiButton
-            v-if="health.duplicates.groups.length > dupesShown"
-            variant="plain"
-            size="sm"
-            @click="dupesShown += 10"
-          >
+          <UiButton variant="plain" size="sm" @click="dupesShown += 10">
             {{ t('doctor.showMore') }}
           </UiButton>
-        </ul>
+        </div>
+        <SettingRow
+          v-if="health.duplicates.kept_apart"
+          :label="
+            t('doctor.dupeKeptApart', { count: health.duplicates.kept_apart })
+          "
+        >
+          <UiButton
+            size="sm"
+            variant="ghost"
+            :disabled="busy"
+            @click="listKeptAgain"
+          >
+            {{ t('doctor.dupeListAgain') }}
+          </UiButton>
+        </SettingRow>
       </SettingGroup>
 
       <!-- Repeat downloads -->
@@ -489,6 +527,7 @@ import SettingGroup from '/src/components/settings/SettingGroup.vue'
 import SettingRow from '/src/components/settings/SettingRow.vue'
 import CheckLine from '/src/components/settings/doctor/CheckLine.vue'
 import PlaylistGroupCard from '/src/components/settings/doctor/PlaylistGroupCard.vue'
+import DuplicateGroupCard from '/src/components/settings/doctor/DuplicateGroupCard.vue'
 
 const { t, locale } = useI18n()
 const ui = useUi()
@@ -500,6 +539,7 @@ const slskd = ref(null)
 const cleaned = ref(null)
 const merged = ref(null)
 const ndResult = ref(null)
+const deduped = ref(null)
 const holdingQueue = ref(false)
 const verifiedFiles = ref([])
 const verifiedTotal = ref(0)
@@ -640,6 +680,11 @@ function applyJob(current) {
   }
   if (current.kind === 'merge') merged.value = result
   if (current.kind === 'navidrome') ndResult.value = result
+  if (current.kind === 'dedupe') {
+    // The server took the merged copies out of its last health check.
+    deduped.value = result
+    reloadHealth()
+  }
   // A repair changes what the health check found: look again, once the
   // repair's own result is on screen.
   if (fresh && (current.kind === 'merge' || current.kind === 'navidrome')) {
@@ -761,6 +806,53 @@ async function mergePlaylists(group) {
   })
   if (!ok) return
   start(() => API.doctorMerge(group.members.map((m) => m.path)))
+}
+
+async function reloadHealth() {
+  try {
+    const { data } = await API.doctorStatus()
+    if (data.last?.health) health.value = data.last.health.result
+  } catch {
+    // The next poll tries again.
+  }
+}
+
+async function mergeDuplicates({ keep, remove }) {
+  const trash = Boolean(health.value?.duplicates?.trash)
+  const ok = await ui.confirm({
+    title: t('doctor.dupeMergeTitle'),
+    body: t('doctor.dupeMergeBody', {
+      keep,
+      count: remove.length,
+      where: trash ? t('doctor.dupeToTrash') : t('doctor.dupeForGood'),
+    }),
+    confirmLabel: t('doctor.dupeMergeConfirm'),
+    danger: !trash,
+  })
+  if (!ok) return
+  deduped.value = null
+  start(() => API.doctorDuplicatesMerge(keep, remove))
+}
+
+async function keepAllDuplicates(files) {
+  try {
+    await API.doctorDuplicatesKeep(files)
+  } catch (err) {
+    ui.toast(errorOf(err), { kind: 'error' })
+    return
+  }
+  ui.toast(t('doctor.dupeKeptAllDone'))
+  reloadHealth()
+}
+
+async function listKeptAgain() {
+  try {
+    await API.doctorDuplicatesKeepReset()
+  } catch (err) {
+    ui.toast(errorOf(err), { kind: 'error' })
+    return
+  }
+  runHealth()
 }
 
 async function repairNavidrome() {

@@ -2271,6 +2271,9 @@ export default {
       verifying: 'Ses kitaplıkla karşılaştırılıyor…',
       deleting: 'Kaldırılıyor…',
       navidrome_scan: 'Navidrome’un yeniden taraması bekleniyor…',
+      dedupe_check: 'Kopyalar kontrol ediliyor…',
+      dedupe_relink: 'Çalma listeleri, beğeniler ve izlemeler taşınıyor…',
+      dedupe_remove: 'Diğer kopyalar kaldırılıyor…',
       merging: 'Listeler birleştiriliyor…',
     },
     slskdTitle: 'slskd kalıntıları',
@@ -2382,10 +2385,32 @@ export default {
     ndRemaining: 'Kalan: yinelenen {duplicates}, M3U yok {orphans}',
     duplicatesTitle: 'Yinelenen şarkılar',
     duplicatesHint:
-      'Aynı şarkıyı içeren kitaplık dosyaları. Kitaplık’ta gözden geçirin; Doktor kitaplık şarkılarını silmez.',
+      'Aynı şarkıyı içeren kitaplık dosyaları. Her kopyayı dinleyin ve en iyisini tutun: diğerlerinin çalma listeleri, beğenileri ve izlemeleri ona geçer; böylece hiçbir şey eksilmez ya da yeniden indirilmez. Gerçekten farklı sürüm olan kopyaların hepsi tutulabilir.',
     duplicatesExact: 'Aynı dosya',
     duplicatesLikely: 'Muhtemelen aynı şarkı',
     duplicatesCounts: 'Şarkılar: {groups} · fazla dosyalar: {files} · {size}',
+    dupeKeep: 'Bu kopyayı tut',
+    dupeIn: 'Bulunduğu listeler: {playlists}',
+    dupeInNone: 'Hiçbir listede değil',
+    dupeTags: 'Etiketler: {title} · {album}',
+    dupeMerge: 'Seçilen kopyayı tut',
+    dupeKeepAll: 'Hepsini tut, farklılar',
+    dupeMergeTitle: 'Yalnızca bu kopya kalsın mı?',
+    dupeMergeBody:
+      '{keep} kalır. Diğer kopyalar ({count}) {where} kaldırılır. Onları kullanan her çalma listesi, beğeni ve izleme artık tuttuğunuzu kullanır; böylece hiçbir şey yeniden indirilmez.',
+    dupeToTrash: '30 günlüğüne müzik çöp kutusuna',
+    dupeForGood: 'kalıcı olarak',
+    dupeMergeConfirm: 'Tut ve diğerlerini kaldır',
+    dupeMerged: 'Tutulan: {keep} · kaldırılan kopyalar: {count}',
+    dupeMergedPlaylists: 'Güncellenen listeler: {playlists}',
+    dupeCheckClean: 'Artık hiçbir şey kaldırılan kopyaları göstermiyor',
+    dupeLeftovers:
+      'Bir şey hâlâ kaldırılan bir kopyayı gösteriyor ({where}). Sağlık kontrolünü yeniden çalıştırın.',
+    dupeFailed: 'Kaldırılmayanlar: {files}',
+    dupeKeptApart: 'Farklı şarkı olarak tutulanlar: {count}',
+    dupeListAgain: 'Yeniden listele',
+    dupeKeptAllDone:
+      'Hepsi tutuldu. Başka bir kopya çıkmadıkça yeniden listelenmezler.',
     relinkedTitle: 'Yeni bir Spotify kimliğiyle yeniden indirildi',
     relinkedHint:
       'Spotify bazen listedeki bir parçayı aynı şarkının başka bir kimliğiyle değiştirir. İzlenen liste de onu yeniden indirir.',
@@ -2404,6 +2429,16 @@ export default {
       playlists_differ:
         'Çok az şarkı eşleşiyor; farklı listeler gibi görünüyor.',
       not_flagged: 'Önce sağlık kontrolünü yeniden çalıştırın.',
+      dedupe_rescan:
+        'Liste güncel değil. Sağlık kontrolünü yeniden çalıştırın.',
+      dedupe_missing:
+        'Dosyalardan biri yok. Sağlık kontrolünü yeniden çalıştırın.',
+      dedupe_invalid: 'Tutulacak bir kopya seçin.',
+      dedupe_trash:
+        'Müzik çöp kutusu kopyalardan birini alamıyor (klasörü kapsanmıyor ya da çalıyor). Hiçbir şey değiştirilmedi.',
+      dedupe_replacement_pending:
+        'Sesi değiştir hâlâ bu dosyalardan biri üzerinde çalışıyor.',
+      doctor_not_ready: 'Downtify hâlâ başlıyor. Biraz sonra yeniden deneyin.',
       navidrome_off: 'Navidrome ayarlanmamış.',
     },
   },

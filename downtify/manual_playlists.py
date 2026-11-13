@@ -545,6 +545,34 @@ def drop_manual_playlist(ctx: LibraryContext, name: str) -> dict[str, Any]:
 
 
 @_serialized
+@_serialized
+def drop_copies_of(
+    ctx: LibraryContext, keep: str, extras: list[str]
+) -> list[str]:
+    """Drop *extras* from every manual M3U that already lists *keep* -
+    two copies of one song being merged into *keep*, where the playlist
+    would otherwise list it twice. Returns the playlists changed."""
+
+    keep = str(keep or '').strip().replace('\\', '/')
+    gone = {
+        str(item or '').strip().replace('\\', '/')
+        for item in extras
+        if str(item or '').strip()
+    }
+    if not keep or not gone:
+        return []
+    affected: list[str] = []
+    for path in m3u.iter_m3u_files(ctx.download_dir):
+        if not m3u.is_manual_m3u(path):
+            continue
+        files = _read_files(ctx, path)
+        if keep not in files or not gone.intersection(files):
+            continue
+        _write(ctx, [item for item in files if item not in gone], path)
+        affected.append(path.stem)
+    return affected
+
+
 def prune_files_from_manual_playlists(
     ctx: LibraryContext, filenames: list[str]
 ) -> list[str]:

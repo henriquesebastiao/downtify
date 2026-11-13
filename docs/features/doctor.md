@@ -54,7 +54,11 @@ Navidrome turns every M3U file in its music folder into a playlist of its own, w
 
 ## Duplicate songs
 
-Downtify's own view, the same as [Storage & Usage](storage-usage.md#could-be-cleaned-up): **Same file** and **Likely the same song**, with examples. The Doctor doesn't delete library songs; review them in the Library.
+Downtify's own view, the same as [Storage & Usage](storage-usage.md#could-be-cleaned-up): **Same file** and **Likely the same song**. Each group lists its copies with their format, size, length, where they came from, their own title and album tags, and the playlists they are in. Each copy has a player, with seeking, so you can listen before you decide.
+
+Deleting one copy of a duplicate from the Library isn't enough: the playlists, likes and monitored playlists that used it now point at nothing, so the song looks missing and a monitored playlist downloads it again. **Keep the selected copy** merges instead. Everything that used the other copies moves to the one you keep first: the M3U files (your own playlists too, where the song then appears once), the playlist catalog, the Spotify track index, likes and owners for every account, songs hidden from a playlist, the offline copies in the mobile apps, and Playlist Monitor's downloaded tracks, artist releases and history. Then the other copies are removed: to the [music trash](music-trash.md) when it is on (a copy it can't take, in a folder it doesn't cover or playing right now, stops the merge before anything changes), for good otherwise. The result says which playlists were updated and checks that nothing still points at a removed copy. A copy hidden from the Library doesn't hide the one you keep.
+
+**Keep all, they're different** is for look-alikes that really are different recordings: an edit, a live take, a parody under the original's name. The Doctor stops listing them until another copy turns up; **List them again** brings back every group kept this way.
 
 ## Downloaded again under a new Spotify ID
 
@@ -62,4 +66,4 @@ Spotify sometimes replaces a playlist's track with the same song under a new ID 
 
 ## API
 
-All admin-only, under `/api/doctor`: `GET /api/doctor` (the running or last job and the last result of each kind), `POST /scan`, `POST /cancel`, `POST /slskd/scan`, `GET /slskd/files`, `POST /slskd/clean`, `POST /slskd/release`, `POST /playlists/preview`, `POST /playlists/merge` and `POST /navidrome/repair`. One Doctor job runs at a time.
+All admin-only, under `/api/doctor`: `GET /api/doctor` (the running or last job and the last result of each kind), `POST /scan`, `POST /cancel`, `POST /slskd/scan`, `GET /slskd/files`, `POST /slskd/clean`, `POST /slskd/release`, `POST /playlists/preview`, `POST /playlists/merge`, `POST /navidrome/repair`, `POST /duplicates/merge` (`keep`, `remove`), `POST /duplicates/keep` (`files`) and `POST /duplicates/keep/reset`. One Doctor job runs at a time.
