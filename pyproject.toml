@@ -25,6 +25,7 @@ dev = [
     "codeflash>=0.20.6",
     "httpx2>=2.16.0",
     "pytest>=9.2.0",
+    "pytest-codspeed>=5.0.4",
     "ruff>=0.17.4",
 ]
 
