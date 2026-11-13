@@ -9,7 +9,7 @@ Downtify може да обслужва приложения на вашия т�
 ::: warning Приложението още е в разработка
 **Настройки → Приложения** е означено като *Експериментално*. Описаната на тази страница страна на сървъра е завършена и работи, но **още не е публикувана нито една версия на Android приложението**, така че засега няма какво да се инсталира, а подробности за сдвояването и стриймването може още да се променят между версиите на Downtify.
 
-Приложението се разработва открито в [henriquesebastiao/downtify-android](https://github.com/henriquesebastiao/downtify-android). Всичко друго може да се изгради върху същия API — вижте [договора за мобилния клиент](../mobile-client-contract.md).
+Приложението се разработва открито в [henriquesebastiao/downtify-android](https://github.com/henriquesebastiao/downtify-android). Приложението за iPhone и iPad е в [michaelmoskie/Downtify-IOS-Client](https://github.com/michaelmoskie/Downtify-IOS-Client). Всичко друго може да се изгради върху същия API — вижте [договора за мобилния клиент](../mobile-client-contract.md).
 :::
 
 ## Вход от приложението

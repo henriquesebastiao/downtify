@@ -9,7 +9,7 @@ A Downtify képes alkalmazásokat kiszolgálni a telefonodon: azok böngészik �
 ::: warning Az alkalmazás még fejlesztés alatt áll
 A **Beállítások → Alkalmazások** *Kísérleti*nek van jelölve. Az ezen az oldalon leírt szerveroldal kész és működik, de **az Android-alkalmazásnak még nem jelent meg egyetlen verziója sem**, így egyelőre nincs mit telepíteni, és a párosítás és a streamelés részletei még változhatnak a Downtify-verziók között.
 
-Az alkalmazás nyíltan készül a [henriquesebastiao/downtify-android](https://github.com/henriquesebastiao/downtify-android) adattárban. Bármi más is építhető ugyanerre az API-ra — lásd a [mobilkliens-szerződést](../mobile-client-contract.md).
+Az alkalmazás nyíltan készül a [henriquesebastiao/downtify-android](https://github.com/henriquesebastiao/downtify-android) adattárban. Az iPhone- és iPad-alkalmazás a [michaelmoskie/Downtify-IOS-Client](https://github.com/michaelmoskie/Downtify-IOS-Client) adattárban található. Bármi más is építhető ugyanerre az API-ra — lásd a [mobilkliens-szerződést](../mobile-client-contract.md).
 :::
 
 ## Bejelentkezés az alkalmazásból
