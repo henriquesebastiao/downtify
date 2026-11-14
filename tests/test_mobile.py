@@ -356,6 +356,24 @@ def test_the_cache_stays_under_its_size(tmp_path):
     assert sorted(p.name for p in cache.iterdir()) == ['2.opus', '3.opus']
 
 
+def test_cache_hit_preserves_mtime_and_updates_lru(tmp_path):
+    transcoder = Transcoder(tmp_path / 'cache', max_bytes=150, ffmpeg='x')
+    source = _sources(tmp_path, 2)
+    transcoder._dir.mkdir()
+    older = transcoder._target(source[0], 'opus', 160)
+    newer = transcoder._target(source[1], 'opus', 160)
+    for path, stamp in ((older, 1000), (newer, 1001)):
+        path.write_bytes(b'x' * 100)
+        os.utime(path, (stamp, stamp))
+    mtime = older.stat().st_mtime_ns
+
+    assert transcoder.cached_path(source[0], 'opus', 160) == older
+    assert older.stat().st_mtime_ns == mtime
+    assert transcoder.prune() == 1
+    assert older.exists()
+    assert not newer.exists()
+
+
 def test_without_ffmpeg_there_is_no_transcoding(tmp_path):
     transcoder = Transcoder(tmp_path, ffmpeg='')
     assert transcoder.capability() == {
@@ -607,6 +625,16 @@ def test_stream_transcodes_and_seeks(client, app_dirs):
     part = client.get(url, headers={'Range': f'bytes={size // 2}-'})
     assert part.status_code == 206
     assert part.content == whole.content[size // 2 :]
+
+    probe = client.get(url, headers={'Range': 'bytes=0-1'})
+    ranged = client.get(
+        url, headers={'Range': 'bytes=2-4', 'If-Range': probe.headers['etag']}
+    )
+    assert probe.status_code == 206
+    assert ranged.status_code == 206
+    assert ranged.headers['etag'] == probe.headers['etag']
+    assert ranged.headers['content-range'] == f'bytes 2-4/{size}'
+    assert ranged.content == whole.content[2:5]
 
     # 192 kbps mp3 at "mp3 320": the original already fits.
     fits = client.get(
