@@ -5,8 +5,10 @@ from __future__ import annotations
 import asyncio
 import threading
 import time
+from pathlib import Path
 from types import SimpleNamespace
 
+import pytest
 from mutagen.id3 import ID3, TALB, TIT2, TPE1, TPE2
 
 from downtify import api, m3u
@@ -267,9 +269,10 @@ def test_writing_an_m3u_shows_up_on_the_next_ui_read(tmp_path):
     assert names == ['Road Trip']
 
 
+@pytest.mark.parametrize('suffix', ['.m3u', '.m3u8'])
 def test_a_hand_edited_m3u_shows_up_after_the_recheck_window(
-    tmp_path, monkeypatch
-):
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, suffix: str
+) -> None:
     download_dir = tmp_path / 'downloads'
     (download_dir / 'Playlists').mkdir(parents=True)
     (download_dir / 'Song.mp3').write_bytes(b'x')
@@ -277,7 +280,7 @@ def test_a_hand_edited_m3u_shows_up_after_the_recheck_window(
     set_listing_refresh_fn(lambda: None)
     assert list_library_playlists(download_dir, stale_ok=True) == []
 
-    (download_dir / 'Playlists' / 'Manual.m3u').write_text(
+    (download_dir / 'Playlists' / f'Manual{suffix}').write_text(
         '#EXTM3U\n../Song.mp3\n', encoding='utf-8'
     )
     assert list_library_playlists(download_dir, stale_ok=True) == []
