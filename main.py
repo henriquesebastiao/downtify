@@ -671,13 +671,14 @@ def build_app() -> FastAPI:
             name='traffic-flush',
         )
         # Separate hourly sweep that forgets a downloaded-track record once
-        # its file is gone from the downloads directory — see
+        # its file is gone from the registered library folders — see
         # downtify/monitor.py:reconcile_loop for why this is a distinct,
         # slower cadence from the per-watch monitor_loop above.
         api.spawn_task(
             reconcile_loop(
                 db=api.state.monitor_db,
                 get_downloader=lambda: api.state.downloader,
+                settings=api.state.settings,
             ),
             name='reconcile-loop',
         )

@@ -30,7 +30,9 @@ Downtify keeps a background task running every 60 seconds. On each sweep it chec
 
 The first check, which starts as soon as you add the watch, downloads everything already in the playlist; later checks download only what was added since. "Already downloaded" is tracked in a small SQLite database (`downtify_monitor.db` under `/data`), not by checking the downloads folder — so moving a downloaded file elsewhere on disk (into your own library layout, another drive, wherever) does **not** make Downtify think it's missing and re-download it on the next check.
 
-A separate sweep runs every hour and checks whether each downloaded track's file is still there. Genuinely deleted files (as opposed to ones you moved) are forgotten at that point, so the track becomes eligible for download again — on the next watch check after that hourly sweep, not instantly.
+A separate sweep runs every hour and checks whether each downloaded track's file is still available in the registered library folders: the downloads folder, the slskd source folder and **Existing music folders**, including read-only mounts. Tracks still present in a configured external folder keep their download records. Files no longer found in any of those locations are forgotten, so the track becomes eligible for download again on the next watch check after that hourly sweep, not instantly.
+
+The external folder list is read again on every hourly sweep, so saving or reordering it takes effect without restarting Downtify. Removing a folder from Settings leaves its audio untouched, but watch records pointing only into that now-unmapped folder are no longer considered available. A temporarily unavailable mount is also treated as missing; the sweep does not distinguish that from deletion.
 
 A watch is never checked twice at the same time. Adding a watch starts its first check immediately; if that check is still downloading when the next scheduled sweep comes around, the sweep skips the watch instead of starting a second, overlapping download of the same tracks.
 

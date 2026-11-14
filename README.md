@@ -89,6 +89,8 @@ Read-only music folders stay protected during **Upgrade library**: their tracks 
 
 Existing Library `.m3u` playlists can use UTF-8 or the Windows-1252 legacy fallback. Unreadable playlists are skipped with a warning; reading keeps existing files intact. See [M3U compatibility](docs/features/m3u-export.md#compatibility).
 
+Playlist Monitor's hourly file check includes configured existing music folders, so tracks still available there keep their download records instead of being queued again. See [Playlist Monitor](docs/features/playlist-monitor.md#how-it-works).
+
 ## Quick start
 
 You only need [Docker](https://docs.docker.com/get-docker/).
