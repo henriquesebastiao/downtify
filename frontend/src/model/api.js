@@ -754,6 +754,28 @@ function replaceAudio(file, videoId) {
   return API.post('/api/library/replace', { file, video_id: videoId })
 }
 
+// The audio file is sent as the raw request body (no multipart, like
+// uploadArtistArt); its name tells the server its format.
+function replaceAudioFromFile(file, upload, onProgress) {
+  return API.post('/api/library/replace/upload', upload, {
+    params: { file, name: upload.name },
+    headers: { 'Content-Type': 'application/octet-stream' },
+    timeout: 0,
+    onUploadProgress: (event) => {
+      if (onProgress && event.total) onProgress(event.loaded / event.total)
+    },
+  })
+}
+
+// Whether downloads leave a hand-replaced file alone, and lifting that.
+function getHandReplaced(file) {
+  return API.get('/api/library/replace/protected', { params: { file } })
+}
+
+function forgetHandReplaced(file) {
+  return API.delete('/api/library/replace/protected', { params: { file } })
+}
+
 // Mark (or unmark) an album's tracks as a Various Artists compilation:
 // rewrites their album-artist tag and compilation flag in place.
 function setAlbumCompilation(files, compilation) {
@@ -1190,6 +1212,9 @@ export default {
   setServerPort,
   getReplaceCandidates,
   replaceAudio,
+  replaceAudioFromFile,
+  getHandReplaced,
+  forgetHandReplaced,
   setAlbumCompilation,
   getDiscover,
   getDiscoverDeezerCollections,

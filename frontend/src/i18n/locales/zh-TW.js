@@ -1808,6 +1808,16 @@ export default {
     running: '正在取代音訊…',
     done: '音訊已取代',
     failed: '無法取代音訊',
+    handReplaced: '你已於 {date} 手動替換此音訊。下載不會更動此檔案。',
+    unprotect: '允許下載替換它',
+    unprotected: '下載現在可以再次替換此檔案',
+    uploading: '正在上傳檔案…',
+    fileTitle: '或使用裝置上的檔案',
+    fileHint:
+      '{format} 檔案會原樣使用。其他音訊檔案（MP3、FLAC、M4A、WAV…）會轉換為 {format}。',
+    fileChoose: '選擇檔案…',
+    fileOther: '選擇其他檔案…',
+    fileConverted: '已轉換為 {format}',
     source: {
       'youtube-music': 'YouTube Music',
       youtube: 'YouTube',

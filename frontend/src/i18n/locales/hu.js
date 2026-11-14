@@ -1918,6 +1918,17 @@ export default {
     running: 'A hang cseréje folyamatban…',
     done: 'Hang lecserélve',
     failed: 'Nem sikerült lecserélni a hangot',
+    handReplaced:
+      'Ezt a hangot {date} napon kézzel cserélted le. A letöltések a fájlt változatlanul hagyják.',
+    unprotect: 'A letöltések lecserélhetik',
+    unprotected: 'A letöltések újra lecserélhetik ezt a fájlt',
+    uploading: 'A fájl feltöltése…',
+    fileTitle: 'Vagy használj egy fájlt az eszközödről',
+    fileHint:
+      'Egy {format} fájl változatlanul kerül felhasználásra. Más hangfájlok (MP3, FLAC, M4A, WAV…) {format} formátumra lesznek alakítva.',
+    fileChoose: 'Fájl kiválasztása…',
+    fileOther: 'Másik fájl kiválasztása…',
+    fileConverted: 'Átalakítva: {format}',
     source: {
       'youtube-music': 'YouTube Music',
       youtube: 'YouTube',

@@ -922,6 +922,45 @@ class Downloader:
         self._report_outcome(song, OUTCOME_SKIPPED, existing)
         return existing
 
+    def _hand_replaced_at(
+        self, song: dict[str, Any], subdir: Optional[str]
+    ) -> Optional[str]:
+        """The library file a download of *song* would write over, when
+        an admin replaced its audio by hand
+        (:mod:`downtify.hand_replaced`); ``None`` otherwise.
+
+        Only matters with ``overwrite_existing_files`` on: off, nothing
+        existing is ever overwritten."""
+
+        store = getattr(self, 'hand_replaced', None)
+        if store is None:
+            return None
+        try:
+            existing = self.existing_filename_for(song, subdir)
+            return (
+                existing
+                if existing is not None and store.protected(existing)
+                else None
+            )
+        except Exception:
+            logger.opt(exception=True).debug('Hand-replaced check failed')
+            return None
+
+    def _skip_hand_replaced(
+        self,
+        song: dict[str, Any],
+        existing: str,
+        progress_cb: Optional[ProgressCallback],
+    ) -> str:
+        logger.info(
+            'Keeping {}: its audio was replaced by hand, not downloading '
+            'over it',
+            existing,
+        )
+        _report(progress_cb, 100.0, 'Kept: audio replaced by hand')
+        self._report_outcome(song, OUTCOME_SKIPPED, existing)
+        return existing
+
     def _resolve_target_dir(self, subdir: Optional[str]) -> tuple[Path, str]:
         """Return ``(target_dir, relative_prefix)`` for an optional subdir.
 
@@ -1043,6 +1082,10 @@ class Downloader:
             existing = self.find_existing_download(song, subdir)
             if existing is not None:
                 return self._skip_existing(song, existing, progress_cb)
+        elif self._can_resolve_path_early(song):
+            kept = self._hand_replaced_at(song, subdir)
+            if kept is not None:
+                return self._skip_hand_replaced(song, kept, progress_cb)
 
         # Known-long tracks are refused before any search or fetch.
         reject_overlong_song(song, self.max_track_duration_seconds)
@@ -1112,6 +1155,12 @@ class Downloader:
         # Sparse rows learn their duration from the per-track embed
         # above; re-check now that it is known.
         reject_overlong_song(song, self.max_track_duration_seconds)
+
+        if not skip_existing:
+            # The path is complete now (album, track number).
+            kept = self._hand_replaced_at(song, subdir)
+            if kept is not None:
+                return self._skip_hand_replaced(song, kept, progress_cb)
 
         if local_source is not None:
             stored, copied_from = self._finalize_local_source(

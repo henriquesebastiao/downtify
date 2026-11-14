@@ -205,7 +205,11 @@ downloads are shared, and files are never stored twice.
   to pick from: YouTube Music and YouTube results, or a pasted link) and
   ``POST /api/library/replace`` (body ``{file, video_id}``: replace the
   track's audio with that video in place, as a queue job - see
-  ``downtify/audio_replace.py``)
+  ``downtify/audio_replace.py``); ``POST /api/library/replace/upload``
+  (``?file=&name=``, the raw audio file as the body: replace with an
+  uploaded file), ``GET|DELETE /api/library/replace/protected``
+  (``?file=``: whether downloads leave a hand-replaced file alone, and
+  lifting that - ``downtify/hand_replaced.py``)
 * ``POST /api/library/compilation`` (body ``{files, compilation}``: mark
   or unmark an album as a various-artists compilation - rewrites its
   album-artist tag and compilation flag in place and remembers it for
@@ -1258,6 +1262,8 @@ class AppState:
     lyrics_cache: Optional[LyricsLookupCache] = None
     upgrade_runner: Optional[library_upgrade.LibraryUpgradeRunner] = None
     audio_replacements: Any = None
+    # Files whose audio an admin replaced by hand (downtify/hand_replaced.py).
+    hand_replaced: Any = None
     external_sync: Optional[ExternalSyncJob] = None
     likes: Optional[LikedTracks] = None
     track_owners: Optional[TrackOwners] = None
@@ -6354,6 +6360,112 @@ async def replace_candidates(
     }
 
 
+def _hand_replaced_info(file: str) -> Optional[dict[str, Any]]:
+    store = state.hand_replaced
+    return store.get(file) if store is not None else None
+
+
+def _mark_hand_replaced(file: str, source: str) -> None:
+    if state.hand_replaced is None:
+        return
+    try:
+        state.hand_replaced.mark(file, source)
+    except Exception:
+        logger.opt(exception=True).warning(
+            'Could not remember that {} was replaced by hand', file
+        )
+
+
+@router.get('/api/library/replace/protected')
+async def hand_replaced_status(file: str = Query(...)) -> dict[str, Any]:
+    """Whether downloads leave *file* alone because its audio was replaced
+    by hand: ``{file, hand_replaced: {source, replaced_at} | null}``."""
+
+    file = file.strip().replace('\\', '/')
+    return {'file': file, 'hand_replaced': _hand_replaced_info(file)}
+
+
+@router.delete('/api/library/replace/protected')
+async def forget_hand_replaced(file: str = Query(...)) -> dict[str, Any]:
+    """Let downloads overwrite a hand-replaced file again (with
+    "Download again if the file exists" on): ``{file, forgotten}``."""
+
+    file = file.strip().replace('\\', '/')
+    if state.hand_replaced is None:
+        raise HTTPException(status_code=500, detail='Library not ready')
+    forgotten = await asyncio.to_thread(state.hand_replaced.forget, file)
+    return {'file': file, 'forgotten': forgotten}
+
+
+@router.post('/api/library/replace/upload')
+async def replace_track_audio_from_file(
+    request: Request, file: str = Query(...), name: str = Query(...)
+) -> dict[str, Any]:
+    """Replace a library track's audio with an audio file uploaded as the
+    raw request body (``name`` is its file name, for its format):
+    ``{file, duration_before, duration_after, converted,
+    hand_replaced}``. Same format: used as it is; another: converted to
+    the file's own. The file keeps its path and tags, and downloads
+    leave it alone from then on."""
+
+    file = file.strip().replace('\\', '/')
+    try:
+        fmt = audio_replace.upload_format(name)
+    except audio_replace.ReplaceError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    full, entry = await asyncio.to_thread(_replaceable_track, file)
+    if file in _replacing:
+        raise HTTPException(
+            status_code=409, detail='This track is already being replaced'
+        )
+    _replacing.add(file)
+    staged = audio_replace.upload_staging_path(full, fmt)
+    try:
+        size = 0
+        with staged.open('wb') as handle:
+            async for chunk in request.stream():
+                size += len(chunk)
+                if size > audio_replace.MAX_UPLOAD_BYTES:
+                    raise HTTPException(
+                        status_code=413, detail='The file is too large'
+                    )
+                handle.write(chunk)
+        if not size:
+            raise HTTPException(status_code=400, detail='The file is empty')
+        try:
+            old_key = content_key_for(full) or ''
+        except Exception:
+            old_key = ''
+        bitrate = str(getattr(state.downloader, 'audio_bitrate', '') or '320')
+        try:
+            result = await asyncio.to_thread(
+                audio_replace.replace_from_file,
+                full,
+                staged,
+                bitrate=bitrate,
+            )
+        except audio_replace.ReplaceError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+    finally:
+        staged.unlink(missing_ok=True)
+        _replacing.discard(file)
+    await asyncio.to_thread(_after_replacement, file, full, old_key)
+    await asyncio.to_thread(_mark_hand_replaced, file, 'file')
+    summary = _track_summary(file, entry)
+    await log_activity(
+        request,
+        'audio_replaced',
+        f'{summary["artist"]} - {summary["title"]}'.strip(' -'),
+        {'file': file, 'upload': Path(name).name},
+    )
+    announce_library_changed()
+    return {
+        'file': file,
+        **result,
+        'hand_replaced': _hand_replaced_info(file),
+    }
+
+
 @router.post('/api/library/replace')
 async def replace_track_audio(request: Request) -> dict[str, Any]:
     """Replace a library track's audio with a YouTube video:
@@ -6481,6 +6593,13 @@ async def _run_replacement(
         return
     _replacing.discard(file)
     await asyncio.to_thread(_after_replacement, file, full, old_key)
+    await asyncio.to_thread(
+        _mark_hand_replaced,
+        file,
+        'soundcloud'
+        if providers.parse_soundcloud_url(video_id) is not None
+        else 'youtube',
+    )
     job.update(status='done', progress=100, filename=file, message='Replaced')
     await state.connections.broadcast({
         'song': song,

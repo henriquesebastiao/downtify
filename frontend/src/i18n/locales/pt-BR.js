@@ -1915,6 +1915,17 @@ export default {
     running: 'Substituindo o áudio…',
     done: 'Áudio substituído',
     failed: 'Não foi possível substituir o áudio',
+    handReplaced:
+      'Você substituiu este áudio manualmente em {date}. Os downloads deixam este arquivo como está.',
+    unprotect: 'Deixar os downloads substituírem',
+    unprotected: 'Os downloads podem substituir este arquivo de novo',
+    uploading: 'Enviando o arquivo…',
+    fileTitle: 'Ou use um arquivo do seu dispositivo',
+    fileHint:
+      'Um arquivo {format} é usado como está. Outros arquivos de áudio (MP3, FLAC, M4A, WAV…) são convertidos para {format}.',
+    fileChoose: 'Escolher um arquivo…',
+    fileOther: 'Escolher outro arquivo…',
+    fileConverted: 'Convertido para {format}',
     source: {
       'youtube-music': 'YouTube Music',
       youtube: 'YouTube',

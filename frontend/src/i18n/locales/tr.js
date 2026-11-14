@@ -1899,6 +1899,17 @@ export default {
     running: 'Ses değiştiriliyor…',
     done: 'Ses değiştirildi',
     failed: 'Ses değiştirilemedi',
+    handReplaced:
+      'Bu sesi {date} tarihinde elle değiştirdiniz. İndirmeler bu dosyayı olduğu gibi bırakır.',
+    unprotect: 'İndirmeler değiştirebilsin',
+    unprotected: 'İndirmeler bu dosyayı yeniden değiştirebilir',
+    uploading: 'Dosya yükleniyor…',
+    fileTitle: 'Ya da cihazınızdaki bir dosyayı kullanın',
+    fileHint:
+      'Bir {format} dosyası olduğu gibi kullanılır. Diğer ses dosyaları (MP3, FLAC, M4A, WAV…) {format} biçimine dönüştürülür.',
+    fileChoose: 'Dosya seç…',
+    fileOther: 'Başka bir dosya seç…',
+    fileConverted: '{format} biçimine dönüştürüldü',
     source: {
       'youtube-music': 'YouTube Music',
       youtube: 'YouTube',
