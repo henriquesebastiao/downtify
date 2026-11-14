@@ -89,6 +89,8 @@ Read-only music folders stay protected during **Upgrade library**: their tracks 
 
 Existing Library `.m3u` playlists can use UTF-8 or the Windows-1252 legacy fallback. Unreadable playlists are skipped with a warning; reading keeps existing files intact. See [M3U compatibility](docs/features/m3u-export.md#compatibility).
 
+Podcast feeds with multiple attachments use the audio enclosure, not accompanying PDFs, images or videos. Feeds with untyped or generic-binary enclosures retain a compatibility fallback. See [Podcasts](docs/features/podcasts.md#good-to-know).
+
 ## Quick start
 
 You only need [Docker](https://docs.docker.com/get-docker/).

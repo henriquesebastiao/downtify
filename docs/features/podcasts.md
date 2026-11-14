@@ -78,7 +78,9 @@ Downtify writes what podcast apps and media servers already read for an episode:
 
 ## Good to know
 
-- **No video podcasts.** An episode whose only enclosure is a video file is skipped entirely; only audio is supported.
+- **Audio attachments take priority.** For RSS or Atom entries with multiple enclosures, Downtify chooses the first URL marked `audio/*`, skipping PDF, image, HTML and video attachments. MIME types are case-insensitive and parameters such as `audio/mp4; codecs=...` are accepted.
+- **Compatibility fallback.** If there is no explicitly typed audio enclosure, the first enclosure with an empty type or `application/octet-stream` is used as before. This trusts the feed's URL without checking the audio bytes; an Atom enclosure without a type is interpreted as `text/html` by the parser, so it needs an audio or generic-binary type. Entries with only explicitly non-audio attachments are skipped. Selection applies to newly discovered episodes; existing episode records and downloads are not rewritten.
+- **No video podcasts.** Only audio is supported; an entry whose only enclosure is a video file is skipped entirely.
 - **No chapters.** Feeds that include chapter markers don't get them in Downtify yet.
 - **Not mirrored into Navidrome.** Unlike playlists, podcast subscriptions aren't pushed into a Navidrome library — episodes are plain files your media server already sees on its own.
 - Unsubscribing (**⋯ → Unsubscribe**) removes downloaded episodes by default; choose **Unsubscribe, keep downloaded episodes** to leave the files in place.
