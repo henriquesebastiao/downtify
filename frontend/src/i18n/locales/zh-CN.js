@@ -1172,6 +1172,15 @@ export default {
     switchedOn: '已打开 {name}',
     switchedOff: '已关闭 {name}',
     noneHere: '这里没有内容。',
+    check: '检查我已有的',
+    checking: '正在读取曲目列表：{done} / {total}…',
+    checkDone: '完成：已读取 {count} 个曲目列表，{failed} 个失败',
+    checkHint:
+      '读取每个作品的曲目列表，并与整个音乐库比较，因此关注前已有的专辑也会计入。不会下载任何内容。大艺人较慢：MusicBrainz 每秒只允许一次请求。',
+    tracks: '{name} 的曲目',
+    tracksNotRead: '尚未读取曲目列表：请点击“检查我已有的”。',
+    trackHave: '在音乐库中',
+    trackMissing: '缺失',
     kind: {
       mixtape: '混音带',
       soundtrack: '原声带',

@@ -32,8 +32,11 @@ export function stateTone(state) {
   return TONES[state] || 'neutral'
 }
 
-// Whether a release is downloaded by the watch: its switch.
+// Whether the watch downloads a release: its switch. The server says
+// (`wanted`) - what the library has of it is another matter (`state`):
+// an album owned before the watch started is complete, not watched.
 export function isOn(release) {
+  if (typeof release.wanted === 'boolean') return release.wanted
   return ['complete', 'partly', 'missing'].includes(release.state)
 }
 

@@ -2693,14 +2693,32 @@ An artist watch's whole catalogue as of its last check: every release YouTube Mu
       "state": "complete",
       "have": 20,
       "total": 20,
-      "choice": ""
+      "choice": "",
+      "wanted": true
     }
   ],
-  "counts": { "complete": 1, "partly": 0, "missing": 0, "skipped": 0, "not_watched": 0, "off": 0, "not_own": 0 }
+  "counts": { "complete": 1, "partly": 0, "missing": 0, "skipped": 0, "not_watched": 0, "off": 0, "not_own": 0 },
+  "inventory": { "running": false, "done": 73, "total": 73, "checked": 72, "failed": 1, "started_at": "…", "finished_at": "…" }
 }
 ```
 
-`state` is `complete` (every track in the library), `partly`, `missing` (wanted, not there yet), `skipped` (out before a "new releases only" watch started), `not_watched` (a type or kind the watch doesn't download), `off` (switched off) or `not_own` (a guest spot or a bootleg, never downloaded). `total` is `0` until the release's tracklist was fetched. `section` is `album`, `mixtape`, `ep`, `single` or `other`. `choice` is the user's switch: `on`, `off` or `""` (the watch's rules).
+`state` is `complete` (every track in the library), `partly`, `missing` (wanted, not there yet), `skipped` (out before a "new releases only" watch started), `not_watched` (a type or kind the watch doesn't download), `off` (switched off) or `not_own` (a guest spot or a bootleg, never downloaded). `have` counts the tracks of the release's tracklist the library holds (the same artist and title, the same length, whoever downloaded them), `total` its tracks; both are what the watch recorded until a tracklist was read, by a check that downloads the release or by [`POST .../releases/inventory`](#post-apimonitorplaylistsplaylist_idreleasesinventory). `wanted` is whether the watch downloads the release (its switch); an album owned before the watch started can be `complete` and not `wanted`. `inventory` is the last "Check what I have" (`null` before one ran). `section` is `album`, `mixtape`, `ep`, `single` or `other`. `choice` is the user's switch: `on`, `off` or `""` (the watch's rules).
+
+---
+
+### `GET /api/monitor/playlists/{playlist_id}/releases/tracks`
+
+One release's tracks and which the library has: `?album_id=…` repeated with the release's `album_ids`; the first with a kept tracklist is used.
+
+**Response:** `{ "album_id": "deezer:13082992", "tracks": [{ "position": 1, "name": "Keep the Family Close", "artists": ["Drake"], "duration": 328, "file": "Drake/Drake - Keep the Family Close.mp3" }] }` — `file` is `null` for a track the library doesn't have; `tracks` is empty until the tracklist was read.
+
+---
+
+### `POST /api/monitor/playlists/{playlist_id}/releases/inventory`
+
+"Check what I have": reads, in the background, the tracklist of every release of the watch's catalogue that has none kept (a release two catalogues list once, from Deezer, then YouTube Music, then MusicBrainz), so `GET .../releases` counts what the library has of each. Downloads nothing. A release that turns out to be a guest spot or bootleg is marked `not_own`; one a catalogue fails on is left for the next check.
+
+**Response:** `{ "inventory": { "running": true, "done": 0, "total": 0, … } }`. While one runs, calling again returns it; follow it in `GET .../releases`.
 
 ---
 

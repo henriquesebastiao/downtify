@@ -531,6 +531,7 @@ from .library_reconcile import (
     reconcile_and_refresh,
     refresh_playlists_after_moves,
 )
+from .library_songs import LibrarySongs
 from .library_sync import LibrarySync
 from .library_usage import (
     UsageSnapshots,
@@ -576,6 +577,7 @@ from .monitor import (
     normalize_release_types,
     parse_playlist_url,
     playlist_watch_key,
+    take_inventory,
 )
 from .navidrome import (
     NavidromeClient,
@@ -10696,13 +10698,36 @@ async def _artist_watch_for_request(
     return watch
 
 
+def _library_songs() -> Any:
+    """The library by song (artist, title, length), to count what it has
+    of an artist's releases; ``None`` when it can't be read."""
+
+    try:
+        return LibrarySongs(listing_for_request(library_context()))
+    except Exception:
+        logger.opt(exception=True).warning(
+            'Could not read the library to compare with an artist catalogue'
+        )
+        return None
+
+
+#: "Check what I have" per artist watch: ``{running, done, total,
+#: checked, failed, started_at, finished_at}``, the last one kept.
+_inventories: dict[int, dict[str, Any]] = {}
+
+
 def _artist_releases(
     db: PlaylistMonitorDB, watch: MonitoredPlaylist
 ) -> dict[str, Any]:
     kinds = artist_catalogue.watch_kinds(watch, state.settings)
+    have = artist_catalogue.library_have(
+        db.catalogue.tracks(watch.id),
+        _library_songs(),
+        db.releases.counts(watch.id),
+    )
     releases = artist_catalogue.catalogue_view(
         db.catalogue.rows(watch.id),
-        have=db.releases.counts(watch.id),
+        have=have,
         seen=db.catalogue.seen(watch.id),
         types=set((watch.release_types or ALL_RELEASE_TYPES).split(',')),
         kinds=kinds,
@@ -10716,6 +10741,7 @@ def _artist_releases(
         'musicbrainz': bool(state.settings.get('artist_watch_musicbrainz')),
         'releases': releases,
         'counts': artist_catalogue.counts(releases),
+        'inventory': dict(_inventories.get(watch.id) or {}) or None,
     }
 
 
@@ -10731,6 +10757,91 @@ async def artist_watch_releases(
     db = _require_monitor_db()
     watch = await _artist_watch_for_request(playlist_id, request)
     return await asyncio.to_thread(_artist_releases, db, watch)
+
+
+@router.get('/api/monitor/playlists/{playlist_id}/releases/tracks')
+async def artist_watch_release_tracks(
+    playlist_id: int, request: Request, album_id: list[str] = Query(...)
+) -> dict[str, Any]:
+    """One release's tracklist (of the first of *album_id* - a release's
+    ``album_ids`` - with one kept) and the library file holding each
+    track: ``{album_id, tracks: [{position, name, artists, duration,
+    file}]}``, ``file`` ``null`` when the library doesn't have it.
+    ``tracks`` is empty until a check read the tracklist."""
+
+    db = _require_monitor_db()
+    watch = await _artist_watch_for_request(playlist_id, request)
+
+    def build() -> dict[str, Any]:
+        kept = db.catalogue.tracks(watch.id)
+        chosen = next((a for a in album_id if a in kept), '')
+        if not chosen:
+            return {'album_id': album_id[0], 'tracks': []}
+        recorded = {
+            position: filename
+            for (position, _track), filename in db.releases.tracks(
+                watch.id, chosen
+            ).items()
+        }
+        return {
+            'album_id': chosen,
+            'tracks': artist_catalogue.track_list(
+                kept[chosen], _library_songs(), recorded
+            ),
+        }
+
+    return await asyncio.to_thread(build)
+
+
+@router.post('/api/monitor/playlists/{playlist_id}/releases/inventory')
+async def check_artist_watch_inventory(
+    playlist_id: int, request: Request
+) -> dict[str, Any]:
+    """ "Check what I have": read, in the background, the tracklist of every
+    release of the watch's catalogue that has none kept, so ``GET
+    .../releases`` counts what the library has of each. Downloads
+    nothing. ``{inventory: {running, done, total, ...}}``; a second call
+    while it runs returns the running one."""
+
+    db = _require_monitor_db()
+    watch = await _artist_watch_for_request(playlist_id, request)
+    job = _inventories.get(watch.id)
+    if job and job.get('running'):
+        return {'inventory': dict(job)}
+    job = {
+        'running': True,
+        'done': 0,
+        'total': 0,
+        'checked': 0,
+        'failed': 0,
+        'started_at': datetime.now(timezone.utc).isoformat(),
+        'finished_at': '',
+    }
+    _inventories[watch.id] = job
+
+    def progress(done: int, total: int) -> None:
+        job.update(done=done, total=total)
+
+    async def run() -> None:
+        try:
+            job.update(
+                await asyncio.to_thread(
+                    take_inventory, watch, db, progress=progress
+                )
+            )
+        except Exception:
+            logger.exception(
+                'Checking what the library has of "{}" failed', watch.name
+            )
+            job['error'] = True
+        finally:
+            job.update(
+                running=False,
+                finished_at=datetime.now(timezone.utc).isoformat(),
+            )
+
+    spawn_task(run(), name=f'artist-inventory-{watch.id}')
+    return {'inventory': dict(job)}
 
 
 @router.patch('/api/monitor/playlists/{playlist_id}/releases')

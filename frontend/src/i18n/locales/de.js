@@ -1304,6 +1304,16 @@ export default {
     switchedOn: '{name} eingeschaltet',
     switchedOff: '{name} ausgeschaltet',
     noneHere: 'Hier ist nichts.',
+    check: 'Prüfen, was ich habe',
+    checking: 'Titellisten werden gelesen: {done} von {total}…',
+    checkDone: 'Fertig: {count} Titellisten gelesen, {failed} fehlgeschlagen',
+    checkHint:
+      'Liest die Titelliste jeder Veröffentlichung und vergleicht sie mit deiner ganzen Bibliothek, sodass auch Alben zählen, die du schon vor der Beobachtung hattest. Es wird nichts heruntergeladen. Bei großen Künstlern langsam: MusicBrainz erlaubt eine Anfrage pro Sekunde.',
+    tracks: 'Titel von {name}',
+    tracksNotRead:
+      'Titelliste noch nicht gelesen: drücke „Prüfen, was ich habe“.',
+    trackHave: 'In deiner Bibliothek',
+    trackMissing: 'Fehlt',
     kind: {
       mixtape: 'Mixtapes',
       soundtrack: 'Soundtracks',

@@ -1248,6 +1248,15 @@ export default {
     switchedOn: '{name} switched on',
     switchedOff: '{name} switched off',
     noneHere: 'Nothing here.',
+    check: 'Check what I have',
+    checking: 'Reading track lists: {done} of {total}…',
+    checkDone: 'Done: {count} track lists read, {failed} failed',
+    checkHint:
+      'Reads each release’s track list and compares it with your whole library, so albums you had before the watch count too. Nothing is downloaded. Slow for a big artist: MusicBrainz allows one request a second.',
+    tracks: 'Tracks of {name}',
+    tracksNotRead: 'Track list not read yet: press Check what I have.',
+    trackHave: 'In your library',
+    trackMissing: 'Missing',
     kind: {
       mixtape: 'Mixtapes',
       soundtrack: 'Soundtracks',

@@ -25,10 +25,20 @@ album listed by two catalogues is one row - with its state:
 ``not_watched`` a type or kind the watch doesn't download
 ``off``       switched off
 ``not_own``   a guest spot or a bootleg: never downloaded
+
+**What the library has** of a release is counted against its tracklist
+(:meth:`ArtistCatalogue.store_tracks`): every track the library holds -
+the same artist and title, the same length, as :mod:`downtify.
+library_songs` matches them - whoever downloaded it. A sweep keeps the
+tracklists of the releases it processes; ``monitor.take_inventory``
+reads the others on request ("Check what I have"), downloading nothing.
+So an album the user had before the watch started shows as complete,
+not just "out before the watch".
 """
 
 from __future__ import annotations
 
+import json
 import sqlite3
 from datetime import datetime, timezone
 from typing import Any, Callable, Iterable, Optional
@@ -97,6 +107,19 @@ class ArtistCatalogue:
                 FOREIGN KEY (playlist_id) REFERENCES monitored_playlists(id)
                     ON DELETE CASCADE
             )""")
+            # Each release's tracklist, once a sweep or "Check what I
+            # have" read it.
+            conn.execute("""CREATE TABLE IF NOT EXISTS artist_catalogue_tracks (
+                playlist_id INTEGER NOT NULL,
+                album_id TEXT NOT NULL,
+                position INTEGER NOT NULL,
+                name TEXT NOT NULL,
+                artists TEXT NOT NULL DEFAULT '[]',
+                duration REAL NOT NULL DEFAULT 0,
+                PRIMARY KEY (playlist_id, album_id, position),
+                FOREIGN KEY (playlist_id) REFERENCES monitored_playlists(id)
+                    ON DELETE CASCADE
+            )""")
 
     def record(
         self, playlist_id: int, albums: Iterable[dict[str, Any]]
@@ -140,6 +163,58 @@ class ArtistCatalogue:
                         now,
                     ),
                 )
+
+    def store_tracks(
+        self, playlist_id: int, album_id: str, songs: list[dict[str, Any]]
+    ) -> None:
+        """Keep a release's tracklist (and its track count)."""
+
+        with self._connect() as conn:
+            conn.execute(
+                'DELETE FROM artist_catalogue_tracks '
+                'WHERE playlist_id = ? AND album_id = ?',
+                (playlist_id, album_id),
+            )
+            conn.executemany(
+                'INSERT INTO artist_catalogue_tracks VALUES (?,?,?,?,?,?)',
+                [
+                    (
+                        playlist_id,
+                        album_id,
+                        position,
+                        str(song.get('name') or ''),
+                        json.dumps([
+                            str(a) for a in song.get('artists') or []
+                        ]),
+                        float(song.get('duration') or 0),
+                    )
+                    for position, song in enumerate(songs, start=1)
+                ],
+            )
+            conn.execute(
+                'UPDATE artist_catalogue SET track_total = ? '
+                'WHERE playlist_id = ? AND album_id = ?',
+                (len(songs), playlist_id, album_id),
+            )
+
+    def tracks(self, playlist_id: int) -> dict[str, list[dict[str, Any]]]:
+        """``{album_id: [{position, name, artists, duration}]}`` for the
+        releases whose tracklist is kept."""
+
+        found: dict[str, list[dict[str, Any]]] = {}
+        with self._connect() as conn:
+            for r in conn.execute(
+                'SELECT * FROM artist_catalogue_tracks WHERE playlist_id = ? '
+                'ORDER BY album_id, position',
+                (playlist_id,),
+            ):
+                found.setdefault(r['album_id'], []).append({
+                    'position': r['position'],
+                    'name': r['name'],
+                    'artists': json.loads(r['artists'] or '[]'),
+                    'duration': r['duration'],
+                })
+        return found
 
     def set_total(self, playlist_id: int, album_id: str, total: int) -> None:
         with self._connect() as conn:
@@ -234,10 +309,11 @@ class ArtistCatalogue:
         """Forget the listing - the watch now follows another artist."""
 
         with self._connect() as conn:
-            conn.execute(
-                'DELETE FROM artist_catalogue WHERE playlist_id = ?',
-                (playlist_id,),
-            )
+            for table in ('artist_catalogue', 'artist_catalogue_tracks'):
+                conn.execute(
+                    f'DELETE FROM {table} WHERE playlist_id = ?',  # noqa: S608
+                    (playlist_id,),
+                )
 
 
 def release_key(name: str) -> str:
@@ -301,6 +377,46 @@ def wanted(
     return follows_watch(album, types, kinds)
 
 
+# ── What the library has ────────────────────────────────────────────────
+
+
+def library_have(
+    tracks: dict[str, list[dict[str, Any]]],
+    songs: Any,
+    recorded: dict[str, int],
+) -> dict[str, int]:
+    """How many tracks of each release the library holds: of its kept
+    tracklist, those *songs* (a :class:`~downtify.library_songs.
+    LibrarySongs`) finds; for a release with none kept, the tracks the
+    watch recorded (*recorded*)."""
+
+    have = dict(recorded)
+    if songs is None:
+        return have
+    for album_id, rows in tracks.items():
+        have[album_id] = sum(1 for row in rows if songs.find(row))
+    return have
+
+
+def track_list(
+    rows: list[dict[str, Any]],
+    songs: Any,
+    recorded: dict[int, str],
+) -> list[dict[str, Any]]:
+    """A release's tracklist with the library file holding each track
+    (``file``, ``None`` when missing): the one *songs* finds, else the one
+    the watch recorded at that position."""
+
+    return [
+        {
+            **row,
+            'file': (songs.find(row) if songs is not None else None)
+            or recorded.get(row['position']),
+        }
+        for row in rows
+    ]
+
+
 # ── The view ────────────────────────────────────────────────────────────
 
 
@@ -331,6 +447,20 @@ def _state(  # noqa: PLR0911  # one answer per state
     return 'skipped' if skipped else 'missing'
 
 
+def _downloads(
+    row: dict[str, Any], skipped: Optional[bool], follows: bool
+) -> bool:
+    """Whether the watch downloads a release (its switch): the user's
+    choice, else its type and kind - unless it came out before a "new
+    releases only" watch. Never a guest spot or a bootleg."""
+
+    if row['not_own']:
+        return False
+    if row['choice']:
+        return row['choice'] == 'on'
+    return follows and not skipped
+
+
 def section_of(release_type: str, kinds: list[str]) -> str:
     """Where a release is listed: ``album``, ``mixtape``, ``ep``,
     ``single``, or ``other`` (live albums, compilations, remixes...)."""
@@ -355,7 +485,9 @@ def catalogue_view(
     """The watch's releases as the page lists them: one per release (a
     release two catalogues list is merged: same name, same type), each
     ``{id, album_ids, name, release_type, kinds, section, year, sources,
-    cover_url, url, state, have, total, choice}``.
+    cover_url, url, state, have, total, choice, wanted}`` - ``wanted``
+    being whether the watch downloads it (its switch), ``state`` what
+    the library has of it.
 
     *have* is how many tracks of each release the library holds, *seen*
     whether a processed release was skipped (``True``) or downloaded
@@ -370,12 +502,14 @@ def catalogue_view(
         }
         release_type = release_type_of(album)
         kind_names = [_KIND_NAMES.get(k, k) for k in album['kinds']]
+        follows = follows_watch(album, types, kinds)
         state = _state(
             row,
             have.get(row['album_id'], 0),
             seen.get(row['album_id']),
-            follows_watch(album, types, kinds),
+            follows,
         )
+        downloads = _downloads(row, seen.get(row['album_id']), follows)
         key = (release_key(row['name']) or row['album_id'], release_type)
         entry = merged.get(key)
         if entry is None:
@@ -394,6 +528,7 @@ def catalogue_view(
                 'have': have.get(row['album_id'], 0),
                 'total': int(row['track_total'] or 0),
                 'choice': row['choice'],
+                'wanted': downloads,
             }
             continue
         entry['album_ids'].append(row['album_id'])
@@ -406,6 +541,7 @@ def catalogue_view(
         entry['year'] = entry['year'] or row['year']
         entry['cover_url'] = entry['cover_url'] or row['cover_url']
         entry['choice'] = entry['choice'] or row['choice']
+        entry['wanted'] = entry['wanted'] or downloads
     return list(merged.values())
 
 

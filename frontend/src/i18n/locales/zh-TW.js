@@ -1200,6 +1200,15 @@ export default {
     switchedOn: '已開啟 {name}',
     switchedOff: '已關閉 {name}',
     noneHere: '這裡沒有內容。',
+    check: '檢查我已有的',
+    checking: '正在讀取曲目列表：{done} / {total}…',
+    checkDone: '完成：已讀取 {count} 個曲目列表，{failed} 個失敗',
+    checkHint:
+      '讀取每個作品的曲目列表，並與整個音樂庫比較，因此關注前已有的專輯也會計入。不會下載任何內容。大藝人較慢：MusicBrainz 每秒只允許一次請求。',
+    tracks: '{name} 的曲目',
+    tracksNotRead: '尚未讀取曲目列表：請點擊「檢查我已有的」。',
+    trackHave: '在音樂庫中',
+    trackMissing: '缺失',
     kind: {
       mixtape: '混音帶',
       soundtrack: '原聲帶',

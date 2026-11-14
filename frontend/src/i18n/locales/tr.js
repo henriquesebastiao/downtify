@@ -1269,6 +1269,16 @@ export default {
     switchedOn: '{name} açıldı',
     switchedOff: '{name} kapatıldı',
     noneHere: 'Burada bir şey yok.',
+    check: 'Elimde ne var, kontrol et',
+    checking: 'Parça listeleri okunuyor: {done} / {total}…',
+    checkDone: 'Bitti: {count} parça listesi okundu, {failed} başarısız',
+    checkHint:
+      'Her yayının parça listesini okur ve tüm kitaplığınızla karşılaştırır; böylece takipten önce sahip olduğunuz albümler de sayılır. Hiçbir şey indirilmez. Büyük bir sanatçıda yavaştır: MusicBrainz saniyede bir isteğe izin verir.',
+    tracks: '{name} parçaları',
+    tracksNotRead:
+      'Parça listesi henüz okunmadı: Elimde ne var, kontrol et düğmesine basın.',
+    trackHave: 'Kitaplığınızda',
+    trackMissing: 'Eksik',
     kind: {
       mixtape: 'Mixtape’ler',
       soundtrack: 'Film müzikleri',

@@ -1302,6 +1302,16 @@ export default {
     switchedOn: '{name} activée',
     switchedOff: '{name} désactivée',
     noneHere: 'Rien ici.',
+    check: 'Vérifier ce que j’ai',
+    checking: 'Lecture des listes de titres : {done} sur {total}…',
+    checkDone: 'Terminé : {count} listes lues, {failed} en échec',
+    checkHint:
+      'Lit la liste des titres de chaque sortie et la compare à toute votre bibliothèque, pour que les albums que vous aviez avant le suivi comptent aussi. Rien n’est téléchargé. Lent pour un gros artiste : MusicBrainz autorise une requête par seconde.',
+    tracks: 'Titres de {name}',
+    tracksNotRead:
+      'Liste des titres pas encore lue : appuyez sur Vérifier ce que j’ai.',
+    trackHave: 'Dans votre bibliothèque',
+    trackMissing: 'Manquant',
     kind: {
       mixtape: 'Mixtapes',
       soundtrack: 'Bandes originales',

@@ -699,6 +699,10 @@ class PlaylistMonitorDB:
                 'DELETE FROM artist_catalogue WHERE playlist_id = ?',
                 (playlist_id,),
             )
+            conn.execute(
+                'DELETE FROM artist_catalogue_tracks WHERE playlist_id = ?',
+                (playlist_id,),
+            )
             row = conn.execute(
                 'SELECT * FROM monitored_playlists WHERE id = ?',
                 (playlist_id,),
@@ -1793,6 +1797,78 @@ def _release_tracks(
     ]
 
 
+#: The catalogue whose tracklist is read first for a release several of
+#: them list: Deezer's API is the quickest, MusicBrainz's the slowest
+#: (one request a second).
+_TRACKLIST_ORDER = ('deezer', 'youtube', 'musicbrainz')
+
+
+def take_inventory(
+    playlist: MonitoredPlaylist,
+    db: PlaylistMonitorDB,
+    *,
+    progress: Optional[Callable[[int, int], None]] = None,
+    stop: Optional[Callable[[], bool]] = None,
+) -> dict[str, int]:
+    """Read the tracklist of every release in an artist watch's catalogue
+    that has none kept yet ("Check what I have"), so its page can count
+    what the library has of each - downloading nothing.
+
+    A release two catalogues list is read once, from the quickest
+    (:data:`_TRACKLIST_ORDER`). One that turns out not to be the
+    artist's own (a guest spot, a bootleg) is marked so. A release a
+    catalogue fails on is left for the next check. ``{checked, failed,
+    total}``; *progress* hears ``(done, total)`` after each release and
+    *stop* can end it early."""
+
+    kept = set(db.catalogue.tracks(playlist.id))
+    groups: dict[tuple[str, str], list[dict[str, Any]]] = {}
+    for row in db.catalogue.rows(playlist.id):
+        key = (release_key(row['name']), release_type_of(row))
+        groups.setdefault(key, []).append(row)
+    todo = []
+    for rows in groups.values():
+        if any(r['album_id'] in kept or r['not_own'] for r in rows):
+            continue
+        rows.sort(
+            key=lambda r: (
+                _TRACKLIST_ORDER.index(r['source'])
+                if r['source'] in _TRACKLIST_ORDER
+                else len(_TRACKLIST_ORDER)
+            )
+        )
+        todo.append(rows[0])
+    checked = failed = 0
+    for row in todo:
+        if stop is not None and stop():
+            break
+        album = {'album_id': row['album_id'], 'name': row['name']}
+        try:
+            tracks = _release_tracks(album, playlist.name)
+        except Exception:
+            failed += 1
+            logger.opt(exception=True).info(
+                'Could not read the tracks of {} ({})',
+                row['name'],
+                row['album_id'],
+            )
+        else:
+            if tracks is None:
+                db.catalogue.set_not_own(playlist.id, row['album_id'])
+            else:
+                db.catalogue.store_tracks(playlist.id, row['album_id'], tracks)
+            checked += 1
+        if progress is not None:
+            progress(checked + failed, len(todo))
+    logger.info(
+        'Artist "{}": read the tracks of {} release(s), {} failed',
+        playlist.name,
+        checked,
+        failed,
+    )
+    return {'checked': checked, 'failed': failed, 'total': len(todo)}
+
+
 def _credited_release(
     artist: str, owner: str, main: list[str], titles: list[str]
 ) -> bool:
@@ -2046,8 +2122,9 @@ async def check_artist(  # noqa: PLR0914  # one sweep: discography, releases, tr
                 db.catalogue.set_not_own, playlist.id, album_id
             )
             continue
+        # The watch's page counts what the library has of it from this.
         await asyncio.to_thread(
-            db.catalogue.set_total, playlist.id, album_id, len(tracks)
+            db.catalogue.store_tracks, playlist.id, album_id, tracks
         )
 
         complete = bool(tracks) and max(

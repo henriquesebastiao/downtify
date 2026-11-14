@@ -1273,6 +1273,16 @@ export default {
     switchedOn: '{name} bekapcsolva',
     switchedOff: '{name} kikapcsolva',
     noneHere: 'Itt nincs semmi.',
+    check: 'Nézd meg, mi van meg',
+    checking: 'Számlisták olvasása: {done} / {total}…',
+    checkDone: 'Kész: {count} számlista beolvasva, {failed} sikertelen',
+    checkHint:
+      'Beolvassa minden kiadvány számlistáját, és összeveti a teljes könyvtáraddal, így a figyelés előtt meglévő albumok is számítanak. Semmi nem töltődik le. Nagy előadónál lassú: a MusicBrainz másodpercenként egy kérést enged.',
+    tracks: '{name} számai',
+    tracksNotRead:
+      'A számlista még nincs beolvasva: nyomd meg a Nézd meg, mi van meg gombot.',
+    trackHave: 'A könyvtáradban',
+    trackMissing: 'Hiányzik',
     kind: {
       mixtape: 'Mixtape-ek',
       soundtrack: 'Filmzenék',

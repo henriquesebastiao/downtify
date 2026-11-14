@@ -1266,6 +1266,15 @@ export default {
     switchedOn: '{name} 켬',
     switchedOff: '{name} 끔',
     noneHere: '여기에는 없습니다.',
+    check: '가진 곡 확인',
+    checking: '트랙 목록 읽는 중: {total}개 중 {done}개…',
+    checkDone: '완료: 트랙 목록 {count}개 읽음, {failed}개 실패',
+    checkHint:
+      '각 발매작의 트랙 목록을 읽어 라이브러리 전체와 비교하므로, 감시 전에 갖고 있던 앨범도 집계됩니다. 아무것도 다운로드하지 않습니다. 큰 아티스트는 느립니다. MusicBrainz는 초당 한 번의 요청만 허용합니다.',
+    tracks: '{name}의 트랙',
+    tracksNotRead: '아직 트랙 목록을 읽지 않았습니다. 가진 곡 확인을 누르세요.',
+    trackHave: '라이브러리에 있음',
+    trackMissing: '없음',
     kind: {
       mixtape: '믹스테이프',
       soundtrack: '사운드트랙',
