@@ -87,7 +87,7 @@ Route supported outbound requests through an optional HTTP(S) or SOCKS5 proxy, w
 
 Read-only music folders stay protected during **Upgrade library**: their tracks are skipped before remote lookups, without changing files or marking unchecked categories as complete. See [Upgrade library](https://henriquesebastiao.github.io/downtify/features/library-upgrade/#read-only-music-folders).
 
-Existing Library `.m3u` playlists can use UTF-8 or the Windows-1252 legacy fallback. Unreadable playlists are skipped with a warning; reading keeps existing files intact. See [M3U compatibility](docs/features/m3u-export.md#compatibility).
+Existing Library `.m3u` and `.m3u8` playlists are discovered throughout the downloads folder. Both accept UTF-8; only `.m3u` uses the Windows-1252 legacy fallback. Unreadable playlists are skipped with a warning; reading keeps existing files intact. See [M3U compatibility](docs/features/m3u-export.md#compatibility).
 
 ## Quick start
 

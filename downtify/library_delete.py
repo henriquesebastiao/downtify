@@ -300,7 +300,17 @@ def _m3u_paths_for_playlist(
         download_dir / safe / f'{safe}.m3u',
     ]
     if organize_by_artist:
-        return [paths[0]]
+        paths = paths[:1]
+    # Keep canonical candidates for cover cleanup even without an M3U.
+    for directory in {path.parent for path in paths}:
+        try:
+            paths.extend(
+                path
+                for path in directory.iterdir()
+                if path.stem == safe and path.suffix.lower() == '.m3u8'
+            )
+        except OSError:
+            continue
     return paths
 
 

@@ -59,7 +59,9 @@ The generated file uses:
 
 This is compatible with Jellyfin, Navidrome, Plex, VLC, Kodi, Sonos and any other player or media server that consumes standard M3U playlists.
 
-When reading existing `.m3u` playlists in the Library, Downtify first tries strict UTF-8, accepting an optional UTF-8 BOM. If decoding fails, it tries strict Windows-1252, the same fallback used by the external-playlist importer. This also handles printable Latin-1 text, including names such as `Beyoncé`. It is a fallback policy, not automatic encoding detection: other legacy encodings may need conversion to UTF-8. `.m3u8` reads require UTF-8 and never use the legacy fallback; Library discovery still lists only `.m3u` files.
+When reading existing `.m3u` playlists in the Library, Downtify first tries strict UTF-8, accepting an optional UTF-8 BOM. If decoding fails, it tries strict Windows-1252, the same fallback used by the external-playlist importer. This also handles printable Latin-1 text, including names such as `Beyoncé`. It is a fallback policy, not automatic encoding detection: other legacy encodings may need conversion to UTF-8. `.m3u8` reads require UTF-8 and never use the legacy fallback.
+
+Library discovery recognizes both `.m3u` and `.m3u8` throughout the downloads folder, including uppercase or mixed-case extensions. Track order, repeated songs and sidecar cover art are preserved. Files added or changed by hand appear after the existing 60-second playlist-cache recheck window, on a subsequent Library read; no restart or extension rename is needed. New exports and newly created playlists still use `.m3u`. Playlists in configured external music folders still use **Import existing playlists**, rather than being listed directly.
 
 If neither permitted encoding can decode a file, it contains NUL characters (for example, UTF-16 data), or it cannot be opened, Downtify skips that playlist and logs its path and a warning to check permissions or save a UTF-8 copy. Other playlists continue loading. Characters are never silently dropped or replaced, and reading does not rewrite playlists or audio files. Explicit playlist edits continue to write UTF-8.
 
