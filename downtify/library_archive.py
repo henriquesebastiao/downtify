@@ -19,6 +19,7 @@ lands in the user's download folder like any other file.
 
 from __future__ import annotations
 
+import os
 import secrets
 import time
 import zipfile
@@ -98,11 +99,15 @@ def _entry_chunks(
     be read at all never leaves a stray entry behind.
     """
 
-    with path.open('rb') as source, archive.open(name, mode='w') as target:
-        while chunk := source.read(_CHUNK_SIZE):
-            target.write(chunk)
-            if buffer.has_chunk():
-                yield buffer.drain()
+    with path.open('rb') as source:
+        info = zipfile.ZipInfo(name)
+        # Choose ZIP64 before emitting the header; a stream cannot rewind it.
+        info.file_size = os.fstat(source.fileno()).st_size
+        with archive.open(info, mode='w') as target:
+            while chunk := source.read(_CHUNK_SIZE):
+                target.write(chunk)
+                if buffer.has_chunk():
+                    yield buffer.drain()
 
 
 def stream_library_zip(

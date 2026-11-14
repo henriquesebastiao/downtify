@@ -7,6 +7,9 @@ import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
 
+import pytest
+
+from downtify import library_archive
 from downtify.library_archive import (
     ArchiveTicketStore,
     archive_filename,
@@ -50,6 +53,58 @@ def test_stream_library_zip_stores_without_compressing(tmp_path: Path) -> None:
     info = archive.getinfo('Artist - Song.flac')
     assert info.compress_type == zipfile.ZIP_STORED
     assert info.file_size == 4096
+    assert info.extract_version == 20
+    assert info.extra == b''
+
+
+@pytest.mark.parametrize('size', [1023, 1024, 1025])
+def test_stream_library_zip_supports_zip64_entries(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, size: int
+) -> None:
+    # Exercise the real ZIP64 boundary without allocating a 2 GiB file.
+    monkeypatch.setattr(zipfile, 'ZIP64_LIMIT', 1024)
+    name = 'My Playlist/Artist - Long.wav'
+    track = tmp_path / 'long.wav'
+    content = b'x' * size
+    track.write_bytes(content)
+    following = tmp_path / 'following.mp3'
+    following.write_bytes(b'next track')
+
+    with _zip_from([(name, track), ('following.mp3', following)]) as archive:
+        assert archive.namelist() == [name, 'following.mp3']
+        assert archive.read(name) == content
+        assert archive.getinfo(name).file_size == size
+        assert archive.getinfo(name).compress_type == zipfile.ZIP_STORED
+        assert archive.getinfo(name).extract_version == 45
+        assert archive.read('following.mp3') == b'next track'
+        assert archive.testzip() is None
+
+
+def test_stream_library_zip_streams_zip64_before_reading_next_entry(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(zipfile, 'ZIP64_LIMIT', 1024)
+    track = tmp_path / 'long.wav'
+    content = b'x' * (1024 * 1024)
+    track.write_bytes(content)
+    following = tmp_path / 'following.mp3'
+    entries = stream_library_zip([
+        ('long.wav', track),
+        ('following.mp3', following),
+    ])
+
+    first = next(entries)
+    # This file is created only after the first chunk reaches the client.
+    following.write_bytes(b'next track')
+    chunks = [first, *entries]
+
+    assert len(chunks) > 1
+    assert len(first) < len(content)
+    with zipfile.ZipFile(io.BytesIO(b''.join(chunks))) as archive:
+        assert archive.read('long.wav') == content
+        assert archive.getinfo('long.wav').extract_version == 45
+        assert archive.read('following.mp3') == b'next track'
+        assert archive.testzip() is None
 
 
 def test_stream_library_zip_yields_chunks_before_finishing(
@@ -96,10 +151,14 @@ def test_archive_ticket_is_single_use(tmp_path: Path) -> None:
     assert store.pop(token) is None
 
 
-def test_archive_ticket_expires(tmp_path: Path) -> None:
-    store = ArchiveTicketStore(ttl_seconds=0)
+def test_archive_ticket_expires(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(library_archive.time, 'monotonic', lambda: 1000.0)
+    store = ArchiveTicketStore(ttl_seconds=60)
     token = store.create([('Artist - Song.mp3', tmp_path / 'x.mp3')])
 
+    monkeypatch.setattr(library_archive.time, 'monotonic', lambda: 1061.0)
     assert store.pop(token) is None
 
 
