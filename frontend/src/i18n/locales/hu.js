@@ -1664,6 +1664,10 @@ export default {
     syncDelay: 'Szünet a szinkronizálás között',
     syncDelayHint:
       'Minden importált köteg után vár (méret = Párhuzamos letöltések), mielőtt dalszöveget, borítót és műfajt keres. Nagy mappáknál elkerüli a korlátokat.',
+    idsGroup: 'Dalazonosítók',
+    isrc: 'ISRC-kódok írása',
+    isrcHint:
+      'Minden új letöltésbe beírja az ISRC-t, egy felvétel azonosító kódját, így ugyanaz a dal más néven is felismerhető. A Deezeren keresi ki; kihagyja, ha nem biztos.',
     artGroup: 'Borító',
     coverArt: 'Borító beágyazása',
     coverArtHint: 'Kapcsold ki a kisebb fájlokért és gyorsabb letöltésért.',

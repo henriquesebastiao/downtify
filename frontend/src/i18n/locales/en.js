@@ -1627,6 +1627,10 @@ export default {
     syncDelay: 'Pause between sync lookups',
     syncDelayHint:
       'Wait after each batch of imported tracks (size = Parallel downloads) before looking up lyrics, covers and genre. Helps avoid rate limits on large folders.',
+    idsGroup: 'Song IDs',
+    isrc: 'Write ISRC codes',
+    isrcHint:
+      'Saves each new download’s ISRC, the code that names one recording, so the same song is recognised even under another name. Looked up on Deezer; left out when it isn’t certain.',
     artGroup: 'Cover art',
     coverArt: 'Embed cover art',
     coverArtHint: 'Turn off for smaller files and faster downloads.',

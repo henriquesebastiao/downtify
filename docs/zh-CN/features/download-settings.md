@@ -208,3 +208,6 @@ Downtify 会使用指定视频（或 SoundCloud 曲目）重新下载，同时�
 | 年份 | Spotify embed（逐曲目获取） |
 | 专辑封面 | Spotify 解析曲目使用 Spotify embed 的曲目封面；其他情况使用 YouTube Music 缩略图或 Deezer 封面。可选，参见[下载封面](#download-cover-art)和[封面分辨率](#cover-art-resolution)。 |
 | 歌词 | lrclib（启用时） |
+| ISRC | Deezer，仅在确定时写入。可选，参见下文 **Write ISRC codes** |
+
+**ISRC** 是唱片公司为一条录音分配的代码，例如 `USCM51600061`。开启 **Settings → Tags & lyrics → Write ISRC codes**（默认开启）后，每个新下载都会在 Deezer 上查询：来自 Deezer 的下载直接使用其曲目的代码；其他下载按艺人、标题和时长搜索，只有所有匹配结果一致时才写入代码。Deezer 无法确定的歌曲宁可不写，也不会写错。艺人监控和重复检查会优先按这个代码比对歌曲，因此即使两个曲库对同一条录音的命名不同，也能认出来。音乐库中已有的文件不会被修改；Navidrome 不按 ISRC 识别歌曲，所以写入它不会影响 Navidrome。

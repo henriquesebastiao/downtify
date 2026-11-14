@@ -208,3 +208,6 @@ Downtify bettet die folgenden Tags in jede heruntergeladene Datei ein, unabhäng
 | Jahr | Spotify-Embed (Abruf auf Titelebene) |
 | Cover | Spotify-Embed (Cover auf Titelebene) bei von Spotify aufgelösten Titeln; sonst YouTube-Music-Thumbnail oder Deezer-Cover. Optional — siehe [Cover herunterladen](#download-cover-art) und [Cover-Auflösung](#cover-art-resolution) |
 | Songtext | lrclib (falls aktiviert) |
+| ISRC | Deezer, nur wenn er sicher ist. Optional — **ISRC-Codes schreiben** (siehe unten) |
+
+Der **ISRC** ist der Code, den ein Label einer Aufnahme gibt, etwa `USCM51600061`. Ist **Einstellungen → Tags und Songtexte → ISRC-Codes schreiben** an (Standard), wird jeder neue Download bei Deezer nachgeschlagen: Ein Deezer-Download übernimmt den Code seines eigenen Titels; jeder andere wird nach Künstler, Titel und Länge gesucht, und der Code wird nur geschrieben, wenn alle Treffer übereinstimmen. Ein Song, den Deezer nicht eindeutig findet, bekommt keinen Code statt eines falschen. Die Künstlerbeobachtung und die Duplikatprüfung vergleichen Songs zuerst über diesen Code, sodass dieselbe Aufnahme auch erkannt wird, wenn zwei Kataloge sie unterschiedlich benennen. Dateien, die schon in deiner Bibliothek sind, werden nicht verändert, und Navidrome erkennt Songs nicht am ISRC, das Schreiben ändert dort also nichts.

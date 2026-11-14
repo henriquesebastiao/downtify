@@ -40,6 +40,7 @@ from yt_dlp.postprocessor.ffmpeg import FFmpegExtractAudioPP
 
 from . import cover_sources
 from . import deezer as deezer_mod
+from . import isrc as isrc_mod
 from . import lyrics as lyrics_mod
 from . import spotify as spotify_mod
 from .album_artist import VARIOUS_ARTISTS, filing_artist
@@ -428,6 +429,7 @@ class Downloader:
         organize_by_album: bool = False,
         download_cover_art: bool = True,
         cover_min_resolution: int = 0,
+        write_isrc: bool = True,
         overwrite_existing_files: bool = True,
         cookies_store: Optional[CookiesStore] = None,
         audio_providers: Optional[list[str]] = None,
@@ -440,6 +442,8 @@ class Downloader:
         # The smallest cover (short side, px) worth embedding; 0 = take
         # what the track's source offers (see _download_cover_meeting).
         self.cover_min_resolution = max(0, int(cover_min_resolution or 0))
+        # Write each download's ISRC (downtify.isrc).
+        self.write_isrc = bool(write_isrc)
         self.deemix_settings = normalize_settings(deemix_settings)
         self.audio_providers = self._normalize_audio_providers(audio_providers)
         self.slskd_settings = self._normalize_slskd_settings(slskd_settings)
@@ -1307,6 +1311,11 @@ class Downloader:
             except Exception:
                 succeeded = False
                 logger.exception('Failed to embed lyrics into {}', final_path)
+
+        # The recording's own ID (see downtify.isrc); a file without one
+        # is no less a download.
+        if found.isrc:
+            isrc_mod.write(final_path, found.isrc)
         return succeeded
 
     def _remove_slskd_source_after_import(
@@ -1701,14 +1710,17 @@ class _LookupResults:
         genre: Optional[str],
         cover_bytes: Optional[bytes],
         lyrics: Any,
+        isrc: Optional[str] = None,
     ) -> None:
         self.genre = genre
         self.cover_bytes = cover_bytes
         self.lyrics = lyrics
+        self.isrc = isrc
 
 
 class _MetadataLookups:
-    """Genre, cover-art and lyrics lookups for one song, run in parallel.
+    """Genre, cover-art, lyrics and ISRC lookups for one song, run in
+    parallel.
 
     They depend only on the song's metadata, not on the audio file, so
     callers start them while the audio itself is being fetched. The cover
@@ -1718,7 +1730,12 @@ class _MetadataLookups:
     def __init__(self, downloader: Downloader, song: dict[str, Any]) -> None:
         self._song = song
         self._pool = ThreadPoolExecutor(
-            max_workers=3, thread_name_prefix='downtify-metadata'
+            max_workers=4, thread_name_prefix='downtify-metadata'
+        )
+        self._isrc = (
+            self._pool.submit(isrc_mod.lookup, song)
+            if getattr(downloader, 'write_isrc', True)
+            else None
         )
         self._genre = (
             None
@@ -1756,6 +1773,7 @@ class _MetadataLookups:
             lyrics=_lookup_result(
                 self._lyrics, 'Lyrics fetch', self._song, error=True
             ),
+            isrc=_lookup_result(self._isrc, 'ISRC lookup', self._song),
         )
 
     def cancel(self) -> None:

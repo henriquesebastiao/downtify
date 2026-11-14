@@ -208,3 +208,6 @@ A Downtify a következő címkéket ágyazza be minden letöltött fájlba, form
 | Év | Spotify embed (számszintű lekérés) |
 | Albumborító | Spotify embed (számszintű borító) a Spotify által feloldott számoknál; egyébként YouTube Music bélyegkép vagy Deezer-borító. Opcionális — lásd: [Borítók letöltése](#download-cover-art) és [Borító felbontása](#cover-art-resolution) |
 | Dalszöveg | lrclib (ha engedélyezett) |
+| ISRC | Deezer, csak ha biztos. Opcionális — **ISRC-kódok írása** (lásd lent) |
+
+Az **ISRC** az a kód, amelyet egy kiadó egy felvételnek ad, például `USCM51600061`. Ha a **Beállítások → Címkék és dalszövegek → ISRC-kódok írása** be van kapcsolva (alapértelmezés), minden új letöltést kikeres a Deezeren: egy Deezer-letöltés a saját számának kódját kapja; minden mást előadó, cím és hossz alapján keres, és a kódot csak akkor írja be, ha minden találat egyezik. Az a dal, amelyet a Deezer nem tud biztosan azonosítani, inkább kód nélkül marad, mint hogy rosszat kapjon. Az Előadófigyelés és a duplikátumellenőrzés először e kód alapján hasonlít össze, így ugyanaz a felvétel akkor is felismerhető, ha két katalógus másképp nevezi. A könyvtáradban már meglévő fájlok nem változnak, a Navidrome pedig nem az ISRC alapján azonosítja a dalokat, így a beírása ott semmit sem változtat.
