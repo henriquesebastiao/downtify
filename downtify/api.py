@@ -571,6 +571,7 @@ from .monitor import (
     LibraryStores,
     MonitoredPlaylist,
     PlaylistMonitorDB,
+    check_running,
     check_watch,
     download_playlist_cover,
     fetch_playlist,
@@ -10742,6 +10743,8 @@ def _artist_releases(
         'releases': releases,
         'counts': artist_catalogue.counts(releases),
         'inventory': dict(_inventories.get(watch.id) or {}) or None,
+        'missing': artist_catalogue.missing(releases),
+        'checking': check_running(watch.id),
     }
 
 
@@ -10842,6 +10845,48 @@ async def check_artist_watch_inventory(
 
     spawn_task(run(), name=f'artist-inventory-{watch.id}')
     return {'inventory': dict(job)}
+
+
+@router.post('/api/monitor/playlists/{playlist_id}/releases/download-missing')
+async def download_missing_artist_releases(
+    playlist_id: int, request: Request
+) -> dict[str, Any]:
+    """ "Download missing": a check of the watch that goes through every
+    release it downloads again, known or not, and downloads the songs
+    missing from them (linking those the library has under another name)
+    - as the queue shows. Releases the watch doesn't download are left
+    alone; switch one on first. ``{started, missing}``; ``409`` while the
+    watch is being checked."""
+
+    db = _require_monitor_db()
+    watch = await _artist_watch_for_request(playlist_id, request)
+    if state.downloader is None:
+        raise HTTPException(status_code=500, detail='Downloader not ready')
+    if check_running(watch.id):
+        raise HTTPException(
+            status_code=409, detail='This artist is being checked right now'
+        )
+    missing = (await asyncio.to_thread(_artist_releases, db, watch))['missing']
+    loop = state.loop or asyncio.get_running_loop()
+
+    async def run() -> None:
+        try:
+            await check_watch(
+                watch,
+                db,
+                state.downloader,  # type: ignore[arg-type]
+                state.connections.broadcast,
+                loop,
+                state.settings,
+                library_stores(),
+                state.podcasts,
+                fill_missing=True,
+            )
+        except Exception:
+            logger.exception('Downloading what "{}" misses failed', watch.name)
+
+    spawn_task(run(), name=f'artist-missing-{watch.id}')
+    return {'started': True, 'missing': missing}
 
 
 @router.patch('/api/monitor/playlists/{playlist_id}/releases')

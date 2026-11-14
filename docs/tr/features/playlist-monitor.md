@@ -290,6 +290,8 @@ Bir sanatçı takibinin sayfası, son kontroldeki tüm kataloğunu da listeler: 
 
 **Elimde ne var, kontrol et**, her yayının parça listesini okur ve sanatçı takibinin şarkıları eşleştirdiği gibi (aynı sanatçı ve başlık, aynı süre) tüm kitaplıkla karşılaştırır; şarkıları kimin indirdiği fark etmez. Böylece takipten önce sahip olduğunuz bir albüm **Tamam** olarak görünür ve bir yayının yanındaki ok, parçalarını kitaplığınızda veya eksik olarak işaretleyerek listeler. Hiçbir şey indirilmez. Arka planda çalışır ve büyük bir sanatçıda yavaştır, çünkü MusicBrainz saniyede bir isteğe izin verir. Parça listeleri saklanır; sonraki bir kontrol yalnızca henüz okunmamış yayınları okur, normal bir kontrol de indirdiği yayınların parça listelerini saklar.
 
+**Eksikleri indir** ardından, takibin indirdiği her yayından (açık olan veya izlenen bir tür ve çeşitte olan), daha önce gezilmiş olanlar dahil, sizde olmayan şarkıları **kuyrukta** takip ettiğiniz bir kontrol olarak indirir. Önce şarkı sayısıyla birlikte sorar. Kitaplığınızda zaten olan şarkılar yeniden indirilmez, bağlanır; takibin indirmediği yayınlara dokunulmaz: dahil etmek için önce yayını açın.
+
 Bir yayının yanındaki anahtar, Lidarr’ın albüm başına izlemesi gibi takibin önüne geçer. Açık olduğunda, türü izlenmese ya da takip başlamadan önce çıkmış olsa bile yayını indirir ve hemen bir kontrol başlar. Kapalı olduğunda onu indirmeyi bırakır. Kitaplıkta zaten olan şarkılar her iki durumda da kalır. **MusicBrainz’den şunları da indir**, yalnızca bu sanatçı için, yalnızca MusicBrainz’in ayırt ettiği yayın türlerinden hangilerinin indirileceğini seçer: varsayılan olarak mixtape’ler ve film müzikleri; canlı albümler, derlemeler, remiksler, DJ miksleri ve demolar açıldığında.
 
 ## Bir şarkının nereden geldiği

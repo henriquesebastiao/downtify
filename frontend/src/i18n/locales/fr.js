@@ -1293,7 +1293,7 @@ export default {
     empty: 'Aucune sortie pour l’instant',
     emptyHint: 'Elles apparaissent après le prochain contrôle.',
     summary:
-      '{complete} complètes · {partly} en partie · {missing} à télécharger',
+      '{complete} complètes · {partly} en partie · {missing} encore vides',
     kinds: 'Depuis MusicBrainz, télécharger aussi',
     kindsHint:
       'Des types de sortie que seul MusicBrainz distingue. Les mixtapes et les bandes originales sont la musique de l’artiste ; les albums live, compilations et remixes la répètent surtout. Pour cet artiste seulement.',
@@ -1312,6 +1312,24 @@ export default {
       'Liste des titres pas encore lue : appuyez sur Vérifier ce que j’ai.',
     trackHave: 'Dans votre bibliothèque',
     trackMissing: 'Manquant',
+    downloadMissing: 'Télécharger ce qui manque',
+    downloadMissingCount: 'Télécharger {count} manquants',
+    missingTitle: 'Télécharger ce qui manque ?',
+    missingBody: {
+      one: 'Morceaux manquants : {tracks}, d’une sortie que le suivi télécharge. Les morceaux déjà dans votre bibliothèque sont liés, pas retéléchargés.',
+      other:
+        'Morceaux manquants : {tracks}, de {count} sorties que le suivi télécharge. Les morceaux déjà dans votre bibliothèque sont liés, pas retéléchargés.',
+    },
+    missingBodyUnread: {
+      one: 'Morceaux manquants : {tracks}, d’une sortie que le suivi télécharge, plus ceux des sorties dont la liste n’a pas encore été lue ({unread}). Les morceaux déjà dans votre bibliothèque sont liés, pas retéléchargés.',
+      other:
+        'Morceaux manquants : {tracks}, de {count} sorties que le suivi télécharge, plus ceux des sorties dont la liste n’a pas encore été lue ({unread}). Les morceaux déjà dans votre bibliothèque sont liés, pas retéléchargés.',
+    },
+    missingConfirm: 'Télécharger',
+    missingStarted: 'Téléchargement de ce qui manque : suivez-le dans la file',
+    busy: 'Cet artiste est en cours de contrôle : suivez-le dans la file.',
+    missingHint:
+      'Télécharger ce qui manque parcourt chaque sortie activée et récupère les morceaux que vous n’avez pas ; activez d’abord une sortie pour l’inclure.',
     kind: {
       mixtape: 'Mixtapes',
       soundtrack: 'Bandes originales',

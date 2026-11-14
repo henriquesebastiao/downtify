@@ -1260,7 +1260,7 @@ export default {
     hint: 'YouTube Music, Deezer ve MusicBrainz’in son kontrolde bu sanatçı için listelediği her şey ve kitaplığınızda her birinden ne olduğu. Türü izlenmese bile indirmek için bir yayını açın, indirmeyi durdurmak için kapatın (mevcut olan kalır).',
     empty: 'Henüz yayın yok',
     emptyHint: 'Bir sonraki kontrolden sonra görünürler.',
-    summary: '{complete} tamam · {partly} kısmen · {missing} indirilecek',
+    summary: '{complete} tamam · {partly} kısmen · {missing} henüz boş',
     kinds: 'MusicBrainz’den şunları da indir',
     kindsHint:
       'Yalnızca MusicBrainz’in ayırt ettiği yayın türleri. Mixtape’ler ve film müzikleri sanatçının kendi müziğidir; canlı albümler, derlemeler ve remiksler çoğunlukla onu tekrarlar. Yalnızca bu sanatçı için.',
@@ -1279,6 +1279,24 @@ export default {
       'Parça listesi henüz okunmadı: Elimde ne var, kontrol et düğmesine basın.',
     trackHave: 'Kitaplığınızda',
     trackMissing: 'Eksik',
+    downloadMissing: 'Eksikleri indir',
+    downloadMissingCount: '{count} eksiği indir',
+    missingTitle: 'Eksikler indirilsin mi?',
+    missingBody: {
+      one: 'Eksik şarkılar: {tracks}, takibin indirdiği {count} yayından. Kitaplığınızda zaten olan şarkılar yeniden indirilmez, bağlanır.',
+      other:
+        'Eksik şarkılar: {tracks}, takibin indirdiği {count} yayından. Kitaplığınızda zaten olan şarkılar yeniden indirilmez, bağlanır.',
+    },
+    missingBodyUnread: {
+      one: 'Eksik şarkılar: {tracks}, takibin indirdiği {count} yayından ve parça listesi henüz okunmamış yayınlardan ({unread}). Kitaplığınızda zaten olan şarkılar yeniden indirilmez, bağlanır.',
+      other:
+        'Eksik şarkılar: {tracks}, takibin indirdiği {count} yayından ve parça listesi henüz okunmamış yayınlardan ({unread}). Kitaplığınızda zaten olan şarkılar yeniden indirilmez, bağlanır.',
+    },
+    missingConfirm: 'İndir',
+    missingStarted: 'Eksikler indiriliyor: kuyrukta takip edin',
+    busy: 'Bu sanatçı şu an kontrol ediliyor: kuyrukta takip edin.',
+    missingHint:
+      'Eksikleri indir, açık olan her yayını gezer ve sizde olmayan şarkıları indirir; dahil etmek için önce yayını açın.',
     kind: {
       mixtape: 'Mixtape’ler',
       soundtrack: 'Film müzikleri',

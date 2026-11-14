@@ -1257,7 +1257,7 @@ export default {
     hint: '마지막 확인 시점에 YouTube Music, Deezer, MusicBrainz가 이 아티스트에 대해 보여 주는 모든 발매작과, 각각 라이브러리에 있는 양입니다. 유형을 지켜보지 않아도 받으려면 켜고, 더 받지 않으려면 끄세요(이미 있는 파일은 남습니다).',
     empty: '아직 발매작이 없습니다',
     emptyHint: '다음 확인 후에 표시됩니다.',
-    summary: '완료 {complete} · 일부 {partly} · 받을 예정 {missing}',
+    summary: '완료 {complete} · 일부 {partly} · 아직 없음 {missing}',
     kinds: 'MusicBrainz에서 함께 받기',
     kindsHint:
       'MusicBrainz만 구분하는 발매 종류입니다. 믹스테이프와 사운드트랙은 아티스트 자신의 음악이고, 라이브 앨범·컴필레이션·리믹스는 대부분 같은 곡의 반복입니다. 이 아티스트에만 적용됩니다.',
@@ -1275,6 +1275,24 @@ export default {
     tracksNotRead: '아직 트랙 목록을 읽지 않았습니다. 가진 곡 확인을 누르세요.',
     trackHave: '라이브러리에 있음',
     trackMissing: '없음',
+    downloadMissing: '없는 곡 받기',
+    downloadMissingCount: '없는 곡 {count}개 받기',
+    missingTitle: '없는 곡을 받을까요?',
+    missingBody: {
+      one: '없는 곡 {tracks}곡, 감시가 받는 발매작 {count}개에서. 이미 라이브러리에 있는 곡은 다시 받지 않고 연결합니다.',
+      other:
+        '없는 곡 {tracks}곡, 감시가 받는 발매작 {count}개에서. 이미 라이브러리에 있는 곡은 다시 받지 않고 연결합니다.',
+    },
+    missingBodyUnread: {
+      one: '없는 곡 {tracks}곡, 감시가 받는 발매작 {count}개에서, 그리고 아직 트랙 목록을 읽지 않은 발매작({unread}개)의 곡. 이미 라이브러리에 있는 곡은 다시 받지 않고 연결합니다.',
+      other:
+        '없는 곡 {tracks}곡, 감시가 받는 발매작 {count}개에서, 그리고 아직 트랙 목록을 읽지 않은 발매작({unread}개)의 곡. 이미 라이브러리에 있는 곡은 다시 받지 않고 연결합니다.',
+    },
+    missingConfirm: '받기',
+    missingStarted: '없는 곡을 받는 중: 대기열에서 확인하세요',
+    busy: '이 아티스트를 확인하는 중입니다. 대기열에서 확인하세요.',
+    missingHint:
+      '없는 곡 받기는 켜진 모든 발매작을 살펴 없는 곡을 받습니다. 포함하려면 먼저 발매작을 켜세요.',
     kind: {
       mixtape: '믹스테이프',
       soundtrack: '사운드트랙',

@@ -10,6 +10,9 @@ from __future__ import annotations
 
 import asyncio
 
+import pytest
+from fastapi import HTTPException
+
 from downtify import api, artist_catalogue, monitor
 from downtify.library_songs import LibrarySongs
 from tests.test_artist_catalogue import _by_name, _catalogues, _view
@@ -289,3 +292,111 @@ def test_a_release_not_read_yet_has_no_tracks(monkeypatch, tmp_path):
         )
     )
     assert tracks == {'album_id': 'CLB', 'tracks': []}
+
+
+# ── "Download missing" ──────────────────────────────────────────────────
+
+
+def test_download_missing_fills_in_what_a_known_release_lacks(
+    monkeypatch, tmp_path
+):
+    _catalogues(monkeypatch)
+    db, watch = _watch(tmp_path)
+    db.update_playlist(watch.id, release_types='album')
+    dl = _FakeDownloader(tmp_path)
+    _sweep(db, watch, dl, ON)
+    # Way 2 Sexy goes missing from the library since.
+    files = db.get_track_filenames(watch.id)
+    (tmp_path / files['wib']).unlink()
+    dl.calls.clear()
+
+    async def scenario():
+        async def broadcast(_message):
+            return None
+
+        return await monitor.check_artist(
+            db.get_playlist(watch.id),
+            db,
+            dl,
+            broadcast,
+            asyncio.get_running_loop(),
+            settings=ON,
+            library=monitor.LibraryStores(listing=lambda: []),
+            fill_missing=True,
+        )
+
+    asyncio.run(scenario())
+
+    # Only the missing song is fetched again; the single the watch
+    # doesn't download stays out.
+    assert dl.calls in (['wib'], ['deezer-Certified Lover Boy-2'])
+    assert not any('Laugh Now Cry Later' in call for call in dl.calls)
+
+
+def test_download_missing_leaves_releases_out_before_the_watch(
+    monkeypatch, tmp_path
+):
+    _catalogues(monkeypatch)
+    db, watch = _watch(tmp_path, new_only=True)
+    dl = _FakeDownloader(tmp_path)
+    _sweep(db, watch, dl, ON)  # the baseline
+
+    async def scenario():
+        async def broadcast(_message):
+            return None
+
+        return await monitor.check_artist(
+            db.get_playlist(watch.id),
+            db,
+            dl,
+            broadcast,
+            asyncio.get_running_loop(),
+            settings=ON,
+            library=monitor.LibraryStores(listing=lambda: []),
+            fill_missing=True,
+        )
+
+    asyncio.run(scenario())
+    assert dl.calls == []
+
+
+def test_what_download_missing_would_fetch():
+    def release(state, have, total, wanted=True):
+        return {'state': state, 'have': have, 'total': total, 'wanted': wanted}
+
+    assert artist_catalogue.missing([
+        release('partly', 3, 20),
+        release('missing', 0, 12),
+        release('missing', 0, 0),  # tracklist not read yet
+        release('complete', 5, 5),
+        release('partly', 1, 9, wanted=False),
+    ]) == {'tracks': 29, 'releases': 2, 'unread': 1}
+
+
+def test_download_missing_over_the_api(monkeypatch, tmp_path):
+    db, watch, spawned = _api(monkeypatch, tmp_path)
+    monkeypatch.setattr(api.state, 'downloader', object())
+    started = []
+
+    async def fake_check(*args, fill_missing=False, **kwargs):
+        started.append(fill_missing)
+        return 0
+
+    monkeypatch.setattr(api, 'check_watch', fake_check)
+    db.catalogue.set_choice(watch.id, ['mb:rfi'], 'on')
+
+    body = asyncio.run(
+        api.download_missing_artist_releases(watch.id, _Req({}))
+    )
+    assert body['started'] is True
+    assert body['missing'] == {'tracks': 0, 'releases': 0, 'unread': 1}
+    asyncio.run(spawned[0])
+    assert started == [True]
+
+    monkeypatch.setattr(api, 'check_running', lambda _id: True)
+    with pytest.raises(HTTPException) as busy:
+        asyncio.run(api.download_missing_artist_releases(watch.id, _Req({})))
+    assert busy.value.status_code == 409
+    listed = asyncio.run(api.artist_watch_releases(watch.id, _Req({})))
+    assert listed['checking'] is True
+    assert listed['missing']['unread'] == 1

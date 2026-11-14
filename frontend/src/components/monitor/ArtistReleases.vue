@@ -36,6 +36,22 @@
           >
             {{ t('artistReleases.check') }}
           </UiButton>
+          <UiButton
+            size="sm"
+            variant="secondary"
+            icon="download"
+            :loading="fetching"
+            :disabled="!canDownloadMissing"
+            @click="downloadMissing"
+          >
+            {{
+              missing.tracks
+                ? t('artistReleases.downloadMissingCount', {
+                    count: missing.tracks,
+                  })
+                : t('artistReleases.downloadMissing')
+            }}
+          </UiButton>
           <span
             v-if="inventory?.running"
             class="tabular text-[13px] text-muted"
@@ -65,8 +81,16 @@
           "
           :indeterminate="!inventory.total"
         />
+        <p
+          v-if="data.checking"
+          class="text-[13px] text-pretty text-muted"
+          aria-live="polite"
+        >
+          {{ t('artistReleases.busy') }}
+        </p>
         <p class="text-[12px] text-pretty text-muted">
           {{ t('artistReleases.checkHint') }}
+          {{ t('artistReleases.missingHint') }}
         </p>
       </div>
 
@@ -262,6 +286,7 @@ const filter = ref('all')
 const busy = ref(new Set())
 const savingKinds = ref(false)
 const starting = ref(false)
+const fetching = ref(false)
 // Each opened release's tracks: 'loading', or the list.
 const tracks = ref({})
 let poll = null
@@ -269,6 +294,15 @@ let poll = null
 const releases = computed(() => data.value?.releases || [])
 const kinds = computed(() => data.value?.kinds || [])
 const inventory = computed(() => data.value?.inventory || null)
+const missing = computed(
+  () => data.value?.missing || { tracks: 0, releases: 0, unread: 0 }
+)
+const canDownloadMissing = computed(
+  () =>
+    Boolean(missing.value.tracks || missing.value.unread) &&
+    !data.value?.checking &&
+    !inventory.value?.running
+)
 const sections = computed(() => sectioned(releases.value, filter.value))
 const counts = computed(() => filterCounts(releases.value))
 const chips = computed(() =>
@@ -309,8 +343,10 @@ async function load() {
   try {
     const { data: body } = await monitorAPI.getArtistReleases(props.watchId)
     data.value = body
-    // Follow a running check until it is done.
-    if (body.inventory?.running) poll = setTimeout(load, 3000)
+    // Follow a running check (or download) until it is done.
+    if (body.inventory?.running || body.checking) {
+      poll = setTimeout(load, body.checking ? 5000 : 3000)
+    }
   } catch (err) {
     error.value = errorOf(err)
   } finally {
@@ -329,6 +365,30 @@ async function checkHave() {
     ui.toast(errorOf(err), { kind: 'error' })
   } finally {
     starting.value = false
+  }
+}
+
+async function downloadMissing() {
+  const { tracks, releases: count, unread } = missing.value
+  const ok = await ui.confirm({
+    title: t('artistReleases.missingTitle'),
+    body: unread
+      ? t('artistReleases.missingBodyUnread', { tracks, count, unread })
+      : t('artistReleases.missingBody', { tracks, count }),
+    confirmLabel: t('artistReleases.missingConfirm'),
+  })
+  if (!ok) return
+  fetching.value = true
+  try {
+    await monitorAPI.downloadArtistMissing(props.watchId)
+    data.value = { ...data.value, checking: true }
+    ui.toast(t('artistReleases.missingStarted'), { kind: 'success' })
+    clearTimeout(poll)
+    poll = setTimeout(load, 3000)
+  } catch (err) {
+    ui.toast(errorOf(err), { kind: 'error' })
+  } finally {
+    fetching.value = false
   }
 }
 

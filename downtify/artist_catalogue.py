@@ -545,6 +545,26 @@ def catalogue_view(
     return list(merged.values())
 
 
+def missing(releases: list[dict[str, Any]]) -> dict[str, int]:
+    """What "Download missing" would fetch: of the releases the watch
+    downloads (``wanted``), how many tracks are missing (``tracks``, in
+    ``releases`` releases), plus the releases whose tracklist isn't read
+    yet (``unread``: their count is unknown)."""
+
+    found = {'tracks': 0, 'releases': 0, 'unread': 0}
+    for release in releases:
+        if not release.get('wanted') or release['state'] == 'complete':
+            continue
+        if not release['total']:
+            found['unread'] += 1
+            continue
+        gap = release['total'] - release['have']
+        if gap > 0:
+            found['tracks'] += gap
+            found['releases'] += 1
+    return found
+
+
 def counts(releases: list[dict[str, Any]]) -> dict[str, int]:
     """How many releases are in each state."""
 

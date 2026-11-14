@@ -1295,7 +1295,7 @@ export default {
     empty: 'Noch keine Veröffentlichungen',
     emptyHint: 'Sie erscheinen nach der nächsten Prüfung.',
     summary:
-      '{complete} vollständig · {partly} teilweise · {missing} herunterzuladen',
+      '{complete} vollständig · {partly} teilweise · {missing} noch leer',
     kinds: 'Von MusicBrainz auch herunterladen',
     kindsHint:
       'Arten von Veröffentlichungen, die nur MusicBrainz unterscheidet. Mixtapes und Soundtracks sind eigene Musik des Künstlers; Live-Alben, Compilations und Remixe wiederholen sie meist. Nur für diesen Künstler.',
@@ -1314,6 +1314,25 @@ export default {
       'Titelliste noch nicht gelesen: drücke „Prüfen, was ich habe“.',
     trackHave: 'In deiner Bibliothek',
     trackMissing: 'Fehlt',
+    downloadMissing: 'Fehlendes herunterladen',
+    downloadMissingCount: '{count} fehlende herunterladen',
+    missingTitle: 'Fehlendes herunterladen?',
+    missingBody: {
+      one: 'Fehlende Songs: {tracks}, aus 1 Veröffentlichung, die die Beobachtung herunterlädt. Songs, die schon in deiner Bibliothek sind, werden verknüpft, nicht erneut heruntergeladen.',
+      other:
+        'Fehlende Songs: {tracks}, aus {count} Veröffentlichungen, die die Beobachtung herunterlädt. Songs, die schon in deiner Bibliothek sind, werden verknüpft, nicht erneut heruntergeladen.',
+    },
+    missingBodyUnread: {
+      one: 'Fehlende Songs: {tracks}, aus 1 Veröffentlichung, die die Beobachtung herunterlädt, dazu alle aus Veröffentlichungen, deren Titelliste noch nicht gelesen wurde ({unread}). Songs, die schon in deiner Bibliothek sind, werden verknüpft, nicht erneut heruntergeladen.',
+      other:
+        'Fehlende Songs: {tracks}, aus {count} Veröffentlichungen, die die Beobachtung herunterlädt, dazu alle aus Veröffentlichungen, deren Titelliste noch nicht gelesen wurde ({unread}). Songs, die schon in deiner Bibliothek sind, werden verknüpft, nicht erneut heruntergeladen.',
+    },
+    missingConfirm: 'Herunterladen',
+    missingStarted:
+      'Fehlendes wird heruntergeladen: verfolge es in der Warteschlange',
+    busy: 'Dieser Künstler wird gerade geprüft: verfolge es in der Warteschlange.',
+    missingHint:
+      'Fehlendes herunterladen geht jede eingeschaltete Veröffentlichung durch und lädt die Songs, die du nicht hast; schalte eine Veröffentlichung zuerst ein, um sie einzubeziehen.',
     kind: {
       mixtape: 'Mixtapes',
       soundtrack: 'Soundtracks',

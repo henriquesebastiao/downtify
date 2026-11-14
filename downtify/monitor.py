@@ -1990,8 +1990,17 @@ async def check_artist(  # noqa: PLR0914  # one sweep: discography, releases, tr
     loop: asyncio.AbstractEventLoop,
     settings: Optional[dict[str, Any]] = None,
     library: Optional[LibraryStores] = None,
+    *,
+    fill_missing: bool = False,
 ) -> int:
     """Download every release of a watched artist that isn't known yet.
+
+    With *fill_missing* ("Download missing" on the watch's page), every
+    release the watch downloads is gone through again, known or not, so
+    the songs missing from it - deleted since, or never fetched - are
+    downloaded (or linked when the library has them under another name).
+    Releases out before a "new releases only" watch stay skipped unless
+    switched on.
 
     ``playlist.spotify_id`` is the artist's YouTube Music channel id. The
     discography is listed once per sweep - YouTube Music's, plus Deezer's
@@ -2068,6 +2077,9 @@ async def check_artist(  # noqa: PLR0914  # one sweep: discography, releases, tr
     seen.discard(
         await asyncio.to_thread(db.releases.next_release, playlist.id)
     )
+    if fill_missing:
+        processed = await asyncio.to_thread(db.catalogue.seen, playlist.id)
+        seen = {album_id for album_id, skipped in processed.items() if skipped}
     # The watch's types (and MusicBrainz kinds), unless the user switched
     # a release on or off on the watch's page.
     kinds = watch_kinds(playlist, settings or {})
@@ -2412,6 +2424,12 @@ def _download_cover_for_watch(
 _checks_running: set[int] = set()
 
 
+def check_running(watch_id: int) -> bool:
+    """Whether a check of the watch is running right now."""
+
+    return watch_id in _checks_running
+
+
 async def check_podcast_watch(
     playlist: MonitoredPlaylist,
     db: PlaylistMonitorDB,
@@ -2477,11 +2495,15 @@ async def check_watch(
     settings: Optional[dict[str, Any]] = None,
     library: Optional[LibraryStores] = None,
     podcasts: Optional[PodcastStore] = None,
+    *,
+    fill_missing: bool = False,
 ) -> int:
     saved = settings if settings is not None else {}
     if enabled(saved):
         return 0
     await queue_pause.wait()
+    # Only a "Download missing" check carries the option.
+    extra = {'fill_missing': True} if fill_missing else {}
     with policy.external(saved):
         return await _check_watch_online(
             playlist,
@@ -2492,6 +2514,7 @@ async def check_watch(
             settings,
             library,
             podcasts,
+            **extra,
         )
 
 
@@ -2504,6 +2527,8 @@ async def _check_watch_online(
     settings: Optional[dict[str, Any]] = None,
     library: Optional[LibraryStores] = None,
     podcasts: Optional[PodcastStore] = None,
+    *,
+    fill_missing: bool = False,
 ) -> int:
     """Run the right check for a watch by kind, unless one is already running."""
     if playlist.id in _checks_running:
@@ -2528,7 +2553,14 @@ async def _check_watch_online(
             )
         if playlist.kind == KIND_ARTIST:
             return await check_artist(
-                playlist, db, downloader, broadcast, loop, settings, library
+                playlist,
+                db,
+                downloader,
+                broadcast,
+                loop,
+                settings,
+                library,
+                fill_missing=fill_missing,
             )
         return await check_playlist(
             playlist, db, downloader, broadcast, loop, settings, library

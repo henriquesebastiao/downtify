@@ -1191,7 +1191,7 @@ export default {
     hint: '截至上次檢查，YouTube Music、Deezer 和 MusicBrainz 為該藝人列出的全部作品，以及音樂庫中各有多少。開啟某個作品，即使未關注其類型也會下載；關閉則不再下載（已有的保留）。',
     empty: '還沒有作品',
     emptyHint: '下次檢查後顯示。',
-    summary: '{complete} 個完整 · {partly} 個部分 · {missing} 個待下載',
+    summary: '{complete} 個完整 · {partly} 個部分 · {missing} 個尚無歌曲',
     kinds: '也從 MusicBrainz 下載',
     kindsHint:
       '只有 MusicBrainz 區分的作品種類。混音帶和原聲帶是藝人自己的音樂；現場專輯、合輯和混音多為重複。僅對該藝人生效。',
@@ -1209,6 +1209,24 @@ export default {
     tracksNotRead: '尚未讀取曲目列表：請點擊「檢查我已有的」。',
     trackHave: '在音樂庫中',
     trackMissing: '缺失',
+    downloadMissing: '下載缺少的',
+    downloadMissingCount: '下載缺少的 {count} 首',
+    missingTitle: '下載缺少的歌曲？',
+    missingBody: {
+      one: '缺少的歌曲：{tracks} 首，來自關注會下載的 {count} 個作品。音樂庫中已有的歌曲只會連結，不會重新下載。',
+      other:
+        '缺少的歌曲：{tracks} 首，來自關注會下載的 {count} 個作品。音樂庫中已有的歌曲只會連結，不會重新下載。',
+    },
+    missingBodyUnread: {
+      one: '缺少的歌曲：{tracks} 首，來自關注會下載的 {count} 個作品，另加尚未讀取曲目列表的作品（{unread} 個）中的歌曲。音樂庫中已有的歌曲只會連結，不會重新下載。',
+      other:
+        '缺少的歌曲：{tracks} 首，來自關注會下載的 {count} 個作品，另加尚未讀取曲目列表的作品（{unread} 個）中的歌曲。音樂庫中已有的歌曲只會連結，不會重新下載。',
+    },
+    missingConfirm: '下載',
+    missingStarted: '正在下載缺少的歌曲：可在佇列中查看',
+    busy: '正在檢查該藝人：可在佇列中查看。',
+    missingHint:
+      '「下載缺少的」會走過每個已開啟的作品並下載你沒有的歌曲；要包含某個作品，請先開啟它。',
     kind: {
       mixtape: '混音帶',
       soundtrack: '原聲帶',

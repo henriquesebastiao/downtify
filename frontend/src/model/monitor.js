@@ -88,8 +88,15 @@ function getArtistReleaseTracks(id, albumIds) {
   })
 }
 
+// "Download missing": a check that fetches the songs missing from every
+// release the watch downloads.
+function downloadArtistMissing(id) {
+  return API.post(`/api/monitor/playlists/${id}/releases/download-missing`)
+}
+
 export default {
   artistSuggestions,
+  downloadArtistMissing,
   checkArtistInventory,
   getArtistReleaseTracks,
   getArtistReleases,

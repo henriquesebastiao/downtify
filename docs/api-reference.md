@@ -2698,7 +2698,9 @@ An artist watch's whole catalogue as of its last check: every release YouTube Mu
     }
   ],
   "counts": { "complete": 1, "partly": 0, "missing": 0, "skipped": 0, "not_watched": 0, "off": 0, "not_own": 0 },
-  "inventory": { "running": false, "done": 73, "total": 73, "checked": 72, "failed": 1, "started_at": "…", "finished_at": "…" }
+  "inventory": { "running": false, "done": 73, "total": 73, "checked": 72, "failed": 1, "started_at": "…", "finished_at": "…" },
+  "missing": { "tracks": 0, "releases": 0, "unread": 0 },
+  "checking": false
 }
 ```
 
@@ -2719,6 +2721,14 @@ One release's tracks and which the library has: `?album_id=…` repeated with th
 "Check what I have": reads, in the background, the tracklist of every release of the watch's catalogue that has none kept (a release two catalogues list once, from Deezer, then YouTube Music, then MusicBrainz), so `GET .../releases` counts what the library has of each. Downloads nothing. A release that turns out to be a guest spot or bootleg is marked `not_own`; one a catalogue fails on is left for the next check.
 
 **Response:** `{ "inventory": { "running": true, "done": 0, "total": 0, … } }`. While one runs, calling again returns it; follow it in `GET .../releases`.
+
+---
+
+### `POST /api/monitor/playlists/{playlist_id}/releases/download-missing`
+
+"Download missing": starts a check of the watch, in the background, that goes through every release it downloads (`wanted`) again, known or not, and downloads the songs missing from them, linking those the library has under another name. Releases the watch doesn't download are left alone. Progress shows in the queue, as for any check.
+
+**Response:** `{ "started": true, "missing": { "tracks": 17, "releases": 2, "unread": 1 } }` — what it is expected to fetch (`unread`: releases whose tracklist isn't read yet). `GET .../releases` carries the same `missing` and `checking` (a check of the watch is running). `409` while the watch is being checked.
 
 ---
 

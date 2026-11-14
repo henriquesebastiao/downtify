@@ -1264,7 +1264,7 @@ export default {
     hint: 'Minden, amit a YouTube Music, a Deezer és a MusicBrainz listáz erről az előadóról a legutóbbi ellenőrzéskor, és hogy a könyvtáradban mi van belőlük. Kapcsolj be egy kiadványt, hogy akkor is letöltődjön, ha a típusát nem figyeled, vagy kapcsold ki, hogy ne töltődjön le többé (ami megvan, marad).',
     empty: 'Még nincsenek kiadványok',
     emptyHint: 'A következő ellenőrzés után jelennek meg.',
-    summary: '{complete} teljes · {partly} részben · {missing} letöltendő',
+    summary: '{complete} teljes · {partly} részben · {missing} még üres',
     kinds: 'A MusicBrainzről töltsd le ezeket is',
     kindsHint:
       'Kiadványfajták, amelyeket csak a MusicBrainz különböztet meg. A mixtape-ek és filmzenék az előadó saját zenéi; az élő albumok, válogatások és remixek többnyire ismétlik őket. Csak ennél az előadónál.',
@@ -1283,6 +1283,24 @@ export default {
       'A számlista még nincs beolvasva: nyomd meg a Nézd meg, mi van meg gombot.',
     trackHave: 'A könyvtáradban',
     trackMissing: 'Hiányzik',
+    downloadMissing: 'Hiányzók letöltése',
+    downloadMissingCount: '{count} hiányzó letöltése',
+    missingTitle: 'Letöltöd a hiányzókat?',
+    missingBody: {
+      one: 'Hiányzó dalok: {tracks}, {count} olyan kiadványból, amelyet a figyelés letölt. A könyvtáradban már meglévő dalok összekapcsolódnak, nem töltődnek le újra.',
+      other:
+        'Hiányzó dalok: {tracks}, {count} olyan kiadványból, amelyet a figyelés letölt. A könyvtáradban már meglévő dalok összekapcsolódnak, nem töltődnek le újra.',
+    },
+    missingBodyUnread: {
+      one: 'Hiányzó dalok: {tracks}, {count} olyan kiadványból, amelyet a figyelés letölt, plusz a még be nem olvasott számlistájú kiadványokban lévők ({unread}). A könyvtáradban már meglévő dalok összekapcsolódnak, nem töltődnek le újra.',
+      other:
+        'Hiányzó dalok: {tracks}, {count} olyan kiadványból, amelyet a figyelés letölt, plusz a még be nem olvasott számlistájú kiadványokban lévők ({unread}). A könyvtáradban már meglévő dalok összekapcsolódnak, nem töltődnek le újra.',
+    },
+    missingConfirm: 'Letöltés',
+    missingStarted: 'A hiányzók letöltése folyamatban: kövesd a sorban',
+    busy: 'Ez az előadó éppen ellenőrzés alatt áll: kövesd a sorban.',
+    missingHint:
+      'A Hiányzók letöltése végigmegy minden bekapcsolt kiadványon, és letölti a hiányzó dalokat; egy kiadvány bevonásához előbb kapcsold be.',
     kind: {
       mixtape: 'Mixtape-ek',
       soundtrack: 'Filmzenék',

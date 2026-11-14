@@ -296,6 +296,8 @@ An artist watch's page also lists the artist's whole catalogue as of its last ch
 
 **Check what I have** reads the track list of every release and compares it with the whole library, the way Artist Watch matches songs (the same artist and title, the same length), whoever downloaded them. So an album you had before the watch started shows as **Complete**, and the arrow next to a release lists its tracks, each marked as in your library or missing. Nothing is downloaded. It runs in the background and is slow for a big artist, since MusicBrainz allows one request a second. Track lists are kept, so a later check only reads the releases it hasn't read yet; a regular check also keeps the track lists of the releases it downloads.
 
+**Download missing** then fetches the songs you don't have from every release the watch downloads (switched on, or of a type and kind it watches), even releases it already went through, as a check you follow in the **Queue**. It asks first, with how many songs that is. Songs already in your library are linked, not downloaded again, and releases the watch doesn't download are left alone: switch one on first to include it.
+
 The switch next to a release overrides the watch, like Lidarr's per-album monitoring. On downloads it even when its type isn't watched or it came out before the watch started, and a check starts right away. Off stops downloading it. Songs already in the library stay either way. **From MusicBrainz, also download** chooses, for this artist only, which kinds of release only MusicBrainz tells apart are downloaded: mixtapes and soundtracks by default; live albums, compilations, remixes, DJ mixes and demos when turned on.
 
 ## Where a song came from
