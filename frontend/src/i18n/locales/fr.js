@@ -291,7 +291,7 @@ export default {
     home: 'Accueil',
     search: 'Recherche',
     library: 'Bibliothèque',
-    queue: 'File',
+    queue: 'File d’attente',
     monitor: 'Surveillance',
     discover: 'Découvrir',
     podcasts: 'Podcasts',
