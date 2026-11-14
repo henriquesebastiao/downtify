@@ -28,7 +28,9 @@ Pairing needs no password on the phone: handy when the web page is already open,
 
 The phone is paired to **your account**: it plays as you, and it shows up in your activity. Anyone with an account can pair their own phones.
 
-A code works **once**, for **five minutes**, and trying wrong codes is rate-limited. The phone gets a key of its own that it keeps; the server only stores a hash of it.
+A code works **once**, for **five minutes**, and trying wrong codes is rate-limited. At the five-minute deadline it is expired, even if a pairing request arrived earlier but had to wait for the server. Start a new pairing to get a fresh code. The phone gets a key of its own that it keeps; the server only stores a hash of it.
+
+The server keeps a successful pairing's confirmation available until one minute after the code's original deadline. After that, the pairing status expires, but the phone stays paired until you unpair it.
 
 **Paired apps** lists your phones (an admin sees everyone's, with whose each is) with their platform, when it was last seen and from which address. **Unpair** stops a phone at once — its next request fails, an open connection is closed, and links it shared (see [Casting](#casting)) stop working. To use it again, pair it again.
 

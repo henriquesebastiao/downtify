@@ -8,9 +8,12 @@ import base64
 import hashlib
 import re
 import time
+from concurrent.futures import ThreadPoolExecutor
+from contextlib import contextmanager
 from ipaddress import ip_network
 from pathlib import Path
-from typing import Any
+from types import SimpleNamespace
+from typing import Any, Iterator
 from urllib.parse import parse_qs, urlsplit
 
 import httpx
@@ -24,7 +27,7 @@ from starlette.testclient import TestClient
 from starlette.websockets import WebSocketDisconnect
 
 import main
-from downtify import account_routes, api, auth_routes, mobile_routes
+from downtify import account_routes, api, auth, auth_routes, mobile_routes
 from downtify.auth import (
     ADMIN,
     CLIENT,
@@ -242,6 +245,34 @@ def test_revoke_everything(tmp_path):
 # ── pairing ─────────────────────────────────────────────────────────────
 
 
+@pytest.fixture
+def auth_clock(monkeypatch: pytest.MonkeyPatch) -> list[float]:
+    now = [1000.0]
+    monkeypatch.setattr(
+        auth,
+        'time',
+        SimpleNamespace(monotonic=lambda: now[0], time=time.time),
+    )
+    return now
+
+
+@contextmanager
+def _advancing_lock(clock: list[float], elapsed: float) -> Iterator[None]:
+    # Model time passing between requesting a lock and acquiring it.
+    clock[0] += elapsed
+    yield
+
+
+def _temporary_credential(
+    store: PairingStore | TicketStore,
+) -> tuple[str, str | Principal]:
+    if isinstance(store, PairingStore):
+        started = store.create(7)
+        return started['code'], started['pairing_id']
+    principal = Principal('device', CLIENT, 'abc', 1, 'admin', 'admin')
+    return store.create(principal), principal
+
+
 def test_pairing_code_is_single_use():
     pairing = PairingStore()
     started = pairing.create(7)
@@ -258,13 +289,133 @@ def test_pairing_code_is_single_use():
     }
 
 
-def test_pairing_code_expires():
+def test_pairing_code_expires(auth_clock: list[float]) -> None:
     pairing = PairingStore(ttl_seconds=0)
     started = pairing.create()
-    time.sleep(0.01)
 
     assert pairing.claim(started['code']) is None
     assert pairing.status(started['pairing_id'])['status'] == 'expired'
+
+
+@pytest.mark.parametrize('store_type', [PairingStore, TicketStore])
+@pytest.mark.parametrize(
+    ('elapsed', 'valid'),
+    [(29.999, True), (30.0, False), (30.001, False)],
+)
+def test_temporary_credentials_expire_at_the_deadline(
+    auth_clock: list[float],
+    store_type: type[PairingStore] | type[TicketStore],
+    elapsed: float,
+    valid: bool,
+) -> None:
+    store = store_type(ttl_seconds=30)
+    credential, expected = _temporary_credential(store)
+    auth_clock[0] += elapsed
+
+    assert store.claim(credential) == (expected if valid else None)
+    assert store.claim(credential) is None
+
+
+@pytest.mark.parametrize('elapsed', [30.0, 30.001])
+def test_pairing_status_expires_at_the_deadline(
+    auth_clock: list[float], elapsed: float
+) -> None:
+    pairing = PairingStore(ttl_seconds=30)
+    started = pairing.create(7)
+    assert pairing.status(started['pairing_id']) == {
+        'status': 'pending',
+        'expires_in': 30,
+    }
+    auth_clock[0] += elapsed
+
+    assert pairing.status(started['pairing_id']) == {'status': 'expired'}
+    assert pairing.owner(started['pairing_id']) is None
+
+
+def test_starting_a_pairing_prunes_sessions_at_their_deadline(
+    auth_clock: list[float],
+) -> None:
+    pairing = PairingStore(ttl_seconds=30)
+    expired = pairing.create(7)
+    auth_clock[0] += 30
+    current = pairing.create(8)
+
+    assert pairing.owner(expired['pairing_id']) is None
+    assert pairing.owner(current['pairing_id']) == 8
+    assert pairing.status(current['pairing_id'])['expires_in'] == 30
+
+
+@pytest.mark.parametrize(
+    ('elapsed', 'status'),
+    [
+        (30.0, 'paired'),
+        (89.999, 'paired'),
+        (90.0, 'expired'),
+        (90.001, 'expired'),
+    ],
+)
+def test_completed_pairing_retains_its_result_for_the_existing_grace_period(
+    auth_clock: list[float], elapsed: float, status: str
+) -> None:
+    pairing = PairingStore(ttl_seconds=30)
+    started = pairing.create()
+    assert pairing.claim(started['code']) == started['pairing_id']
+    pairing.complete(started['pairing_id'], {'id': 'dev'})
+    auth_clock[0] += elapsed
+
+    assert pairing.claim(started['code']) is None
+    result = pairing.status(started['pairing_id'])
+    assert result == (
+        {'status': 'paired', 'device': {'id': 'dev'}}
+        if status == 'paired'
+        else {'status': 'expired'}
+    )
+
+
+@pytest.mark.parametrize('operation', ['claim', 'status'])
+def test_pairing_rechecks_time_after_waiting_for_the_lock(
+    auth_clock: list[float],
+    monkeypatch: pytest.MonkeyPatch,
+    operation: str,
+) -> None:
+    pairing = PairingStore(ttl_seconds=30)
+    started = pairing.create()
+    monkeypatch.setattr(pairing, '_lock', _advancing_lock(auth_clock, 31))
+
+    if operation == 'claim':
+        assert pairing.claim(started['code']) is None
+    else:
+        assert pairing.status(started['pairing_id']) == {'status': 'expired'}
+
+
+@pytest.mark.parametrize('store_type', [PairingStore, TicketStore])
+def test_issued_credentials_get_the_full_ttl_after_waiting_for_the_lock(
+    auth_clock: list[float],
+    monkeypatch: pytest.MonkeyPatch,
+    store_type: type[PairingStore] | type[TicketStore],
+) -> None:
+    store = store_type(ttl_seconds=30)
+    original_lock = store._lock
+    monkeypatch.setattr(store, '_lock', _advancing_lock(auth_clock, 10))
+    credential, expected = _temporary_credential(store)
+    monkeypatch.setattr(store, '_lock', original_lock)
+    auth_clock[0] += 29.999
+
+    assert store.claim(credential) == expected
+
+
+@pytest.mark.parametrize('store_type', [PairingStore, TicketStore])
+def test_temporary_credentials_are_single_use_under_concurrent_claims(
+    auth_clock: list[float],
+    store_type: type[PairingStore] | type[TicketStore],
+) -> None:
+    store = store_type()
+    credential, expected = _temporary_credential(store)
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        results = list(pool.map(store.claim, [credential] * 8))
+
+    assert results.count(expected) == 1
+    assert results.count(None) == 7
 
 
 def test_pairing_code_typing_is_forgiving():
@@ -284,7 +435,9 @@ def test_a_cancelled_pairing_cannot_be_claimed():
 # ── tickets and rate limits ─────────────────────────────────────────────
 
 
-def test_ws_ticket_is_single_use_and_expires():
+def test_ws_ticket_is_single_use_and_expires(
+    auth_clock: list[float],
+) -> None:
     tickets = TicketStore()
     principal = Principal('device', CLIENT, 'abc', 1, 'admin', 'admin')
     ticket = tickets.create(principal)
@@ -293,8 +446,19 @@ def test_ws_ticket_is_single_use_and_expires():
 
     short = TicketStore(ttl_seconds=0)
     old = short.create(principal)
-    time.sleep(0.01)
     assert short.claim(old) is None
+
+
+def test_issuing_a_ticket_prunes_tickets_at_their_deadline(
+    auth_clock: list[float],
+) -> None:
+    tickets = TicketStore(ttl_seconds=30)
+    _temporary_credential(tickets)
+    auth_clock[0] += 30
+    current, expected = _temporary_credential(tickets)
+
+    assert len(tickets._tickets) == 1
+    assert tickets.claim(current) == expected
 
 
 def test_rate_limiting_kicks_in_and_resets():
@@ -791,6 +955,70 @@ def test_pairing_end_to_end(client, monkeypatch):
     ]
 
 
+def test_expired_pairing_is_rejected_without_creating_a_device(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+    auth_clock: list[float],
+) -> None:
+    monkeypatch.setattr(api.state, 'pairing', PairingStore())
+    monkeypatch.setattr(api.state, 'pair_limiter', RateLimiter())
+    assert _sign_in(client).status_code == 200
+    started = client.post('/api/auth/pairing').json()
+    assert started['expires_in'] == 300
+    auth_clock[0] += 300
+
+    paired = client.post(
+        '/api/auth/pair',
+        json={'code': started['code'], 'device_name': 'Phone'},
+    )
+
+    assert paired.status_code == 401
+    assert paired.json()['detail'] == 'Wrong or expired pairing code'
+    assert api.state.auth.list_devices() == []
+    assert client.get(f'/api/auth/pairing/{started["pairing_id"]}').json() == {
+        'status': 'expired'
+    }
+    fresh = client.post('/api/auth/pairing').json()
+    assert fresh['expires_in'] == 300
+    assert (
+        client.post('/api/auth/pair', json={'code': fresh['code']}).status_code
+        == 200
+    )
+
+
+def test_expired_pairing_status_does_not_unpair_the_device(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+    auth_clock: list[float],
+) -> None:
+    monkeypatch.setattr(api.state, 'pairing', PairingStore())
+    monkeypatch.setattr(api.state, 'pair_limiter', RateLimiter())
+    assert _sign_in(client).status_code == 200
+    started = client.post('/api/auth/pairing').json()
+    paired = client.post(
+        '/api/auth/pair',
+        json={'code': started['code'], 'device_name': 'Phone'},
+    ).json()
+    auth_clock[0] += 300
+    assert (
+        client.get(f'/api/auth/pairing/{started["pairing_id"]}').json()[
+            'status'
+        ]
+        == 'paired'
+    )
+    auth_clock[0] += 60
+
+    assert client.get(f'/api/auth/pairing/{started["pairing_id"]}').json() == {
+        'status': 'expired'
+    }
+    status = client.get(
+        '/api/auth/status',
+        headers={'Authorization': f'Bearer {paired["token"]}'},
+    ).json()
+    assert status['signed_in']
+    assert status['device']['id'] == paired['device']['id']
+
+
 def _sign_in_app(client, username='maria', password=PASSWORD):
     return client.post(
         '/api/auth/token',
@@ -904,6 +1132,29 @@ def test_websocket_needs_credentials(client):
     )
     with client.websocket_connect(f'/api/ws?client_id=c&ticket={ticket}'):
         pass
+
+
+def test_websocket_rejects_a_ticket_at_its_deadline(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+    auth_clock: list[float],
+) -> None:
+    monkeypatch.setattr(api.state, 'ws_tickets', TicketStore())
+    _device, token = api.state.auth.create_device('Phone', user_id=1)
+    response = client.post(
+        '/api/auth/ws-ticket', headers={'Authorization': f'Bearer {token}'}
+    )
+    assert response.status_code == 200
+    ticket = response.json()['ticket']
+    auth_clock[0] += 60
+
+    with (
+        pytest.raises(WebSocketDisconnect) as denied,
+        client.websocket_connect(f'/api/ws?client_id=expired&ticket={ticket}'),
+    ):
+        pass
+    assert denied.value.code == 4401
+    assert api.state.ws_tickets.claim(ticket) is None
 
 
 def test_server_info_is_public_and_says_little(client):
