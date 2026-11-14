@@ -20,9 +20,12 @@ A file or a track whose length is unknown never matches.
 
 Deezer adds a few more spellings of the very same recording: ``(Album
 Version)``, ``(Explicit Version)``, ``(Explicit)``, ``- Original Mix``
-and the like are folded away too (:data:`_SAME_RECORDING_TAG`). Words
-that name another recording - ``Clean``, ``Radio Edit``, ``Live``,
-``Remix`` - are kept, and the length must agree as well.
+and the like are folded away too (:data:`_SAME_RECORDING_TAG`). So is
+the film a soundtrack song comes from, which Indian labels add on one
+catalogue and not another: ``Tum Hi Ho (From "Aashiqui 2")`` is the
+``Tum Hi Ho`` MusicBrainz and Spotify list. Words that name another
+recording - ``Clean``, ``Radio Edit``, ``Live``, ``Remix`` - are kept,
+and the length must agree as well.
 """
 
 from __future__ import annotations
@@ -42,10 +45,12 @@ from .library_paths import SLSKD_LIBRARY_PREFIX
 SAME_SONG_SECONDS = 3.0
 
 #: Title tags that name no other recording: the album's (explicit)
-#: version, as one catalogue spells it and another leaves out.
+#: version, or the film a song is from, as one catalogue spells it and
+#: another leaves out.
 _SAME_RECORDING_TAG = re.compile(
     r'\s*(?:[([]\s*(?:album|explicit|original|lp)(?:\s+(?:version|mix))?\s*'
-    r'[)\]]|\s-\s(?:album|explicit|original|lp)\s+(?:version|mix)\s*$)',
+    r'[)\]]|\s-\s(?:album|explicit|original|lp)\s+(?:version|mix)\s*$'
+    r'|[([]\s*from\s[^)\]]*[)\]])',
     re.IGNORECASE,
 )
 
