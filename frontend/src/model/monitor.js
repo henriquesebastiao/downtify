@@ -61,8 +61,23 @@ function getWatchTracks(id) {
   return API.get(`/api/monitor/playlists/${id}/tracks`)
 }
 
+// An artist watch's whole catalogue, with what the library has of each
+// release, and switching releases on, off or back to the watch's rules.
+function getArtistReleases(id) {
+  return API.get(`/api/monitor/playlists/${id}/releases`)
+}
+
+function switchArtistReleases(id, albumIds, choice) {
+  return API.patch(`/api/monitor/playlists/${id}/releases`, {
+    album_ids: albumIds,
+    choice,
+  })
+}
+
 export default {
   artistSuggestions,
+  getArtistReleases,
+  switchArtistReleases,
   resolveArtistSuggestion,
   getMonitorStats,
   getTrackProvenance,

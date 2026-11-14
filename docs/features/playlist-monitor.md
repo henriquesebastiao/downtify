@@ -290,6 +290,12 @@ A watch's page also shows:
 
 The watch's id (`#12`) is shown next to its name, so two watches of the same link — two accounts following one playlist, say — can be told apart.
 
+### An artist's releases
+
+An artist watch's page also lists the artist's whole catalogue as of its last check: every release YouTube Music, Deezer and MusicBrainz list (the same album from two of them is shown once), under albums, mixtapes, EPs, singles, and live, compilation and remix releases. Each shows what the library has of it: **Complete** with its track count, **Partly**, **To download**, **Out before the watch** (a **New releases only** watch skipped it), **Not watched** (a type or kind the watch doesn't download) or **Off**. Guest spots and bootlegs have their own filter and never download.
+
+The switch next to a release overrides the watch, like Lidarr's per-album monitoring. On downloads it even when its type isn't watched or it came out before the watch started, and a check starts right away. Off stops downloading it. Songs already in the library stay either way. **From MusicBrainz, also download** chooses, for this artist only, which kinds of release only MusicBrainz tells apart are downloaded: mixtapes and soundtracks by default; live albums, compilations, remixes, DJ mixes and demos when turned on.
+
 ## Where a song came from
 
 **Where it came from** in a song's menu (anywhere in the Library) tells which watch first downloaded it, when, and with which provider — **First check** when it came with the watch's backfill — and lists every watch that holds it now, each with its id, owner (for an admin), when it got the song and how: **Downloaded it**, **Already in library** or **Before tracking**. It's one file: watches that share a song all point at the same copy.

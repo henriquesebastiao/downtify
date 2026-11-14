@@ -2519,8 +2519,9 @@ Update a watch.
 | `url` | string | A new link for the watch — same kinds as in `POST` |
 | `release_types` | array | Artist watches only — as in `POST` |
 | `new_only` | boolean | Artist watches only. `true` records whatever is out at the next check as skipped; `false` forgets the skipped releases so the next check downloads them |
+| `musicbrainz_kinds` | array or `null` | Artist watches only. The MusicBrainz secondary types this watch downloads: any of `mixtape`, `soundtrack`, `live`, `compilation`, `remix`, `dj-mix`, `demo`; `null` follows the `artist_watch_musicbrainz_kinds` setting. `400` for anything else |
 
-Changing `release_types` or `new_only` starts a check in the background if the watch is enabled, and is a `400` on a playlist watch. A `url` that points at the **same** playlist or artist only replaces the stored `url`. One that points at a **different** playlist or artist of the same kind retargets the watch: `spotify_id`, `name` and `url` change, `last_checked` becomes `null`, `last_track_count` becomes `0`, and its downloaded-track and seen-release history is cleared. If the watch is enabled, a first check starts in the background, as after `POST`. An unchanged `url` is ignored.
+Changing `release_types`, `new_only` or `musicbrainz_kinds` starts a check in the background if the watch is enabled, and is a `400` on a playlist watch. A `url` that points at the **same** playlist or artist only replaces the stored `url`. One that points at a **different** playlist or artist of the same kind retargets the watch: `spotify_id`, `name` and `url` change, `last_checked` becomes `null`, `last_track_count` becomes `0`, and its downloaded-track and seen-release history is cleared. If the watch is enabled, a first check starts in the background, as after `POST`. An unchanged `url` is ignored.
 
 **Response:** Updated watch object. `404` if there is no such watch; for a new `url`: `400` if it isn't a supported link or is the other kind (an artist link for a playlist watch, or the reverse), `409` if another watch already follows it, `404`/`502` if it can't be resolved. On an error nothing is changed.
 
@@ -2661,6 +2662,51 @@ The songs a watch holds, newest first, as [`GET /tracks`](#get-tracks) rows — 
 ```
 
 `watch` is the watch object of [`GET /api/monitor/playlists`](#get-apimonitorplaylists). `shared_with` is how many other watches hold the same file, `missing` how many recorded songs are no longer on disk. Songs an admin hid from users are left out for a user. `404` for a watch that doesn't exist or belongs to another account (unless you're an admin).
+
+---
+
+### `GET /api/monitor/playlists/{playlist_id}/releases`
+
+An artist watch's whole catalogue as of its last check: every release YouTube Music, Deezer and MusicBrainz list, one row per release (the same name and type from two catalogues is merged), with what the library has of it. See [An artist's releases](features/playlist-monitor.md#an-artists-releases). `400` for a playlist or podcast watch.
+
+**Response:**
+
+```json
+{
+  "watch": { "id": 1, "name": "Drake", "kind": "artist", "musicbrainz_kinds": null, "…": "…" },
+  "kinds": ["mixtape", "soundtrack"],
+  "kinds_default": true,
+  "available_kinds": ["mixtape", "soundtrack", "live", "compilation", "remix", "dj-mix", "demo"],
+  "musicbrainz": true,
+  "releases": [
+    {
+      "id": "deezer:13082992",
+      "album_ids": ["deezer:13082992"],
+      "name": "Views",
+      "release_type": "album",
+      "kinds": [],
+      "section": "album",
+      "year": "2016",
+      "sources": ["deezer"],
+      "cover_url": "https://…",
+      "url": "https://www.deezer.com/album/13082992",
+      "state": "complete",
+      "have": 20,
+      "total": 20,
+      "choice": ""
+    }
+  ],
+  "counts": { "complete": 1, "partly": 0, "missing": 0, "skipped": 0, "not_watched": 0, "off": 0, "not_own": 0 }
+}
+```
+
+`state` is `complete` (every track in the library), `partly`, `missing` (wanted, not there yet), `skipped` (out before a "new releases only" watch started), `not_watched` (a type or kind the watch doesn't download), `off` (switched off) or `not_own` (a guest spot or a bootleg, never downloaded). `total` is `0` until the release's tracklist was fetched. `section` is `album`, `mixtape`, `ep`, `single` or `other`. `choice` is the user's switch: `on`, `off` or `""` (the watch's rules).
+
+---
+
+### `PATCH /api/monitor/playlists/{playlist_id}/releases`
+
+Switch releases of an artist watch: `{ "album_ids": ["deezer:13082992"], "choice": "on" }`, with `album_ids` from a release's `album_ids`. `on` downloads them even when their type isn't watched or they came out before a "new releases only" watch started, and starts a check if the watch is enabled. `off` never downloads them (songs already there stay). `""` follows the watch again. **Response:** as `GET`. `400` for a bad body, `404` when the watch lists none of `album_ids`.
 
 ---
 

@@ -408,6 +408,7 @@ from loguru import logger
 from starlette.requests import HTTPConnection
 
 from . import (
+    artist_catalogue,
     artist_photo_proxy,
     artist_profile,
     audio_replace,
@@ -422,6 +423,7 @@ from . import (
     library_visibility,
     lyrics,
     m3u,
+    musicbrainz,
     providers,
     spotify,
     stream,
@@ -10603,6 +10605,15 @@ async def update_monitor_playlist(
     # "new releases only" is turned off) instead of waiting for the
     # next scheduled one.
     filters_changed = False
+    if 'musicbrainz_kinds' in payload:
+        if current.kind != KIND_ARTIST:
+            raise HTTPException(
+                status_code=400,
+                detail='Release kinds only apply to artist watches',
+            )
+        kinds = _musicbrainz_kinds_from(payload['musicbrainz_kinds'])
+        filters_changed = kinds != current.musicbrainz_kinds
+        kwargs['musicbrainz_kinds'] = kinds
     if 'release_types' in payload or 'new_only' in payload:
         if current.kind != KIND_ARTIST:
             raise HTTPException(
@@ -10648,6 +10659,119 @@ async def delete_monitor_playlist(
             status_code=404, detail='Monitored playlist not found'
         )
     return {'deleted': True, 'id': playlist_id}
+
+
+def _musicbrainz_kinds_from(value: Any) -> Optional[str]:
+    """A watch's ``musicbrainz_kinds`` from a request: ``None`` (follow
+    the setting) or a list of ``musicbrainz.KINDS`` names, stored
+    comma-separated. ``400`` for anything else."""
+
+    if value is None:
+        return None
+    if not isinstance(value, list) or any(
+        str(kind) not in musicbrainz.KINDS for kind in value
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail='musicbrainz_kinds is a list of: '
+            + ', '.join(musicbrainz.KINDS),
+        )
+    return ','.join(k for k in musicbrainz.KINDS if k in set(map(str, value)))
+
+
+async def _artist_watch_for_request(
+    playlist_id: int, request: Request
+) -> MonitoredPlaylist:
+    watch = await asyncio.to_thread(
+        _monitor_watch_for_request, playlist_id, request
+    )
+    if watch is None:
+        raise HTTPException(
+            status_code=404, detail='Monitored playlist not found'
+        )
+    if watch.kind != KIND_ARTIST:
+        raise HTTPException(
+            status_code=400, detail='Only an artist watch has releases'
+        )
+    return watch
+
+
+def _artist_releases(
+    db: PlaylistMonitorDB, watch: MonitoredPlaylist
+) -> dict[str, Any]:
+    kinds = artist_catalogue.watch_kinds(watch, state.settings)
+    releases = artist_catalogue.catalogue_view(
+        db.catalogue.rows(watch.id),
+        have=db.releases.counts(watch.id),
+        seen=db.catalogue.seen(watch.id),
+        types=set((watch.release_types or ALL_RELEASE_TYPES).split(',')),
+        kinds=kinds,
+    )
+    names = {mb: name for name, mb in musicbrainz.KINDS.items()}
+    return {
+        'watch': watch.to_dict(),
+        'kinds': [names[k] for k in musicbrainz.KINDS.values() if k in kinds],
+        'kinds_default': watch.musicbrainz_kinds is None,
+        'available_kinds': list(musicbrainz.KINDS),
+        'musicbrainz': bool(state.settings.get('artist_watch_musicbrainz')),
+        'releases': releases,
+        'counts': artist_catalogue.counts(releases),
+    }
+
+
+@router.get('/api/monitor/playlists/{playlist_id}/releases')
+async def artist_watch_releases(
+    playlist_id: int, request: Request
+) -> dict[str, Any]:
+    """An artist watch's whole catalogue, from its last check: one row
+    per release with what the library has of it (``state``: complete,
+    partly, missing, skipped, not_watched, off, not_own), plus the
+    watch's MusicBrainz release kinds. See ``downtify/artist_catalogue.py``."""
+
+    db = _require_monitor_db()
+    watch = await _artist_watch_for_request(playlist_id, request)
+    return await asyncio.to_thread(_artist_releases, db, watch)
+
+
+@router.patch('/api/monitor/playlists/{playlist_id}/releases')
+async def switch_artist_watch_releases(
+    playlist_id: int, request: Request
+) -> dict[str, Any]:
+    """Switch releases of an artist watch: ``{album_ids, choice}``, the
+    choice ``on`` (download it even when its type isn't watched or it
+    came out before a "new releases only" watch), ``off`` (never) or
+    ``''`` (follow the watch). Switching on starts a check, so it
+    downloads now. Returns the releases as ``GET`` does."""
+
+    db = _require_monitor_db()
+    watch = await _artist_watch_for_request(playlist_id, request)
+    payload = await _json_object(request)
+    album_ids = payload.get('album_ids')
+    choice = payload.get('choice')
+    if (
+        not isinstance(album_ids, list)
+        or not album_ids
+        or not all(isinstance(a, str) and a for a in album_ids)
+        or choice not in artist_catalogue.CHOICES
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail="Send album_ids and a choice: 'on', 'off' or ''",
+        )
+    changed = await asyncio.to_thread(
+        db.catalogue.set_choice, watch.id, album_ids, choice
+    )
+    if not changed:
+        raise HTTPException(
+            status_code=404, detail='The watch lists no such release'
+        )
+    if choice == 'on':
+        await asyncio.to_thread(
+            db.catalogue.forget_skipped, watch.id, album_ids
+        )
+        if watch.enabled:
+            _start_initial_check(watch, db)
+    return await asyncio.to_thread(_artist_releases, db, watch)
 
 
 @router.post('/api/monitor/playlists/{playlist_id}/check')

@@ -284,6 +284,12 @@ La página de una vigilancia también muestra:
 
 El id de la vigilancia (`#12`) aparece junto a su nombre, así que dos vigilancias del mismo enlace — dos cuentas que siguen una playlist, por ejemplo — se pueden distinguir.
 
+### Los lanzamientos de un artista
+
+La página de un seguimiento de artista también lista todo su catálogo según la última comprobación: cada lanzamiento que listan YouTube Music, Deezer y MusicBrainz (el mismo álbum de dos fuentes aparece una vez), en álbumes, mixtapes, EPs, sencillos y lanzamientos en vivo, recopilatorios y remixes. Cada uno muestra lo que la biblioteca tiene de él: **Completo** con su número de pistas, **En parte**, **Por descargar**, **Anterior al seguimiento** (un seguimiento con **Solo lanzamientos nuevos** lo saltó), **No seguido** (un tipo o clase que el seguimiento no descarga) o **Desactivado**. Las colaboraciones y los bootlegs tienen su propio filtro y nunca se descargan.
+
+El interruptor junto a un lanzamiento tiene prioridad sobre el seguimiento, como la supervisión por álbum de Lidarr. Activado, lo descarga aunque su tipo no se siga o haya salido antes de empezar el seguimiento, y una comprobación empieza enseguida. Desactivado, deja de descargarlo. Las canciones que ya están en la biblioteca se quedan en ambos casos. **De MusicBrainz, descargar también** elige, solo para este artista, qué clases de lanzamiento que solo MusicBrainz distingue se descargan: mixtapes y bandas sonoras por defecto; álbumes en vivo, recopilatorios, remixes, sesiones de DJ y demos al activarlos.
+
 ## De dónde viene una canción
 
 **De dónde viene** en el menú de una canción (en cualquier lugar de la Biblioteca) dice qué vigilancia la descargó primero, cuándo y con qué proveedor — **Primera comprobación** si llegó con la primera comprobación — y lista todas las vigilancias que la tienen ahora, cada una con su id, dueño (para un admin), cuándo recibió la canción y cómo: **La descargó**, **Ya en la biblioteca** o **Antes del registro**. Es un solo archivo: las vigilancias que comparten una canción apuntan todas a la misma copia.
