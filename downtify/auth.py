@@ -219,7 +219,7 @@ class PairingStore:
     def _prune(self, now: float) -> None:
         for pid, entry in list(self._sessions.items()):
             # A claimed one stays a little longer so the page sees it.
-            if entry['expires'] + (60 if entry['device'] else 0) < now:
+            if entry['expires'] + (60 if entry['device'] else 0) <= now:
                 del self._sessions[pid]
 
     def create(self, user_id: int = 0) -> dict[str, Any]:
@@ -228,8 +228,8 @@ class PairingStore:
 
         code = new_pairing_code()
         pairing_id = secrets.token_urlsafe(12)
-        now = time.monotonic()
         with self._lock:
+            now = time.monotonic()
             self._prune(now)
             self._sessions[pairing_id] = {
                 'code_hash': _sha256(normalize_pairing_code(code)),
@@ -251,11 +251,11 @@ class PairingStore:
         if not canonical:
             return None
         wanted = _sha256(canonical)
-        now = time.monotonic()
         with self._lock:
+            now = time.monotonic()
             self._prune(now)
             for pid, entry in self._sessions.items():
-                if entry['device'] is not None or entry['expires'] < now:
+                if entry['device'] is not None or entry['expires'] <= now:
                     continue
                 if hmac.compare_digest(entry['code_hash'], wanted):
                     # Used up at once, before the token is even made.
@@ -280,15 +280,15 @@ class PairingStore:
     def status(self, pairing_id: str) -> dict[str, Any]:
         """``{status: pending|paired|expired, device?, expires_in?}``."""
 
-        now = time.monotonic()
         with self._lock:
+            now = time.monotonic()
             self._prune(now)
             entry = self._sessions.get(pairing_id)
             if entry is None:
                 return {'status': 'expired'}
             if entry['device']:
                 return {'status': 'paired', 'device': entry['device']}
-            if entry['expires'] < now:
+            if entry['expires'] <= now:
                 return {'status': 'expired'}
             return {
                 'status': 'pending',
@@ -310,10 +310,10 @@ class TicketStore:
 
     def create(self, principal: Principal) -> str:
         ticket = secrets.token_urlsafe(24)
-        now = time.monotonic()
         with self._lock:
+            now = time.monotonic()
             for key, (expires, _p) in list(self._tickets.items()):
-                if expires < now:
+                if expires <= now:
                     del self._tickets[key]
             self._tickets[_sha256(ticket)] = (now + self._ttl, principal)
         return ticket
@@ -321,7 +321,7 @@ class TicketStore:
     def claim(self, ticket: str) -> Optional[Principal]:
         with self._lock:
             found = self._tickets.pop(_sha256(str(ticket or '')), None)
-        if found is None or found[0] < time.monotonic():
+        if found is None or found[0] <= time.monotonic():
             return None
         return found[1]
 
