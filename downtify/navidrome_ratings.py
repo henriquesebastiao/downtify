@@ -26,14 +26,19 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-This part of the module is pure: the star tables, the options sanitiser
-and the repeat-schedule rule.
+The first half of the module is pure: the star tables, the options
+sanitiser and the repeat-schedule rule. :class:`RatingRun` walks the
+library and rates songs from Deezer.
 """
 
 from __future__ import annotations
 
+import time
+from collections.abc import Callable
 from datetime import datetime, timedelta, timezone
 from typing import Any, Optional
+
+from . import deezer
 
 #: The options a rating run takes, with their defaults.
 DEFAULTS: dict[str, Any] = {
@@ -149,3 +154,211 @@ def next_run_at(
     if last_rating_run.get('state') == 'failed':
         return started + RETRY_AFTER_FAILURE
     return started + timedelta(days=days)
+
+
+_DEEZER_API = 'https://api.deezer.com'
+
+
+class DeezerUnavailable(RuntimeError):
+    """Deezer failed twice in a row; the run cannot go on."""
+
+
+def _never() -> bool:
+    return False
+
+
+def _ignore(done: int, total: int, step: str) -> None:
+    """Default progress callback: nothing listens."""
+
+
+class RatingRun:
+    """One pass over the Navidrome library, rating songs from Deezer.
+
+    A port of dztnr's walk. ``client`` is a
+    :class:`downtify.navidrome.NavidromeClient`; ``options`` are the
+    :func:`effective_settings`. Navidrome errors are not caught: they
+    reach the caller. With ``preview`` nothing is written.
+    """
+
+    def __init__(
+        self,
+        client: Any,
+        options: dict[str, Any],
+        *,
+        preview: bool = False,
+        cancelled: Callable[[], bool] = _never,
+        progress: Callable[[int, int, str], None] = _ignore,
+        sleep: Callable[[float], None] = time.sleep,
+    ) -> None:
+        self._client = client
+        self._options = effective_settings(options)
+        self._preview = preview
+        self._cancelled = cancelled
+        self._progress = progress
+        self._sleep = sleep
+        self._stopped = False
+        self._total = 0
+        self._done = 0
+        self._rated = 0
+        self._skipped = 0
+        self._not_found = 0
+        self._changes: list[dict[str, Any]] = []
+        self._unmatched: list[str] = []
+        # Reference ranks, kept even when None so they are not retried.
+        self._artist_tops: dict[str, Optional[int]] = {}
+        self._album_tops: dict[str, Optional[int]] = {}
+
+    def run(self) -> dict[str, Any]:
+        """Walk the library and rate it; return the summary."""
+        albums = self._library()
+        for artist_name, album_id in albums:
+            if self._stopped:
+                break
+            self._rate_album(artist_name, self._client.album(album_id))
+        return self._summary()
+
+    # -- the library pass ---------------------------------------------
+
+    def _library(self) -> list[tuple[str, str]]:
+        """Every unique album as ``(navidrome artist name, album id)``."""
+        artists = self._client.artists()
+        seen: set[str] = set()
+        albums: list[tuple[str, str]] = []
+        for index, artist in enumerate(artists, start=1):
+            if self._cancelled():
+                self._stopped = True
+                break
+            for album in self._client.artist_albums(artist['id']):
+                if album['id'] in seen:
+                    continue
+                seen.add(album['id'])
+                albums.append((artist['name'], album['id']))
+                self._total += int(album.get('song_count') or 0)
+            self._progress(index, len(artists), 'library')
+        return albums
+
+    # -- the rating pass ----------------------------------------------
+
+    def _rate_album(self, artist_name: str, album: dict[str, Any]) -> None:
+        for song in album['songs']:
+            if self._cancelled():
+                self._stopped = True
+                return
+            self._rate_song(artist_name, album, song)
+            self._done += 1
+            self._progress(self._done, max(self._total, self._done), 'rating')
+
+    def _wants_skip(self, song: dict[str, Any]) -> bool:
+        if self._options['skip_starred'] and song['starred']:
+            return True
+        return bool(self._options['skip_rated'] and song['rating'] > 0)
+
+    def _rate_song(
+        self, artist_name: str, album: dict[str, Any], song: dict[str, Any]
+    ) -> None:
+        if self._wants_skip(song):
+            self._skipped += 1
+            return
+        top = self._reference(artist_name, album)
+        rank = self._song_rank(f'{album["artist"]} {song["title"]}')
+        if rank is None:
+            self._not_found += 1
+            if len(self._unmatched) < EXAMPLES:
+                self._unmatched.append(
+                    f'{album["artist"]} – {album["name"]} – {song["title"]}'
+                )
+            return
+        stars = (
+            stars_from_rank(rank)
+            if top is None
+            else stars_from_relative_rank(rank, top)
+        )
+        self._rated += 1
+        if len(self._changes) < EXAMPLES:
+            self._changes.append({
+                'artist': album['artist'],
+                'album': album['name'],
+                'title': song['title'],
+                'rank': rank,
+                'stars': stars,
+                'was': song['rating'],
+            })
+        if not self._preview:
+            self._client.set_rating(song['id'], stars)
+
+    # -- Deezer -------------------------------------------------------
+
+    def _call(self, url: str, **params: Any) -> dict[str, Any]:
+        """A Deezer GET, paced; one retry, then :class:`DeezerUnavailable`."""
+        try:
+            data = deezer._get_json(url, **params)
+        except ValueError:
+            self._sleep(RETRY_PAUSE)
+            try:
+                data = deezer._get_json(url, **params)
+            except ValueError as exc:
+                raise DeezerUnavailable('Deezer is not answering') from exc
+        self._sleep(DEEZER_PAUSE)
+        return data
+
+    @staticmethod
+    def _rows(data: dict[str, Any]) -> list[dict[str, Any]]:
+        rows = data.get('data')
+        if not isinstance(rows, list):
+            return []
+        return [row for row in rows if isinstance(row, dict)]
+
+    def _song_rank(self, query: str) -> Optional[int]:
+        rows = self._rows(self._call(f'{_DEEZER_API}/search', q=query))
+        rank = rows[0].get('rank') if rows else None
+        return None if rank is None else int(rank)
+
+    def _first_id(self, url: str, query: str) -> Any:
+        rows = self._rows(self._call(url, q=query))
+        return rows[0].get('id') if rows else None
+
+    def _top_rank(self, url: str, **params: Any) -> Optional[int]:
+        rows = self._rows(self._call(url, **params))
+        ranks = [int(r['rank']) for r in rows if r.get('rank') is not None]
+        return max(ranks) if ranks else None
+
+    def _reference(
+        self, artist_name: str, album: dict[str, Any]
+    ) -> Optional[int]:
+        """The rank relative grading compares to, or ``None`` (absolute)."""
+        grading = self._options['grading']
+        if grading == 'artist':
+            if artist_name not in self._artist_tops:
+                self._artist_tops[artist_name] = self._artist_top(artist_name)
+            return self._artist_tops[artist_name]
+        if grading == 'album':
+            if album['id'] not in self._album_tops:
+                self._album_tops[album['id']] = self._album_top(album)
+            return self._album_tops[album['id']]
+        return None
+
+    def _artist_top(self, artist_name: str) -> Optional[int]:
+        found = self._first_id(f'{_DEEZER_API}/search/artist', artist_name)
+        if found is None:
+            return None
+        return self._top_rank(f'{_DEEZER_API}/artist/{found}/top', limit=100)
+
+    def _album_top(self, album: dict[str, Any]) -> Optional[int]:
+        found = self._first_id(
+            f'{_DEEZER_API}/search/album', f'{album["artist"]} {album["name"]}'
+        )
+        if found is None:
+            return None
+        return self._top_rank(f'{_DEEZER_API}/album/{found}/tracks')
+
+    def _summary(self) -> dict[str, Any]:
+        return {
+            'state': 'stopped' if self._stopped else 'done',
+            'preview': self._preview,
+            'total': self._total,
+            'rated': self._rated,
+            'skipped': self._skipped,
+            'not_found': self._not_found,
+            'changes': self._changes,
+            'unmatched': self._unmatched,
+        }
