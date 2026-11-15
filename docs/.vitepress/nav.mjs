@@ -55,6 +55,7 @@ export const NAV = [
       { title: 'Outbound Proxy', page: 'features/outbound-proxy.md' },
       { title: 'Library-only mode', page: 'features/library-only.md' },
       { title: 'slskd & Navidrome', page: 'features/slskd-navidrome.md' },
+      { title: 'Ratings from Deezer', page: 'features/navidrome-ratings.md' },
       { title: 'Deemix', page: 'features/deemix.md' },
       { title: 'SoundCloud', page: 'features/soundcloud.md' },
       { title: 'Library Catalog', page: 'features/library-catalog.md' },
