@@ -2,7 +2,7 @@ from types import SimpleNamespace
 
 import pytest
 from ai_test_support import opted_in_store
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.testclient import TestClient
 
 from downtify.music_ai import routes
@@ -114,6 +114,33 @@ def test_anonymous_request_rejected(client):
         ).status_code
         == 401
     )
+
+
+@pytest.fixture
+def native_playlists(tmp_path, monkeypatch):
+    from downtify import api
+    from downtify.library_catalog import LibraryContext
+    from downtify.playlist_catalog import ManualPlaylistOwners
+    from downtify.playlist_shares import PlaylistShares
+
+    root = tmp_path / 'native-library'
+    root.mkdir()
+    for name in ('safe-one.mp3', 'safe-two.mp3'):
+        (root / name).write_bytes(b'synthetic audio fixture')
+    ctx = LibraryContext(download_dir=root)
+    owners = ManualPlaylistOwners(tmp_path / 'owners.db')
+    shares = PlaylistShares(tmp_path / 'shares.db')
+    monkeypatch.setattr(api, 'library_context', lambda: ctx)
+    monkeypatch.setattr(api.state, 'manual_playlist_owners', owners)
+    monkeypatch.setattr(api.state, 'playlist_shares', shares)
+    for field in ('auth', 'playlist_catalog', 'playlist_hidden', 'likes'):
+        monkeypatch.setattr(api.state, field, None)
+
+    async def announce():
+        pass
+
+    monkeypatch.setattr(api, 'announce_playlists_changed', announce)
+    return SimpleNamespace(root=root, owners=owners, shares=shares)
 
 
 def test_playlist_cards_are_current_owned_and_visibility_filtered(
@@ -310,22 +337,21 @@ def test_save_uses_native_stable_copy_and_claims_owner(client, monkeypatch):
 
     http, database = client
     written = []
-    claimed = []
+    owner_arguments = []
+    owners, shares = object(), object()
     monkeypatch.setattr(api, 'library_context', lambda: 'test-context')
+    monkeypatch.setattr(api.state, 'manual_playlist_owners', owners)
+    monkeypatch.setattr(api.state, 'playlist_shares', shares)
 
-    def copy(ctx, files, name):
+    def copy(ctx, files, name, *ownership):
         written.append((ctx, files, name))
+        owner_arguments.append(ownership)
         return {'name': name, 'count': len(files)}
 
     async def announce():
         pass
 
     monkeypatch.setattr(manual_playlists, 'copy_playlist', copy)
-    monkeypatch.setattr(
-        api,
-        'claim_manual_playlist',
-        lambda name, request: claimed.append((name, routes.owner(request))),
-    )
     monkeypatch.setattr(api, 'invalidate_library_paths_cache', lambda: None)
     monkeypatch.setattr(api, 'announce_playlists_changed', announce)
     response = http.post(
@@ -341,9 +367,95 @@ def test_save_uses_native_stable_copy_and_claims_owner(client, monkeypatch):
     assert written == [
         ('test-context', ['safe-two.mp3', 'safe-one.mp3'], 'Stable')
     ]
-    assert claimed == [('Stable', 1)]
+    assert owner_arguments == [(owners, 1, shares)]
     database.forget(1)
     assert len(written) == 1
+
+
+def test_saved_selection_is_private_owned_and_stable(client, native_playlists):
+    from downtify import api
+    from downtify.m3u import is_manual_m3u
+    from downtify.playlist_shares import PRIVATE
+
+    http, database = client
+    world = native_playlists
+    response = http.post(
+        '/api/v1/music-ai/playlists/save',
+        headers={'x-test-user': '1'},
+        json={
+            'name': 'Stable selection',
+            'ids': ['two', 'one', 'two'],
+            'source': 'daily',
+        },
+    )
+    assert response.status_code == 200, response.text
+    assert response.json() == {'name': 'Stable selection', 'count': 2}
+    path = world.root / 'Playlists' / 'Stable selection.m3u'
+    assert is_manual_m3u(path)
+    assert world.owners.owner('Stable selection') == 1
+    assert world.shares.visibility('Stable selection') == PRIVATE
+
+    def request(uid):
+        return Request({
+            'type': 'http',
+            'state': {
+                'principal': SimpleNamespace(user_id=uid, is_admin=False)
+            },
+        })
+
+    own = api.require_playlist_visible(
+        'Stable selection', request(1), manage=True
+    )
+    assert own['manual']
+    assert own['mine']
+    assert own['files'] == ['safe-two.mp3', 'safe-one.mp3']
+    with pytest.raises(HTTPException) as hidden:
+        api.require_playlist_visible(
+            'Stable selection', request(2), manage=True
+        )
+    assert hidden.value.status_code == 404
+    saved_bytes = path.read_bytes()
+    database.forget(1)
+    assert path.read_bytes() == saved_bytes
+    assert world.owners.owner('Stable selection') == 1
+
+
+@pytest.mark.parametrize('which', ['owners', 'shares'])
+@pytest.mark.parametrize('offline', [False, True])
+def test_save_unavailable_native_state_leaves_no_file(
+    client, native_playlists, monkeypatch, which, offline
+):
+    from downtify import api
+    from downtify.playlist_shares import PUBLIC
+
+    http, _ = client
+    world = native_playlists
+    native = getattr(world, which)
+    original_path = native._path
+    world.shares.set_visibility('Unavailable', PUBLIC)
+    if offline:
+        # A directory cannot be opened as SQLite: exercise real I/O failure,
+        # native rollback and the API response rather than replacing a method.
+        monkeypatch.setattr(native, '_path', str(world.root))
+    else:
+        field = (
+            'manual_playlist_owners'
+            if which == 'owners'
+            else 'playlist_shares'
+        )
+        monkeypatch.setattr(api.state, field, None)
+    response = http.post(
+        '/api/v1/music-ai/playlists/save',
+        headers={'x-test-user': '1'},
+        json={'name': 'Unavailable', 'ids': ['one'], 'source': 'daily'},
+    )
+    assert response.status_code == 503, response.text
+    assert 'temporarily unavailable' in response.json()['detail']
+    assert not list(world.root.rglob('*.m3u'))
+    if offline:
+        monkeypatch.setattr(native, '_path', original_path)
+    assert world.owners.owner('Unavailable') is None
+    assert world.shares.visibility('Unavailable') == PUBLIC
 
 
 def test_listen_revisions_erasure_and_visibility(client, monkeypatch):

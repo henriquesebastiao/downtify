@@ -6,6 +6,7 @@ import asyncio
 import hashlib
 import json
 import re
+import sqlite3
 import time
 from functools import lru_cache, wraps
 from pathlib import Path
@@ -647,7 +648,7 @@ async def playback_selection(payload: PlaybackSelection, request: Request):
 
 @router.post('/playlists/save')
 async def save_selection(payload: SavedSelection, request: Request):
-    require(request, payload.source)
+    uid = require(request, payload.source)
     from .. import api
     from ..manual_playlists import ManualPlaylistError, copy_playlist
 
@@ -662,11 +663,20 @@ async def save_selection(payload: SavedSelection, request: Request):
     )
     try:
         result = await asyncio.to_thread(
-            copy_playlist, api.library_context(), files, payload.name
+            copy_playlist,
+            api.library_context(),
+            files,
+            payload.name,
+            api.state.manual_playlist_owners,
+            uid,
+            api.state.playlist_shares,
         )
     except ManualPlaylistError as error:
         raise HTTPException(error.status_code, str(error)) from None
-    api.claim_manual_playlist(result['name'], request)
+    except sqlite3.Error:
+        raise HTTPException(
+            503, 'Playlist ownership is temporarily unavailable'
+        ) from None
     api.invalidate_library_paths_cache()
     await api.announce_playlists_changed()
     return {'name': result['name'], 'count': result['count']}
