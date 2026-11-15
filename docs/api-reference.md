@@ -2329,6 +2329,8 @@ A track's full audio, downloaded once into `/data/stream_cache` and served from 
 
 The first request for a video downloads it (concurrent requests share one download); the cache is pruned least-recently-used past `DOWNTIFY_STREAM_CACHE_MB` (default 1024) with at most `DOWNTIFY_STREAM_CONCURRENCY` downloads at once (default 2). `400` for a malformed id and for tracks over 10 minutes (the served file's probed length is enforced either way, so long uploads never accumulate), `503` when YouTube can't provide the audio — including age-gated tracks without usable cookies (see [YouTube Cookies](features/youtube-cookies.md)). A stream never lands in the library, the activity log or the saved player session.
 
+Cancelling a cache request does not cancel another caller waiting for the same video. When the last caller cancels before the download starts, the queued download is removed. A download already running in yt-dlp finishes into the cache and still counts toward the concurrency limit until it finishes; a new playback or prefetch request for that video shares the running download instead of starting another one. An unsuccessful download can be retried.
+
 A cached file keeps its `ETag` across requests while the audio is unchanged. Clients can send that validator in `If-Range` to get `206 Partial Content` for a satisfiable range.
 
 The web UI plays the queue through undownloaded rows without stopping and warms one track ahead: at each track's start, and again the moment it has fully loaded, the next track's download starts in the background (see [`POST /api/stream/prefetch`](#post-apistreamprefetch)), so skipping starts instantly. A run of unresolvable tracks is skipped (an error after three in a row).
