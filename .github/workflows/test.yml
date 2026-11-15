@@ -10,6 +10,10 @@ jobs:
     env:
       UV_SYSTEM_PYTHON: 1
       PYTHON_COLORS: 0
+      OPENBLAS_NUM_THREADS: '1'
+      OMP_NUM_THREADS: '1'
+      MKL_NUM_THREADS: '1'
+      NUMEXPR_NUM_THREADS: '1'
 
     steps:
       - name: Copy files from repo
@@ -18,10 +22,12 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v7
         with:
-          version: "0.5.2"
+          version: '0.13.5'
           enable-cache: true
           cache-dependency-glob: |
             pyproject.toml
+            uv.lock
+            requirements-music-ai-tests.txt
 
       - name: Install Python
         uses: actions/setup-python@v7
@@ -29,10 +35,27 @@ jobs:
           python-version: '3.13'
 
       - name: Install dependencies
-        run: uv sync --all-extras --dev
+        run: uv sync --frozen --all-extras --dev
 
       - name: Run Ruff
-        run: uv run ruff check .; uv run ruff check . --diff
+        run: |
+          uv run --no-sync ruff check .
+          uv run --no-sync ruff format --check .
+
+      - name: Install native audio tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install --yes --no-install-recommends ffmpeg
+
+      - name: Verify FFmpeg, FFprobe and Rubber Band
+        run: |
+          command -v ffmpeg
+          command -v ffprobe
+          ffmpeg -hide_banner -version
+          ffprobe -hide_banner -version
+          ffmpeg -hide_banner -filters > "${RUNNER_TEMP}/downtify-ffmpeg-filters.txt"
+          grep -E '(^|[[:space:]])rubberband[[:space:]]' "${RUNNER_TEMP}/downtify-ffmpeg-filters.txt"
+          ffmpeg -v error -f lavfi -i "sine=frequency=440:duration=0.5:sample_rate=44100" -af "rubberband=tempo=1.01" -f null -
 
       - name: Run pytest
         run: |
