@@ -31,7 +31,15 @@
             :class="section === item.id ? 'text-accent' : ''"
           />
           {{ item.label }}
-          <ExperimentalBadge v-if="item.experimental" class="lg:ml-auto" />
+          <ExperimentalBadge
+            v-if="item.experimental"
+            :hint="
+              item.id === 'ai'
+                ? 'Fonctions IA expérimentales. La qualité dépend de l’analyse locale ; chaque module peut être désactivé.'
+                : ''
+            "
+            class="lg:ml-auto"
+          />
         </RouterLink>
       </nav>
 
@@ -1000,6 +1008,10 @@
             <AppsSettings />
           </template>
 
+          <template v-else-if="section === 'ai'">
+            <MusicAISettings />
+          </template>
+
           <!-- About -->
           <template v-else-if="section === 'about'">
             <div
@@ -1125,6 +1137,7 @@ import NormalizationSettings from '/src/components/settings/NormalizationSetting
 import ActivitySettings from '/src/components/settings/ActivitySettings.vue'
 import DoctorSettings from '/src/components/settings/DoctorSettings.vue'
 import AppsSettings from '/src/components/settings/AppsSettings.vue'
+import MusicAISettings from '/src/components/settings/MusicAISettings.vue'
 import ServerPortSetting from '/src/components/settings/ServerPortSetting.vue'
 import HiddenLibrarySettings from '/src/components/settings/HiddenLibrarySettings.vue'
 import UsersSettings from '/src/components/settings/UsersSettings.vue'
@@ -1272,6 +1285,7 @@ const sections = computed(() =>
         // The apps themselves are still being built (AppsSettings).
         experimental: true,
       },
+      { id: 'ai', icon: 'wand', label: 'IA', experimental: true },
       { id: 'about', icon: 'info', label: t('settings.about') },
     ],
     { authDisabled: auth.authDisabled.value }

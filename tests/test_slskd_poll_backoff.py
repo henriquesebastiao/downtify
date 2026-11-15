@@ -36,7 +36,9 @@ def clock(monkeypatch):
         now[0] += seconds
 
     monkeypatch.setattr(
-        provider, 'time', SimpleNamespace(monotonic=lambda: now[0], sleep=sleep)
+        provider,
+        'time',
+        SimpleNamespace(monotonic=lambda: now[0], sleep=sleep),
     )
     return now, sleeps
 

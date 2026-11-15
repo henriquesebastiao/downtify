@@ -55,10 +55,17 @@ export default {
   },
   nav: {
     groups: {
+      'Music AI & DJ (beta)': 'Music AI & DJ (beta)',
       'Getting Started': 'Ξεκινώντας',
       Features: 'Λειτουργίες',
     },
     pages: {
+      'music-ai.md': 'Music AI and DJ (beta)',
+      'personalized-mix-renewal.md': 'Personalized mix renewal',
+      'progressive-decoding.md': 'Progressive DJ rendering',
+      'rhythm-analysis.md': 'Rhythm analysis',
+      'weekly-dj-assets.md': 'Weekly DJ preparation',
+      'weekly-dj-queue.md': 'Weekly DJ controls',
       'index.md': 'Αρχική',
       'getting-started/index.md': 'Επισκόπηση',
       'getting-started/installation.md': 'Εγκατάσταση',

@@ -90,6 +90,17 @@ export const NAV = [
       { title: 'Update Notifications', page: 'features/updates.md' },
     ],
   },
+  {
+    title: 'Music AI & DJ (beta)',
+    items: [
+      { title: 'Music AI and DJ (beta)', page: 'music-ai.md' },
+      { title: 'Personalized mix renewal', page: 'personalized-mix-renewal.md' },
+      { title: 'Progressive DJ rendering', page: 'progressive-decoding.md' },
+      { title: 'Rhythm analysis', page: 'rhythm-analysis.md' },
+      { title: 'Weekly DJ preparation', page: 'weekly-dj-assets.md' },
+      { title: 'Weekly DJ controls', page: 'weekly-dj-queue.md' },
+    ],
+  },
   { title: 'How It Works', page: 'how-it-works.md' },
   { title: 'Troubleshooting', page: 'troubleshooting.md' },
   { title: 'API Reference', page: 'api-reference.md' },

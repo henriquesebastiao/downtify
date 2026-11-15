@@ -62,10 +62,17 @@ export default {
   },
   nav: {
     groups: {
+      'Music AI & DJ (beta)': 'Music AI & DJ (beta)',
       'Getting Started': 'Getting Started',
       Features: 'Features',
     },
     pages: {
+      'music-ai.md': 'Music AI and DJ (beta)',
+      'personalized-mix-renewal.md': 'Personalized mix renewal',
+      'progressive-decoding.md': 'Progressive DJ rendering',
+      'rhythm-analysis.md': 'Rhythm analysis',
+      'weekly-dj-assets.md': 'Weekly DJ preparation',
+      'weekly-dj-queue.md': 'Weekly DJ controls',
       'index.md': 'Home',
       'getting-started/index.md': 'Overview',
       'getting-started/installation.md': 'Installation',

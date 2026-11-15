@@ -53,10 +53,17 @@ export default {
   },
   nav: {
     groups: {
+      'Music AI & DJ (beta)': 'Music AI & DJ (beta)',
       'Getting Started': '시작하기',
       Features: '기능',
     },
     pages: {
+      'music-ai.md': 'Music AI and DJ (beta)',
+      'personalized-mix-renewal.md': 'Personalized mix renewal',
+      'progressive-decoding.md': 'Progressive DJ rendering',
+      'rhythm-analysis.md': 'Rhythm analysis',
+      'weekly-dj-assets.md': 'Weekly DJ preparation',
+      'weekly-dj-queue.md': 'Weekly DJ controls',
       'index.md': '홈',
       'getting-started/index.md': '개요',
       'getting-started/installation.md': '설치',

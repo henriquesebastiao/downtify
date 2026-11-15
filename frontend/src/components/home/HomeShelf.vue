@@ -6,16 +6,27 @@
     <div class="flex items-baseline justify-between gap-3">
       <h2 class="text-display text-lg font-semibold">{{ title }}</h2>
       <button
+        v-if="!seeAll"
         type="button"
         class="shrink-0 text-[13px] font-semibold text-accent hover:text-accent-hi"
         @click="expanded = true"
       >
         {{ t('common.seeAll') }}
       </button>
+      <RouterLink
+        v-else
+        :to="seeAll"
+        class="shrink-0 text-[13px] font-semibold text-accent hover:text-accent-hi"
+        >{{ t('common.seeAll') }}</RouterLink
+      >
     </div>
-    <div class="grid grid-cols-2 gap-2.5 sm:grid-cols-3" data-home-preview>
+    <div
+      class="grid grid-cols-2 gap-2.5"
+      :class="kind === 'for-you' ? 'lg:grid-cols-4' : 'sm:grid-cols-3'"
+      data-home-preview
+    >
       <HomeShortcut
-        v-for="entry in entries.slice(0, 6)"
+        v-for="entry in entries.slice(0, previewCount)"
         :key="entry.id"
         :entry="entry"
         @play="$emit('play', $event)"
@@ -50,6 +61,8 @@ defineProps({
   title: { type: String, required: true },
   kind: { type: String, required: true },
   entries: { type: Array, required: true },
+  seeAll: { type: [String, Object], default: null },
+  previewCount: { type: Number, default: 6 },
 })
 defineEmits(['play'])
 const { t } = useI18n()

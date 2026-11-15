@@ -54,10 +54,17 @@ export default {
   },
   nav: {
     groups: {
+      'Music AI & DJ (beta)': 'Music AI & DJ (beta)',
       'Getting Started': 'Első lépések',
       Features: 'Funkciók',
     },
     pages: {
+      'music-ai.md': 'Music AI and DJ (beta)',
+      'personalized-mix-renewal.md': 'Personalized mix renewal',
+      'progressive-decoding.md': 'Progressive DJ rendering',
+      'rhythm-analysis.md': 'Rhythm analysis',
+      'weekly-dj-assets.md': 'Weekly DJ preparation',
+      'weekly-dj-queue.md': 'Weekly DJ controls',
       'index.md': 'Kezdőlap',
       'getting-started/index.md': 'Áttekintés',
       'getting-started/installation.md': 'Telepítés',

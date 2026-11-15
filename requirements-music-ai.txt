@@ -1,0 +1,4 @@
+numpy==2.5.4
+onnxruntime==1.31.1
+librosa==1.0.0
+transformers==5.22.1

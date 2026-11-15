@@ -1,0 +1,5 @@
+# CPU signal fixtures only; model runtimes/weights are not test dependencies.
+numpy==2.5.4
+scipy==1.18.1
+soxr==1.1.0
+tzdata==2026.6

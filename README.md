@@ -30,6 +30,24 @@
   <img src="assets/readme-hero.png" alt="Downtify 3.0: paste a Spotify link, get the music. The home screen, the full-screen player and the mobile app." width="100%">
 </p>
 
+## Experimental music AI and DJ beta
+
+**Opt-in beta: all modules and the unqualified-engine trial default off for new
+installations and accounts.** Existing explicit preferences are preserved.
+Four daily mixes appear below favorite playlists; weekly DJ sets, song-based
+mixes and queue DJ use the common player. DJ uses local files, never radio.
+CPU companions analyze music and prepare server transitions without changing
+original files; the Android device engine remains a short-fade prototype.
+
+Starting configurable limits are **0.5 CPU / 1.5 GiB for analysis**, **1 CPU /
+2 GiB and a separate 5 GiB cache for DJ**, plus bounded client audio caches.
+These limits are not measured minimum requirements or phone consumption.
+Real-time continuity, comparative listening and physical-device qualification
+remain pending. See the [setup, controls, licenses, historical measurements and
+beta limits](docs/music-ai.md), including where the features appear and how to
+test them. The matching Android contribution is
+[downtify-android#49](https://github.com/henriquesebastiao/downtify-android/pull/49).
+
 ## Overview
 
 Downtify is a self-hosted web app that turns Spotify and YouTube Music links into a tagged audio library. It never touches the Spotify API, and it needs no account and no Premium subscription. It also plays that library back, so what you download is one tab away from listening.

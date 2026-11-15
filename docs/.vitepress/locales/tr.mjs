@@ -54,10 +54,17 @@ export default {
   },
   nav: {
     groups: {
+      'Music AI & DJ (beta)': 'Music AI & DJ (beta)',
       'Getting Started': 'Başlarken',
       Features: 'Özellikler',
     },
     pages: {
+      'music-ai.md': 'Music AI and DJ (beta)',
+      'personalized-mix-renewal.md': 'Personalized mix renewal',
+      'progressive-decoding.md': 'Progressive DJ rendering',
+      'rhythm-analysis.md': 'Rhythm analysis',
+      'weekly-dj-assets.md': 'Weekly DJ preparation',
+      'weekly-dj-queue.md': 'Weekly DJ controls',
       'index.md': 'Ana sayfa',
       'getting-started/index.md': 'Genel bakış',
       'getting-started/installation.md': 'Kurulum',

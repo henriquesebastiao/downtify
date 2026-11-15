@@ -1,8 +1,23 @@
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const { getSimilarTracks } = vi.hoisted(() => ({
+const { getSimilarTracks, getLocalSimilar } = vi.hoisted(() => ({
   getSimilarTracks: vi.fn(),
+  getLocalSimilar: vi.fn(),
 }))
+
+vi.mock('/src/model/musicAI', async () => {
+  const { ref } = await import('vue')
+  return {
+    musicAI: {
+      capabilities: ref({
+        features: { external_beta: true, similarity: true },
+      }),
+      refresh: vi.fn(),
+      externalSimilar: getSimilarTracks,
+      similar: getLocalSimilar,
+    },
+  }
+})
 
 vi.mock('/src/model/api', () => ({
   default: {
@@ -18,6 +33,8 @@ vi.mock('/src/model/api', () => ({
 }))
 
 import { useSimilar } from '../model/similar'
+import { musicAI } from '/src/model/musicAI'
+import { nextTick } from 'vue'
 
 const ROWS = [
   {
@@ -33,6 +50,65 @@ const ROWS = [
 ]
 
 describe('useSimilar', () => {
+  beforeEach(async () => {
+    musicAI.capabilities.value = {
+      features: { external_beta: true, similarity: true },
+    }
+    await nextTick()
+    useSimilar().setSource('external')
+  })
+  it('hides both search commands and makes no request when both modules are disabled', async () => {
+    musicAI.capabilities.value = {
+      features: { external_beta: false, similarity: false },
+    }
+    await nextTick()
+    getSimilarTracks.mockClear()
+    getLocalSimilar.mockClear()
+    const similar = useSimilar()
+    expect(similar.canSearch.value).toBe(false)
+    await similar.searchFor('Synthetic artist', 'Synthetic title')
+    expect(getSimilarTracks).not.toHaveBeenCalled()
+    expect(getLocalSimilar).not.toHaveBeenCalled()
+  })
+  it('chooses the only enabled source without exposing the other command', async () => {
+    musicAI.capabilities.value = {
+      features: { external_beta: true, similarity: false },
+    }
+    await nextTick()
+    const similar = useSimilar()
+    expect(similar.source.value).toBe('external')
+    expect(similar.localEnabled.value).toBe(false)
+    expect(similar.canSearch.value).toBe(true)
+    musicAI.capabilities.value = {
+      features: { external_beta: false, similarity: true },
+    }
+    await nextTick()
+    expect(similar.source.value).toBe('local')
+    expect(similar.externalEnabled.value).toBe(false)
+  })
+  it('keeps a local request entirely inside the local catalog', async () => {
+    const similar = useSimilar()
+    similar.setSource('local')
+    getSimilarTracks.mockClear()
+    getLocalSimilar.mockResolvedValueOnce({
+      data: {
+        tracks: [
+          {
+            song_id: 'local-one',
+            file: 'one.flac',
+            name: 'One',
+            artist: 'A',
+            source: 'library',
+          },
+        ],
+      },
+    })
+    await similar.searchFor('A', 'Seed')
+    expect(getLocalSimilar).toHaveBeenCalledWith('A', 'Seed')
+    expect(getSimilarTracks).not.toHaveBeenCalled()
+    expect(similar.songs.value[0].source).toBe('library')
+    expect(similar.hasMore.value).toBe(false)
+  })
   it('maps rows to downloadable songs', async () => {
     getSimilarTracks.mockResolvedValueOnce({
       data: { artist: 'Cher', track: 'Believe', tracks: ROWS },

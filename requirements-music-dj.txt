@@ -1,0 +1,6 @@
+numpy==2.5.4
+scipy==1.18.1
+soxr==1.1.0
+einops==0.8.2
+rotary-embedding-torch==0.9.1
+beat-this==1.1.0
