@@ -1715,7 +1715,7 @@ export default {
     ratingsNever: 'Henüz çalıştırılmadı',
     ratingsFailedDeezer:
       'Deezer’a ulaşılamadı. Daha önce verilen yıldızlar korunur.',
-    ratingsFailedNavidrome: 'Navidrome hata ile yanıt verdi: {message}',
+    ratingsFailedNavidrome: 'Navidrome hatası: {message}',
     ratingsFailed: 'Puanlama başarısız oldu: {message}',
     ratingsNotConfigured: 'Önce Navidrome girişini kaydet.',
     ratingsBusy: 'Bir puanlama zaten çalışıyor.',

@@ -34,32 +34,32 @@
 
     <div
       v-if="view.changes.length"
-      class="overflow-x-auto rounded-control border border-line-2"
+      class="overflow-hidden rounded-control border border-line-2"
     >
-      <table class="w-full min-w-[20rem] text-left text-[13px]">
+      <table class="w-full text-left text-[13px]">
         <thead class="bg-surface-2 text-muted">
           <tr>
             <th class="px-3 py-2 font-semibold">
               {{ t('settings.ratingsColSong') }}
             </th>
-            <th class="px-3 py-2 text-right font-semibold">
+            <th class="px-2 py-2 text-right font-semibold whitespace-nowrap">
               {{ t('settings.ratingsColRank') }}
             </th>
-            <th class="px-3 py-2 text-right font-semibold">
+            <th class="px-2 py-2 text-right font-semibold whitespace-nowrap">
               {{ t('settings.ratingsColStars') }}
             </th>
           </tr>
         </thead>
         <tbody class="divide-y divide-line">
           <tr v-for="(row, i) in view.changes" :key="i">
-            <td class="px-3 py-2">
+            <td class="px-3 py-2 break-words">
               <span class="block text-fg">{{ row.title }}</span>
               <span class="block text-muted">{{ row.artist }}</span>
             </td>
-            <td class="tabular px-3 py-2 text-right">
+            <td class="tabular px-2 py-2 text-right whitespace-nowrap">
               {{ Number(row.rank).toLocaleString() }}
             </td>
-            <td class="tabular px-3 py-2 text-right whitespace-nowrap">
+            <td class="tabular px-2 py-2 text-right whitespace-nowrap">
               {{ row.was }} → {{ row.stars }}
             </td>
           </tr>

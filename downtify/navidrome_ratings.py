@@ -353,10 +353,6 @@ class RatingRun:
         rank = rows[0].get('rank') if rows else None
         return None if rank is None else int(rank)
 
-    def _first_id(self, url: str, query: str) -> Any:
-        rows = self._rows(self._call(url, q=query))
-        return rows[0].get('id') if rows else None
-
     def _top_rank(self, url: str, **params: Any) -> Optional[int]:
         rows = self._rows(self._call(url, **params))
         ranks = [int(r['rank']) for r in rows if r.get('rank') is not None]
@@ -378,14 +374,36 @@ class RatingRun:
         return None
 
     def _artist_top(self, artist_name: str) -> Optional[int]:
-        found = self._first_id(f'{_DEEZER_API}/search/artist', artist_name)
+        # Deezer's first hit is often a namesake with a handful of fans:
+        # take the exact name with the most fans instead.
+        rows = self._rows(
+            self._call(f'{_DEEZER_API}/search/artist', q=artist_name, limit=25)
+        )
+        match = deezer._most_popular_exact_match(rows, artist_name)
+        found = match.get('id') if match else None
         if found is None:
             return None
         return self._top_rank(f'{_DEEZER_API}/artist/{found}/top', limit=100)
 
     def _album_top(self, album: dict[str, Any]) -> Optional[int]:
-        found = self._first_id(
-            f'{_DEEZER_API}/search/album', f'{album["artist"]} {album["name"]}'
+        # The album artist on Deezer is often the composer, so only the
+        # title has to match exactly (a single or mashup ranks first).
+        rows = self._rows(
+            self._call(
+                f'{_DEEZER_API}/search/album',
+                q=f'{album["artist"]} {album["name"]}',
+                limit=25,
+            )
+        )
+        wanted = deezer.file_name_key(album['name'])
+        found = next(
+            (
+                row.get('id')
+                for row in rows
+                if wanted
+                and deezer.file_name_key(str(row.get('title') or '')) == wanted
+            ),
+            None,
         )
         if found is None:
             return None

@@ -236,6 +236,14 @@ describe('describeRatings', () => {
     expect(reading.indeterminate).toBe(true)
   })
 
+  it('says it is reading before the first progress report', () => {
+    const fresh = view({
+      job: job({ progress: { done: 0, total: 0, step: '' } }),
+    })
+    expect(fresh.progressText).toBe('Reading your Navidrome library…')
+    expect(fresh.indeterminate).toBe(true)
+  })
+
   it('shows the last result and a preview table', () => {
     const shown = view({ last: previewRun() })
     expect(shown.running).toBe(false)
@@ -276,9 +284,7 @@ describe('describeRatings', () => {
     expect(failed('deezer_unreachable')).toBe(
       "Deezer couldn't be reached. Stars already given are kept."
     )
-    expect(failed('navidrome_failed')).toBe(
-      'Navidrome answered with an error: boom'
-    )
+    expect(failed('navidrome_failed')).toBe('Navidrome error: boom')
     expect(failed('ratings_failed')).toBe('The ratings run failed: boom')
   })
 

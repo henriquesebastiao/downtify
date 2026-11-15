@@ -47,7 +47,7 @@ The default **Grading**, **Worldwide popularity**, uses Deezer's number as it is
 | 20 % and up | 2 |
 | Anything above 0 | 1 |
 
-The top song is the highest popularity among the artist's top 100 songs on Deezer, or among the album's tracks on Deezer. When Deezer has nothing to compare with for an artist or album, **Worldwide popularity** is used for it.
+The top song is the highest popularity among the artist's top 100 songs on Deezer, or among the album's tracks on Deezer. The artist is the Deezer artist with exactly that name (ignoring capitals and punctuation) and the most fans, and the album is the Deezer album with exactly that title. Downtify differs from dztnr here: dztnr takes Deezer's first search result, which is often a namesake. For "Drake" the first result is an unrelated artist with 201 fans, so every real Drake song would get 5 stars. When Deezer has nothing to compare with for an artist or album, **Worldwide popularity** is used for it.
 
 ## Options
 
@@ -74,7 +74,7 @@ A Preview shows what a real run would do, so you can try the **Grading** and **S
 
 ### How long it takes
 
-Downtify waits 0.2 seconds after every Deezer request, to stay within Deezer's rate limit. Looking up one song takes roughly 0.35 to 0.5 seconds, so a first run takes about an hour for every 10,000 songs. With **Skip songs that have stars** on, later runs skip every song that already has stars. They look up again the songs Deezer didn't find and the songs that were given 0 stars (Navidrome stores 0 as no rating), so they are much shorter. Comparing with the top song adds two Deezer requests for every artist or album that has a song to rate.
+Downtify waits 0.2 seconds after every Deezer request, to stay within Deezer's rate limit. A Deezer search takes about 0.3 to 0.5 seconds, so looking up one song takes roughly 0.5 to 0.7 seconds, and a first run over 10,000 songs takes about 1.5 to 2 hours. With **Skip songs that have stars** on, later runs skip every song that already has stars. They look up again the songs Deezer didn't find and the songs that were given 0 stars (Navidrome stores 0 as no rating), so they are much shorter. Comparing with the top song adds two Deezer requests for every artist or album that has a song to rate.
 
 ## Repeating
 

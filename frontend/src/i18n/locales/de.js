@@ -1768,8 +1768,7 @@ export default {
     ratingsNever: 'Noch nicht ausgeführt',
     ratingsFailedDeezer:
       'Deezer war nicht erreichbar. Bereits vergebene Sterne bleiben erhalten.',
-    ratingsFailedNavidrome:
-      'Navidrome hat mit einem Fehler geantwortet: {message}',
+    ratingsFailedNavidrome: 'Navidrome-Fehler: {message}',
     ratingsFailed: 'Der Bewertungslauf ist fehlgeschlagen: {message}',
     ratingsNotConfigured: 'Speichere zuerst die Navidrome-Anmeldung.',
     ratingsBusy: 'Ein Bewertungslauf läuft bereits.',

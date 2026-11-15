@@ -329,7 +329,7 @@ def test_reference_top_of_zero_falls_back_to_absolute(monkeypatch):
     client = FakeClient(one_album(song('s1', 'A')))
     top = 'https://api.deezer.com/artist/77/top'
     routes = {
-        (ARTIST_SEARCH, 'Drake'): {'data': [{'id': 77}]},
+        (ARTIST_SEARCH, 'Drake'): {'data': [{'id': 77, 'name': 'Drake'}]},
         (top, None): {'data': [{'rank': 0}]},
         (SEARCH, 'Drake A'): hit(900_000),
     }
@@ -369,7 +369,7 @@ def test_artist_grading_uses_the_top_track(monkeypatch):
     client = FakeClient(one_album(song('s1', 'A'), song('s2', 'B')))
     top = 'https://api.deezer.com/artist/77/top'
     routes = {
-        (ARTIST_SEARCH, 'Drake'): {'data': [{'id': 77}]},
+        (ARTIST_SEARCH, 'Drake'): {'data': [{'id': 77, 'name': 'Drake'}]},
         (top, None): {'data': [{'rank': 1000}, {'rank': 500}]},
         (SEARCH, 'Drake A'): hit(450),
         (SEARCH, 'Drake B'): hit(1000),
@@ -401,7 +401,7 @@ def test_album_grading_uses_the_album_tracks(monkeypatch):
     client = FakeClient(one_album(song('s1', 'A'), song('s2', 'B')))
     tracks = 'https://api.deezer.com/album/9/tracks'
     routes = {
-        (ALBUM_SEARCH, 'Drake Views'): {'data': [{'id': 9}]},
+        (ALBUM_SEARCH, 'Drake Views'): {'data': [{'id': 9, 'title': 'Views'}]},
         (tracks, None): {'data': [{'rank': 200}, {'rank': 1000}]},
         (SEARCH, 'Drake A'): hit(500),
         (SEARCH, 'Drake B'): hit(100),
@@ -412,6 +412,91 @@ def test_album_grading_uses_the_album_tracks(monkeypatch):
     run.run()
     assert client.set_calls == [('s1', 3), ('s2', 1)]
     assert [u for u, _p in fake.calls].count(ALBUM_SEARCH) == 1
+
+
+def test_artist_reference_skips_a_namesake_with_few_fans(monkeypatch):
+    client = FakeClient(one_album(song('s1', 'A')))
+    top = 'https://api.deezer.com/artist/77/top'
+    routes = {
+        (ARTIST_SEARCH, 'Drake'): {
+            'data': [
+                {'id': 5, 'name': 'Drake', 'nb_fan': 201},
+                {'id': 6, 'name': 'Drake Bell', 'nb_fan': 900_000},
+                {'id': 77, 'name': 'Drake', 'nb_fan': 14_000_000},
+            ]
+        },
+        (top, None): {'data': [{'rank': 1000}]},
+        (SEARCH, 'Drake A'): hit(500),
+    }
+    run, fake, _ = make_run(
+        monkeypatch, client, routes, options={'grading': 'artist'}
+    )
+    run.run()
+    assert top in [u for u, _p in fake.calls]
+    assert 'https://api.deezer.com/artist/5/top' not in [
+        u for u, _p in fake.calls
+    ]
+    assert client.set_calls == [('s1', 3)]
+    searched = next(p for u, p in fake.calls if u == ARTIST_SEARCH)
+    assert searched == {'q': 'Drake', 'limit': 25}
+
+
+def test_artist_without_an_exact_name_is_absolute(monkeypatch):
+    client = FakeClient(one_album(song('s1', 'A')))
+    routes = {
+        (ARTIST_SEARCH, 'Drake'): {
+            'data': [{'id': 6, 'name': 'Drake Bell', 'nb_fan': 900_000}]
+        },
+        (SEARCH, 'Drake A'): hit(900_000),
+    }
+    run, fake, _ = make_run(
+        monkeypatch, client, routes, options={'grading': 'artist'}
+    )
+    run.run()
+    assert client.set_calls == [('s1', 5)]
+    assert not [u for u, _p in fake.calls if u.endswith('/top')]
+
+
+def test_album_reference_skips_a_single_with_another_title(monkeypatch):
+    client = FakeClient(one_album(song('s1', 'A')))
+    mashup = 'https://api.deezer.com/album/1/tracks'
+    tracks = 'https://api.deezer.com/album/9/tracks'
+    routes = {
+        (ALBUM_SEARCH, 'Drake Views'): {
+            'data': [
+                {'id': 1, 'title': 'Views Mashup'},
+                {'id': 9, 'title': 'Views'},
+            ]
+        },
+        (tracks, None): {'data': [{'rank': 1000}]},
+        (SEARCH, 'Drake A'): hit(500),
+    }
+    run, fake, _ = make_run(
+        monkeypatch, client, routes, options={'grading': 'album'}
+    )
+    run.run()
+    urls = [u for u, _p in fake.calls]
+    assert tracks in urls
+    assert mashup not in urls
+    assert client.set_calls == [('s1', 3)]
+    searched = next(p for u, p in fake.calls if u == ALBUM_SEARCH)
+    assert searched == {'q': 'Drake Views', 'limit': 25}
+
+
+def test_album_without_an_exact_title_is_absolute(monkeypatch):
+    client = FakeClient(one_album(song('s1', 'A')))
+    routes = {
+        (ALBUM_SEARCH, 'Drake Views'): {
+            'data': [{'id': 1, 'title': 'Views Mashup'}]
+        },
+        (SEARCH, 'Drake A'): hit(900_000),
+    }
+    run, fake, _ = make_run(
+        monkeypatch, client, routes, options={'grading': 'album'}
+    )
+    run.run()
+    assert client.set_calls == [('s1', 5)]
+    assert not [u for u, _p in fake.calls if '/album/' in u]
 
 
 def test_album_under_two_artists_is_rated_once(monkeypatch):
@@ -515,7 +600,7 @@ def test_reference_top_refused_is_absolute(monkeypatch):
     client = FakeClient(one_album(song('s1', 'A')))
     top = 'https://api.deezer.com/album/9/tracks'
     routes = {
-        (ALBUM_SEARCH, 'Drake Views'): {'data': [{'id': 9}]},
+        (ALBUM_SEARCH, 'Drake Views'): {'data': [{'id': 9, 'title': 'Views'}]},
         (top, None): refused(800),
         (SEARCH, 'Drake A'): hit(900_000),
     }

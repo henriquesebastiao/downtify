@@ -1731,7 +1731,7 @@ export default {
     ratingsNever: 'Ainda não executada',
     ratingsFailedDeezer:
       'Não foi possível acessar o Deezer. As estrelas já dadas continuam.',
-    ratingsFailedNavidrome: 'O Navidrome respondeu com um erro: {message}',
+    ratingsFailedNavidrome: 'Erro do Navidrome: {message}',
     ratingsFailed: 'A avaliação falhou: {message}',
     ratingsNotConfigured: 'Salve primeiro o login do Navidrome.',
     ratingsBusy: 'Já há uma avaliação em andamento.',

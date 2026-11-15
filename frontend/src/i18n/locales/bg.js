@@ -1714,7 +1714,7 @@ export default {
     ratingsNever: 'Още не е пускано',
     ratingsFailedDeezer:
       'Deezer не може да бъде достигнат. Вече дадените звезди остават.',
-    ratingsFailedNavidrome: 'Navidrome отговори с грешка: {message}',
+    ratingsFailedNavidrome: 'Грешка от Navidrome: {message}',
     ratingsFailed: 'Оценяването не успя: {message}',
     ratingsNotConfigured: 'Първо запази входа в Navidrome.',
     ratingsBusy: 'Вече тече оценяване.',

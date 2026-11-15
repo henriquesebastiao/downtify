@@ -1604,7 +1604,7 @@ export default {
     ratingsNextSoon: '下次运行将在一小时内',
     ratingsNever: '尚未运行',
     ratingsFailedDeezer: '无法连接 Deezer。已打的星级会保留。',
-    ratingsFailedNavidrome: 'Navidrome 返回了错误：{message}',
+    ratingsFailedNavidrome: 'Navidrome 错误：{message}',
     ratingsFailed: '评分运行失败：{message}',
     ratingsNotConfigured: '请先保存 Navidrome 登录信息。',
     ratingsBusy: '已有评分任务正在运行。',

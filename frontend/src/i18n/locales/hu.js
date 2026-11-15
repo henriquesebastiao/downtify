@@ -1730,7 +1730,7 @@ export default {
     ratingsNever: 'Még nem futott',
     ratingsFailedDeezer:
       'A Deezer nem érhető el. A már megadott csillagok megmaradnak.',
-    ratingsFailedNavidrome: 'A Navidrome hibával válaszolt: {message}',
+    ratingsFailedNavidrome: 'Navidrome-hiba: {message}',
     ratingsFailed: 'Az értékelés sikertelen: {message}',
     ratingsNotConfigured: 'Előbb mentsd el a Navidrome-bejelentkezést.',
     ratingsBusy: 'Már fut egy értékelés.',

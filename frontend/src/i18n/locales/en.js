@@ -1693,7 +1693,7 @@ export default {
     ratingsNever: 'Not run yet',
     ratingsFailedDeezer:
       "Deezer couldn't be reached. Stars already given are kept.",
-    ratingsFailedNavidrome: 'Navidrome answered with an error: {message}',
+    ratingsFailedNavidrome: 'Navidrome error: {message}',
     ratingsFailed: 'The ratings run failed: {message}',
     ratingsNotConfigured: 'Save the Navidrome login first.',
     ratingsBusy: 'A ratings run is already going.',

@@ -1717,7 +1717,7 @@ export default {
     ratingsNever: '아직 실행하지 않음',
     ratingsFailedDeezer:
       'Deezer에 연결할 수 없습니다. 이미 준 별점은 그대로 유지됩니다.',
-    ratingsFailedNavidrome: 'Navidrome에서 오류가 발생했습니다: {message}',
+    ratingsFailedNavidrome: 'Navidrome 오류: {message}',
     ratingsFailed: '별점 실행에 실패했습니다: {message}',
     ratingsNotConfigured: '먼저 Navidrome 로그인 정보를 저장하세요.',
     ratingsBusy: '별점 실행이 이미 진행 중입니다.',

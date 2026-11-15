@@ -33,7 +33,7 @@ export function describeRatings({ job, last, nextRunAt }, now = Date.now()) {
   const view = {
     running,
     percent: progress.total ? (progress.done / progress.total) * 100 : 0,
-    indeterminate: progress.step === 'library' || !progress.total,
+    indeterminate: progress.step !== 'rating' || !progress.total,
     progressText: '',
     lastError: '',
     lastText: t('settings.ratingsNever'),
@@ -45,7 +45,7 @@ export function describeRatings({ job, last, nextRunAt }, now = Date.now()) {
   }
   if (running) {
     view.progressText =
-      progress.step === 'library'
+      progress.step !== 'rating'
         ? t('settings.ratingsReading')
         : t('settings.ratingsProgress', {
             done: progress.done.toLocaleString(),

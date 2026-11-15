@@ -1752,7 +1752,7 @@ export default {
     ratingsNever: 'Δεν έχει εκτελεστεί ακόμη',
     ratingsFailedDeezer:
       'Δεν ήταν δυνατή η σύνδεση με το Deezer. Τα αστέρια που δόθηκαν ήδη παραμένουν.',
-    ratingsFailedNavidrome: 'Το Navidrome απάντησε με σφάλμα: {message}',
+    ratingsFailedNavidrome: 'Σφάλμα Navidrome: {message}',
     ratingsFailed: 'Η βαθμολόγηση απέτυχε: {message}',
     ratingsNotConfigured: 'Αποθήκευσε πρώτα τη σύνδεση στο Navidrome.',
     ratingsBusy: 'Μια βαθμολόγηση εκτελείται ήδη.',
