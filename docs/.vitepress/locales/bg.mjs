@@ -54,10 +54,17 @@ export default {
   },
   nav: {
     groups: {
+      'Music AI & DJ (beta)': 'Music AI & DJ (beta)',
       'Getting Started': 'Първи стъпки',
       Features: 'Функции',
     },
     pages: {
+      'music-ai.md': 'Music AI and DJ (beta)',
+      'personalized-mix-renewal.md': 'Personalized mix renewal',
+      'progressive-decoding.md': 'Progressive DJ rendering',
+      'rhythm-analysis.md': 'Rhythm analysis',
+      'weekly-dj-assets.md': 'Weekly DJ preparation',
+      'weekly-dj-queue.md': 'Weekly DJ controls',
       'index.md': 'Начало',
       'getting-started/index.md': 'Общ преглед',
       'getting-started/installation.md': 'Инсталиране',
@@ -95,6 +102,7 @@ export default {
       'features/library-upgrade.md': 'Подобряване на библиотеката',
       'features/storage-usage.md': 'Хранилище и използване',
       'features/music-trash.md': 'Кошче за музика',
+      'features/doctor.md': 'Доктор',
       'features/replace-audio.md': 'Замяна на аудио',
       'features/external-playlists.md': 'Import existing playlists',
       'features/m3u-export.md': 'M3U експорт',

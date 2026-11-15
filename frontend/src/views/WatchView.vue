@@ -236,6 +236,8 @@
         </ul>
       </UiPanel>
 
+      <ArtistReleases v-if="watch.kind === 'artist'" :watch-id="watch.id" />
+
       <section class="flex flex-col gap-3 pb-10">
         <div>
           <h2 class="text-display text-xl font-semibold">
@@ -294,6 +296,7 @@ import UiSkeleton from '/src/components/ui/UiSkeleton.vue'
 import PageHeader from '/src/components/library/PageHeader.vue'
 import SelectionBar from '/src/components/library/SelectionBar.vue'
 import TrackList from '/src/components/library/TrackList.vue'
+import ArtistReleases from '/src/components/monitor/ArtistReleases.vue'
 import WatchSourceBadge from '/src/components/monitor/WatchSourceBadge.vue'
 import monitorAPI from '/src/model/monitor'
 import { useLibrary } from '/src/model/library'

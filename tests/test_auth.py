@@ -921,6 +921,7 @@ def test_server_info_is_public_and_says_little(client):
     assert info['api_version'] == 1
     assert info['require_sign_in'] is True
     assert info['capabilities']['password_sign_in'] is True
+    assert info['capabilities']['playlist_editing'] is True
 
 
 def test_renaming_the_server(client):

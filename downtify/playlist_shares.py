@@ -378,6 +378,56 @@ class PlaylistShares:
             ):
                 conn.execute(f'DELETE FROM {table} WHERE name_key = ?', (key,))
 
+    def snapshot(self, name: str) -> dict[str, list[tuple]]:
+        """Capture rows removed by :meth:`forget` for a failed create rollback."""
+
+        key = share_key(name)
+        tables = (
+            'playlist_shares',
+            'playlist_share_users',
+            'playlist_follows',
+            'playlist_editors',
+            'playlist_favorites',
+        )
+        with self._connect() as conn:
+            return {
+                table: [
+                    tuple(row)
+                    for row in conn.execute(
+                        f'SELECT * FROM {table} WHERE name_key = ?', (key,)
+                    ).fetchall()
+                ]
+                for table in tables
+            }
+
+    def restore(self, name: str, snapshot: dict[str, list[tuple]]) -> None:
+        """Restore a snapshot captured before a failed creation attempt."""
+
+        tables = (
+            'playlist_shares',
+            'playlist_share_users',
+            'playlist_follows',
+            'playlist_editors',
+            'playlist_favorites',
+        )
+        with self._connect() as conn:
+            for table in tables:
+                rows = snapshot.get(table, [])
+                if not rows:
+                    continue
+                columns = [
+                    str(row['name'])
+                    for row in conn.execute(
+                        f'PRAGMA table_info({table})'
+                    ).fetchall()
+                ]
+                marks = ', '.join('?' for _ in columns)
+                conn.executemany(
+                    f'INSERT OR REPLACE INTO {table} '
+                    f'({", ".join(columns)}) VALUES ({marks})',
+                    rows,
+                )
+
     def remove_user(self, user_id: int) -> None:
         """A deleted account's follows, and being on anyone's list."""
 

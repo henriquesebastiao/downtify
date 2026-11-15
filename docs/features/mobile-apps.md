@@ -6,10 +6,10 @@ icon: lucide/smartphone
 
 Downtify can serve apps on your phone: they browse and stream the library straight from your server, and keep songs on the phone for offline listening. An app signs in with your username and password, or pairs with a code from **Settings → Apps**, where your paired apps and the server's name are too. Who may use the server at all is set by the accounts in [Users & Sign-in](users.md).
 
-::: warning The app is still in development
-**Settings → Apps** is marked *Experimental*. The server side described on this page is finished and working, but **no version of the Android app has been published yet**, so there is nothing to install for now, and details of pairing and streaming may still change between Downtify versions.
+::: warning Mobile apps are experimental
+**Settings → Apps** is marked *Experimental*. The server side described on this page is finished and working, but **no version of the Android app has been published yet**, and details of pairing and streaming may still change between Downtify versions.
 
-The app is built in the open at [henriquesebastiao/downtify-android](https://github.com/henriquesebastiao/downtify-android). Anything else can be built against the same API — see the [mobile client contract](../mobile-client-contract.md).
+The Android app is built in the open at [henriquesebastiao/downtify-android](https://github.com/henriquesebastiao/downtify-android). The iPhone and iPad app is at [michaelmoskie/Downtify-IOS-Client](https://github.com/michaelmoskie/Downtify-IOS-Client); it requires iOS 17 or later and supports sign-in or QR pairing, library playback, offline downloads, and background and lock-screen controls. Anything else can be built against the same API — see the [mobile client contract](../mobile-client-contract.md).
 :::
 
 ## Signing in from the app

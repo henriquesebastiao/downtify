@@ -206,9 +206,14 @@ class ExternalPlaylistImports:
             while name.casefold() in taken:
                 name = f'{base} ({suffix})'
                 suffix += 1
-            result = copy_playlist(ctx, files, name)
-            owners.set_owner(result['name'], user_id)
-            PlaylistShares(Path(self.path)).forget(result['name'])
+            result = copy_playlist(
+                ctx,
+                files,
+                name,
+                owners,
+                user_id,
+                PlaylistShares(Path(self.path)),
+            )
             with connect_sqlite(self.path) as conn:
                 conn.execute(
                     'INSERT INTO external_playlist_imports VALUES (?, ?, ?, ?) '

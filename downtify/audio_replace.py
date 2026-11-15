@@ -20,11 +20,24 @@ swapped for it:
   download or check leaves the old file untouched.
 
 Candidates come from :func:`candidates`; the swap is :func:`replace_audio`.
+
+**From a file.** The admin can also upload the right audio from their
+own computer (a CD rip, a Soulseek download, a file a friend sent):
+:func:`replace_from_file`. A file in the same format as the library file
+is used as it is, bit for bit; another format is converted to the file's
+own (an ``.mp3`` at the chosen bitrate), so the path still doesn't
+change. Same tags, same date, same staging and checks as above.
+
+Either way the file is then remembered as replaced by hand
+(:mod:`downtify.hand_replaced`), so a later download of the same song
+doesn't write over it.
 """
 
 from __future__ import annotations
 
 import os
+import shutil
+import subprocess
 from pathlib import Path
 from typing import Any, Callable, Optional
 
@@ -37,6 +50,22 @@ from .library_catalog import UPGRADE_STAGING_MARKER
 
 #: File types whose audio can be replaced: the formats Downtify writes.
 REPLACEABLE_FORMATS = ('mp3', 'flac', 'm4a', 'ogg', 'opus')
+
+#: What an uploaded replacement may be: the formats above, plus the
+#: usual lossless and lossy files people have (converted on the way in).
+UPLOAD_FORMATS = (*REPLACEABLE_FORMATS, 'wav', 'aiff', 'aif', 'aac', 'webm')
+
+#: The biggest file accepted for upload (a 20-minute WAV is ~210 MB).
+MAX_UPLOAD_BYTES = 400 * 1024 * 1024
+
+#: ffmpeg's encoder for each format Downtify writes.
+_ENCODERS = {
+    'mp3': 'libmp3lame',
+    'm4a': 'aac',
+    'ogg': 'libvorbis',
+    'opus': 'libopus',
+    'flac': 'flac',
+}
 
 #: Candidates asked of each source.
 CANDIDATE_LIMIT = 10
@@ -320,4 +349,134 @@ def replace_audio(
     return {
         'duration_before': round(before, 1),
         'duration_after': round(after, 1),
+    }
+
+
+# ── From a file ─────────────────────────────────────────────────────────
+
+
+def upload_format(name: str) -> str:
+    """The format of an uploaded file, from its name (``ReplaceError``
+    for anything that isn't an audio file Downtify takes)."""
+
+    fmt = Path(str(name or '')).suffix.lower().lstrip('.')
+    if fmt not in UPLOAD_FORMATS:
+        raise ReplaceError(
+            f'Upload an audio file: {", ".join(UPLOAD_FORMATS)}'
+        )
+    return fmt
+
+
+def upload_staging_path(target: Path, fmt: str) -> Path:
+    """Where an upload for *target* is written while it arrives: beside
+    it, under a name the library scan skips."""
+
+    return target.with_name(f'{staging_basename(target)}.upload.{fmt}')
+
+
+def _ffmpeg() -> Optional[str]:
+    return shutil.which('ffmpeg')
+
+
+def _decodes(path: Path, ffmpeg: str) -> bool:
+    """Whether ffmpeg reads *path* through to the end without an error
+    (a truncated or renamed non-audio file doesn't)."""
+
+    try:
+        subprocess.run(
+            [ffmpeg, '-nostdin', '-v', 'error', '-xerror', '-i', str(path)]
+            + ['-map', '0:a:0', '-f', 'null', '-'],
+            check=True,
+            capture_output=True,
+            timeout=300,
+        )
+    except (subprocess.SubprocessError, OSError):
+        return False
+    return True
+
+
+def _convert(
+    source: Path, output: Path, fmt: str, bitrate: str, ffmpeg: str
+) -> None:
+    """Re-encode *source*'s audio as *fmt* into *output* (no tags, no
+    cover: those come from the library file)."""
+
+    args = [ffmpeg, '-nostdin', '-v', 'error', '-y', '-i', str(source)]
+    args += ['-map', '0:a:0', '-map_metadata', '-1', '-vn']
+    args += ['-c:a', _ENCODERS[fmt]]
+    if fmt != 'flac' and str(bitrate).isdigit():
+        args += ['-b:a', f'{bitrate}k']
+    if fmt == 'm4a':
+        args += ['-f', 'mp4']
+    args.append(str(output))
+    try:
+        subprocess.run(args, check=True, capture_output=True, timeout=900)
+    except subprocess.CalledProcessError as exc:
+        detail = (exc.stderr or b'').decode('utf-8', 'replace').strip()
+        logger.warning('Converting {} failed: {}', source.name, detail)
+        raise ReplaceError('Could not convert the uploaded file') from exc
+    except (subprocess.SubprocessError, OSError) as exc:
+        raise ReplaceError('Could not convert the uploaded file') from exc
+
+
+def replace_from_file(
+    target: Path, upload: Path, *, bitrate: str = '320'
+) -> dict[str, Any]:
+    """Replace *target*'s audio with the uploaded file *upload* (already
+    on disk, beside it - :func:`upload_staging_path`), keeping its path,
+    format, tags and modification time. The upload is used as it is when
+    it is already in *target*'s format, converted otherwise.
+
+    ``{duration_before, duration_after, converted}``. Raises
+    :class:`ReplaceError` with nothing changed. *upload* is gone
+    afterwards either way."""
+
+    converted: Optional[Path] = None
+    try:
+        fmt = replacement_format(target)
+        if not target.is_file():
+            raise ReplaceError('The file is no longer in the library')
+        upload_fmt = upload_format(upload.name)
+        ffmpeg = _ffmpeg()
+        if _length(upload) <= 0 or (ffmpeg and not _decodes(upload, ffmpeg)):
+            raise ReplaceError('The uploaded file is not readable audio')
+        before = _length(target)
+        stat = target.stat()
+        if upload_fmt == fmt:
+            staged = upload
+        else:
+            if not ffmpeg:
+                raise ReplaceError(
+                    f'Converting to .{fmt} needs ffmpeg: upload a .{fmt} file'
+                )
+            converted = target.with_name(f'{staging_basename(target)}.{fmt}')
+            _convert(upload, converted, fmt, bitrate, ffmpeg)
+            staged = converted
+        after = _length(staged)
+        if after <= 0:
+            raise ReplaceError('The new audio could not be read')
+        copy_tags(target, staged)
+        os.replace(str(staged), str(target))
+        converted = None
+    finally:
+        upload.unlink(missing_ok=True)
+        if converted is not None:
+            converted.unlink(missing_ok=True)
+    try:
+        os.utime(str(target), ns=(stat.st_atime_ns, stat.st_mtime_ns))
+    except OSError:
+        pass
+    logger.info(
+        'Replaced the audio of {} with an uploaded .{} file '
+        '({:.0f}s -> {:.0f}s{})',
+        target.name,
+        upload_fmt,
+        before,
+        after,
+        ', converted' if upload_fmt != fmt else '',
+    )
+    return {
+        'duration_before': round(before, 1),
+        'duration_after': round(after, 1),
+        'converted': upload_fmt != fmt,
     }

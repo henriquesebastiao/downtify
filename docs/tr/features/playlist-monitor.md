@@ -284,6 +284,12 @@ Bir izlemenin sayfası ayrıca şunları gösterir:
 
 İzlemenin kimliği (`#12`) adının yanında görünür; böylece aynı bağlantının iki izlemesi — örneğin aynı listeyi takip eden iki hesap — ayırt edilebilir.
 
+### Bir sanatçının yayınları
+
+Bir sanatçı takibinin sayfası, son kontroldeki tüm kataloğunu da listeler: YouTube Music, Deezer ve MusicBrainz’in listelediği her yayın (iki kaynaktaki aynı albüm bir kez gösterilir); albümler, mixtape’ler, EP’ler, single’lar ve canlı, derleme ve remiks yayınları altında. Her biri kitaplıkta ondan ne olduğunu gösterir: parça sayısıyla **Tamam**, **Kısmen**, **İndirilecek**, **İzlemeden önce çıktı** (**Yalnızca yeni yayınlar** takibi onu atladı), **İzlenmiyor** (takibin indirmediği bir tür veya çeşit) ya da **Kapalı**. Konuk katılımlar ve bootleg’ler kendi filtrelerindedir ve hiç indirilmez.
+
+Bir yayının yanındaki anahtar, Lidarr’ın albüm başına izlemesi gibi takibin önüne geçer. Açık olduğunda, türü izlenmese ya da takip başlamadan önce çıkmış olsa bile yayını indirir ve hemen bir kontrol başlar. Kapalı olduğunda onu indirmeyi bırakır. Kitaplıkta zaten olan şarkılar her iki durumda da kalır. **MusicBrainz’den şunları da indir**, yalnızca bu sanatçı için, yalnızca MusicBrainz’in ayırt ettiği yayın türlerinden hangilerinin indirileceğini seçer: varsayılan olarak mixtape’ler ve film müzikleri; canlı albümler, derlemeler, remiksler, DJ miksleri ve demolar açıldığında.
+
 ## Bir şarkının nereden geldiği
 
 Kitaplığın herhangi bir yerinde bir şarkının menüsündeki **Nereden geldi**, onu ilk hangi izlemenin, ne zaman ve hangi sağlayıcıyla indirdiğini — ilk kontrolle geldiyse **İlk kontrol** — söyler ve şu anda onu tutan her izlemeyi kimliği, sahibi (yönetici için), şarkıyı ne zaman ve nasıl aldığıyla listeler: **İndirdi**, **Zaten kitaplıkta** ya da **Kayıttan önce**. Tek bir dosyadır: bir şarkıyı paylaşan izlemelerin hepsi aynı kopyayı gösterir.

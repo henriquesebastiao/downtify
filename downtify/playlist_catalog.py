@@ -536,6 +536,20 @@ class ManualPlaylistOwners:
                 (key, str(name or '').strip(), int(user_id)),
             )
 
+    def claim_owner(self, name: str, user_id: int) -> bool:
+        """Claim an unowned playlist without replacing an existing owner."""
+
+        key = self._key(name)
+        if not key or not user_id:
+            return False
+        with self._connect() as conn:
+            cursor = conn.execute(
+                """INSERT OR IGNORE INTO manual_playlist_owners
+                   (name_key, name, user_id) VALUES (?, ?, ?)""",
+                (key, str(name or '').strip(), int(user_id)),
+            )
+        return cursor.rowcount == 1
+
     def owner(self, name: str) -> Optional[int]:
         """The owner's user id, or ``None`` when nobody claimed it."""
 

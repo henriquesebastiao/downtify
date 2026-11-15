@@ -68,6 +68,94 @@
   font-size: clamp(1.125rem, 2.4vw + 1vh, 1.5rem);
 }
 
+/* Karaoke: every control stays, in less height, so the words get the room.
+   Here rather than per button: unlayered, so it overrides their sizes. */
+.now-playing-footer--karaoke .now-playing-transport {
+  margin-top: 0;
+}
+.now-playing-footer--karaoke .now-playing-controls > * {
+  width: 2.5rem;
+  height: 2.5rem;
+}
+.now-playing-footer--karaoke .now-playing-play {
+  width: 3rem;
+  height: 3rem;
+}
+.now-playing-footer--karaoke .now-playing-phone-extras {
+  margin-top: 0.25rem;
+}
+.now-playing-footer--karaoke .now-playing-phone-extras button {
+  height: 2.25rem;
+}
+@media (min-width: 64rem) {
+  /* One row: the seek bar between the transport and the file info. */
+  .now-playing-footer--karaoke {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+  }
+  .now-playing-footer--karaoke .now-playing-transport {
+    display: contents;
+  }
+  .now-playing-footer--karaoke .now-playing-controls {
+    order: 1;
+    flex: none;
+    gap: 0.25rem;
+  }
+  .now-playing-footer--karaoke .now-playing-controls > * {
+    width: 2.25rem;
+    height: 2.25rem;
+  }
+  .now-playing-footer--karaoke .now-playing-play {
+    width: 2.75rem;
+    height: 2.75rem;
+  }
+  /* The bar sits 11px below the middle of its canvas, under the waves:
+     raised so it lines up with the buttons, its time labels staying put. */
+  .now-playing-footer--karaoke .now-playing-seek {
+    order: 2;
+    flex: 1;
+    min-width: 0;
+    transform: translateY(-11px);
+  }
+  .now-playing-footer--karaoke .now-playing-seek > span {
+    transform: translateY(11px);
+  }
+  .now-playing-footer--karaoke .now-playing-file {
+    order: 3;
+    flex: none;
+  }
+  .now-playing-footer--karaoke .now-playing-extras {
+    order: 4;
+    flex: none;
+  }
+}
+.now-playing-karaoke-lyric {
+  font-size: clamp(1.625rem, 3.2vw + 2.6vh, 5rem);
+}
+.now-playing-karaoke-plain {
+  font-size: clamp(1.375rem, 2vw + 1.6vh, 3rem);
+}
+/* Registered so it can transition: `timeupdate` only fires about four
+   times a second, and the fill has to glide between those steps. An inline
+   box, so a line that wraps fills one row after the other. */
+@property --karaoke-fill {
+  syntax: '<percentage>';
+  inherits: false;
+  initial-value: 0%;
+}
+.now-playing-karaoke-fill {
+  color: transparent;
+  background-image: linear-gradient(
+    90deg,
+    #fff var(--karaoke-fill),
+    rgb(255 255 255 / 0.55) var(--karaoke-fill)
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  transition: --karaoke-fill 260ms linear;
+}
+
 /* List insert/remove */
 .list-enter-active,
 .list-leave-active {

@@ -1,3 +1,7 @@
+---
+icon: lucide/disc-3
+---
+
 # Renouvellement des mixes personnels
 
 Les favoris et écoutes du compte connecté guident les mixes quand la personnalisation est activée. Les artistes déjà proposés sont pénalisés, avec au plus deux titres par artiste dans chaque sélection. Rock, rap, pop et électro restent des sélections hebdomadaires fondées sur les genres de la bibliothèque ; les six humeurs ont leurs sélections quotidiennes et hebdomadaires.

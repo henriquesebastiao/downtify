@@ -42,6 +42,19 @@ class ArtistReleaseStore:
                 )
             }
 
+    def counts(self, playlist_id: int) -> dict[str, int]:
+        """``{album_id: tracks recorded}`` for an artist watch."""
+
+        with self._connect() as conn:
+            return {
+                r['album_id']: r['n']
+                for r in conn.execute(
+                    'SELECT album_id, COUNT(*) AS n FROM artist_release_tracks '
+                    'WHERE playlist_id=? GROUP BY album_id',
+                    (playlist_id,),
+                )
+            }
+
     def record(
         self,
         playlist_id: int,

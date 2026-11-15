@@ -1,3 +1,7 @@
+---
+icon: lucide/disc-3
+---
+
 # File des sets DJ hebdomadaires
 
 Ce lot ajoute la préparation automatique côté serveur. Les copies enregistrées, le nettoyage global du cache et l’interface Pour vous DJ appartiennent au lot suivant ; activer cette file ne constitue pas une livraison complète de cette interface.

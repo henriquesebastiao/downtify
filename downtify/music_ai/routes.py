@@ -96,7 +96,11 @@ def visible_rows(request, identities):
         return []
     hidden = api.library_context().hidden_files
     sync = mobile_routes._sync()
-    rows = sync.rows_for(identities)
+    identities = list(dict.fromkeys(identities))
+    resolved = sync.rows_for(identities)
+    rows = [
+        resolved[identity] for identity in identities if identity in resolved
+    ]
     allowed = api.allowed_entry_keys(request, entries=rows)
     return [
         {**row, 'fingerprint': fingerprint(row)}

@@ -36,6 +36,7 @@ import contextlib
 import hashlib
 import os
 import shutil
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Optional
@@ -202,8 +203,11 @@ class Transcoder:
         target = self._target(source, fmt, bitrate_kbps)
         if not target.is_file():
             return None
+        # Keep mtime stable: FileResponse uses it to generate the ETag for
+        # conditional range requests. Access time tracks cache recency instead.
         with contextlib.suppress(OSError):
-            os.utime(target)
+            st = target.stat()
+            os.utime(target, ns=(time.time_ns(), st.st_mtime_ns))
         return target
 
     def _target(self, source: Path, fmt: str, bitrate_kbps: int) -> Path:
@@ -306,10 +310,10 @@ class Transcoder:
                 st = path.stat()
             except OSError:
                 continue
-            stats.append((st.st_mtime, st.st_size, path))
+            stats.append((st.st_atime_ns, st.st_size, path))
         total = sum(size for _m, size, _p in stats)
         removed = 0
-        for _mtime, size, path in sorted(stats):
+        for _atime, size, path in sorted(stats):
             if total <= self._max_bytes:
                 break
             with contextlib.suppress(OSError):

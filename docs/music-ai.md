@@ -1,3 +1,7 @@
+---
+icon: lucide/disc-3
+---
+
 # Optional local music analysis
 
 **Experimental beta: all modules and the separate unqualified-engine trial default off for new installations and
@@ -280,14 +284,24 @@ separate disk cache. No GPU or paid service is required. Do not confuse configur
 caps with actual usage, minimum hardware or a phone battery result. Android's
 64 MiB target bounds the audio allocator; artwork/offline caches have separate
 budgets. Its beta build enables R8, resource shrinking and shell profiling.
-The README records a separate post-deployment Docker usage snapshot from
-6 November 2026. Its uncontrolled workload cannot establish active-render
-throughput or a causal before/after performance improvement.
+A historical Docker snapshot, recorded about 50 minutes after startup on
+6 November 2026, reported the following process usage:
+
+| Component | Observed CPU | Observed memory |
+| --- | --- | --- |
+| Web | 0.24% | 283.9 MiB |
+| Analysis | 1.20% | 78.05 MiB |
+| DJ | 1.36% | 21.18 MiB |
+
+All three containers were running without recorded restarts or OOM exits.
+This is a single uncontrolled historical snapshot, not a measurement of the
+current integrated candidate. Its workload cannot establish active-render
+throughput, minimum RAM, phone consumption or a causal before/after improvement.
 Physical Macrobenchmark/baseline-profile measurements must use the real paired
 server and report Android version, startup, warm home, pause p95, memory,
 temperature and transport recovery. No physical-device numbers are claimed yet.
 
-Current automated evidence: web 777 passed/one skipped plus production build;
+Historical automated evidence (6–7 November 2026): web 777 passed/one skipped plus production build;
 focused Python 116 passed; isolated Linux DJ 75 passed; isolated native/server
 3375 passed and ten subtests. Groups overlap. A synthetic local 50000-entry
 comparison measured home p50=46.49ms/p95=51.81ms (25 requests), max160 ids and

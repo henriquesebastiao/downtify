@@ -1064,12 +1064,23 @@ export default {
     file: 'Dosya',
   },
   player: {
+    unlockLayout: 'Oynatıcı düzeninin kilidini aç',
+    lockLayout: 'Oynatıcı düzenini kilitle',
+    resetLayout: 'Oynatıcı düzenini sıfırla',
+    resizeTrackSection: 'Parça bilgileri bölümünü yeniden boyutlandır',
+    resizeTransportSection: 'Oynatma kontrolleri bölümünü yeniden boyutlandır',
     nowPlaying: 'Şimdi çalıyor',
     openNowPlaying: 'Şimdi çalanı aç',
     closeNowPlaying: 'Şimdi çalanı kapat',
     queue: 'Kuyruk',
     upNext: 'Sıradaki',
     lyrics: 'Şarkı sözleri',
+    karaoke: 'Karaoke',
+    karaokeWindow: 'Yeni pencerede aç',
+    karaokeWindowBlocked:
+      'Tarayıcı yeni pencereyi engelledi. Downtify için açılır pencerelere izin verip yeniden deneyin.',
+    karaokeWaiting: 'Ana Downtify penceresinden şarkı bekleniyor',
+    fullscreen: 'Tam ekran',
     details: 'Ayrıntılar',
     playing: 'Çalıyor',
     play: 'Çal',
@@ -1243,6 +1254,55 @@ export default {
     save: 'Kaydet',
     saved: 'İzleme güncellendi',
     retargeted: 'Artık {name} izleniyor',
+  },
+  artistReleases: {
+    title: 'Yayınlar',
+    hint: 'YouTube Music, Deezer ve MusicBrainz’in son kontrolde bu sanatçı için listelediği her şey ve kitaplığınızda her birinden ne olduğu. Türü izlenmese bile indirmek için bir yayını açın, indirmeyi durdurmak için kapatın (mevcut olan kalır).',
+    empty: 'Henüz yayın yok',
+    emptyHint: 'Bir sonraki kontrolden sonra görünürler.',
+    summary: '{complete} tamam · {partly} kısmen · {missing} indirilecek',
+    kinds: 'MusicBrainz’den şunları da indir',
+    kindsHint:
+      'Yalnızca MusicBrainz’in ayırt ettiği yayın türleri. Mixtape’ler ve film müzikleri sanatçının kendi müziğidir; canlı albümler, derlemeler ve remiksler çoğunlukla onu tekrarlar. Yalnızca bu sanatçı için.',
+    byYou: 'sizin seçiminiz',
+    switch: '{name} indir',
+    switchedOn: '{name} açıldı',
+    switchedOff: '{name} kapatıldı',
+    noneHere: 'Burada bir şey yok.',
+    kind: {
+      mixtape: 'Mixtape’ler',
+      soundtrack: 'Film müzikleri',
+      live: 'Canlı albümler',
+      compilation: 'Derlemeler',
+      remix: 'Remiksler',
+      'dj-mix': 'DJ miksleri',
+      demo: 'Demolar',
+    },
+    section: {
+      album: 'Albümler',
+      mixtape: 'Mixtape’ler',
+      ep: 'EP’ler',
+      single: 'Single’lar',
+      other: 'Canlı, derleme ve remiks',
+    },
+    filter: {
+      all: 'Tümü',
+      missing: 'İndirilecek',
+      partly: 'Kısmen',
+      complete: 'Tamam',
+      not_watched: 'İzlenmeyen',
+      off: 'Kapalı',
+      not_own: 'Konuk katılımlar',
+    },
+    state: {
+      complete: 'Tamam · {have}/{total}',
+      partly: 'Kısmen · {have}/{total}',
+      missing: 'İndirilecek',
+      skipped: 'İzlemeden önce çıktı',
+      not_watched: 'İzlenmiyor',
+      off: 'Kapalı',
+      not_own: 'Konuk katılım veya bootleg',
+    },
   },
   watchStats: {
     colActivity: 'Etkinlik',
@@ -1485,7 +1545,7 @@ export default {
       'Virgülle ayrılmış uzantıları en yüksek öncelikliden başlayarak yazın (ör. flac, mp3).',
     slskdMinBitrate: 'Kayıplı biçimler için minimum bit hızı',
     slskdMinBitrateHint:
-      'Katı modda bu değerin altındaki veya bit hızı bildirilmemiş kayıplı dosyalar reddedilir. FLAC etkilenmez.',
+      'Daha düşük bit hızı bildiren kayıplı dosyalar atlanır. Bit hızı bildirmeyen dosyalara, katı biçim önceliği açık değilse izin verilir. Katı modda FLAC etkilenmez.',
     slskdAttempts: 'Aday denemeleri',
     slskdAttemptsHint:
       'Katı modda her biçim için bu kadar aday denenir; diğer durumda toplam sayıdır.',
@@ -1504,6 +1564,34 @@ export default {
     slskdFolderHint: 'Ana makinedeki değil, Downtify kapsayıcısındaki yol.',
     slskdTimeout: 'Toplam zaman aşımı',
     slskdQueuedTimeout: 'Kuyruk zaman aşımı',
+    slskdTimeoutHint:
+      'Bir indirmenin, sonraki adaya geçmeden önce ne kadar sürebileceği.',
+    slskdQueuedTimeoutHint:
+      'Başka bir kullanıcının yükleme kuyruğunda, vazgeçmeden önce ne kadar bekleneceği.',
+    slskdProfile: 'Kalite profili',
+    slskdProfileHint:
+      'Biçim listesi için bir başlangıç noktası. Aşağıdaki alanları dilediğin gibi değiştir.',
+    slskdProfileDefault: 'Varsayılan',
+    slskdProfileLossless: 'Önce kayıpsız',
+    slskdProfileLossy: 'Yalnızca kayıplı',
+    slskdAdvanced: 'Kalite ve eşleşmeyi ince ayarla',
+    slskdAdvancedHint:
+      'Ek bit hızı kuralları, aday denemeleri ve zaman aşımları. Kapalıyken ek bit hızı kuralları kullanılmaz.',
+    slskdUnknownBitrate: 'Bit hızı belirtilmeyen dosyalar',
+    slskdUnknownBitrateHint:
+      'Bazı Soulseek kullanıcıları bit hızı paylaşmaz. Varsayılan, bunları yalnızca minimum bit hızlı katı modda reddeder.',
+    slskdUnknownAuto: 'Varsayılan',
+    slskdUnknownAllow: 'İzin ver',
+    slskdUnknownReject: 'Reddet',
+    slskdPreferBitrate: 'Önce en yüksek bit hızını dene',
+    slskdPreferBitrateHint:
+      'Yeterince eşleşen dosyalar arasında en yakın dosya adı yerine en iyi kaliteyle başla.',
+    slskdFormatFloors: 'Biçime göre minimum bit hızı',
+    slskdFormatFloorsHint:
+      'Yukarıdaki minimumu kullanmak için boş bırak. AAC (m4a) ve Opus gibi verimli biçimler MP3’ten daha düşük bit hızlarında iyi ses verir.',
+    slskdMaxBitrate: 'Maksimum bit hızı',
+    slskdMaxBitrateHint:
+      '0 her şeye izin verir. Yaklaşık 400, .m4a dosyalarındaki kayıpsız sesi (ALAC) atlar ve dosyaları küçük tutar.',
     slskdInPlace: 'Dosyaları slskd klasöründe bırak',
     slskdInPlaceHint:
       'Açık: dosyaları yerinde etiketle ve koru. Kapalı: İndirilenler klasörüne kopyalayıp etiketle; kaynak yalnızca içe aktarma başarılı olursa silinir. Hata olursa kaynak korunur.',
@@ -1564,6 +1652,10 @@ export default {
     artGroup: 'Kapak',
     coverArt: 'Kapağı göm',
     coverArtHint: 'Daha küçük dosyalar ve daha hızlı indirmeler için kapat.',
+    coverMin: 'En küçük kapak boyutu',
+    coverMinHint:
+      'Bunun altında Spotify, iTunes ve YouTube Music’ten aynı yayının daha büyük kapağı istenir ve en büyüğü kullanılır. Kapalıyken parçanın kaynağının kapağı kalır.',
+    coverMinOff: 'Kapalı',
     coverSize: 'Kapak boyutu',
     coverSizeHint:
       'YouTube Music ve Deezer kapakları için. Spotify kapakları her zaman en büyük boyuttadır.',
@@ -1646,6 +1738,10 @@ export default {
     navidromeSync: 'Navidrome’da çalma listesi oluştur',
     navidromeSyncHint:
       'Çalma listesi indirmeleri ve izleyici kontrollerinden sonra Navidrome’da aynı adlı bir liste tut.',
+    doctor: 'Doktor',
+    navidromeM3uImport: 'M3U çalma listelerini Navidrome içe aktarsın',
+    navidromeM3uImportHint:
+      'Navidrome, Downtify’ın yazdığı her M3U’dan kapaklı bir çalma listesi yapar. Bu açıkken Downtify API üzerinden ikinci bir liste oluşturmaz.',
     navidromePublic: 'Navidrome çalma listelerini herkese açık yap',
     primaryLibrary: 'Primary library folder',
     primaryLibraryHint:
@@ -1829,6 +1925,12 @@ export default {
     androidUnreleased:
       'Henüz hiçbir sürüm yayımlanmadı: uygulama hâlâ geliştirme aşamasında, dolayısıyla şimdilik kurulacak bir şey yok.',
     androidRepo: 'Depoyu görüntüle',
+    iosGroup: 'iOS için Downtify',
+    iosHint:
+      'Bu sunucudaki kitaplığınıza göz atmanızı ve müzik çalmanızı sağlayan iPhone ve iPad uygulaması.',
+    iosBody:
+      'Hesabınızla giriş yapın veya uygulamayı bu sayfadaki bir kodla eşleştirin. Kitaplığınıza göz atın, müzik çalın, çevrimdışı dinlemek için şarkıları kaydedin ve kilit ekranından oynatmayı kontrol edin.',
+    iosRepo: 'Depoyu görüntüle',
   },
   replace: {
     menu: 'Sesi değiştir…',
@@ -1846,6 +1948,17 @@ export default {
     running: 'Ses değiştiriliyor…',
     done: 'Ses değiştirildi',
     failed: 'Ses değiştirilemedi',
+    handReplaced:
+      'Bu sesi {date} tarihinde elle değiştirdiniz. İndirmeler bu dosyayı olduğu gibi bırakır.',
+    unprotect: 'İndirmeler değiştirebilsin',
+    unprotected: 'İndirmeler bu dosyayı yeniden değiştirebilir',
+    uploading: 'Dosya yükleniyor…',
+    fileTitle: 'Ya da cihazınızdaki bir dosyayı kullanın',
+    fileHint:
+      'Bir {format} dosyası olduğu gibi kullanılır. Diğer ses dosyaları (MP3, FLAC, M4A, WAV…) {format} biçimine dönüştürülür.',
+    fileChoose: 'Dosya seç…',
+    fileOther: 'Başka bir dosya seç…',
+    fileConverted: '{format} biçimine dönüştürüldü',
     source: {
       'youtube-music': 'YouTube Music',
       youtube: 'YouTube',
@@ -2199,5 +2312,198 @@ export default {
   },
   source: {
     from: '{source} kaynağından indirildi',
+  },
+  doctor: {
+    title: 'Doktor',
+    intro:
+      'Downtify’ın yeni sürümleri sorunları o andan itibaren düzeltir, ancak eski bir sürümün yazdığı dosyalar ve listeler olduğu gibi kalır. Doktor bu kalıntıları bulur ve güvenli olduğunu kanıtlayabildiklerini onarır.',
+    checkup: 'Sağlık kontrolü',
+    checkupHint:
+      'slskd kalıntılarına, yinelenen şarkı ve listelere ve Navidrome’un gösterdiklerine bakar. Hiçbir şeyi değiştirmez.',
+    lastCheckup: 'Son kontrol: {when}',
+    runCheckup: 'Şimdi kontrol et',
+    stop: 'Durdur',
+    step: {
+      starting: 'Başlıyor…',
+      library: 'Kitaplık okunuyor…',
+      playlists: 'Çalma listeleri okunuyor…',
+      duplicates: 'Yinelenen şarkılar aranıyor…',
+      monitor: 'İzlenen listeler kontrol ediliyor…',
+      navidrome: 'Navidrome’a soruluyor…',
+      pausing: 'Süren indirmelerin bitmesi bekleniyor…',
+      listing: 'slskd klasörü listeleniyor…',
+      verifying: 'Ses kitaplıkla karşılaştırılıyor…',
+      deleting: 'Kaldırılıyor…',
+      navidrome_scan: 'Navidrome’un yeniden taraması bekleniyor…',
+      dedupe_check: 'Kopyalar kontrol ediliyor…',
+      dedupe_relink: 'Çalma listeleri, beğeniler ve izlemeler taşınıyor…',
+      dedupe_remove: 'Diğer kopyalar kaldırılıyor…',
+      merging: 'Listeler birleştiriliyor…',
+    },
+    slskdTitle: 'slskd kalıntıları',
+    slskdHint:
+      'Eski sürümler her Soulseek dosyasını kitaplığa kopyaladıktan sonra slskd klasöründe bırakırdı. Yalnızca sesi bir kitaplık şarkısıyla aynı olan dosya silinmek üzere önerilir.',
+    slskdLeftovers: 'slskd klasöründeki dosyalar',
+    slskdNotChecked: 'Saymak için sağlık kontrolünü çalıştırın.',
+    slskdInPlace:
+      'Dosyalar slskd klasöründe bırakılıyor, yani klasör kitaplığın parçası. Temizlenecek bir şey yok.',
+    slskdFound: 'Kitaplık şarkısı değil: {files} · {size}',
+    slskdCheck: 'İndirmeleri duraklat ve kontrol et',
+    slskdCheckTitle: 'slskd kalıntıları kontrol edilsin mi?',
+    slskdCheckBody:
+      'Önce indirmeler duraklatılır ve süren indirmeler tamamlanır, böylece karşılaştırma sırasında hiçbir şey yazılmaz. Onayınız olmadan hiçbir şey silinmez.',
+    queueHeld:
+      'Siz karar verirken indirmeler duraklatıldı. Bir saat sonra kendiliğinden devam eder.',
+    slskdKeepResume: 'Koru ve indirmelere devam et',
+    status: {
+      verified: 'Kitaplıkta aynısı var',
+      different: 'Benzer, aynı değil',
+      unmatched: 'Kitaplıkta yok',
+      unreadable: 'Okunamıyor',
+      recent: 'Yakın zamanda değişti',
+      missing: 'Yok',
+    },
+    slskdVerifiedHint:
+      'Her birinin sesi altında gösterilen kitaplık dosyasıyla bit bit aynı.',
+    showMore: 'Daha fazla',
+    slskdDelete: 'Aynı kopyaları sil ({files} · {size})',
+    slskdDeleteTitle: 'Aynı kopyalar silinsin mi?',
+    slskdDeleteBody:
+      'slskd klasöründen kaldırılacak dosyalar: {files} ({size}). Her biri hemen öncesinde yeniden kontrol edilir: değişmemiş ve kitaplık kopyası hâlâ yerinde. Ardından indirmeler devam eder.',
+    slskdDeleteConfirm: 'Sil',
+    slskdCleaned: 'Kaldırılan: {files} · açılan yer: {size}',
+    slskdKeptChanged:
+      'Değiştiği ya da kitaplık kopyası olmadığı için korunan: {files}',
+    checkGone: 'Dosyalar diskten kalktı',
+    checkQueueResumed: 'İndirmeler devam ediyor',
+    checkNavidromeScan: 'Navidrome yeniden taradı',
+    playlistsTitle: 'Yinelenen çalma listeleri',
+    playlistsHint:
+      'Bir liste için iki M3U dosyası; örneğin eski bir sürümün yazdığı yerde kalmış bir dosya. Birleştirme her şarkıyı bir kez, kapağı ve tek dosyayı korur. Özgün dosyalar önce yedeklenir.',
+    playlistsOk: 'Her listenin tek bir M3U dosyası var.',
+    groupReason: {
+      name: 'Aynı ad',
+      songs: 'Aynı şarkılar',
+      manual: 'Sizin seçiminiz',
+    },
+    songsCount: 'Şarkılar: {count}',
+    hasCover: 'Kapağı var',
+    keeps: 'Korunur',
+    mergePlan: 'Sonuç: {songs} şarkı. Şarkılarının %{overlap} kadarı ortak.',
+    mergeUnsafe:
+      'Şarkıların yalnızca %{overlap} kadarı eşleşiyor; farklı listeler olabilir. Birleştirilmez.',
+    merge: 'Birleştir',
+    mergeTitle: 'Bu listeler birleştirilsin mi?',
+    mergeBody:
+      '{keeper} tüm {songs} şarkıyı ve kapağı tutacak; diğer dosyalar yedeklendikten sonra kaldırılır.',
+    merged: '{path} artık {songs} şarkı içeriyor.',
+    checkOthersGone: 'Diğer M3U dosyaları kalktı',
+    checkCover: 'Kapak yanında',
+    checkNavidromeOne:
+      'Navidrome bu listeyi bir kez gösteriyor (bulunan: {count})',
+    backupAt: 'Yedek: {path}',
+    manualTitle: 'Listeleri kendin seç',
+    manualHint:
+      'Tek liste olması gereken iki ya da daha fazla M3U dosyası seçin. Yalnızca şarkıların çoğu eşleşirse birleştirilir.',
+    manualFilter: 'Listeleri süz',
+    manualCompare: 'Karşılaştır',
+    navidromeHint:
+      'Navidrome’un ve ona bağlı her uygulamanın gerçekten gösterdikleri.',
+    navidromeOff: 'Navidrome ayarlanmamış.',
+    navidromeDown: 'Navidrome yanıt vermedi.',
+    navidromeNoAdmin:
+      'Doktor’un içe aktarılan listeleri ve dosyalarını görebilmesi için Ayarlar → Navidrome’a bir yönetici girişi ekleyin.',
+    navidromeSummary: 'Çalma listeleri',
+    navidromeCounts:
+      'Yinelenen: {duplicates} · M3U yok: {orphans} · Eksik şarkı: {incomplete}',
+    navidromeFix: 'Düzelt',
+    navidromeFixTitle: 'Navidrome listeleri düzeltilsin mi?',
+    navidromeFixBody:
+      '“kaldırılacak” işaretli listeler silinir ({count}), ardından Navidrome yeniden tarar.',
+    navidromeFixImport:
+      'Downtify ayrıca Navidrome’un içe aktardığı listelerin kendi kopyasını oluşturmayı bırakır.',
+    navidromeSuggestImport:
+      'Navidrome, Downtify’ın M3U dosyalarını (kapaklarıyla) içe aktarıyor ve Downtify aynı listeleri API ile de oluşturuyor; bu yüzden her biri iki kez görünüyor.',
+    reason: {
+      m3u_and_api: 'İçe aktarılan M3U ve Downtify kopyası',
+      imports: 'İki kez içe aktarıldı',
+      api: 'İki kez oluşturuldu',
+      name: 'Aynı ad',
+      orphan: 'M3U dosyası yok',
+    },
+    kind: {
+      import: 'M3U’dan içe aktarıldı',
+      downtify: 'Downtify oluşturdu',
+      other: 'Diğer',
+    },
+    willRemove: 'kaldırılacak',
+    wouldLoseSongs: 'korunur: içe aktarmada olmayan şarkıları var',
+    incomplete:
+      'Navidrome, M3U’daki {m3u} şarkının {songs} tanesini gösteriyor.',
+    incompleteOutside:
+      'Navidrome müzik klasörünün dışındaki şarkılar: {count}.',
+    navidromeSongDupes: 'Navidrome’da yinelenen şarkılar',
+    songDupesCounts:
+      'Birden çok kez listelenen şarkılar: {groups} · fazla kopyalar: {extra} · bir slskd klasöründe: {slskd}',
+    ndRemoved: 'Kaldırılan listeler: {count}',
+    ndRemaining: 'Kalan: yinelenen {duplicates}, M3U yok {orphans}',
+    duplicatesTitle: 'Yinelenen şarkılar',
+    duplicatesHint:
+      'Aynı şarkıyı içeren kitaplık dosyaları. Her kopyayı dinleyin ve en iyisini tutun: diğerlerinin çalma listeleri, beğenileri ve izlemeleri ona geçer; böylece hiçbir şey eksilmez ya da yeniden indirilmez. Gerçekten farklı sürüm olan kopyaların hepsi tutulabilir.',
+    duplicatesExact: 'Aynı dosya',
+    duplicatesLikely: 'Muhtemelen aynı şarkı',
+    duplicatesCounts: 'Şarkılar: {groups} · fazla dosyalar: {files} · {size}',
+    dupeKeep: 'Bu kopyayı tut',
+    dupeIn: 'Bulunduğu listeler: {playlists}',
+    dupeInNone: 'Hiçbir listede değil',
+    dupeTags: 'Etiketler: {title} · {album}',
+    dupeMerge: 'Seçilen kopyayı tut',
+    dupeKeepAll: 'Hepsini tut, farklılar',
+    dupeMergeTitle: 'Yalnızca bu kopya kalsın mı?',
+    dupeMergeBody:
+      '{keep} kalır. Diğer kopyalar ({count}) {where} kaldırılır. Onları kullanan her çalma listesi, beğeni ve izleme artık tuttuğunuzu kullanır; böylece hiçbir şey yeniden indirilmez.',
+    dupeToTrash: '30 günlüğüne müzik çöp kutusuna',
+    dupeForGood: 'kalıcı olarak',
+    dupeMergeConfirm: 'Tut ve diğerlerini kaldır',
+    dupeMerged: 'Tutulan: {keep} · kaldırılan kopyalar: {count}',
+    dupeMergedPlaylists: 'Güncellenen listeler: {playlists}',
+    dupeCheckClean: 'Artık hiçbir şey kaldırılan kopyaları göstermiyor',
+    dupeLeftovers:
+      'Bir şey hâlâ kaldırılan bir kopyayı gösteriyor ({where}). Sağlık kontrolünü yeniden çalıştırın.',
+    dupeFailed: 'Kaldırılmayanlar: {files}',
+    dupeKeptApart: 'Farklı şarkı olarak tutulanlar: {count}',
+    dupeListAgain: 'Yeniden listele',
+    dupeKeptAllDone:
+      'Hepsi tutuldu. Başka bir kopya çıkmadıkça yeniden listelenmezler.',
+    relinkedTitle: 'Yeni bir Spotify kimliğiyle yeniden indirildi',
+    relinkedHint:
+      'Spotify bazen listedeki bir parçayı aynı şarkının başka bir kimliğiyle değiştirir. İzlenen liste de onu yeniden indirir.',
+    relinkedLabel: 'Aynı şarkı, birkaç kimlik',
+    relinkedCounts: 'Şarkılar: {songs} · fazla dosyalar: {extra}',
+    error: {
+      doctor_busy: 'Doktor zaten çalışıyor.',
+      doctor_failed: 'Doktor bir hatayla durdu. Sunucu günlüğüne bakın.',
+      queue_busy:
+        'Süren indirmeler zamanında bitmedi. Daha sonra yeniden deneyin.',
+      scan_first: 'Önce kalıntıları yeniden kontrol edin.',
+      m3u_not_found:
+        'Bu M3U dosyası yok. Sağlık kontrolünü yeniden çalıştırın.',
+      m3u_manual: 'Kitaplık’ta oluşturduğunuz listeler birleştirilmez.',
+      need_two: 'En az iki liste seçin.',
+      playlists_differ:
+        'Çok az şarkı eşleşiyor; farklı listeler gibi görünüyor.',
+      not_flagged: 'Önce sağlık kontrolünü yeniden çalıştırın.',
+      dedupe_rescan:
+        'Liste güncel değil. Sağlık kontrolünü yeniden çalıştırın.',
+      dedupe_missing:
+        'Dosyalardan biri yok. Sağlık kontrolünü yeniden çalıştırın.',
+      dedupe_invalid: 'Tutulacak bir kopya seçin.',
+      dedupe_trash:
+        'Müzik çöp kutusu kopyalardan birini alamıyor (klasörü kapsanmıyor ya da çalıyor). Hiçbir şey değiştirilmedi.',
+      dedupe_replacement_pending:
+        'Sesi değiştir hâlâ bu dosyalardan biri üzerinde çalışıyor.',
+      doctor_not_ready: 'Downtify hâlâ başlıyor. Biraz sonra yeniden deneyin.',
+      navidrome_off: 'Navidrome ayarlanmamış.',
+    },
   },
 }

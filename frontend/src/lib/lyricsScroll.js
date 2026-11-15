@@ -10,3 +10,10 @@ export function centerWithin(container, el) {
     behavior: 'smooth',
   })
 }
+
+// Centres the line being sung. Before the first one (the track restarted,
+// or a seek back into the intro) that's the first line, not wherever the
+// lyrics had scrolled to.
+export function centerLine(container, lineEls, active) {
+  centerWithin(container, lineEls[Math.max(active, 0)])
+}

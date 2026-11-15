@@ -1,4 +1,3 @@
-
 """Deterministic blocked-task checks for the live preparation pipeline."""
 
 import sys

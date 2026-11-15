@@ -44,7 +44,9 @@ REMOTE_PREFIXES = (
     '/api/artists/art/from_url',
     '/api/artists/profile/ensure',
     '/api/artists/profile/bio/preview',
-    '/api/library/replace',
+    # Searching for and fetching a version; uploading a file of your own
+    # (/api/library/replace/upload) stays local.
+    '/api/library/replace/candidates',
     '/api/playlists/incomplete',
     '/api/playlists/batches/',
 )
@@ -56,6 +58,7 @@ REMOTE_ACTIONS = {
     '/api/library/upgrade/scan',
     '/api/library/upgrade/start',
     '/api/library/upgrade/resume',
+    '/api/library/replace',
     '/api/deemix/test',
     '/api/slskd/test',
 }

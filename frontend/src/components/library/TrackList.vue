@@ -229,6 +229,12 @@
         </span>
       </div>
     </div>
+    <MetadataEditor
+      v-if="editingTrack"
+      :open="true"
+      :tracks="[editingTrack]"
+      @close="editingTrack = null"
+    />
   </div>
 </template>
 
@@ -240,6 +246,7 @@ import CoverArt from '../ui/CoverArt.vue'
 import EqBars from '../ui/EqBars.vue'
 import ExplicitBadge from '../ui/ExplicitBadge.vue'
 import UiMenu from '../ui/UiMenu.vue'
+import MetadataEditor from './MetadataEditor.vue'
 import LikeButton from '../player/LikeButton.vue'
 import TrackArtistLinks from './TrackArtistLinks.vue'
 import { useAuth } from '/src/model/auth'
@@ -272,6 +279,7 @@ const props = defineProps({
 })
 const emit = defineEmits(['update:selected', 'update:sort'])
 
+const editingTrack = ref(null)
 const auth = useAuth()
 const library = useLibrary()
 const player = usePlayer()
@@ -415,6 +423,13 @@ function menuItems(row) {
     context: props.context,
     hide: props.hideMenu,
   })
+  if (row.track.file)
+    items.unshift({
+      label: 'Edit metadata',
+      action: () => {
+        editingTrack.value = row.track
+      },
+    })
   const addItems = playlistActions.addMenuItems([row.track])
   if (addItems.length) {
     const queueAt = items.findIndex((item) => item.icon === 'queue')

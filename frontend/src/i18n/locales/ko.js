@@ -1062,12 +1062,23 @@ export default {
     file: '파일',
   },
   player: {
+    unlockLayout: '플레이어 레이아웃 잠금 해제',
+    lockLayout: '플레이어 레이아웃 잠금',
+    resetLayout: '플레이어 레이아웃 초기화',
+    resizeTrackSection: '트랙 정보 영역 크기 조절',
+    resizeTransportSection: '재생 컨트롤 영역 크기 조절',
     nowPlaying: '현재 재생 중',
     openNowPlaying: '현재 재생 화면 열기',
     closeNowPlaying: '현재 재생 화면 닫기',
     queue: '대기열',
     upNext: '다음 재생 곡',
     lyrics: '가사',
+    karaoke: '노래방',
+    karaokeWindow: '새 창에서 열기',
+    karaokeWindowBlocked:
+      '브라우저가 새 창을 차단했습니다. Downtify의 팝업을 허용한 후 다시 시도하세요.',
+    karaokeWaiting: 'Downtify 기본 창에서 노래를 기다리는 중',
+    fullscreen: '전체 화면',
     details: '세부정보',
     playing: '재생 중',
     play: '재생',
@@ -1240,6 +1251,55 @@ export default {
     save: '저장',
     saved: '모니터링 설정이 업데이트되었습니다',
     retargeted: '이제 {name}을(를) 모니터링합니다',
+  },
+  artistReleases: {
+    title: '발매작',
+    hint: '마지막 확인 시점에 YouTube Music, Deezer, MusicBrainz가 이 아티스트에 대해 보여 주는 모든 발매작과, 각각 라이브러리에 있는 양입니다. 유형을 지켜보지 않아도 받으려면 켜고, 더 받지 않으려면 끄세요(이미 있는 파일은 남습니다).',
+    empty: '아직 발매작이 없습니다',
+    emptyHint: '다음 확인 후에 표시됩니다.',
+    summary: '완료 {complete} · 일부 {partly} · 받을 예정 {missing}',
+    kinds: 'MusicBrainz에서 함께 받기',
+    kindsHint:
+      'MusicBrainz만 구분하는 발매 종류입니다. 믹스테이프와 사운드트랙은 아티스트 자신의 음악이고, 라이브 앨범·컴필레이션·리믹스는 대부분 같은 곡의 반복입니다. 이 아티스트에만 적용됩니다.',
+    byYou: '직접 설정',
+    switch: '{name} 받기',
+    switchedOn: '{name} 켬',
+    switchedOff: '{name} 끔',
+    noneHere: '여기에는 없습니다.',
+    kind: {
+      mixtape: '믹스테이프',
+      soundtrack: '사운드트랙',
+      live: '라이브 앨범',
+      compilation: '컴필레이션',
+      remix: '리믹스',
+      'dj-mix': 'DJ 믹스',
+      demo: '데모',
+    },
+    section: {
+      album: '앨범',
+      mixtape: '믹스테이프',
+      ep: 'EP',
+      single: '싱글',
+      other: '라이브·컴필레이션·리믹스',
+    },
+    filter: {
+      all: '전체',
+      missing: '받을 예정',
+      partly: '일부',
+      complete: '완료',
+      not_watched: '지켜보지 않음',
+      off: '꺼짐',
+      not_own: '피처링',
+    },
+    state: {
+      complete: '완료 · {have}/{total}',
+      partly: '일부 · {have}/{total}',
+      missing: '받을 예정',
+      skipped: '감시 전에 발매',
+      not_watched: '지켜보지 않음',
+      off: '꺼짐',
+      not_own: '피처링 또는 부틀렉',
+    },
   },
   watchStats: {
     colActivity: '활동',
@@ -1483,7 +1543,7 @@ export default {
       '쉼표로 구분한 확장자를 우선순위가 높은 순서로 입력하세요(예: flac, mp3).',
     slskdMinBitrate: '손실 형식의 최소 비트레이트',
     slskdMinBitrateHint:
-      '엄격 모드에서는 이 값보다 낮거나 비트레이트가 보고되지 않은 손실 파일을 거부합니다. FLAC은 제외됩니다.',
+      '보고된 비트레이트가 더 낮은 손실 파일은 건너뜁니다. 비트레이트를 보고하지 않은 파일은 엄격한 형식 우선순위가 켜져 있지 않으면 허용됩니다. 엄격 모드에서 FLAC은 제외됩니다.',
     slskdAttempts: '후보 시도 횟수',
     slskdAttemptsHint:
       '엄격 모드에서는 형식별로 이 수만큼 시도하며, 그 외에는 전체 횟수입니다.',
@@ -1503,6 +1563,34 @@ export default {
       '호스트 경로가 아닌 Downtify 컨테이너 내부 경로를 입력해야 합니다.',
     slskdTimeout: '전체 타임아웃',
     slskdQueuedTimeout: '대기 타임아웃',
+    slskdTimeoutHint:
+      '다음 후보로 넘어가기 전에 다운로드 하나에 허용되는 시간입니다.',
+    slskdQueuedTimeoutHint:
+      '다른 사용자의 업로드 대기열에서 기다리는 시간입니다. 지나면 다음으로 넘어갑니다.',
+    slskdProfile: '품질 프로필',
+    slskdProfileHint:
+      '형식 목록의 시작점입니다. 아래 항목을 자유롭게 바꿔 맞추세요.',
+    slskdProfileDefault: '기본값',
+    slskdProfileLossless: '무손실 우선',
+    slskdProfileLossy: '손실 형식만',
+    slskdAdvanced: '품질 및 매칭 세부 조정',
+    slskdAdvancedHint:
+      '추가 비트레이트 규칙, 후보 시도 횟수, 타임아웃입니다. 꺼져 있으면 추가 비트레이트 규칙은 사용되지 않습니다.',
+    slskdUnknownBitrate: '비트레이트가 없는 파일',
+    slskdUnknownBitrateHint:
+      '일부 Soulseek 사용자는 비트레이트를 공유하지 않습니다. 기본값은 최소 비트레이트가 있는 엄격 모드에서만 거부합니다.',
+    slskdUnknownAuto: '기본값',
+    slskdUnknownAllow: '허용',
+    slskdUnknownReject: '거부',
+    slskdPreferBitrate: '가장 높은 비트레이트부터 시도',
+    slskdPreferBitrateHint:
+      '충분히 일치하는 파일 중에서 가장 비슷한 파일 이름 대신 가장 좋은 품질부터 시도합니다.',
+    slskdFormatFloors: '형식별 최소 비트레이트',
+    slskdFormatFloorsHint:
+      '비워 두면 위의 최소값을 사용합니다. AAC(m4a)와 Opus 같은 효율적인 형식은 MP3보다 낮은 비트레이트에서도 좋은 음질을 냅니다.',
+    slskdMaxBitrate: '최대 비트레이트',
+    slskdMaxBitrateHint:
+      '0은 모두 허용합니다. 약 400으로 설정하면 .m4a 파일 안의 무손실 오디오(ALAC)를 건너뛰고 파일 크기를 작게 유지합니다.',
     slskdInPlace: 'slskd 폴더에 파일 그대로 유지',
     slskdInPlaceHint:
       '켜짐: 원래 위치에서 태그를 작성하고 파일을 유지합니다. 꺼짐: 다운로드 폴더로 복사하고 태그를 작성한 뒤 가져오기가 성공해야 원본을 삭제합니다. 실패하면 원본을 유지합니다.',
@@ -1565,6 +1653,10 @@ export default {
     coverArt: '커버 아트 포함',
     coverArtHint:
       '비활성화하면 파일 크기가 줄어들고 다운로드 속도가 빨라집니다.',
+    coverMin: '최소 커버 크기',
+    coverMinHint:
+      '이보다 작으면 Spotify, iTunes, YouTube Music에 같은 발매의 더 큰 커버를 요청하고 가장 큰 것을 씁니다. 끄면 곡 출처의 커버를 그대로 씁니다.',
+    coverMinOff: '끔',
     coverSize: '커버 해상도',
     coverSizeHint:
       'YouTube Music 및 Deezer에서 가져오는 커버에 적용됩니다. Spotify 커버는 항상 사용 가능한 최대 해상도로 저장됩니다.',
@@ -1650,6 +1742,10 @@ export default {
     navidromeSync: 'Navidrome에 재생목록 생성',
     navidromeSyncHint:
       '재생목록 다운로드 및 모니터링 확인 후, Navidrome에 동일한 이름의 재생목록을 동기화합니다.',
+    doctor: '닥터',
+    navidromeM3uImport: 'Navidrome이 M3U 재생목록을 가져오게 하기',
+    navidromeM3uImportHint:
+      'Navidrome은 Downtify가 쓰는 각 M3U를 커버가 있는 재생목록으로 만듭니다. 켜면 Downtify가 API로 두 번째 재생목록을 만들지 않습니다.',
     navidromePublic: 'Navidrome 재생목록 공개 설정',
     primaryLibrary: 'Primary library folder',
     primaryLibraryHint:
@@ -1831,6 +1927,12 @@ export default {
     androidUnreleased:
       '아직 정식 버전이 출시되지 않았습니다. 현재 활발히 개발 중이므로 설치 가능한 파일이 아직 없습니다.',
     androidRepo: '저장소 보기',
+    iosGroup: 'iOS용 Downtify',
+    iosHint:
+      '이 서버의 라이브러리를 탐색하고 재생하는 iPhone 및 iPad 앱입니다.',
+    iosBody:
+      '계정으로 로그인하거나 이 페이지의 코드로 앱을 연결하세요. 라이브러리를 탐색하고 재생하며, 오프라인 감상을 위해 곡을 저장하고 잠금 화면에서 재생을 제어할 수 있습니다.',
+    iosRepo: '저장소 보기',
   },
   replace: {
     menu: '음원 교체…',
@@ -1848,6 +1950,17 @@ export default {
     running: '음원 교체 중…',
     done: '음원이 교체되었습니다',
     failed: '음원을 교체하지 못했습니다',
+    handReplaced:
+      '{date}에 이 오디오를 직접 교체했습니다. 다운로드는 이 파일을 그대로 둡니다.',
+    unprotect: '다운로드가 교체하도록 허용',
+    unprotected: '이제 다운로드가 이 파일을 다시 교체할 수 있습니다',
+    uploading: '파일 업로드 중…',
+    fileTitle: '또는 기기의 파일 사용',
+    fileHint:
+      '{format} 파일은 그대로 사용됩니다. 다른 오디오 파일(MP3, FLAC, M4A, WAV…)은 {format}(으)로 변환됩니다.',
+    fileChoose: '파일 선택…',
+    fileOther: '다른 파일 선택…',
+    fileConverted: '{format}(으)로 변환됨',
     source: {
       'youtube-music': 'YouTube Music',
       youtube: 'YouTube',
@@ -2195,5 +2308,193 @@ export default {
   },
   source: {
     from: '{source}에서 다운로드됨',
+  },
+  doctor: {
+    title: '닥터',
+    intro:
+      '새 버전의 Downtify는 그때부터 문제를 고치지만, 예전 버전이 쓴 파일과 재생목록은 그대로 남습니다. 닥터는 그런 잔여 상태를 찾아 안전하다고 증명할 수 있는 것만 고칩니다.',
+    checkup: '상태 점검',
+    checkupHint:
+      'slskd 잔여 파일, 중복 노래와 재생목록, Navidrome에 보이는 내용을 살펴봅니다. 아무것도 바꾸지 않습니다.',
+    lastCheckup: '마지막 점검: {when}',
+    runCheckup: '지금 점검',
+    stop: '중지',
+    step: {
+      starting: '시작하는 중…',
+      library: '라이브러리 읽는 중…',
+      playlists: '재생목록 읽는 중…',
+      duplicates: '중복 노래 찾는 중…',
+      monitor: '모니터링 재생목록 확인 중…',
+      navidrome: 'Navidrome에 묻는 중…',
+      pausing: '진행 중인 다운로드가 끝나길 기다리는 중…',
+      listing: 'slskd 폴더 목록 만드는 중…',
+      verifying: '라이브러리와 오디오 비교 중…',
+      deleting: '삭제하는 중…',
+      navidrome_scan: 'Navidrome 재검색 기다리는 중…',
+      dedupe_check: '사본 확인 중…',
+      dedupe_relink: '플레이리스트, 좋아요, 모니터링 옮기는 중…',
+      dedupe_remove: '나머지 사본 제거 중…',
+      merging: '재생목록 합치는 중…',
+    },
+    slskdTitle: 'slskd 잔여 파일',
+    slskdHint:
+      '예전 버전은 Soulseek 파일을 라이브러리에 복사한 뒤에도 slskd 폴더에 남겨 두었습니다. 오디오가 라이브러리의 노래와 똑같은 파일만 삭제 대상으로 제안합니다.',
+    slskdLeftovers: 'slskd 폴더의 파일',
+    slskdNotChecked: '상태 점검을 실행하면 개수를 셉니다.',
+    slskdInPlace:
+      '파일을 slskd 폴더에 두는 설정이라 그 폴더가 라이브러리의 일부입니다. 정리할 것이 없습니다.',
+    slskdFound: '라이브러리 노래가 아닌 파일: {files} · {size}',
+    slskdCheck: '다운로드 일시정지 후 확인',
+    slskdCheckTitle: 'slskd 잔여 파일을 확인할까요?',
+    slskdCheckBody:
+      '먼저 다운로드를 일시정지하고 진행 중인 것은 끝까지 마쳐서, 비교하는 동안 아무것도 쓰이지 않게 합니다. 확인 전에는 아무것도 삭제하지 않습니다.',
+    queueHeld:
+      '결정하는 동안 다운로드가 일시정지됩니다. 한 시간 뒤에는 저절로 다시 시작됩니다.',
+    slskdKeepResume: '그대로 두고 다운로드 재개',
+    status: {
+      verified: '라이브러리에 동일 파일 있음',
+      different: '비슷하지만 다름',
+      unmatched: '라이브러리에 없음',
+      unreadable: '읽을 수 없음',
+      recent: '최근에 변경됨',
+      missing: '사라짐',
+    },
+    slskdVerifiedHint:
+      '각 파일은 아래 표시된 라이브러리 파일과 오디오가 비트 단위로 같습니다.',
+    showMore: '더 보기',
+    slskdDelete: '동일한 사본 삭제 ({files} · {size})',
+    slskdDeleteTitle: '동일한 사본을 삭제할까요?',
+    slskdDeleteBody:
+      'slskd 폴더에서 지울 파일: {files} ({size}). 삭제 직전에 각 파일이 그대로인지, 라이브러리 사본이 아직 있는지 다시 확인합니다. 그다음 다운로드가 재개됩니다.',
+    slskdDeleteConfirm: '삭제',
+    slskdCleaned: '삭제: {files} · 확보: {size}',
+    slskdKeptChanged:
+      '변경되었거나 라이브러리 사본이 없어서 남긴 파일: {files}',
+    checkGone: '파일이 디스크에서 사라짐',
+    checkQueueResumed: '다운로드 재개됨',
+    checkNavidromeScan: 'Navidrome 재검색 완료',
+    playlistsTitle: '중복 재생목록',
+    playlistsHint:
+      '한 재생목록에 M3U 파일이 두 개 있는 경우입니다. 예를 들어 예전 버전이 쓰던 위치에 하나가 남아 있을 수 있습니다. 합치면 노래는 한 번씩, 커버와 파일 하나만 남습니다. 원본은 먼저 백업합니다.',
+    playlistsOk: '모든 재생목록에 M3U 파일이 하나씩 있습니다.',
+    groupReason: {
+      name: '같은 이름',
+      songs: '같은 노래',
+      manual: '직접 선택',
+    },
+    songsCount: '노래: {count}',
+    hasCover: '커버 있음',
+    keeps: '유지',
+    mergePlan: '결과: 노래 {songs}곡. 노래의 {overlap}%가 겹칩니다.',
+    mergeUnsafe:
+      '노래의 {overlap}%만 겹쳐서 서로 다른 재생목록일 수 있습니다. 합치지 않습니다.',
+    merge: '합치기',
+    mergeTitle: '이 재생목록을 합칠까요?',
+    mergeBody:
+      '{keeper}에 노래 {songs}곡과 커버가 모두 들어가고, 나머지 파일은 백업 후 삭제됩니다.',
+    merged: '{path}에 이제 노래 {songs}곡이 있습니다.',
+    checkOthersGone: '다른 M3U 파일이 사라짐',
+    checkCover: '커버가 옆에 있음',
+    checkNavidromeOne:
+      'Navidrome에 이 재생목록이 하나만 보임 (찾은 수: {count})',
+    backupAt: '백업: {path}',
+    manualTitle: '직접 고르기',
+    manualHint:
+      '하나의 재생목록이어야 할 M3U 파일을 두 개 이상 고르세요. 노래 대부분이 겹칠 때만 합칩니다.',
+    manualFilter: '재생목록 필터',
+    manualCompare: '비교',
+    navidromeHint: 'Navidrome과 연결된 모든 앱에 실제로 보이는 내용입니다.',
+    navidromeOff: 'Navidrome이 설정되지 않았습니다.',
+    navidromeDown: 'Navidrome이 응답하지 않았습니다.',
+    navidromeNoAdmin:
+      '닥터가 가져온 재생목록과 그 파일을 볼 수 있도록 설정 → Navidrome에서 관리자 로그인을 추가하세요.',
+    navidromeSummary: '재생목록',
+    navidromeCounts:
+      '중복: {duplicates} · M3U 없음: {orphans} · 빠진 노래: {incomplete}',
+    navidromeFix: '고치기',
+    navidromeFixTitle: 'Navidrome 재생목록을 고칠까요?',
+    navidromeFixBody:
+      '“삭제 예정” 표시된 재생목록을 지우고({count}) Navidrome이 다시 검색합니다.',
+    navidromeFixImport:
+      'Downtify는 Navidrome이 가져오는 재생목록의 자체 사본도 더 이상 만들지 않습니다.',
+    navidromeSuggestImport:
+      'Navidrome이 Downtify의 M3U 파일을 커버와 함께 가져오고, Downtify도 같은 재생목록을 API로 만들어서 각각 두 번씩 보입니다.',
+    reason: {
+      m3u_and_api: '가져온 M3U와 Downtify 사본',
+      imports: '두 번 가져옴',
+      api: '두 번 생성됨',
+      name: '같은 이름',
+      orphan: 'M3U가 없음',
+    },
+    kind: {
+      import: 'M3U에서 가져옴',
+      downtify: 'Downtify가 만듦',
+      other: '기타',
+    },
+    willRemove: '삭제 예정',
+    wouldLoseSongs: '유지: 가져온 목록에 없는 노래가 있음',
+    incomplete: 'Navidrome은 M3U의 노래 {m3u}곡 중 {songs}곡을 보여 줍니다.',
+    incompleteOutside: 'Navidrome 음악 폴더 밖에 있는 노래: {count}.',
+    navidromeSongDupes: 'Navidrome의 중복 노래',
+    songDupesCounts:
+      '두 번 이상 보이는 노래: {groups} · 여분 사본: {extra} · slskd 폴더 안: {slskd}',
+    ndRemoved: '삭제된 재생목록: {count}',
+    ndRemaining: '남음: 중복 {duplicates}, M3U 없음 {orphans}',
+    duplicatesTitle: '중복 노래',
+    duplicatesHint:
+      '같은 곡이 들어 있는 라이브러리 파일입니다. 각 사본을 들어 보고 가장 좋은 것을 남기세요. 다른 사본의 플레이리스트, 좋아요, 모니터링이 남긴 사본으로 옮겨지므로 아무것도 사라지거나 다시 다운로드되지 않습니다. 실제로 다른 버전인 사본은 모두 남길 수 있습니다.',
+    duplicatesExact: '같은 파일',
+    duplicatesLikely: '같은 노래로 보임',
+    duplicatesCounts: '노래: {groups} · 여분 파일: {files} · {size}',
+    dupeKeep: '이 사본 남기기',
+    dupeIn: '포함된 곳: {playlists}',
+    dupeInNone: '어느 플레이리스트에도 없음',
+    dupeTags: '태그: {title} · {album}',
+    dupeMerge: '선택한 사본 남기기',
+    dupeKeepAll: '모두 남기기(서로 다름)',
+    dupeMergeTitle: '이 사본만 남길까요?',
+    dupeMergeBody:
+      '{keep}이(가) 남습니다. 다른 사본 {count}개는 {where} 제거됩니다. 이를 사용하던 모든 플레이리스트, 좋아요, 모니터링은 이제 남긴 사본을 사용하므로 다시 다운로드되지 않습니다.',
+    dupeToTrash: '음악 휴지통으로(30일 보관)',
+    dupeForGood: '영구적으로',
+    dupeMergeConfirm: '남기고 나머지 제거',
+    dupeMerged: '{keep} 남김 · 제거된 사본: {count}',
+    dupeMergedPlaylists: '업데이트된 플레이리스트: {playlists}',
+    dupeCheckClean: '제거된 사본을 가리키는 항목이 더 이상 없습니다',
+    dupeLeftovers:
+      '아직 제거된 사본을 가리키는 항목이 있습니다({where}). 상태 점검을 다시 실행하세요.',
+    dupeFailed: '제거되지 않음: {files}',
+    dupeKeptApart: '다른 곡으로 남김: {count}',
+    dupeListAgain: '다시 표시',
+    dupeKeptAllDone:
+      '모두 남겼습니다. 다른 사본이 생기지 않는 한 다시 표시되지 않습니다.',
+    relinkedTitle: '새 Spotify ID로 다시 다운로드됨',
+    relinkedHint:
+      'Spotify는 가끔 재생목록의 곡을 같은 노래의 다른 ID로 바꿉니다. 그러면 모니터링 중인 재생목록이 그 노래를 다시 다운로드합니다.',
+    relinkedLabel: '같은 노래, 여러 ID',
+    relinkedCounts: '노래: {songs} · 여분 파일: {extra}',
+    error: {
+      doctor_busy: '닥터가 이미 작업 중입니다.',
+      doctor_failed: '닥터가 오류로 멈췄습니다. 서버 로그를 확인하세요.',
+      queue_busy:
+        '진행 중인 다운로드가 제때 끝나지 않았습니다. 나중에 다시 시도하세요.',
+      scan_first: '먼저 잔여 파일을 다시 확인하세요.',
+      m3u_not_found: '그 M3U 파일이 없어졌습니다. 상태 점검을 다시 실행하세요.',
+      m3u_manual: '라이브러리에서 만든 재생목록은 합치지 않습니다.',
+      need_two: '재생목록을 두 개 이상 고르세요.',
+      playlists_differ:
+        '겹치는 노래가 너무 적어 서로 다른 재생목록으로 보입니다.',
+      not_flagged: '먼저 상태 점검을 다시 실행하세요.',
+      dedupe_rescan: '목록이 오래되었습니다. 상태 점검을 다시 실행하세요.',
+      dedupe_missing: '파일 하나가 없어졌습니다. 상태 점검을 다시 실행하세요.',
+      dedupe_invalid: '남길 사본 하나를 선택하세요.',
+      dedupe_trash:
+        '음악 휴지통이 사본 하나를 받을 수 없습니다(폴더가 포함되지 않았거나 재생 중). 아무것도 바뀌지 않았습니다.',
+      dedupe_replacement_pending:
+        '오디오 교체가 아직 이 파일 중 하나를 처리하고 있습니다.',
+      doctor_not_ready:
+        'Downtify가 아직 시작 중입니다. 잠시 후 다시 시도하세요.',
+      navidrome_off: 'Navidrome이 설정되지 않았습니다.',
+    },
   },
 }

@@ -394,12 +394,16 @@ def _same_length_runs(rows: list[dict[str, Any]]) -> list[list[str]]:
 
 
 def duplicates(
-    entries: list[dict[str, Any]], providers: dict[str, str]
+    entries: list[dict[str, Any]],
+    providers: dict[str, str],
+    *,
+    limit: Optional[int] = EXAMPLES,
 ) -> dict[str, Any]:
     """Library files holding the same song more than once.
 
     ``bytes`` is what keeping only the biggest file of each group would
-    free. ``groups`` lists the :data:`EXAMPLES` that would free most.
+    free. ``examples`` lists the *limit* groups that would free most
+    (every group with ``None``).
     """
 
     by_file = {norm_path(e.get('file')): e for e in entries}
@@ -448,7 +452,7 @@ def duplicates(
         'bytes': sum(g['bytes'] for g in found),
         'exact': totals['exact'],
         'likely': totals['likely'],
-        'examples': found[:EXAMPLES],
+        'examples': found if limit is None else found[:limit],
     }
 
 
@@ -474,6 +478,12 @@ def _duplicate_group(
                     'provider': provider_of(name, providers),
                     'codec': str(row.get('codec') or ''),
                     'bitrate': int(row.get('bitrate') or 0),
+                    # Each copy's own tags: look-alikes can differ there
+                    # (a parody uploaded under the original's name).
+                    'title': str(row.get('title') or ''),
+                    'artist': str(row.get('artist') or ''),
+                    'album': str(row.get('album') or ''),
+                    'duration': _duration(row),
                 }
                 for name, row, size in zip(names, rows, sizes)
             ),

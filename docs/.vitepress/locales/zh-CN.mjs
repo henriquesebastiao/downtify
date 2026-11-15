@@ -53,10 +53,17 @@ export default {
   },
   nav: {
     groups: {
+      'Music AI & DJ (beta)': 'Music AI & DJ (beta)',
       'Getting Started': '快速入门',
       Features: '功能',
     },
     pages: {
+      'music-ai.md': 'Music AI and DJ (beta)',
+      'personalized-mix-renewal.md': 'Personalized mix renewal',
+      'progressive-decoding.md': 'Progressive DJ rendering',
+      'rhythm-analysis.md': 'Rhythm analysis',
+      'weekly-dj-assets.md': 'Weekly DJ preparation',
+      'weekly-dj-queue.md': 'Weekly DJ controls',
       'index.md': '首页',
       'getting-started/index.md': '概览',
       'getting-started/installation.md': '安装',
@@ -94,6 +101,7 @@ export default {
       'features/library-upgrade.md': '升级媒体库',
       'features/storage-usage.md': '存储空间与用量',
       'features/music-trash.md': '音乐回收站',
+      'features/doctor.md': '医生',
       'features/replace-audio.md': '替换音频',
       'features/external-playlists.md': '导入现有播放列表',
       'features/m3u-export.md': '导出 M3U',

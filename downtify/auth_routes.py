@@ -161,6 +161,7 @@ def get_server_info() -> dict[str, Any]:
         transcoding=transcoder.capability() if transcoder else None,
     )
     result['library_only'] = api.state.settings.get('library_only') is True
+    result['capabilities']['playlist_editing'] = True
     return result
 
 

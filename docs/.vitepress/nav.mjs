@@ -65,6 +65,7 @@ export const NAV = [
       { title: 'Upgrade Library', page: 'features/library-upgrade.md' },
       { title: 'Storage & Usage', page: 'features/storage-usage.md' },
       { title: 'Music Trash', page: 'features/music-trash.md' },
+      { title: 'Doctor', page: 'features/doctor.md' },
       { title: 'Replace Audio', page: 'features/replace-audio.md' },
       { title: 'M3U Export', page: 'features/m3u-export.md' },
       {
@@ -87,6 +88,17 @@ export const NAV = [
       },
       { title: 'Install as an App (PWA)', page: 'features/pwa.md' },
       { title: 'Update Notifications', page: 'features/updates.md' },
+    ],
+  },
+  {
+    title: 'Music AI & DJ (beta)',
+    items: [
+      { title: 'Music AI and DJ (beta)', page: 'music-ai.md' },
+      { title: 'Personalized mix renewal', page: 'personalized-mix-renewal.md' },
+      { title: 'Progressive DJ rendering', page: 'progressive-decoding.md' },
+      { title: 'Rhythm analysis', page: 'rhythm-analysis.md' },
+      { title: 'Weekly DJ preparation', page: 'weekly-dj-assets.md' },
+      { title: 'Weekly DJ controls', page: 'weekly-dj-queue.md' },
     ],
   },
   { title: 'How It Works', page: 'how-it-works.md' },

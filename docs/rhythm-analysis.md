@@ -1,3 +1,7 @@
+---
+icon: lucide/disc-3
+---
+
 # Analyses rythmiques incrémentales
 
 DCLAP et les profils rythmiques sont deux inventaires différents. `GET /api/v1/music-ai/dj/analysis`, réservé à l’administration, compte les vecteurs DCLAP et les profils DJ correspondant au catalogue observé, au modèle courant, à l’empreinte du morceau et à sa version de source. Il distingue tempo, temps, mesures, tonalité suffisamment confiante, niveau, énergie, confiance et points candidats. Un champ absent est compté comme manquant ; un vecteur DCLAP ne prouve jamais une analyse rythmique.

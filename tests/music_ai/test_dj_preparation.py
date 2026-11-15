@@ -54,7 +54,9 @@ def test_single_slot_and_poll_remain_nonblocking_until_reaped():
         assert preparation.busy
         assert not preparation.submit('second', lambda check: None)
         result = reap(preparation)
-        assert result == PreparationResult(('generation', 1), 'pcm', None, False)
+        assert result == PreparationResult(
+            ('generation', 1), 'pcm', None, False
+        )
         assert not preparation.busy
         assert preparation.poll() is None
         assert preparation.submit('second', lambda check: 2)
@@ -120,7 +122,10 @@ def test_cancellation_is_cooperative_and_keeps_slot_until_reaped():
 def test_close_waits_for_cleanup_and_retains_late_value_for_disposal():
     preparation = SinglePreparation()
     started, cleanup_started, cleanup_release, closed = (
-        Event(), Event(), Event(), Event()
+        Event(),
+        Event(),
+        Event(),
+        Event(),
     )
 
     def work(checkpoint):

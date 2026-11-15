@@ -73,6 +73,7 @@ import { useLibrary } from '/src/model/library'
 import { useDiscover } from '/src/model/discover'
 import { musicAI } from '/src/model/musicAI'
 import { attachMusicAiListening } from '/src/model/musicAiListening'
+import { useKaraokeStage } from '/src/model/karaokeStage'
 import { useNowPlaying, useUi } from '/src/model/ui'
 import { useShortcuts } from './shortcuts'
 
@@ -129,6 +130,7 @@ API.onForbidden(() => {
 })
 // Count listens for Discover, whichever page the music is playing on.
 useDiscover().startListenTracking()
+useKaraokeStage().resume()
 
 useShortcuts({
   player,

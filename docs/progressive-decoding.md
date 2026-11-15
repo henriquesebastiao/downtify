@@ -1,3 +1,7 @@
+---
+icon: lucide/disc-3
+---
+
 # Décodage progressif du DJ interactif
 
 Le direct décode désormais progressivement les pistes au lieu de produire un fichier PCM complet avant leur lecture. Chaque occurrence possède un processus FFmpeg/Rubberband continu et un tampon stéréo de 24 secondes d’avance. Le traitement ne redémarre pas à chaque bloc : le test audio compare les échantillons obtenus à un décodage continu au-delà de la première fenêtre.

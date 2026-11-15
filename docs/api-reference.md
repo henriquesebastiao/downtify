@@ -1637,7 +1637,25 @@ Admin. Versions of a library track to [replace its audio](features/replace-audio
 
 Admin. Replace a library track's audio with a YouTube video: `{ "file": "…", "video_id": "7nxWP9BhI7w" }`. `video_id` may also be a SoundCloud track URL (as a SoundCloud candidate carries it). **Response:** `{ "job_id": "replace:<file>", "file": "…" }`.
 
-It runs as a queue job, with the usual [WebSocket](#websocket) progress messages (`song.song_id` is `job_id`, and `song.replace` is `{file, video_id}`), ending in `done` or `error`. The file keeps its path, format, tags and modification date; a failure leaves it untouched. `400` for an invalid video id or file type, `404` for an unknown file, `409` while the same file is already being replaced.
+It runs as a queue job, with the usual [WebSocket](#websocket) progress messages (`song.song_id` is `job_id`, and `song.replace` is `{file, video_id}`), ending in `done` or `error`. The file keeps its path, format, tags and modification date; a failure leaves it untouched. `400` for an invalid video id or file type, `404` for an unknown file, `409` while the same file is already being replaced. Once replaced, the file is [kept from downloads](#get-apilibraryreplaceprotected).
+
+---
+
+### `POST /api/library/replace/upload`
+
+Admin. Replace a library track's audio with an audio file from the admin's device, sent as the raw request body (not multipart). Query: `file` (the track's library path) and `name` (the uploaded file's name, which gives its format: `.mp3`, `.flac`, `.m4a`, `.ogg`, `.opus`, `.wav`, `.aiff`, `.aif`, `.aac` or `.webm`). At most 400 MB.
+
+**Response:** `{ "file", "duration_before", "duration_after", "converted", "hand_replaced": { "file", "source": "file", "replaced_at" } }`.
+
+A file in the track's own format is used as it is; another is converted to it (`converted: true`) at the chosen bitrate. The track keeps its path, tags and modification date, and is then kept from downloads. Works in library-only mode. `400` for a file that isn't readable audio, an empty body or an unsupported type, `404` for an unknown track, `409` while it is already being replaced, `413` above the size limit.
+
+---
+
+### `GET /api/library/replace/protected`
+
+Admin. Whether downloads leave a track alone because its audio was replaced by hand (either way above): `?file=` → `{ "file", "hand_replaced": { "file", "source", "replaced_at" } | null }`. `source` is `youtube`, `soundcloud` or `file`; `replaced_at` is a Unix time.
+
+With **Download again if the file exists** on, a download that would write over such a file counts it as already downloaded instead, and Library upgrade's audio replacement skips it. **`DELETE`** with the same `?file=` lifts that: `{ "file", "forgotten": true | false }`.
 
 ---
 
@@ -2311,6 +2329,8 @@ A track's full audio, downloaded once into `/data/stream_cache` and served from 
 
 The first request for a video downloads it (concurrent requests share one download); the cache is pruned least-recently-used past `DOWNTIFY_STREAM_CACHE_MB` (default 1024) with at most `DOWNTIFY_STREAM_CONCURRENCY` downloads at once (default 2). `400` for a malformed id and for tracks over 10 minutes (the served file's probed length is enforced either way, so long uploads never accumulate), `503` when YouTube can't provide the audio — including age-gated tracks without usable cookies (see [YouTube Cookies](features/youtube-cookies.md)). A stream never lands in the library, the activity log or the saved player session.
 
+A cached file keeps its `ETag` across requests while the audio is unchanged. Clients can send that validator in `If-Range` to get `206 Partial Content` for a satisfiable range.
+
 The web UI plays the queue through undownloaded rows without stopping and warms one track ahead: at each track's start, and again the moment it has fully loaded, the next track's download starts in the background (see [`POST /api/stream/prefetch`](#post-apistreamprefetch)), so skipping starts instantly. A run of unresolvable tracks is skipped (an error after three in a row).
 
 ### `POST /api/stream/prefetch`
@@ -2499,8 +2519,9 @@ Update a watch.
 | `url` | string | A new link for the watch — same kinds as in `POST` |
 | `release_types` | array | Artist watches only — as in `POST` |
 | `new_only` | boolean | Artist watches only. `true` records whatever is out at the next check as skipped; `false` forgets the skipped releases so the next check downloads them |
+| `musicbrainz_kinds` | array or `null` | Artist watches only. The MusicBrainz secondary types this watch downloads: any of `mixtape`, `soundtrack`, `live`, `compilation`, `remix`, `dj-mix`, `demo`; `null` follows the `artist_watch_musicbrainz_kinds` setting. `400` for anything else |
 
-Changing `release_types` or `new_only` starts a check in the background if the watch is enabled, and is a `400` on a playlist watch. A `url` that points at the **same** playlist or artist only replaces the stored `url`. One that points at a **different** playlist or artist of the same kind retargets the watch: `spotify_id`, `name` and `url` change, `last_checked` becomes `null`, `last_track_count` becomes `0`, and its downloaded-track and seen-release history is cleared. If the watch is enabled, a first check starts in the background, as after `POST`. An unchanged `url` is ignored.
+Changing `release_types`, `new_only` or `musicbrainz_kinds` starts a check in the background if the watch is enabled, and is a `400` on a playlist watch. A `url` that points at the **same** playlist or artist only replaces the stored `url`. One that points at a **different** playlist or artist of the same kind retargets the watch: `spotify_id`, `name` and `url` change, `last_checked` becomes `null`, `last_track_count` becomes `0`, and its downloaded-track and seen-release history is cleared. If the watch is enabled, a first check starts in the background, as after `POST`. An unchanged `url` is ignored.
 
 **Response:** Updated watch object. `404` if there is no such watch; for a new `url`: `400` if it isn't a supported link or is the other kind (an artist link for a playlist watch, or the reverse), `409` if another watch already follows it, `404`/`502` if it can't be resolved. On an error nothing is changed.
 
@@ -2641,6 +2662,51 @@ The songs a watch holds, newest first, as [`GET /tracks`](#get-tracks) rows — 
 ```
 
 `watch` is the watch object of [`GET /api/monitor/playlists`](#get-apimonitorplaylists). `shared_with` is how many other watches hold the same file, `missing` how many recorded songs are no longer on disk. Songs an admin hid from users are left out for a user. `404` for a watch that doesn't exist or belongs to another account (unless you're an admin).
+
+---
+
+### `GET /api/monitor/playlists/{playlist_id}/releases`
+
+An artist watch's whole catalogue as of its last check: every release YouTube Music, Deezer and MusicBrainz list, one row per release (the same name and type from two catalogues is merged), with what the library has of it. See [An artist's releases](features/playlist-monitor.md#an-artists-releases). `400` for a playlist or podcast watch.
+
+**Response:**
+
+```json
+{
+  "watch": { "id": 1, "name": "Drake", "kind": "artist", "musicbrainz_kinds": null, "…": "…" },
+  "kinds": ["mixtape", "soundtrack"],
+  "kinds_default": true,
+  "available_kinds": ["mixtape", "soundtrack", "live", "compilation", "remix", "dj-mix", "demo"],
+  "musicbrainz": true,
+  "releases": [
+    {
+      "id": "deezer:13082992",
+      "album_ids": ["deezer:13082992"],
+      "name": "Views",
+      "release_type": "album",
+      "kinds": [],
+      "section": "album",
+      "year": "2016",
+      "sources": ["deezer"],
+      "cover_url": "https://…",
+      "url": "https://www.deezer.com/album/13082992",
+      "state": "complete",
+      "have": 20,
+      "total": 20,
+      "choice": ""
+    }
+  ],
+  "counts": { "complete": 1, "partly": 0, "missing": 0, "skipped": 0, "not_watched": 0, "off": 0, "not_own": 0 }
+}
+```
+
+`state` is `complete` (every track in the library), `partly`, `missing` (wanted, not there yet), `skipped` (out before a "new releases only" watch started), `not_watched` (a type or kind the watch doesn't download), `off` (switched off) or `not_own` (a guest spot or a bootleg, never downloaded). `total` is `0` until the release's tracklist was fetched. `section` is `album`, `mixtape`, `ep`, `single` or `other`. `choice` is the user's switch: `on`, `off` or `""` (the watch's rules).
+
+---
+
+### `PATCH /api/monitor/playlists/{playlist_id}/releases`
+
+Switch releases of an artist watch: `{ "album_ids": ["deezer:13082992"], "choice": "on" }`, with `album_ids` from a release's `album_ids`. `on` downloads them even when their type isn't watched or they came out before a "new releases only" watch started, and starts a check if the watch is enabled. `off` never downloads them (songs already there stay). `""` follows the watch again. **Response:** as `GET`. `400` for a bad body, `404` when the watch lists none of `album_ids`.
 
 ---
 
@@ -3539,6 +3605,56 @@ The playlists [`GET /playlists`](#get-playlists) lists, with track ids in playli
 | `hidden_count` | Songs the owner [hid](features/hidden-playlist-songs.md) from an imported playlist of theirs (`0` otherwise); list them with [`GET /api/v1/playlists/hidden`](#get-apiv1playlistshidden) |
 
 Keep the other people's playlists apart from the caller's own (a "Shared with me" and a "Public playlists" section, each entry labelled with its `owner`).
+
+### Mobile playlist writes
+
+`GET /api/server/info` advertises `capabilities.playlist_editing: true` when these routes are available. These routes use stable mobile **track IDs**, and write only **manual** (Library-created) playlists. An inaccessible playlist or track returns `404`; imported playlists and callers without the required write permission return `403`; malformed bodies or fields return `400`; a stale reorder returns `409` without changing the playlist. The library sync index must be ready; otherwise a write returns `503` (`Starting up`). There is no whole-playlist delete route in this mobile API.
+
+Create and rename require the playlist owner or an admin. Add, remove, and reorder require the owner, an admin, or an editor of a shared playlist. Successful changes notify connected WebSocket clients with `playlists_changed` according to playlist visibility.
+
+All successful writes return the canonical shape `{ "name", "manual", "count", "track_ids" }`, where `track_ids` is in playlist order and includes every repeated occurrence. Rename also returns `previous`; track edits may also return `added`, `removed`, and `already`.
+
+#### `POST /api/v1/playlists`
+
+Create an empty manual playlist.
+
+**Body:** `{ "name": "Late night" }`
+
+**Response:** `{ "name": "Late night", "manual": true, "count": 0, "track_ids": [] }`
+
+#### `POST /api/v1/playlists/rename`
+
+Rename a manual playlist.
+
+**Body:** `{ "name": "Late night", "new_name": "Night drive" }`
+
+**Response:** `{ "name": "Night drive", "previous": "Late night", "manual": true, "count": 0, "track_ids": [] }`
+
+#### `POST /api/v1/playlists/tracks`
+
+Add or remove tracks from a manual playlist. The body accepts `name` and any combination of these optional fields:
+
+```json
+{
+  "name": "Late night",
+  "add": ["track-id"],
+  "remove": ["track-id"],
+  "remove_entries": [{ "track_id": "track-id", "occurrence": 0 }],
+  "allow_duplicates": false
+}
+```
+
+`add` and `remove` are arrays of track IDs. `remove` removes every copy of each ID; `remove_entries` removes only the specified zero-based occurrence of an ID in playlist order. A missing occurrence removes nothing. By default, adding an ID already in the playlist skips it and lists it in `already`; set `allow_duplicates` to `true` to add another copy. The response may include `added` and `removed` counts and `already` track IDs, alongside the canonical result shape.
+
+The combined number of IDs in `add`, `remove`, and `remove_entries` may not exceed 10,000. The reorder endpoint also accepts at most 10,000 IDs. Larger requests return `400` before any IDs are resolved or the playlist is changed. Unknown and caller-hidden IDs both return `404`.
+
+#### `PUT /api/v1/playlists/order`
+
+Replace the order of a manual playlist's tracks. `track_ids` must describe the caller-visible playlist contents, including each repeated occurrence.
+
+**Body:** `{ "name": "Late night", "track_ids": ["track-id", "track-id-2"] }`
+
+If the playlist changed since the client loaded it, the request returns `409`; reload and retry with the current IDs. Success returns the canonical result shape.
 
 ---
 

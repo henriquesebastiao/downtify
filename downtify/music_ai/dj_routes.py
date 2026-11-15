@@ -76,7 +76,7 @@ def visible(request, ids, *, sources=False, known_paths=None):
     rows, snapshots = {}, {}
     # One native connection for a window, rather than one connection per title.
     bulk = (
-        {row['id']: row for row in sync.rows_for(ids)}
+        sync.rows_for(ids)
         if hasattr(sync, 'rows_for')
         else {identity: sync.row_for(identity) for identity in ids}
     )

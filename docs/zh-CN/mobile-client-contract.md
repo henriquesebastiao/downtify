@@ -38,7 +38,7 @@ icon: lucide/file-code
   "require_sign_in": true,
   "capabilities": {
     "transcoding": { "available": true, "formats": ["aac", "mp3", "opus"], "bitrates": [96, 128, 160, 192, 256, 320] },
-    "signed_urls": true, "pairing": true, "password_sign_in": true, "podcasts": true, "discover": true, "lyrics": true, "library_sync": true
+    "signed_urls": true, "pairing": true, "password_sign_in": true, "podcasts": true, "discover": true, "lyrics": true, "library_sync": true, "playlist_editing": true
   }
 }
 ```
@@ -152,8 +152,22 @@ GET /api/v1/library?since=<cursor>
 | `POST /api/v1/playlists/seen` | 请求体 `{ "name" }`；清除共享给用户的播放列表上的 `new` 标记。 |
 | `GET /api/v1/playlists/hidden?name=` | `{ "name", "songs": [{ "key", "label", "track_id", "hidden_at" }] }`，即用户从自己导入的播放列表中隐藏的歌曲（文件消失后 `track_id` 为空字符串）。 |
 | `POST /api/v1/playlists/hidden` | 请求体 `{ "name", "hide": [track_ids], "show": [keys] }`；从用户导入的播放列表中隐藏曲目（监控或重新导入链接时仍保持隐藏，但曲目仍在媒体库中），或重新显示隐藏曲目。返回 `{ "name", "hidden", "keys", "shown", "restored", "count", "track_ids" }`；将 `keys` 作为 `show` 发送即可撤销隐藏。应在 `mine` 为真的、且 `manual` 和 `liked` 均为假的播放列表中提供此功能（否则返回 `409`）。参见[隐藏播放列表歌曲](features/hidden-playlist-songs.md)。 |
+| `POST /api/v1/playlists` | 请求体 `{ "name" }`；创建空的自建播放列表。 |
+| `POST /api/v1/playlists/rename` | 请求体 `{ "name", "new_name" }`；重命名自建播放列表。 |
+| `POST /api/v1/playlists/tracks` | 请求体 `{ "name", "add"?: [track_id], "remove"?: [track_id], "remove_entries"?: [{ "track_id", "occurrence" }], "allow_duplicates"?: bool }`；按曲目 ID 编辑自建播放列表；三个数组合计最多 10,000 项（超出时返回 `400`）。 |
+| `PUT /api/v1/playlists/order` | 请求体 `{ "name", "track_ids": [...] }`；调整自建播放列表的曲目顺序，包括重复项；最多 10,000 个 ID（超出时返回 `400`）。 |
 | `GET /api/v1/likes` | `{ "track_ids": [...] }`，按最新时间在前排序。 |
 | `PUT /api/v1/likes` | 请求体 `{ "track_id", "liked" }`；操作具有幂等性。 |
+
+### 编辑播放列表
+
+`/api/server/info` 中的 `capabilities.playlist_editing` 为 `true` 时，服务器支持这些写入操作。使用媒体库同步返回的稳定曲目 ID，不要使用文件路径。这四个接口仅适用于自建播放列表，不能删除整个播放列表。所有者或管理员可以重命名；所有者、管理员或共享列表的编辑者可以添加、移除和排序曲目。
+
+成功的写入返回 `{ "name", "manual", "count", "track_ids" }`，`track_ids` 按播放列表顺序排列，重复项各占一项。重命名还返回 `previous`；曲目编辑可能返回 `added`、`removed` 和 `already`。
+
+在 `POST /api/v1/playlists/tracks` 中，`add` 将曲目追加到末尾；已有曲目会被跳过并列入 `already`，除非 `allow_duplicates` 为 `true`。`remove` 移除指定曲目的所有副本；`remove_entries` 仅移除从零开始计数的指定 `occurrence`，不存在的副本不会被移除。调用 `PUT /api/v1/playlists/order` 时，按目标顺序发送当前可见的所有曲目 ID，包括重复项。列表已过期时返回 `409`；重新加载后再试。
+
+无法访问的播放列表或曲目返回 `404`；导入的播放列表或没有写入权限的调用者返回 `403`；请求体或字段无效返回 `400`；媒体库同步索引尚未就绪返回 `503`。成功修改播放列表后，服务器根据可见性向 WebSocket 客户端发送 `playlists_changed`。
 
 ## 5. 串流和下载
 
@@ -256,3 +270,11 @@ POST /api/activity/playback
 - 移动操作分三步：使用 `{ "track_ids": [...] }`（媒体库 ID，最多 200 个）调用 `POST …/preview`；之后每秒左右轮询 `GET …/preview/{request_id}`，直到 `state` 为 `ready`；向用户展示 `items`（标题、格式、路径）并请求确认，随后使用其中的 `confirmation` 调用 `POST …/confirm`（有效期 10 分钟）。确认响应先于实际移动操作返回，因此歌曲应显示为等待处理，而不是已删除。
 - 确认移入回收站的歌曲会以已删除 ID 的形式从媒体库消息流移除（出现在 `GET /api/v1/library` 的 `deleted` 中）；恢复的歌曲会以**相同的 `id`** 返回，因此以 ID 为键的喜欢记录、播放列表、队列条目和离线文件仍能关联到该歌曲。在本次会话首次成功同步之前，不要删除用户队列或离线文件；只有同步明确确认 ID 消失时才视为已移除。
 - 对 `409` 响应中的 `detail.code` 显示相应提示（代码列表见 API 参考）；未知代码按“操作未完成，未删除任何内容”处理。
+
+## 编辑媒体库元数据
+
+已登录用户和已配对设备可以编辑共享媒体库中可见曲目的标签。单曲编辑使用 `PATCH /api/v1/tracks/{track_id}/metadata`，请求体例如 `{"changes": {"title": "新标题"}, "revision": "..."}`；批量编辑使用 `PATCH /api/v1/tracks/metadata/batch`，请求体例如 `{"track_ids": ["id1", "id2"], "changes": {"album": "新专辑名"}}`。
+
+曲目数据中的 `revision` 可用于检测过期编辑：单曲请求直接提供该值，批量请求通过以曲目 ID 为键的 `revisions` 对象提供；不匹配时返回 409。版本字段可省略。批量请求最多接受 500 个不同的 ID，返回 `results` 数组，逐项包含 `id`、`ok`，失败时还包含 `status` 和 `error`。批量操作尽力执行，部分失败不会回滚成功的编辑。单曲编辑返回结果或 HTTP 错误；未知或不可访问的曲目返回 404，无效请求返回 422。
+
+可编辑字段为 `title`、`artist`、`album`、`album_artist`、`track_number`（1–9999 的整数）、`release_date`、`genre`、`explicit` 和 `compilation`（后两项为布尔值）。省略字段保持不变，`null` 清除标签。不支持的格式或文件系统错误会逐曲目报告。成功编辑后服务器会更新媒体库变更流；客户端应重新同步并根据返回的曲目重新分组专辑。编辑标签不会重命名文件，并保留内嵌封面及其他无关标签。

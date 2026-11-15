@@ -526,7 +526,7 @@ def test_the_app_hides_by_track_id(world, monkeypatch):
     ids = {f: f't{n}' for n, f in enumerate(FILES)}
     by_id = {v: k for k, v in ids.items()}
 
-    def track_path(track_id):
+    def track_path(track_id, request):
         if track_id not in by_id:
             raise HTTPException(status_code=404, detail='Track not found')
         return {'file': by_id[track_id]}, world.root / by_id[track_id]

@@ -9,7 +9,7 @@ Downtify는 휴대폰의 앱을 지원할 수 있습니다. 앱은 서버에서 
 ::: warning 앱은 아직 개발 중입니다
 **설정 → 앱 연동**은 *실험적 기능*으로 표시되어 있습니다. 이 페이지에서 설명하는 서버 쪽은 완성되어 동작하지만, **Android 앱은 아직 어떤 버전도 공개되지 않았으므로** 지금은 설치할 것이 없고, 연결과 스트리밍의 세부 사항은 Downtify 버전 사이에 바뀔 수 있습니다.
 
-앱은 [henriquesebastiao/downtify-android](https://github.com/henriquesebastiao/downtify-android)에서 공개적으로 개발되고 있습니다. 같은 API를 기반으로 다른 앱도 만들 수 있습니다 — [모바일 클라이언트 규약](../mobile-client-contract.md)을 참고하세요.
+앱은 [henriquesebastiao/downtify-android](https://github.com/henriquesebastiao/downtify-android)에서 공개적으로 개발되고 있습니다. iPhone 및 iPad 앱은 [michaelmoskie/Downtify-IOS-Client](https://github.com/michaelmoskie/Downtify-IOS-Client)에 있습니다. 같은 API를 기반으로 다른 앱도 만들 수 있습니다 — [모바일 클라이언트 규약](../mobile-client-contract.md)을 참고하세요.
 :::
 
 ## 앱에서 로그인하기

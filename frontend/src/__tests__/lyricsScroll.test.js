@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import { centerWithin } from '../lib/lyricsScroll.js'
+import { centerLine, centerWithin } from '../lib/lyricsScroll.js'
 
 const fakeContainer = (clientHeight = 600) => ({
   clientHeight,
@@ -11,6 +11,24 @@ const fakeLine = (offsetTop, offsetHeight = 40) => ({
   offsetTop,
   offsetHeight,
   scrollIntoView: vi.fn(),
+})
+
+describe('centerLine', () => {
+  const lines = [fakeLine(1000), fakeLine(2000)]
+
+  it('centres the line being sung', () => {
+    const container = fakeContainer()
+    centerLine(container, lines, 1)
+    expect(container.scrollTo.mock.calls[0][0].top).toBe(1720)
+  })
+
+  it('goes back to the first line when the track restarts', () => {
+    // No line is active yet: the lyrics must not wait at the end of the
+    // song until the singing starts.
+    const container = fakeContainer()
+    centerLine(container, lines, -1)
+    expect(container.scrollTo.mock.calls[0][0].top).toBe(720)
+  })
 })
 
 describe('centerWithin', () => {

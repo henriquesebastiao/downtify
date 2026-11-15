@@ -284,6 +284,12 @@ A página de um monitoramento mostra também:
 
 O id do monitoramento (`#12`) aparece ao lado do nome, então dois monitoramentos do mesmo link — duas contas seguindo uma playlist, por exemplo — podem ser diferenciados.
 
+### Os lançamentos de um artista
+
+A página de um acompanhamento de artista também lista todo o catálogo dele na última verificação: cada lançamento que YouTube Music, Deezer e MusicBrainz listam (o mesmo álbum vindo de duas fontes aparece uma vez), em álbuns, mixtapes, EPs, singles e lançamentos ao vivo, coletâneas e remixes. Cada um mostra o que a biblioteca tem dele: **Completo** com o número de faixas, **Em parte**, **Para baixar**, **Anterior ao acompanhamento** (um acompanhamento com **Só lançamentos novos** o pulou), **Não acompanhado** (um tipo ou categoria que o acompanhamento não baixa) ou **Desativado**. Participações e bootlegs têm o próprio filtro e nunca são baixados.
+
+O interruptor ao lado de um lançamento tem prioridade sobre o acompanhamento, como o monitoramento por álbum do Lidarr. Ligado, baixa o lançamento mesmo que o tipo não seja acompanhado ou que tenha saído antes do início do acompanhamento, e uma verificação começa na hora. Desligado, deixa de baixá-lo. As músicas que já estão na biblioteca ficam nos dois casos. **Do MusicBrainz, baixar também** escolhe, só para este artista, quais categorias de lançamento que só o MusicBrainz distingue são baixadas: mixtapes e trilhas sonoras por padrão; álbuns ao vivo, coletâneas, remixes, mixes de DJ e demos quando ativados.
+
 ## De onde veio uma música
 
 **De onde veio** no menu de uma música (em qualquer lugar da Biblioteca) diz qual monitoramento a baixou primeiro, quando e com qual provedor — **Primeira verificação** quando veio com a primeira verificação — e lista todos os monitoramentos que a têm agora, cada um com seu id, dono (para um admin), quando recebeu a música e como: **Baixou**, **Já na biblioteca** ou **Antes do registro**. É um arquivo só: os monitoramentos que compartilham uma música apontam todos para a mesma cópia.

@@ -983,7 +983,7 @@ RULES: list[tuple[frozenset[str], re.Pattern[str], str]] = [
         # Where a song came from and what each watch added (own
         # watches; every one for an admin).
         (_READ, r'^/api/monitor/(stats|provenance)$', USER),
-        (_READ, r'^/api/monitor/playlists/\d+/tracks$', USER),
+        (_READ, r'^/api/monitor/playlists/\d+/(tracks|releases)$', USER),
         # Artists to suggest following, from one's own listens.
         (_READ, r'^/api/monitor/artist-suggestions(/resolve)?$', USER),
         # Admin: signing everyone out, settings and credentials.

@@ -22,6 +22,7 @@ from .library_delete import (
 from .library_metadata import read_audio_metadata
 from .library_paths import locate_library_file
 from .navidrome_index import NavidromeIndex
+from .playlist_identity import made_by_downtify, playlist_key
 from .track_index import normalize_spotify_track_id
 from .track_tag_match import (
     snapshot_spotify_metadata,
@@ -411,6 +412,10 @@ def _effective_navidrome_settings(settings: dict[str, Any]) -> dict[str, Any]:
         'admin_username': admin_username,
         'admin_password': admin_password,
         'public_playlist': bool(raw.get('public_playlist', False)),
+        # Navidrome imports the M3U Downtify writes (with its cover) as a
+        # playlist of its own; with this on, Downtify doesn't create a
+        # second one through the API (see sync_playlist_to_navidrome).
+        'm3u_import': bool(raw.get('m3u_import', False)),
         'scan_after_download': bool(raw.get('scan_after_download', True)),
         'scan_full': bool(raw.get('scan_full', False)),
         'scan_wait_seconds': scan_wait_seconds,
@@ -627,8 +632,134 @@ class NavidromeClient:
             return []
         return [song for song in songs if isinstance(song, dict)]
 
-    def delete_playlist(self, playlist_id: str) -> None:
+    def delete_playlist(
+        self, playlist_id: str, *, admin: bool = False
+    ) -> None:
+        """Delete a playlist - with the admin login when *admin*, which
+        is what a playlist Navidrome imported (owned by its admin)
+        needs."""
+
+        if admin:
+            user, pwd = self._scan_credentials()
+            self._request(
+                'deletePlaylist',
+                {'id': playlist_id},
+                username=user,
+                password=pwd,
+            )
+            return
         self._request('deletePlaylist', {'id': playlist_id})
+
+    def list_playlists(self, *, admin: bool = False) -> list[dict[str, Any]]:
+        """``getPlaylists`` rows the user (or the admin login) can see."""
+
+        user, pwd = (
+            self._scan_credentials()
+            if admin
+            else (self.username, self.password)
+        )
+        body = self._request('getPlaylists', username=user, password=pwd)
+        playlists = body.get('playlists') if isinstance(body, dict) else None
+        items = (
+            playlists.get('playlist') if isinstance(playlists, dict) else []
+        )
+        if isinstance(items, dict):
+            items = [items]
+        return [p for p in items or [] if isinstance(p, dict)]
+
+    def native_playlists(self) -> Optional[list[dict[str, Any]]]:
+        """Every playlist through Navidrome's own API, with the M3U each
+        was imported from (``path``) and whether it follows that file
+        (``sync``) - which the Subsonic API doesn't say. Signs in with
+        the admin login when one is set. ``None`` when that fails (not
+        Navidrome, or no admin rights)."""
+
+        user, pwd = self._scan_credentials()
+        try:
+            login = httpx.post(
+                f'{self.base_url}/auth/login',
+                json={'username': user, 'password': pwd},
+                timeout=self.timeout,
+                follow_redirects=True,
+            )
+            login.raise_for_status()
+            token = str((login.json() or {}).get('token') or '')
+            if not token:
+                return None
+            headers = {'x-nd-authorization': f'Bearer {token}'}
+            found: list[dict[str, Any]] = []
+            start = 0
+            while True:
+                resp = httpx.get(
+                    f'{self.base_url}/api/playlist',
+                    params={'_start': start, '_end': start + 500},
+                    headers=headers,
+                    timeout=self.timeout,
+                    follow_redirects=True,
+                )
+                resp.raise_for_status()
+                batch = resp.json()
+                if not isinstance(batch, list):
+                    return None
+                found.extend(p for p in batch if isinstance(p, dict))
+                if len(batch) < 500 or start > 50_000:
+                    break
+                start += 500
+        except (httpx.HTTPError, ValueError) as exc:
+            logger.info('navidrome: native playlist list failed err={}', exc)
+            return None
+        return [
+            {
+                'id': str(p.get('id') or ''),
+                'name': str(p.get('name') or ''),
+                'songCount': int(p.get('songCount') or 0),
+                'owner': str(p.get('ownerName') or ''),
+                'comment': str(p.get('comment') or ''),
+                'path': str(p.get('path') or ''),
+                'sync': bool(p.get('sync')),
+                'public': bool(p.get('public')),
+            }
+            for p in found
+        ]
+
+    def all_songs(self, *, limit: int = 200_000) -> list[dict[str, Any]]:
+        """Every song Navidrome lists (``search3`` with an empty query,
+        500 at a time), as ``{id, artist, title, duration, path}``."""
+
+        songs: list[dict[str, Any]] = []
+        offset = 0
+        while offset < limit:
+            body = self._request(
+                'search3',
+                {
+                    'query': '',
+                    'songCount': 500,
+                    'songOffset': offset,
+                    'artistCount': 0,
+                    'albumCount': 0,
+                },
+            )
+            result = (
+                body.get('searchResult3') if isinstance(body, dict) else None
+            )
+            batch = result.get('song') if isinstance(result, dict) else None
+            if isinstance(batch, dict):
+                batch = [batch]
+            if not batch:
+                break
+            for song in batch:
+                if isinstance(song, dict):
+                    songs.append({
+                        'id': str(song.get('id') or ''),
+                        'artist': str(song.get('artist') or ''),
+                        'title': str(song.get('title') or ''),
+                        'duration': song.get('duration') or 0,
+                        'path': str(song.get('path') or ''),
+                    })
+            if len(batch) < 500:
+                break
+            offset += 500
+        return songs
 
     def _rest_post(
         self,
@@ -929,6 +1060,41 @@ def _library_dirs_from_settings(
     return Path(dl), slskd_dir
 
 
+def remove_own_playlist_copies(client: NavidromeClient, name: str) -> int:
+    """Delete the playlists Downtify created for *name* through the API.
+
+    Only the Downtify login's own playlists carrying Downtify's comment
+    are touched - never one Navidrome imported or a user made. Names are
+    compared the way the M3U file is named, so ``Chill: Vibes`` also
+    finds the copy for ``Chill Vibes.m3u``.
+    """
+
+    want = playlist_key(name)
+    removed = 0
+    try:
+        playlists = client.list_playlists()
+    except Exception as exc:
+        logger.info('navidrome: could not list playlists err={}', exc)
+        return 0
+    for playlist in playlists:
+        if (
+            playlist_key(str(playlist.get('name') or '')) != want
+            or not made_by_downtify(playlist)
+            or str(playlist.get('owner') or '') != client.username
+        ):
+            continue
+        try:
+            client.delete_playlist(str(playlist.get('id') or ''))
+            removed += 1
+        except Exception as exc:
+            logger.info(
+                'navidrome: could not remove playlist id={} err={}',
+                playlist.get('id'),
+                exc,
+            )
+    return removed
+
+
 def remove_navidrome_playlist_by_name(
     playlist_name: str,
     settings: dict[str, Any],
@@ -1027,6 +1193,21 @@ def sync_playlist_to_navidrome(  # noqa: PLR0914
             scan_complete = _trigger_library_scan(client, cfg, len(songs))
         except Exception as exc:
             logger.info('navidrome: library scan failed err={}', exc)
+
+    if cfg.get('m3u_import') and settings.get('generate_m3u', True):
+        # Navidrome builds this playlist itself from the M3U (and its
+        # cover) on the scan above; a playlist of Downtify's own would
+        # only show up next to it as a duplicate.
+        removed = remove_own_playlist_copies(client, playlist_name)
+        logger.info(
+            'navidrome: {!r} is imported from its M3U by Navidrome; no API '
+            'playlist created ({} earlier copy removed)',
+            playlist_name,
+            removed,
+        )
+        return PlaylistSyncResult(
+            '', playlist_name, 0, len(songs), scanned, scan_complete
+        )
 
     dl_dir, slskd_dir = _library_dirs_from_settings(settings, download_dir)
     song_ids, pending = _match_songs_in_library(

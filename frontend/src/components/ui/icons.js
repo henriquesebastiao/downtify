@@ -20,6 +20,8 @@ export const STROKE = {
   'log-in':
     '<path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3"/>',
   activity: '<path d="M22 12h-4l-3 9L9 3l-3 9H2"/>',
+  stethoscope:
+    '<path d="M5 3H4a1 1 0 0 0-1 1v4a5 5 0 0 0 10 0V4a1 1 0 0 0-1-1h-1"/><path d="M8 13v1a6 6 0 0 0 12 0v-3"/><circle cx="20" cy="9" r="2"/>',
   'hard-drive':
     '<path d="M22 12H2M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11zM6 16h.01M10 16h.01"/>',
   shield: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>',
@@ -54,6 +56,8 @@ export const STROKE = {
   'play-next': '<path d="M4 6h10M4 12h10M4 18h6"/><path d="M17 9v6M14 12h6"/>',
   moon: '<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>',
   sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+  'screen-share':
+    '<path d="M13 3H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-3"/><path d="M8 21h8M12 17v4M17 8l5-5M17 3h5v5"/>',
   monitor:
     '<rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/>',
   mic: '<rect x="9" y="2.5" width="6" height="12" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M8.5 21h7"/>',
@@ -121,6 +125,8 @@ export const STROKE = {
   cookie:
     '<path d="M21 12a9 9 0 1 1-9-9 3 3 0 0 0 4 3 3 3 0 0 0 5 6z"/><path d="M8.5 9.5h.01M12 14h.01M8 15h.01M15 16h.01"/>',
   lock: '<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
+  unlock:
+    '<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 7.5-2"/>',
   refresh: '<path d="M21 12a9 9 0 1 1-2.6-6.4M21 3v6h-6"/>',
   menu: '<path d="M4 6h16M4 12h16M4 18h16"/>',
   'panel-left':
@@ -138,6 +144,8 @@ export const STROKE = {
 }
 
 export const FILLED = {
+  'mic-vocal':
+    '<g transform="rotate(45 12 12)"><path d="M7 3.2a5 5 0 0 1 10 0z"/><path d="M7.2 4.5h9.6l-1 2.6H8.2z"/><path d="M8.6 8.4h6.8l-1.3 11.4H9.9z"/><path d="M10.2 21h3.6l-.4 2.2h-2.8z"/></g><path d="M4.1 19.9c-1.6 1 1 1.8-.8 3.2" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>',
   play: '<path d="M7 4.5v15a1 1 0 0 0 1.5.86l12.5-7.5a1 1 0 0 0 0-1.72L8.5 3.64A1 1 0 0 0 7 4.5z"/>',
   pause:
     '<rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/>',

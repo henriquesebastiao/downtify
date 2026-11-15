@@ -1,7 +1,9 @@
 name: Greetings
 
 on:
-  pull_request:
+  # Post greetings on fork PRs using the base repository's token.
+  # This workflow must never check out or execute code from the PR.
+  pull_request_target:
     types:
       - opened
   issues:

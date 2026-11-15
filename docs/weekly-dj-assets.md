@@ -1,3 +1,7 @@
+---
+icon: lucide/disc-3
+---
+
 # Weekly DJ assets and saved copies
 
 Weekly audio sets now have an owner-scoped metadata index at `GET /api/v1/music-ai/dj/weekly`: ten themes including Rock, Rap, Pop and Electro, four featured sets rotated daily with ready audio first, progress/duration/track counts, and up to twenty saved copies. The request checks current native ACLs without reading or enumerating NAS music. It never schedules analysis, rendering or downloads.

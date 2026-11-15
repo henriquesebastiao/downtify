@@ -17,6 +17,21 @@ Yalnızca yöneticiler sesi değiştirebilir ([Kullanıcılar ve oturum açma](u
 
 Başarısız olursa (video kullanılamıyor ya da YouTube oturum açmanızı istiyor — [YouTube çerezleri](youtube-cookies.md)’ne bakın) dosyanız tam olarak olduğu gibi kalır. Kuyruktaki **Tekrar dene** aynı videoyu yeniden dener; oraya başka bir bağlantı yapıştırmak onunla değiştirir.
 
+## Cihazınızdaki bir dosyayı kullanma
+
+Doğru sürüm YouTube'da yoksa (bir CD kopyası, bir Soulseek indirmesi, birinin gönderdiği bir dosya) kendi dosyanızı kullanın:
+
+1. İletişim kutusunda **Ya da cihazınızdaki bir dosyayı kullanın** altında **Dosya seç…** düğmesine basın ve ses dosyasını seçin.
+2. **Sesi değiştir** düğmesine basın. Dosya yüklenir, okunabilir ses olup olmadığı denetlenir ve eski dosyanın etiketlerini alır.
+
+Parçanın kendi biçimindeki bir dosya (bir `.mp3` için bir `.mp3`) olduğu gibi kullanılır. Başka bir biçim (`.mp3`, `.flac`, `.m4a`, `.ogg`, `.opus`, `.wav`, `.aiff`, `.aac` veya `.webm`), [İndirme ayarları](download-settings.md) içinde seçilen bit hızıyla parçanın biçimine dönüştürülür; bu yüzden elinizde varsa aynı biçimi kullanın. İnternetten hiçbir şey alınmadığı için yalnızca kitaplık modunda da çalışır.
+
+## İndirmeler değiştirilmiş bir dosyaya dokunmaz
+
+**Dosya varsa yeniden indir** açıkken aynı şarkının sonraki bir indirmesi (başka bir izlenen çalma listesinden, bir sanatçı takibinden veya bir çalma listesi indirmesinden), otomatik aramanın bulduğu şeyi değiştirdiğiniz dosyanın üzerine yazardı. Bu yüzden Downtify, sesini hangi yolla olursa olsun değiştirdiğiniz her dosyayı hatırlar ve böyle bir indirme onu zaten indirilmiş sayar. [Kitaplığı iyileştir](library-upgrade.md) da sesini değiştirmez; kapağı, şarkı sözleri ve etiketleri yine iyileştirilebilir.
+
+İletişim kutusu, bir parçanın sesinin elle değiştirildiğini gösterir. **İndirmeler değiştirebilsin** bunu o dosya için kaldırır.
+
 ## Aynı kalanlar
 
 - **Dosya.** Yeni ses aynı yola, aynı biçimde yazılır: bir `.mp3` MP3 olarak kalır ([İndirme ayarları](download-settings.md)’nda seçilen bit hızıyla), bir `.flac` FLAC olarak kalır ve böyle devam eder. Böylece dosyaya işaret eden her çalma listesi, M3U dosyası, beğenilen şarkı, Navidrome girişi ve eşleştirilmiş uygulama ona işaret etmeyi sürdürür.

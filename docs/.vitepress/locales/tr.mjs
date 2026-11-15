@@ -54,10 +54,17 @@ export default {
   },
   nav: {
     groups: {
+      'Music AI & DJ (beta)': 'Music AI & DJ (beta)',
       'Getting Started': 'Başlarken',
       Features: 'Özellikler',
     },
     pages: {
+      'music-ai.md': 'Music AI and DJ (beta)',
+      'personalized-mix-renewal.md': 'Personalized mix renewal',
+      'progressive-decoding.md': 'Progressive DJ rendering',
+      'rhythm-analysis.md': 'Rhythm analysis',
+      'weekly-dj-assets.md': 'Weekly DJ preparation',
+      'weekly-dj-queue.md': 'Weekly DJ controls',
       'index.md': 'Ana sayfa',
       'getting-started/index.md': 'Genel bakış',
       'getting-started/installation.md': 'Kurulum',
@@ -95,6 +102,7 @@ export default {
       'features/library-upgrade.md': 'Kitaplığı iyileştir',
       'features/storage-usage.md': 'Depolama ve kullanım',
       'features/music-trash.md': 'Müzik çöp kutusu',
+      'features/doctor.md': 'Doktor',
       'features/replace-audio.md': 'Sesi değiştir',
       'features/external-playlists.md': 'Import existing playlists',
       'features/m3u-export.md': 'M3U dışa aktarma',

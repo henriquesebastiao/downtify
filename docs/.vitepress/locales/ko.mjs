@@ -53,10 +53,17 @@ export default {
   },
   nav: {
     groups: {
+      'Music AI & DJ (beta)': 'Music AI & DJ (beta)',
       'Getting Started': '시작하기',
       Features: '기능',
     },
     pages: {
+      'music-ai.md': 'Music AI and DJ (beta)',
+      'personalized-mix-renewal.md': 'Personalized mix renewal',
+      'progressive-decoding.md': 'Progressive DJ rendering',
+      'rhythm-analysis.md': 'Rhythm analysis',
+      'weekly-dj-assets.md': 'Weekly DJ preparation',
+      'weekly-dj-queue.md': 'Weekly DJ controls',
       'index.md': '홈',
       'getting-started/index.md': '개요',
       'getting-started/installation.md': '설치',
@@ -94,6 +101,7 @@ export default {
       'features/library-upgrade.md': '라이브러리 업그레이드',
       'features/storage-usage.md': '저장 공간 및 사용량',
       'features/music-trash.md': '음악 휴지통',
+      'features/doctor.md': '닥터',
       'features/replace-audio.md': '오디오 교체',
       'features/external-playlists.md': 'Import existing playlists',
       'features/m3u-export.md': 'M3U 내보내기',

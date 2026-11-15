@@ -284,6 +284,12 @@ La page d’une surveillance affiche aussi :
 
 L’id de la surveillance (`#12`) est affiché à côté de son nom, pour distinguer deux surveillances du même lien — deux comptes qui suivent la même playlist, par exemple.
 
+### Les sorties d’un artiste
+
+La page d’un suivi d’artiste liste aussi tout son catalogue au dernier contrôle : chaque sortie que listent YouTube Music, Deezer et MusicBrainz (le même album venu de deux sources n’apparaît qu’une fois), en albums, mixtapes, EP, singles, et sorties live, compilations et remixes. Chacune montre ce que la bibliothèque en a : **Complète** avec son nombre de titres, **En partie**, **À télécharger**, **Sortie avant le suivi** (un suivi **Nouvelles sorties uniquement** l’a ignorée), **Non suivie** (un type ou un genre que le suivi ne télécharge pas) ou **Désactivée**. Les featurings et les bootlegs ont leur propre filtre et ne sont jamais téléchargés.
+
+L’interrupteur à côté d’une sortie l’emporte sur le suivi, comme le suivi par album de Lidarr. Activé, il la télécharge même si son type n’est pas suivi ou si elle est sortie avant le début du suivi, et un contrôle démarre aussitôt. Désactivé, il ne la télécharge plus. Les morceaux déjà dans la bibliothèque restent dans les deux cas. **Depuis MusicBrainz, télécharger aussi** choisit, pour cet artiste seulement, quels types de sortie que seul MusicBrainz distingue sont téléchargés : mixtapes et bandes originales par défaut ; albums live, compilations, remixes, mixes DJ et démos une fois activés.
+
 ## D’où vient un titre
 
 **D’où il vient** dans le menu d’un titre (partout dans la bibliothèque) indique quelle surveillance l’a téléchargé en premier, quand et avec quel fournisseur — **Première vérification** s’il est venu avec la première vérification — et liste toutes les surveillances qui l’ont maintenant, chacune avec son id, son propriétaire (pour un admin), quand elle a reçu le titre et comment : **L’a téléchargé**, **Déjà dans la bibliothèque** ou **Avant le suivi**. C’est un seul fichier : les surveillances qui partagent un titre pointent toutes vers la même copie.

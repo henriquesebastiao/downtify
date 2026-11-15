@@ -54,10 +54,17 @@ export default {
   },
   nav: {
     groups: {
+      'Music AI & DJ (beta)': 'Music AI & DJ (beta)',
       'Getting Started': 'Primeiros passos',
       Features: 'Recursos',
     },
     pages: {
+      'music-ai.md': 'Music AI and DJ (beta)',
+      'personalized-mix-renewal.md': 'Personalized mix renewal',
+      'progressive-decoding.md': 'Progressive DJ rendering',
+      'rhythm-analysis.md': 'Rhythm analysis',
+      'weekly-dj-assets.md': 'Weekly DJ preparation',
+      'weekly-dj-queue.md': 'Weekly DJ controls',
       'index.md': 'Início',
       'getting-started/index.md': 'Visão geral',
       'getting-started/installation.md': 'Instalação',
@@ -95,6 +102,7 @@ export default {
       'features/library-upgrade.md': 'Melhorar a biblioteca',
       'features/storage-usage.md': 'Armazenamento e uso',
       'features/music-trash.md': 'Lixeira de músicas',
+      'features/doctor.md': 'Doutor',
       'features/replace-audio.md': 'Substituir áudio',
       'features/external-playlists.md': 'Import existing playlists',
       'features/m3u-export.md': 'Exportação M3U',

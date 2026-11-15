@@ -72,7 +72,11 @@ Accepted URLs:
 
 A handle is resolved to the artist's channel when you add the watch, so the same artist pasted by handle and by channel URL is recognized as one watch. A handle that doesn't belong to a YouTube Music artist is rejected.
 
-On each sweep Downtify lists the artist's discography, compares it against the releases it has already processed, and downloads every track of anything new. A steady-state sweep costs a single request — tracklists are only fetched for releases it hasn't seen before.
+On each sweep Downtify lists the artist's discography, compares it against the releases it has already processed, and downloads every track of anything new. A steady-state sweep costs one request per catalogue — tracklists are only fetched for releases it hasn't seen before.
+
+The discography is read from **Deezer** as well as YouTube Music, because YouTube Music's artist page doesn't always list everything: Drake's leaves out *Views*, for example. The Deezer artist is found by name on the watch's first check (the most followed one with exactly that name) and kept from then on. A release both catalogues list is downloaded once: its songs are linked to the files the other one brought in. Deezer also lists the singles an artist is only a guest on, like another artist's `Song (feat. Drake)`; those are skipped, while a release the artist shares top billing on (a joint album or single) is downloaded. If one catalogue doesn't answer, the sweep goes ahead with the other. When an existing **New releases only** watch reads Deezer for the first time, everything Deezer lists at that point is skipped too, like the back catalogue was.
+
+**MusicBrainz** (musicbrainz.org, the open music encyclopedia Lidarr is built on) fills in what both of them miss: mixtapes, older and rarer releases. Each of its *release groups* is one album, EP or single with all of its editions; Downtify downloads one official edition of each: explicit rather than clean, the one with the most tracks (a deluxe edition holds the standard one). A group with no official edition (a bootleg: a big rapper has dozens of fan-made "street" compilations of songs he already released) is skipped. A group YouTube Music or Deezer already lists under the same name and type is left to them. The MusicBrainz artist is found on the watch's first check through the artist's Deezer page or YouTube Music channel (MusicBrainz links to both), else by name, but only when exactly one artist has exactly that name, and kept from then on. As with Deezer, the groups an artist is only a guest on (`Song (feat. Drake)`) are skipped. Mixtapes and soundtracks are downloaded; live albums, compilations, remixes, DJ mixes and demos, which mostly repeat the artist's songs, are not. MusicBrainz asks for at most one request a second, so a big artist's first check takes a few minutes; later checks cost a request or two. Settings `artist_watch_musicbrainz` (on) and `artist_watch_musicbrainz_kinds` (`["mixtape", "soundtrack"]`; also `live`, `compilation`, `remix`, `dj-mix`, `demo`) control it.
 
 ::: info Why the discography comes from YouTube Music
 Spotify's public embed exposes an artist's name and a top-tracks preview, but **not** their discography — reading that would need Spotify API credentials, which Downtify deliberately doesn't use. So a Spotify artist link is resolved to its name and matched to the same artist on YouTube Music, which is also where the audio is fetched from. The upside: every release Downtify can see is one it can actually download. The trade-off: the link follows the YouTube Music artist with exactly that name (case and punctuation aside), YouTube Music's best match when several share it. For a common name, check that the watch is the artist you meant, and paste the YouTube Music artist URL directly if it isn't. A Spotify artist whose exact name no YouTube Music artist has can only be added that way: Downtify doesn't guess.
@@ -103,6 +107,8 @@ How they behave when you change them later:
 The Monitor list shows a watch's filters under its link when they're not the defaults (e.g. **Albums** · **New only**).
 
 A release is only recorded as processed once every one of its tracks is accounted for, so a track that fails on a transient error is retried on the next sweep rather than being skipped forever. Tracks that already downloaded are never fetched twice.
+
+A song the library already has is linked instead of downloaded again, even under another name. That covers a song downloaded from a playlist (named from Spotify, where YouTube Music writes `(feat. …)` for Spotify's `(with …)`), a single that is also on the album, and an album's deluxe edition. Two songs count as the same when their first artist and their title match, with `(feat. …)`, `(with …)`, remaster tags and Deezer's `(Album Version)` / `(Explicit Version)` ignored, and their lengths are within 3 seconds, so a live version or a remix is still downloaded. When a *different* song already has the file name a track would get (two albums' `Intro`, with files organized by artist but not by album), the track is saved with the album's name added, as `Intro (Album)`.
 
 Artist watches don't generate M3U files — the tracks are laid out by your [file organization](file-organization.md) settings rather than as a playlist.
 
@@ -283,6 +289,12 @@ A watch's page also shows:
 - **Open in Library** (the playlist's page, or the artist's for an artist watch), **Open original** and **Check now**
 
 The watch's id (`#12`) is shown next to its name, so two watches of the same link — two accounts following one playlist, say — can be told apart.
+
+### An artist's releases
+
+An artist watch's page also lists the artist's whole catalogue as of its last check: every release YouTube Music, Deezer and MusicBrainz list (the same album from two of them is shown once), under albums, mixtapes, EPs, singles, and live, compilation and remix releases. Each shows what the library has of it: **Complete** with its track count, **Partly**, **To download**, **Out before the watch** (a **New releases only** watch skipped it), **Not watched** (a type or kind the watch doesn't download) or **Off**. Guest spots and bootlegs have their own filter and never download.
+
+The switch next to a release overrides the watch, like Lidarr's per-album monitoring. On downloads it even when its type isn't watched or it came out before the watch started, and a check starts right away. Off stops downloading it. Songs already in the library stay either way. **From MusicBrainz, also download** chooses, for this artist only, which kinds of release only MusicBrainz tells apart are downloaded: mixtapes and soundtracks by default; live albums, compilations, remixes, DJ mixes and demos when turned on.
 
 ## Where a song came from
 

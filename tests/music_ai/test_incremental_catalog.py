@@ -45,7 +45,7 @@ def test_native_cursor_only_reads_changed_rows_and_invalidates_replaced_sources(
     assert len(candidates(database, 'm', limit=25)) == 25
 
 
-def test_native_bulk_lookup_preserves_requested_order_without_full_feed(
+def test_native_bulk_lookup_resolves_requested_ids_without_full_feed(
     tmp_path, monkeypatch
 ):
     native = LibrarySync(tmp_path / 'native.db')
@@ -56,8 +56,9 @@ def test_native_bulk_lookup_preserves_requested_order_without_full_feed(
         'changes',
         lambda *a, **k: (_ for _ in ()).throw(AssertionError('No full feed')),
     )
-    assert [row['id'] for row in native.rows_for(ids[::-1])] == ids[::-1]
-    assert native.rows_for([]) == []
+    resolved = native.rows_for(ids[::-1])
+    assert [resolved[identity]['id'] for identity in ids[::-1]] == ids[::-1]
+    assert native.rows_for([]) == {}
 
 
 def test_visible_selection_checks_current_acl_and_hidden_files_using_only_points(
@@ -71,11 +72,12 @@ def test_visible_selection_checks_current_acl_and_hidden_files_using_only_points
         {'id': 'one', 'file': 'one.mp3'},
         {'id': 'hidden', 'file': 'hidden.mp3'},
         {'id': 'other', 'file': 'other.mp3'},
+        {'id': 'forbidden', 'file': 'forbidden.mp3'},
     ]
 
     def points(ids):
         calls.append(ids)
-        return [row for row in rows if row['id'] in ids]
+        return {row['id']: row for row in rows if row['id'] in ids}
 
     monkeypatch.setattr(routes, 'owner', lambda _: 1)
     monkeypatch.setattr(
@@ -84,7 +86,7 @@ def test_visible_selection_checks_current_acl_and_hidden_files_using_only_points
     monkeypatch.setattr(
         api,
         'allowed_entry_keys',
-        lambda _, entries=None: {'one.mp3', 'hidden.mp3'},
+        lambda _, entries=None: {'one.mp3', 'hidden.mp3', 'other.mp3'},
     )
     monkeypatch.setattr(
         api,
@@ -96,6 +98,8 @@ def test_visible_selection_checks_current_acl_and_hidden_files_using_only_points
     )
     assert [
         row['id']
-        for row in routes.visible_rows(None, ['one', 'hidden', 'other'])
-    ] == ['one']
-    assert calls == [['one', 'hidden', 'other']]
+        for row in routes.visible_rows(
+            None, ['other', 'one', 'one', 'hidden', 'missing', 'forbidden']
+        )
+    ] == ['other', 'one']
+    assert calls == [['other', 'one', 'hidden', 'missing', 'forbidden']]

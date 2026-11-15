@@ -129,6 +129,7 @@ export function normalizeTrack(row) {
     trackNumber: Number(raw.track_number) || 0,
     year: String(raw.year || ''),
     releaseDate: String(raw.release_date || raw.year || ''),
+    genre: String(raw.genre || ''),
     duration: Number(raw.duration) || 0,
     explicit: Boolean(raw.explicit),
     // Admins only: why users can't see this track ('track', 'album' or

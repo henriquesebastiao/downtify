@@ -10,6 +10,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from downtify.deezer import (
+    album_credits_from_id,
     album_from_id,
     artist_page_from_id,
     artist_top_songs_from_id,
@@ -198,6 +199,29 @@ def test_album_from_id_numbers_tracks_in_order():
     # The album's own release date fills in every track's, since the
     # per-track rows embedded here don't carry one.
     assert all(s['year'] == '2023' for s in songs)
+
+
+def test_album_credits_from_id_names_the_main_artists():
+    payload = {
+        'title': '$ome $exy $ongs 4 U',
+        'release_date': '2025-02-14',
+        'artist': {'id': 1, 'name': 'PARTYNEXTDOOR'},
+        'contributors': [
+            {'name': 'PARTYNEXTDOOR', 'role': 'Main'},
+            {'name': 'Drake', 'role': 'Main'},
+            {'name': 'A Producer', 'role': 'Featured'},
+        ],
+        'tracks': {'data': [_album_track_row(1, 'CN TOWER', 'PARTYNEXTDOOR')]},
+    }
+    with patch(
+        'downtify.deezer.httpx.get', return_value=_mock_response(payload)
+    ) as get:
+        owner, main, songs = album_credits_from_id('999')
+    assert owner == 'PARTYNEXTDOOR'
+    assert main == ['PARTYNEXTDOOR', 'Drake']
+    assert [s['name'] for s in songs] == ['CN TOWER']
+    assert songs[0]['album_artist'] == 'PARTYNEXTDOOR'
+    assert get.call_count == 1
 
 
 def test_album_from_id_follows_pagination():

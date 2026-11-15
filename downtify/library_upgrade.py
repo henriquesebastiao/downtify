@@ -424,6 +424,8 @@ class UpgradeDeps:
     publish: Optional[Callable[[dict[str, Any]], None]] = None
     rekey_owners: Optional[Callable[[str, str, str], None]] = None
     audio_replacement: Any = None
+    # Files whose audio an admin replaced by hand: their audio is kept.
+    hand_replaced: Any = None
 
 
 def resolve_track(stored_path: str, ctx: LibraryContext) -> Optional[Path]:
@@ -999,6 +1001,19 @@ class LibraryUpgradeRunner:
     ) -> None:
         def on_stage(stage: str) -> None:
             self.db.set_stage(run_id, stored, stage)
+
+        hand = self.deps.hand_replaced
+        if 'audio' in todo and hand is not None and hand.protected(stored):
+            # Audio an admin picked by hand isn't swapped for a match.
+            todo = [name for name in todo if name != 'audio']
+            if not todo:
+                self.db.finish_job(
+                    run_id,
+                    stored,
+                    JOB_SKIPPED,
+                    detail='Audio replaced by hand; kept',
+                )
+                return
 
         try:
             if 'audio' in todo:

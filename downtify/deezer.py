@@ -1028,6 +1028,37 @@ def album_from_id(album_id: str) -> list[dict[str, Any]]:
     return _album_songs(_get_json(f'https://api.deezer.com/album/{album_id}'))
 
 
+def album_credits_from_id(
+    album_id: str,
+) -> tuple[str, list[str], list[dict[str, Any]]]:
+    """``(album_artist, main_artists, songs)`` for a Deezer album - its
+    tracks as :func:`album_from_id` lists them, plus whom the release is
+    credited to, in the same single request: the album artist and every
+    contributor Deezer gives the ``Main`` role (a joint album's second
+    artist; also, often, the guest of a "feat." single).
+
+    Raises :class:`ValueError` when the id doesn't resolve or the
+    request fails.
+    """
+
+    payload = _get_json(f'https://api.deezer.com/album/{album_id}')
+    artist = (
+        payload.get('artist')
+        if isinstance(payload.get('artist'), dict)
+        else {}
+    )
+    main = [
+        str(row.get('name') or '').strip()
+        for row in payload.get('contributors') or []
+        if isinstance(row, dict) and row.get('role') == 'Main'
+    ]
+    return (
+        str(artist.get('name') or '').strip(),
+        [name for name in main if name],
+        _album_songs(payload),
+    )
+
+
 def _album_songs(payload: dict[str, Any]) -> list[dict[str, Any]]:
     """Every track of an already-fetched ``GET /album/{id}`` response -
     see :func:`album_from_id`."""

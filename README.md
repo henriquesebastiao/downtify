@@ -3,7 +3,8 @@
 <p align="center">
   <a href="https://downtify.henriquesebastiao.com/getting-started/installation/">Install</a> •
   <a href="https://downtify.henriquesebastiao.com/">Documentation</a> •
-  <a href="https://github.com/henriquesebastiao/downtify-android">Android App</a>
+  <a href="https://github.com/henriquesebastiao/downtify-android">Android App</a> •
+  <a href="https://github.com/michaelmoskie/Downtify-IOS-Client">iOS App</a>
 </p>
 <p align="center">
   <a href="https://downtify.henriquesebastiao.com/features/">Features</a> •
@@ -17,6 +18,7 @@
 <div align="center">
 
 [![Test](https://github.com/henriquesebastiao/downtify/actions/workflows/test.yml/badge.svg)](https://github.com/henriquesebastiao/downtify/actions/workflows/test.yml)
+[![CodSpeed](https://img.shields.io/endpoint?url=https://codspeed.io/badge.json)](https://app.codspeed.io/henriquesebastiao/downtify?utm_source=badge)
 [![GitHub Release](https://img.shields.io/github/v/release/henriquesebastiao/downtify?color=blue)](https://github.com/henriquesebastiao/downtify/releases)
 [![GitHub License](https://img.shields.io/github/license/henriquesebastiao/downtify?color=blue)](/LICENSE)
 [![Docker Pulls](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fghcr-badge.elias.eu.org%2Fapi%2Fhenriquesebastiao%2Fdowntify%2Fdowntify&query=downloadCount&style=flat&label=docker%20pulls)](https://github.com/henriquesebastiao/downtify/pkgs/container/downtify)
@@ -30,88 +32,21 @@
 
 ## Experimental music AI and DJ beta
 
-**Opt-in beta. All modules and the additional unqualified-DJ trial default off
-for new installations/accounts.** Existing explicit preferences survive updates.
+**Opt-in beta: all modules and the unqualified-engine trial default off for new
+installations and accounts.** Existing explicit preferences are preserved.
+Four daily mixes appear below favorite playlists; weekly DJ sets, song-based
+mixes and queue DJ use the common player. DJ uses local files, never radio.
+CPU companions analyze music and prepare server transitions without changing
+original files; the Android device engine remains a short-fade prototype.
 
-My music shows four daily selections below favorite playlists: Relaxation,
-Focus, Motivation and Calm, with a See all page for daily/weekly playlists.
-The separate DJ page offers themes/genres, prepared sets and continuous local
-mixes. Song menus distinguish a classic similar-track mix from a DJ mix.
-The queue also has a DJ button; playback, pause, sleep timer and system media
-controls use the same player.
-
-DCLAP/ONNX analysis runs in a separate CPU companion. Beat This!, Rubber Band
-and a single HLS encoder prepare server transitions. Audio roots stay read-only.
-Native authentication, current catalog visibility and per-account isolation
-remain authoritative. External discovery is separately optional; DJ uses local
-files and never falls back to radio.
-
-| Component | Configured starting budget |
-| --- | --- |
-| Analysis | 0.5 CPU, 1.5 GiB memory cap, one file and one inference thread |
-| DJ | 1 CPU, 2 GiB memory cap, one session, separate 5 GiB disk cache |
-| Scheduling | One heavy compute lease shared by analysis and DJ; DJ has priority |
-| Preparation | Current deck plus up to three following decks; 24-second committed render horizon |
-| Android | 64 MiB audio allocator target; live HLS bypasses the persistent library cache |
-
-These are configurable limits, **not measured minimum requirements or measured
-phone consumption**. Pausing DJ or filling its render horizon yields compute
-back to analysis. Interactive HTTP reads do not reconcile the full catalog;
-the indexer consumes native revisions in the background. DJ status uses bounded
-playback windows, private ETags and session summaries.
-
-A local synthetic comparison on 50,000 catalog entries measured home cards at
-46.49 ms median / 51.81 ms p95 over 25 runs, resolving at most 160 selected ids
-and making zero full-catalog calls. The reconstructed former reconciliation
-path measured 2,812.54 ms median over three runs. This is an in-process
-comparison, **not** a LAN, NAS or Android benchmark.
-
-One post-deployment snapshot, about 50 minutes after startup on 6 November 2026,
-reported the following Docker process usage:
-
-| Component | Observed CPU | Observed memory |
-| --- | --- | --- |
-| Web | 0.24% | 283.9 MiB |
-| Analysis | 1.20% | 78.05 MiB |
-| DJ | 1.36% | 21.18 MiB |
-
-All three containers were running with zero restarts and no observed OOM exit.
-This is a **single uncontrolled snapshot**: model warm-up, concurrent work and
-playback load were not controlled. It establishes neither active-mix/inference
-throughput nor a controlled before/after improvement, minimum RAM or phone cost.
-
-Latest web checks: 777 tests passed (one existing skipped) and the production
-build passed. Earlier backend checks passed 116 focused Python checks, 75 Linux
-DJ checks with local models, and 3,375 native/server checks plus ten subtests. Test groups overlap;
-they are not a subjective music-quality score. The broad server harness needs
-a writable temporary workspace for its trash fixtures, while production can
-remain read-only.
-
-The 7 November live-pipeline correction passed 98 isolated Linux DJ checks
-(real FFmpeg/Beat This! runtime) and 25 targeted Windows checks (one explicit
-symlink-privilege skip). Deck analysis and decoding now run in one cancellable
-preparation slot while HLS production and transport commands remain responsive.
-The current deck and three following occurrences are retained; a single staged
-plan change waits for its audio before taking effect. These synthetic checks
-do not replace an uninterrupted real playback trial or physical Android tests.
-
-The final candidate passed 100 Linux checks, including two cache-identity
-regressions. Its subsequent real trial still failed continuity on clock drift
-and reader events; long segment loads and an unresponsive test browser were
-observed without establishing one cause. It remains unqualified. Administrator
-diagnostics include simultaneous monotonic/wall timestamps to distinguish clock
-effects in the next trial; trial opt-in no longer hides the validation action.
-
-The real uninterrupted one-hour DJ qualification, comparative listening,
-physical Android/background acceptance and phone thermal/battery measurements
-remain pending. A separate **voluntary unqualified-engine trial** allows testing
-an available server engine without pretending it is qualified. It requires both
-administrator and user opt-in and can be disabled independently. The Android
-companion offers an optional short-fade device prototype; on-device beat-model
-inference and physical qualification are still pending.
-
-See [builds, licenses, API behavior and beta limits](docs/music-ai.md).
-The matching Android contribution is [downtify-android#49](https://github.com/henriquesebastiao/downtify-android/pull/49).
+Starting configurable limits are **0.5 CPU / 1.5 GiB for analysis**, **1 CPU /
+2 GiB and a separate 5 GiB cache for DJ**, plus bounded client audio caches.
+These limits are not measured minimum requirements or phone consumption.
+Real-time continuity, comparative listening and physical-device qualification
+remain pending. See the [setup, controls, licenses, historical measurements and
+beta limits](docs/music-ai.md), including where the features appear and how to
+test them. The matching Android contribution is
+[downtify-android#49](https://github.com/henriquesebastiao/downtify-android/pull/49).
 
 ## Overview
 
@@ -145,13 +80,13 @@ Optional **OpenID Connect** login works alongside local accounts and can restric
 | **Hidden playlist songs** | Hide songs you don't want from a downloaded or watched playlist, on the web or from the apps; they stay out when the playlist syncs again and stay in your library. See [Hidden playlist songs](https://downtify.henriquesebastiao.com/features/hidden-playlist-songs/). |
 | **Support the artist** | Found something you love? Open where to buy it: the iTunes Store item with its price, Bandcamp and Qobuz searches, and the artist's own website. See [Support the Artist](https://downtify.henriquesebastiao.com/features/support-artists/). |
 | **Playlist search** | Search a whole playlist, however long (`Ctrl`/`⌘`+`F` on its page), filter its songs, and check a Spotify playlist's pipeline counts from its source tracklist through Navidrome. See [Search and diagnostics](https://downtify.henriquesebastiao.com/features/library-catalog/#search-a-playlist). |
-| **Built-in player**              | Full-screen Now playing with synced lyrics, an editable queue, a sleep timer, keyboard shortcuts, media keys and a ten-band equalizer (experimental). See [Built-in player](https://henriquesebastiao.github.io/downtify/features/player/).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| **Built-in player**              | Full-screen Now playing with synced lyrics, a karaoke view you can project on a second screen, an editable queue, a sleep timer, keyboard shortcuts, media keys and a ten-band equalizer (experimental). See [Built-in player](https://henriquesebastiao.github.io/downtify/features/player/).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 | **Volume normalization**         | Play every song at a similar loudness in the web player and the Android app, from measurements an admin starts. Choose Normal, Louder or Maximum in the web player, with measured peak protection; audio files are never changed. See [Volume normalization](https://downtify.henriquesebastiao.com/features/playback-normalization/). |
 | **Liked songs**                  | Tap the heart on a song and a _Liked songs_ playlist of everything you have liked appears, in Downtify and in your media server. See [Liked songs](https://henriquesebastiao.github.io/downtify/features/liked-songs/).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 | **Podcasts**                     | Subscribe by RSS feed, Spotify link or name; new episodes download, tag and keep their resume position on their own. See [Podcasts](https://henriquesebastiao.github.io/downtify/features/podcasts/).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | **Discover**                     | Artists, albums and playlists you don't have yet, suggested from your library, liked songs and what you play — from Deezer first, with Spotify's picks added as they arrive, no account or API key. Artists and Deezer albums open in the Finder; play any album's or playlist's songs in full before downloading, and hide any artist you never want suggested. See [Discover](https://henriquesebastiao.github.io/downtify/features/discover/).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 | **Users & activity**             | Sign in with a username and password; admins add accounts for the rest of the house. The library is shared — everyone sees every downloaded song — and admins can hide songs, albums or artists from users. Likes and playlists stay per account unless you share a playlist with named users or with everyone — view-only, or letting the people you pick add and remove its songs ([Collaborative playlists](https://downtify.henriquesebastiao.com/features/collaborative-playlists/)) — and an activity log shows who signed in and who is playing what. See [Users & sign-in](https://henriquesebastiao.github.io/downtify/features/users/).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
-| **Mobile apps** _(experimental)_ | Sign in to a phone app with your account (or pair it by QR code) and stream your library to it — original quality or transcoded for mobile data — with offline copies and casting. The server side is ready; the Android app itself is [still in development](#downtify-for-android). See [Mobile apps](https://henriquesebastiao.github.io/downtify/features/mobile-apps/).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| **Mobile apps** _(experimental)_ | Sign in to a phone app with your account (or pair it by QR code) and stream your library to it, with offline copies. The server also supports transcoding and casting; app features vary. See the [Android](#downtify-for-android) and [iOS](#downtify-for-ios) apps. See [Mobile apps](https://henriquesebastiao.github.io/downtify/features/mobile-apps/).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 | **Library**                      | Albums, artists, playlists and tracks in a grid or a list, with filtering, sorting (the Tracks tab and every playlist's songs too), multi-select and download as a ZIP. Create your own playlists (and rename them), add songs from downloads or extra folders, put them in any order and repeat a song ([Playlist order](https://downtify.henriquesebastiao.com/features/playlist-order/)); imported Spotify/YouTube playlists stay read-only until you detach them from their source to edit them. **Existing music folders** import a collection you already have (tags stay on disk; artists are matched to the library). **Upgrade library** repairs small covers, missing lyrics and incomplete tags on music you already have, without re-downloading, and **Replace audio** swaps a wrongly matched song for the version you pick, keeping it in its playlists. **Mark as Various Artists** turns an album into a compilation in its tags ([details](https://henriquesebastiao.github.io/downtify/features/file-organization/#marking-an-album-as-various-artists)). Pick a real photo and banner for an artist from YouTube Music, Deezer, Spotify or your own upload. See [Library catalog](https://henriquesebastiao.github.io/downtify/features/library-catalog/), [Existing music folders](https://henriquesebastiao.github.io/downtify/features/external-library/), [Upgrade library](https://henriquesebastiao.github.io/downtify/features/library-upgrade/), [Replace audio](https://henriquesebastiao.github.io/downtify/features/replace-audio/) and [Artist photo & banner](https://henriquesebastiao.github.io/downtify/features/artist-images/). |
 | **Storage & usage** | For admins: how big the library is and how fast it grows (day by day), which source each part came from (YouTube Music, YouTube, Soulseek...), how downloads ended (completed, skipped, failed) and the free space left, plus what could be cleaned up - duplicate songs, slskd working copies kept apart from the library, leftover temporary files and orphaned lyrics or covers. Nothing is deleted from it. See [Storage & Usage](https://downtify.henriquesebastiao.com/features/storage-usage/). |
 | **Music trash** | Optional (`DOWNTIFY_TRASH=true`): an admin's delete moves songs to a trash kept for 30 days instead, restorable with their likes and playlists from the web or the Android app, and automatic downloads skip them meanwhile. See [Music Trash](https://downtify.henriquesebastiao.com/features/music-trash/). |
@@ -248,6 +183,12 @@ An Android app is being built: it signs in to your server with your username and
 
 Repository: **[henriquesebastiao/downtify-android](https://github.com/henriquesebastiao/downtify-android)**
 
+## Downtify for iOS
+
+An iPhone and iPad app signs in to your server with your username and password (or pairs by scanning a QR code from **Settings → Apps**), then browses and plays your library, keeps songs on the device for offline listening, and offers background and lock-screen playback controls. It requires iOS 17 or later.
+
+Repository: **[michaelmoskie/Downtify-IOS-Client](https://github.com/michaelmoskie/Downtify-IOS-Client)**
+
 Anything that talks to the server can be built against the same API — see the [mobile client contract](https://henriquesebastiao.github.io/downtify/mobile-client-contract/).
 
 ## Troubleshooting
@@ -258,9 +199,9 @@ See **[Troubleshooting](https://henriquesebastiao.github.io/downtify/troubleshoo
 
 ## Translations
 
-The interface is available in English, Spanish, Brazilian Portuguese, French, Turkish, Hungarian, Greek, Bulgarian, German, Korean and Simplified Chinese (简体中文, `zh-CN`). Switch the app's language in **Settings → Language**; the choice is saved in the browser and applies without a reload.
+The interface is available in English, Spanish, Brazilian Portuguese, French, Turkish, Hungarian, Greek, Bulgarian, German, Korean, Simplified Chinese (简体中文, `zh-CN`) and Traditional Chinese (繁體中文, `zh-TW`). Switch the app's language in **Settings → Language**; the choice is saved in the browser and applies without a reload.
 
-The [documentation](https://downtify.henriquesebastiao.com/) is translated into the same languages except Simplified Chinese. It opens in your browser's language when it is translated into it (English otherwise), and the globe button in the top bar switches language. See [Internationalization](https://henriquesebastiao.github.io/downtify/features/internationalization/) for the app and documentation language list.
+The [documentation](https://downtify.henriquesebastiao.com/) is translated into the same languages, with two exceptions: Simplified Chinese is partly translated, and Traditional Chinese is not available yet. It opens in your browser's language when it is translated into it (English otherwise), and the globe button in the top bar switches language. See [Internationalization](https://henriquesebastiao.github.io/downtify/features/internationalization/) for the app and documentation language list.
 
 ### Contributing translations
 
