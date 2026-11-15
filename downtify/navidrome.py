@@ -761,6 +761,83 @@ class NavidromeClient:
             offset += 500
         return songs
 
+    @staticmethod
+    def _as_list(value: Any) -> list[dict[str, Any]]:
+        """Subsonic sends a single entry as an object, not a list."""
+
+        if isinstance(value, dict):
+            value = [value]
+        if not isinstance(value, list):
+            return []
+        return [item for item in value if isinstance(item, dict)]
+
+    def artists(self) -> list[dict[str, str]]:
+        """Every artist (``getArtists``) as ``{id, name}``."""
+
+        body = self._request('getArtists')
+        root = body.get('artists') if isinstance(body, dict) else None
+        found: list[dict[str, str]] = []
+        for index in self._as_list(
+            root.get('index') if isinstance(root, dict) else None
+        ):
+            for artist in self._as_list(index.get('artist')):
+                found.append({
+                    'id': str(artist.get('id') or ''),
+                    'name': str(artist.get('name') or ''),
+                })
+        return found
+
+    def artist_albums(self, artist_id: str) -> list[dict[str, Any]]:
+        """An artist's albums (``getArtist``) as
+        ``{id, name, song_count}``."""
+
+        body = self._request('getArtist', {'id': artist_id})
+        artist = body.get('artist') if isinstance(body, dict) else None
+        return [
+            {
+                'id': str(album.get('id') or ''),
+                'name': str(album.get('name') or ''),
+                'song_count': int(album.get('songCount') or 0),
+            }
+            for album in self._as_list(
+                artist.get('album') if isinstance(artist, dict) else None
+            )
+        ]
+
+    def album(self, album_id: str) -> dict[str, Any]:
+        """An album (``getAlbum``) as ``{id, name, artist, songs}``, each
+        song ``{id, title, starred, rating}``."""
+
+        body = self._request('getAlbum', {'id': album_id})
+        album = body.get('album') if isinstance(body, dict) else None
+        if not isinstance(album, dict):
+            album = {}
+        songs: list[dict[str, Any]] = []
+        for song in self._as_list(album.get('song')):
+            try:
+                rating = int(song.get('userRating') or 0)
+            except (TypeError, ValueError):
+                rating = 0
+            songs.append({
+                'id': str(song.get('id') or ''),
+                'title': str(song.get('title') or ''),
+                'starred': bool(song.get('starred')),
+                'rating': rating,
+            })
+        return {
+            'id': str(album.get('id') or album_id),
+            'name': str(album.get('name') or ''),
+            'artist': str(album.get('artist') or ''),
+            'songs': songs,
+        }
+
+    def set_rating(self, song_id: str, rating: int) -> None:
+        """Give a song 0-5 stars (``setRating``)."""
+
+        self._request(
+            'setRating', {'id': song_id, 'rating': max(0, min(5, rating))}
+        )
+
     def _rest_post(
         self,
         endpoint: str,
