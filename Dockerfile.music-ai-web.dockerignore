@@ -1,0 +1,16 @@
+# This recipe copies a prebuilt frontend; the native Dockerfile builds its own.
+# Only the files used by COPY belong in this context.
+**
+!main.py
+!downtify/
+!downtify/**
+!frontend/
+!frontend/dist/
+!frontend/dist/**
+!LICENSE
+!docs/
+!docs/music-ai.md
+**/__pycache__
+**/*.pyc
+**/.env*
+**/*.keystore

@@ -16,6 +16,9 @@ inside `frontend/`. Create a source offer from the committed public revision usi
 Build `Dockerfile.music-ai-web` with
 `--build-context source_offer=<source-offer-directory>`. Keep that corresponding
 source archive available to authenticated users of modified builds.
+Keep `Dockerfile.music-ai-web.dockerignore` beside the recipe: its limited build
+context includes the prebuilt frontend, which the native recipe's ignore file
+otherwise excludes. It does not include local environments or signing material.
 
 The analysis recipe also needs `audio_bundle` and `sqlite_source` named contexts;
 the DJ recipe needs `dj_models` and `sqlite_source`. Models are public upstream
