@@ -24,8 +24,7 @@ RUN mkdir -p /usr/share/doc/music-ai \
     && python -m pip uninstall -y pip
 RUN mkdir -p /app/downtify/music_ai /models && touch /app/downtify/__init__.py
 COPY --from=audio_bundle --chmod=444 /manifest.json /moods.json /model_epoch_36.onnx /model_epoch_36.onnx.data /models/
-COPY downtify/music_ai/__init__.py downtify/music_ai/store.py downtify/music_ai/encoder.py downtify/music_ai/worker.py downtify/music_ai/sqlite_busy.py /app/downtify/music_ai/
-COPY downtify/music_ai/ranking.py downtify/music_ai/compute_budget.py /app/downtify/music_ai/
+COPY downtify/music_ai/ /app/downtify/music_ai/
 COPY curation/benchmark_companion.py /app/benchmark_companion.py
 COPY LICENSE /usr/share/licenses/music-ai/AGPL-3.0.txt
 COPY docs/music-ai.md /usr/share/doc/music-ai/README.md

@@ -60,6 +60,20 @@
       </p>
     </div>
     <div
+      v-if="player.dj.value && djController.failure.value"
+      class="mx-2 mb-3"
+      role="alert"
+    >
+      <p class="text-sm text-red-300">{{ djController.failure.value }}</p>
+      <button
+        type="button"
+        class="mt-2 rounded-full border border-white/20 px-3 py-2 text-sm"
+        @click="djController.stop()"
+      >
+        Retour classique
+      </button>
+    </div>
+    <div
       v-if="player.dj.value?.transition !== null && player.dj.value"
       class="mx-2 mb-3 rounded-lg bg-white/10 p-3"
       role="status"

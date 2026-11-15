@@ -136,3 +136,80 @@ def test_dj_alone_does_not_start_recommendation_analysis(
     monkeypatch.setattr(api, 'library_context', forbidden)
     indexer.index_pass()
     assert database.claim(kind='analysis') is None
+
+
+def test_rhythm_indexing_works_without_enabling_dclap(tmp_path, monkeypatch):
+    from downtify import (
+        api,
+        library_catalog,
+        library_paths_cache,
+        mobile_routes,
+    )
+    from downtify.music_ai.dj_store import DjStore
+    from downtify.music_ai.store import ANALYSIS_FEATURES
+
+    database = opted_in_store(tmp_path / 'derived.db')
+    database.set_preferences(
+        -1, {**dict.fromkeys(ANALYSIS_FEATURES, False), 'dj_prepared': True}
+    )
+    DjStore(database)
+    database.set_metadata('rhythm', {'model': 'rhythmic-model', 'ready': True})
+    (tmp_path / 'one.audio').write_bytes(b'input')
+    row = {'id': 'one', 'file': 'one.audio', 'fingerprint': 'fp'}
+    monkeypatch.setattr(indexer, 'store', lambda: database)
+    monkeypatch.setattr(api.state, 'download_jobs', {})
+    monkeypatch.setattr(api.state, 'upgrade_runner', None)
+    monkeypatch.setattr(api.state, 'likes', None)
+    monkeypatch.setattr(api, 'library_context', lambda: None)
+    monkeypatch.setattr(
+        library_paths_cache, 'peek_cached_track_entries', lambda _: [row]
+    )
+    monkeypatch.setattr(
+        mobile_routes,
+        '_refresh',
+        lambda: (_ for _ in ()).throw(
+            AssertionError('No full collection refresh')
+        ),
+    )
+    monkeypatch.setattr(
+        mobile_routes,
+        '_sync',
+        lambda: SimpleNamespace(
+            cursor=lambda: 1,
+            ids_for_paths=lambda _: {},
+            changes=lambda since: {
+                'tracks': [row],
+                'deleted': [],
+                'cursor': 1,
+                'full': True,
+            },
+        ),
+    )
+    checked = []
+    monkeypatch.setattr(
+        library_catalog,
+        'resolve_library_file',
+        lambda file, _: checked.append(file) or tmp_path / file,
+    )
+    indexer.index_pass()
+    assert checked == ['one.audio']
+    with database.connect() as db:
+        assert (
+            db.execute(
+                "SELECT count(*) FROM jobs WHERE kind='analysis'"
+            ).fetchone()[0]
+            == 0
+        )
+        assert (
+            db.execute(
+                "SELECT count(*) FROM jobs WHERE kind='rhythm'"
+            ).fetchone()[0]
+            == 1
+        )
+    monkeypatch.setattr(
+        api.state, 'download_jobs', {'native': {'status': 'downloading'}}
+    )
+    checked.clear()
+    indexer.index_pass()
+    assert checked == []
+    assert database.metadata('native_busy') is True

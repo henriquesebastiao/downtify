@@ -306,3 +306,36 @@ def test_cached_audio_cannot_be_registered_outside_its_exact_job_workspace(
     io, one, _ = audio
     with pytest.raises(AudioError, match='unsafe_snapshot_source'):
         io.allow_snapshot(one, list(signature(one)))
+
+
+def test_progressive_decoder_matches_continuous_audio_across_buffer_boundaries(
+    audio,
+):
+    import time
+
+    io, one, _ = audio
+    tone(one, duration=40)
+    before = hashlib.sha256(one.read_bytes()).hexdigest()
+    levels = {'input_i': -18, 'input_tp': -3}
+    row = {'cue': 0.5, 'source_end': 39.5, 'speed': 1.02}
+    complete = io.decode(one, row, levels, io.cache / 'reference.pcm', noop)
+    expected = np.fromfile(complete, dtype='<f4').reshape(-1, 2)
+    stream = io.stream(one, row, levels, noop)
+    try:
+        assert stream.buffered_frames <= 24 * RATE
+        decoded = []
+        for left in range(0, len(expected), RATE):
+            right = min(len(expected), left + RATE)
+            deadline = time.monotonic() + 5
+            while not stream.ready(left, right):
+                assert time.monotonic() < deadline
+                time.sleep(0.001)
+            decoded.append(stream[left:right])
+            assert stream.buffered_frames <= 25 * RATE + 8192
+        np.testing.assert_allclose(
+            np.concatenate(decoded), expected, rtol=0, atol=2e-7
+        )
+    finally:
+        stream.close()
+    assert hashlib.sha256(one.read_bytes()).hexdigest() == before
+    assert set(io.cache.glob('*.pcm')) == {complete}

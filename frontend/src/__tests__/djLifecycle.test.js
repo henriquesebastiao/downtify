@@ -15,6 +15,7 @@ vi.mock('/src/model/musicAI', async () => {
     musicAI: {
       account: ref(1),
       capabilities: ref({
+        dj_navigation: true,
         features: { dj_prepared: true, dj_interactive: true },
       }),
       refresh: vi.fn(async () => {}),
@@ -131,6 +132,76 @@ it('fences an old paused status after returning to the classic player', async ()
   expect(player.dj.value).toBeNull()
   expect(node.pause).toHaveBeenCalledTimes(pauses)
   expect(player.currentTrack.value.file).toBe('b.mp3')
+})
+
+it('keeps an interactive mix selected on a refused next', async () => {
+  await controller.listen(session())
+  player.pause()
+  await flush()
+  music.commandDj.mockRejectedValueOnce({
+    response: { status: 409, data: { detail: 'Rendu terminé' } },
+  })
+  player.next()
+  await flush()
+  expect(controller.session.value.id).toBe(session().id)
+  expect(player.dj.value).not.toBeNull()
+  expect(node.paused).toBe(true)
+  expect(controller.failure.value).toBe('Rendu terminé')
+})
+
+it('applies a confirmed next inside the stream without undoing a pause', async () => {
+  await controller.listen(session())
+  player.pause()
+  await flush()
+  node.currentTime = 20
+  const plays = node.play.mock.calls.length
+  music.commandDj.mockResolvedValueOnce({
+    accepted: true,
+    seek_to_seconds: 100,
+  })
+  player.next()
+  await flush()
+  expect(node.currentTime).toBe(100)
+  expect(node.paused).toBe(true)
+  expect(node.play).toHaveBeenCalledTimes(plays)
+  expect(music.commandDj.mock.calls.at(-1)[1]).toMatchObject({
+    action: 'next',
+    payload: { position: '20' },
+  })
+})
+
+it('discards a next response after returning to the classic selection', async () => {
+  await controller.listen(session())
+  let resolve
+  music.commandDj.mockImplementationOnce(
+    () =>
+      new Promise((done) => {
+        resolve = done
+      })
+  )
+  player.next()
+  await flush()
+  player.playAt(1)
+  const position = node.currentTime
+  resolve({ accepted: true, seek_to_seconds: 100 })
+  await flush()
+  expect(player.dj.value).toBeNull()
+  expect(node.currentTime).toBe(position)
+})
+
+it('navigates prepared markers through the shared transport while paused', async () => {
+  await controller.listen({ ...session(), mode: 'prepared', state: 'ready' })
+  player.pause()
+  await flush()
+  music.commandDj.mockClear()
+  player.next()
+  await flush()
+  expect(node.currentTime).toBe(100)
+  player.prev()
+  await flush()
+  expect(node.currentTime).toBe(0)
+  expect(node.paused).toBe(true)
+  expect(music.commandDj).not.toHaveBeenCalled()
 })
 
 it('pauses immediately while a resume command is pending and never autoplays its late result', async () => {

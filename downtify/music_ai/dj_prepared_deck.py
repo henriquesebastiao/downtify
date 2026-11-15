@@ -24,10 +24,11 @@ class DecodedDeck:
     key: Any
     path: Path
     frames: int
+    buffer: Any = None
 
 
 def _clone(owner_io):
-    return AudioIO(
+    clone = AudioIO(
         owner_io.cache,
         owner_io.roots,
         budget=owner_io.budget,
@@ -39,6 +40,9 @@ def _clone(owner_io):
             else None
         ),
     )
+    if hasattr(owner_io, 'reclaim'):
+        clone.reclaim = owner_io.reclaim
+    return clone
 
 
 def _private_path(value, owner_io, pattern):
@@ -65,6 +69,8 @@ def discard_analysis(prepared, owner_io):
 
 
 def discard_decoded(decoded, owner_io):
+    if decoded.buffer is not None:
+        decoded.buffer.close()
     path = _private_path(decoded.path, owner_io, r'decoded-[0-9]+\.pcm')
     path.unlink(missing_ok=True)
 
@@ -94,7 +100,17 @@ def prepare_analysis(worker, owner_io, track, source, slot, checkpoint):
         raise
 
 
-def decode_deck(owner_io, row, result, source, key, target, checkpoint):
+def decode_deck(
+    owner_io,
+    row,
+    result,
+    source,
+    key,
+    target,
+    checkpoint,
+    *,
+    progressive=False,
+):
     row, result, source = deepcopy((row, result, source))
     target = _private_path(target, owner_io, r'decoded-[0-9]+\.pcm')
     if target.exists():
@@ -110,6 +126,20 @@ def decode_deck(owner_io, row, result, source, key, target, checkpoint):
     }
     try:
         checkpoint()
+        if progressive:
+            buffer = io.stream(
+                audio['path'],
+                complete,
+                result['loudness'],
+                checkpoint,
+                expected=audio['source_version'],
+            )
+            try:
+                checkpoint()
+                return DecodedDeck(key, target, len(buffer), buffer)
+            except BaseException:
+                buffer.close()
+                raise
         path = io.decode(
             audio['path'],
             complete,

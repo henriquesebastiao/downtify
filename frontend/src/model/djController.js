@@ -40,7 +40,7 @@ const trial = () =>
   musicAI.capabilities.value?.features?.dj_trial === true
 const player = usePlayer()
 
-async function command(action) {
+async function command(action, payload = {}) {
   const value = session.value
   if (!value || owner !== musicAI.account.value || !available.value) return
   const mine = serial,
@@ -52,7 +52,7 @@ async function command(action) {
       return musicAI.commandDj(value.id, {
         request_id: uuid(),
         action,
-        payload: {},
+        payload,
       })
     })
   commandTail = work
@@ -69,7 +69,10 @@ function clear({ stopRemote = false } = {}) {
   const id = session.value?.id || pending?.id,
     account = owner,
     previous = commandTail
-  const remote = !session.value || session.value.mode === 'interactive'
+  const remote =
+    !session.value ||
+    session.value.mode === 'interactive' ||
+    musicAI.capabilities.value?.dj_asset_consumers === true
   const request = creation
   creation = null
   if (request && stopRemote) {
@@ -165,7 +168,8 @@ async function listen(value, options = {}) {
     async play() {
       const intent = ++playIntent
       try {
-        if (value.mode === 'interactive') await command('resume')
+        if (value.mode === 'interactive' && session.value?.state !== 'ready')
+          await command('resume')
         if (mine !== serial || intent !== playIntent) return
         if (
           !(await ownStream.connect()) ||
@@ -182,18 +186,66 @@ async function listen(value, options = {}) {
       playIntent++
       node.pause()
       try {
-        if (value.mode === 'interactive') await command('pause')
+        if (value.mode === 'interactive' && session.value?.state !== 'ready')
+          await command('pause')
       } catch (reason) {
         if (mine === serial) error(reason)
       }
     },
     async next() {
+      return transport.navigate('next')
+    },
+    async previous() {
+      return transport.navigate('previous')
+    },
+    async navigate(action) {
       try {
-        await command('next')
-        notice.value =
-          'Le saut sera appliqué à la prochaine transition disponible.'
+        failure.value = ''
+        const position = transport.position()
+        let target
+        if (value.mode === 'prepared') {
+          const rows = session.value?.timeline || []
+          const index = rows.findIndex(
+            (row) => row.start <= position && position < row.end
+          )
+          const start = (ordinal) =>
+            Math.max(rows[ordinal]?.start || 0, rows[ordinal - 1]?.end || 0)
+          const ordinal =
+            action === 'next'
+              ? index + 1
+              : position - start(index) > 3
+                ? index
+                : Math.max(0, index - 1)
+          if (index < 0 || !rows[ordinal])
+            throw new Error('Ce repère n’est pas disponible dans le mix.')
+          target = start(ordinal)
+        } else {
+          const result = await command(
+            action,
+            musicAI.capabilities.value?.dj_navigation === true
+              ? { position: String(position) }
+              : {}
+          )
+          if (mine !== serial || owner !== musicAI.account.value) return
+          if (result?.accepted !== true)
+            throw new Error(
+              result?.reason || 'La commande DJ n’a pas pu être confirmée.'
+            )
+          target = result.seek_to_seconds
+          if (target == null) {
+            notice.value =
+              'Le saut sera appliqué à la prochaine transition disponible.'
+            return
+          }
+        }
+        if (mine !== serial || owner !== musicAI.account.value) return
+        const relative = node.currentTime + target - transport.position()
+        if (!Number.isFinite(target) || relative < 0)
+          throw new Error('Ce repère est sorti de la fenêtre du direct.')
+        node.currentTime = relative
+        notice.value = 'Titre sélectionné dans le mix DJ.'
       } catch (reason) {
-        error(reason)
+        if (mine === serial && owner === musicAI.account.value) error(reason)
       }
     },
     seek(seconds) {
@@ -464,7 +516,10 @@ async function startQueue() {
 }
 async function stop() {
   const id = session.value?.id || pending?.id
-  const remote = !session.value || session.value.mode === 'interactive'
+  const remote =
+    !session.value ||
+    session.value.mode === 'interactive' ||
+    musicAI.capabilities.value?.dj_asset_consumers === true
   const previous = commandTail,
     account = musicAI.account.value
   const resume = player.desiredPlaying.value || player.isPlaying.value

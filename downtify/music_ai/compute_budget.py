@@ -51,11 +51,16 @@ class ComputeTicket:
         now = self.clock()
         if now - self.renewed < 1:
             return True
-        if self.kind == 'analysis' and pressure_high():
+        if self.kind in {'analysis', 'dj-background'} and pressure_high():
             return False
         with self.database.connect() as db:
             db.execute('BEGIN IMMEDIATE')
-            if self.kind == 'analysis':
+            if self.kind == 'dj-background':
+                from .dj_background import blocked
+
+                if blocked(db):
+                    return False
+            if self.kind in {'analysis', 'dj-background'}:
                 waiting = db.execute(
                     "SELECT value FROM metadata WHERE key='compute_dj_waiting'"
                 ).fetchone()
@@ -77,13 +82,18 @@ class ComputeTicket:
 
 
 def acquire(database, kind, *, clock=time.time):
-    if kind not in {'analysis', 'dj'}:
+    if kind not in {'analysis', 'dj', 'dj-background'}:
         raise ValueError('Unknown compute task')
-    if kind == 'analysis' and pressure_high():
+    if kind in {'analysis', 'dj-background'} and pressure_high():
         return None
     now, token = clock(), secrets.token_hex(16)
     with database.connect() as db:
         db.execute('BEGIN IMMEDIATE')
+        if kind == 'dj-background':
+            from .dj_background import blocked
+
+            if blocked(db):
+                return None
         if kind == 'dj':
             db.execute(
                 "INSERT OR REPLACE INTO metadata VALUES ('compute_dj_waiting',?)",

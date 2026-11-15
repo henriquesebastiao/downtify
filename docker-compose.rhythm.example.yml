@@ -1,0 +1,23 @@
+# Optional example: add this profile to the existing stack after verifying its paths.
+services:
+  downtify-rhythm:
+    profiles: [rhythm-analysis]
+    image: ${DOWNTIFY_DJ_IMAGE:?Use the same tested image as the DJ worker}
+    entrypoint: [python, -m, downtify.music_ai.dj_worker, preanalyze]
+    command: [--database, /state/derived.db, --models, /models, --root, /downloads, --root, /slskd, --root, /music/existing, --cache-bytes, '5368709120']
+    volumes:
+      - ${MUSIC_AI_STATE_DIR:?Existing derived state}:/state
+      - ${MUSIC_DOWNLOADS_DIR:?Existing downloads}:/downloads:ro
+      - ${MUSIC_SLSKD_DIR:?Existing slskd collection}:/slskd:ro
+      - ${MUSIC_LIBRARY_DIR:?Existing music collection}:/music/existing:ro
+    init: true
+    restart: unless-stopped
+    network_mode: none
+    read_only: true
+    cpus: 0.5
+    mem_limit: 1536m
+    pids_limit: 128
+    cap_drop: [ALL]
+    security_opt: ['no-new-privileges:true']
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=256m

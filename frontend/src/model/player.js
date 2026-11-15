@@ -793,7 +793,10 @@ function next() {
 }
 
 function prev() {
-  if (djTransport) return
+  if (djTransport) {
+    void djTransport.previous?.()
+    return
+  }
   const a = ensureAudio()
   if (a.currentTime > 3) {
     seek(0)

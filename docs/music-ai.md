@@ -77,6 +77,15 @@ profile does not delete liked songs or saved native playlists.
 
 Daily playlists rotate at 04:00 Europe/Paris; weekly selections rotate Monday at
 04:15, including catch-up after restart. Native saved copies remain stable.
+The daily mix keeps the six mood prompts; the weekly set covers nine themes
+(six moods plus the three genre themes rap, rock and electro). A genre theme
+never falls back to another style: it is offered only once the native library
+holds enough tracks tagged in that genre, otherwise the set stays pending so a
+later metadata completion fills it. Weekly sets hold twenty-five distinct
+titles. Each playlist card exposes a deterministic cover at
+`GET /api/v1/music-ai/playlists/{cadence}/{mood}/cover.svg?period=…` (same key,
+same picture, cached for a day); the client may show it alongside the four
+cover track ids.
 
 ## Optional prepared DJ renderer
 
@@ -119,6 +128,14 @@ Upstream sources and notices checked 2026-11-05/06:
 - https://ffmpeg.org/ffmpeg-filters.html#rubberband
 
 ## Interactive HLS and validation gate
+
+Readiness is measured where the listener feels it. An interactive set records
+`ready_seconds` on the first successful manifest read; a prepared set records
+`preparation_seconds` when the renderer publishes its file. Both stay in the
+private session document. A bounded rolling history (200 entries) is exposed
+to administrators at `GET /api/v1/music-ai/dj/readiness` with `p50`, `p95`,
+worst delay and the count above the ten-second target. The measurement adds no
+client identity, audio or track metadata and never delays the response.
 
 The interactive renderer uses one continuous AAC encoder, six-second HLS
 segments and a 24-second render horizon. A twelve-segment manifest and four

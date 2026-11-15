@@ -10,6 +10,7 @@ from .catalog import (
     recent_addition,
     scheduled,
     synchronize,
+    unanalysed,
 )
 from .routes import store
 from .store import ANALYSIS_FEATURES
@@ -22,12 +23,21 @@ def index_pass():
 
     database = store()
     flags = database.preferences(-1)
-    if database.metadata('analysis_paused', False) or not any(
-        flags[key] for key in ANALYSIS_FEATURES
+    clap_active = any(flags[key] for key in ANALYSIS_FEATURES)
+    rhythm_active = any(
+        flags[key] for key in ('dj_prepared', 'dj_interactive')
+    )
+    if database.metadata('analysis_paused', False) or not (
+        clap_active or rhythm_active
     ):
         return
-    identity = database.metadata('model', {}).get('id')
-    if not identity:
+    identity = (
+        database.metadata('model', {}).get('id') if clap_active else None
+    )
+    rhythm_model = (
+        database.metadata('rhythm', {}).get('model') if rhythm_active else None
+    )
+    if not identity and not rhythm_model:
         return
     busy = any(
         job.get('status') == 'downloading'
@@ -40,7 +50,20 @@ def index_pass():
     if busy:
         return
     synchronize(database, mobile_routes._sync())
-    ensure_analysis_queue(database, identity)
+    if identity:
+        ensure_analysis_queue(database, identity)
+    if rhythm_model:
+        from .rhythm_queue import seed_missing, weekly_check
+
+        weekly_check(database, rhythm_model)
+        seed_missing(database, rhythm_model)
+    missing = unanalysed(database, identity) if identity else []
+    if missing:
+        with database.connect() as db:
+            db.executemany(
+                'INSERT OR IGNORE INTO catalog_pending(id,priority) VALUES (?,0)',
+                [(value,) for value in missing],
+            )
     context = api.library_context()
     generation = database.metadata('analysis_generation', 0)
     favorites = (
@@ -61,12 +84,12 @@ def index_pass():
         )
     recent_ids = {row['track'] for row in recent}
     after = database.metadata('source_scan_after', '')
-    scan = candidates(database, identity, after=after, limit=100)
+    scan = candidates(database, identity or '', after=after, limit=100)
     if not scan and after:
-        scan = candidates(database, identity, limit=100)
+        scan = candidates(database, identity or '', limit=100)
     if scan:
         database.set_metadata('source_scan_after', scan[-1]['id'])
-    pending = candidates(database, identity, limit=100, unmeasured=True)
+    pending = candidates(database, identity or '', limit=100, unmeasured=True)
     selected = {row['id']: row for row in [*pending, *scan]}
     with database.connect() as db:
         marks = ','.join('?' for _ in selected)
@@ -91,10 +114,26 @@ def index_pass():
             version = list(signature(full))
         except OSError:
             continue
-        if (
-            database.observe_source(row['id'], version)
-            and row['id'] in measured
-        ):
+        unchanged = database.observe_source(row['id'], version)
+        if rhythm_model:
+            from .rhythm_queue import enqueue
+
+            enqueue(
+                database,
+                rhythm_model,
+                row,
+                full,
+                version,
+                priority=3
+                if row['id'] in recent_ids
+                else 2
+                if row['file'] in favorites
+                else 0,
+            )
+        if not identity:
+            scheduled(database, row['id'])
+            continue
+        if unchanged and row['id'] in measured:
             scheduled(database, row['id'])
             continue
         key = hashlib.sha256(

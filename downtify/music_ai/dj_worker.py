@@ -7,7 +7,6 @@ import hashlib
 import importlib.metadata
 import inspect
 import json
-import math
 import shutil
 import sqlite3
 import sys
@@ -15,6 +14,7 @@ import time
 from pathlib import Path
 
 from .dj_audio import AudioError, AudioIO, run_audio
+from .dj_background import BackgroundDeferred
 from .dj_plan import Profile, order_tracks, timeline
 from .dj_store import DjStore
 from .sqlite_busy import is_busy, retry_busy
@@ -53,6 +53,9 @@ def analysis_identity():
     # Model pins and audio-analysis changes still invalidate derived profiles.
     content = json.dumps(PINS, sort_keys=True).encode()
     content += Path(__file__).with_name('dj_evidence.py').read_bytes()
+    from .dj_analysis import AnalysisEngine
+
+    content += inspect.getsource(AnalysisEngine).encode()
     for function in (
         validate_models,
         analyze_child,
@@ -82,15 +85,19 @@ def analysis_identity():
 def engine_identity():
     return 'dj:' + identity((
         'dj_plan',
+        'dj_analysis',
+        'analysis_process',
         'dj_evidence',
         'dj_mix',
         'dj_audio',
         'dj_store',
+        'dj_background',
         'dj_worker',
         'dj_live',
         'dj_live_plan',
         'dj_preparation',
         'dj_prepared_deck',
+        'dj_pcm_stream',
         'dj_hls',
         'dj_validation',
     ))
@@ -108,75 +115,10 @@ def validate_models(models):
 
 
 def analyze_child(options):
-    import torch
-    from beat_this.inference import Audio2Beats
+    from .dj_analysis import AnalysisEngine
 
-    from .dj_evidence import profile_from_signal
-
-    validate_models(options.models)
-    torch.set_num_threads(1)
-    torch.set_num_interop_threads(1)
     payload = json.loads(sys.stdin.buffer.read(16385))
-    io = AudioIO(
-        options.cache,
-        options.root,
-        budget=options.cache_bytes,
-        min_free=options.min_free,
-        workspace=options.workspace,
-    )
-    if payload.get('snapshot'):
-        io.allow_snapshot(payload['path'], payload['source_version'])
-    chosen = ['small0']
-
-    def positions(values, duration):
-        if any(
-            not math.isfinite(value)
-            or value < -0.05
-            or value > duration + 0.05
-            for value in values
-        ):
-            raise AudioError('invalid_beat_positions')
-        # A model's final spectrogram frame can coincide with the audio end.
-        return [float(value) for value in values if 0 <= value < duration]
-
-    def tracker(signal, rate):
-        with torch.inference_mode():
-            small = Audio2Beats(
-                str(options.models / 'small0.ckpt'), device='cpu', dbn=False
-            )
-            beats, bars = small(signal, rate)
-            beats, bars = (
-                positions(beats, len(signal) / rate),
-                positions(bars, len(signal) / rate),
-            )
-            evidence = profile_from_signal(
-                payload['id'], signal, rate, beats, bars
-            )
-            if 0.2 <= evidence.confidence < 0.75:
-                large = Audio2Beats(
-                    str(options.models / 'final0.ckpt'),
-                    device='cpu',
-                    dbn=False,
-                )
-                other_beats, other_bars = large(signal, rate)
-                other_beats = positions(other_beats, len(signal) / rate)
-                other_bars = positions(other_bars, len(signal) / rate)
-                other = profile_from_signal(
-                    payload['id'], signal, rate, other_beats, other_bars
-                )
-                if other.confidence > evidence.confidence + 0.05:
-                    beats, bars, chosen[0] = other_beats, other_bars, 'final0'
-            return beats, bars
-
-    result = io.analyze(
-        payload['id'],
-        payload['path'],
-        tracker,
-        lambda: None,
-        artist=payload.get('artist', ''),
-        expected=payload['source_version'],
-    )
-    result['beat_model'] = chosen[0]
+    result = AnalysisEngine(options).analyze(payload)
     print(json.dumps(result))
 
 
@@ -204,6 +146,11 @@ class DjWorker:
         self.checked = self.renewed = 0.0
         self.models_validated = False
         self.compute_ticket = None
+        self._analysis_process = None
+
+    def close(self):
+        if self._analysis_process is not None:
+            self._analysis_process.close()
 
     def capabilities(self):
         from .dj_validation import runtime_identity, saved_proof, validated
@@ -237,8 +184,10 @@ class DjWorker:
                 if ready
                 else 'disabled',
                 'engine': self.engine,
+                'analysis_model': self.analysis,
                 'seen': time.time(),
                 'simultaneous_sessions': 1,
+                'weekly_protocol': 1,
                 'cache_bytes': self.cache_bytes,
             },
         )
@@ -248,10 +197,23 @@ class DjWorker:
 
     def _checkpoint(self):
         if self.compute_ticket is not None and not self.compute_ticket.renew():
+            if self.job.get('background'):
+                raise BackgroundDeferred('background_waiting')
             raise PermissionError('compute_slot_lost')
         clock = time.monotonic()
         if clock - self.checked < 0.25:
             return
+        if self.job.get('background'):
+            from .compute_budget import pressure_high
+            from .dj_background import allowed, blocked
+
+            with self.database.connect() as db:
+                if not allowed(
+                    db, self.job['owner'], self.job, now=time.time()
+                ):
+                    raise PermissionError('weekly_invalidated')
+                if blocked(db) or pressure_high():
+                    raise BackgroundDeferred('background_waiting')
         if (
             self.job.get('trial')
             and not self.database.effective(self.job['owner'])['dj_trial']
@@ -277,8 +239,7 @@ class DjWorker:
         ):
             raise PermissionError('dj_session_stopped')
 
-    def analyze(self, track, source, io, generation, *, checkpoint=None):
-        checkpoint = checkpoint or self.checkpoint
+    def analysis_result(self, track, source, io, checkpoint):
         checkpoint()
         audio = source.get('snapshot', source)
         original, _ = io.original(audio['path'], audio['source_version'])
@@ -290,43 +251,49 @@ class DjWorker:
         )
         if cached:
             return cached
-        arguments = [
-            sys.executable,
-            '-m',
-            'downtify.music_ai.dj_worker',
-            'analyze',
-            '--models',
-            str(self.models),
-            '--cache',
-            str(self.cache),
-            '--workspace',
-            self.job['id'],
-            '--cache-bytes',
-            str(self.cache_bytes),
-            '--min-free',
-            str(self.min_free),
-        ]
-        for root in self.roots:
-            arguments += ['--root', str(root)]
-        payload = {
-            'id': track,
-            'path': str(original),
-            'artist': source.get('artist', ''),
-            'source_version': audio['source_version'],
-            'snapshot': 'snapshot' in source,
-        }
-        output, _ = run_audio(
-            arguments,
+        from .analysis_process import AnalysisProcess
+
+        if self._analysis_process is None:
+            arguments = [
+                sys.executable,
+                '-m',
+                'downtify.music_ai.dj_worker',
+                'analyze-stream',
+                '--models',
+                str(self.models),
+                '--cache',
+                str(self.cache),
+                '--cache-bytes',
+                str(self.cache_bytes),
+                '--min-free',
+                str(self.min_free),
+            ]
+            for root in self.roots:
+                arguments += ['--root', str(root)]
+            self._analysis_process = AnalysisProcess(
+                arguments, cwd=Path(__file__).resolve().parents[2]
+            )
+        result = self._analysis_process.analyze(
+            {
+                'id': track,
+                'path': str(original),
+                'artist': source.get('artist', ''),
+                'source_version': audio['source_version'],
+                'snapshot': 'snapshot' in source,
+                'workspace': io.workspace.name,
+                'analysis_model': self.analysis,
+            },
             checkpoint,
-            timeout=900,
-            input_data=json.dumps(payload).encode(),
-            max_output=2 * 1024**2,
-            cwd=Path(__file__).resolve().parents[2],
         )
-        result = json.loads(output)
         checkpoint()
         io.original(audio['path'], audio['source_version'])
         result['source_version'] = source['source_version']
+        return result
+
+    def analyze(self, track, source, io, generation, *, checkpoint=None):
+        checkpoint = checkpoint or self.checkpoint
+        result = self.analysis_result(track, source, io, checkpoint)
+        checkpoint()
         if not self.dj.put_profile(
             track,
             self.analysis,
@@ -492,14 +459,61 @@ class DjWorker:
                 'render_speed': rows[-1]['end'] / max(0.001, render_time),
                 'engine': self.engine,
                 'output_bytes': target.stat().st_size,
+                **(
+                    {'asset_workspace': io.workspace.name}
+                    if self.job.get('background')
+                    else {}
+                ),
             },
         )
         if not published:
             target.unlink(missing_ok=True)
             raise PermissionError('dj_session_stopped')
+        self._committed_workspace = io.workspace
+        # Prepared readiness is the render itself: the client can play the file.
+        from .dj_readiness import record as record_readiness
+
+        record_readiness(self.dj.database, 'prepared', elapsed)
+
+    def discard_workspace(self, io):
+        if io is None or io.workspace == getattr(
+            self, '_committed_workspace', None
+        ):
+            return
+        directory = io.workspace
+        if (
+            directory != io.cache
+            and not directory.is_symlink()
+            and directory.resolve().is_relative_to(io.cache)
+            and directory.exists()
+        ):
+            shutil.rmtree(directory)
+
+    def defer_background(self, io):
+        try:
+            retry_busy(
+                lambda: self.dj.defer_background(
+                    self.job['id'], self.job['lease_token']
+                ),
+                seconds=8,
+            )
+        finally:
+            try:
+                from .compute_budget import pressure_high
+
+                if (
+                    self.database.metadata('native_busy', False)
+                    or self.database.metadata('analysis_paused', False)
+                    or pressure_high()
+                ):
+                    self.close()
+            finally:
+                self.discard_workspace(io)
 
     def step(self):
         self.capabilities()
+        if self.cache.is_symlink():
+            raise AudioError('unsafe_cache_entry')
         # The single renderer performs deletion only between jobs, after any
         # cancelled decoder/encoder has been reaped. No original path is used.
         for identity in self.dj.deletion_requests():
@@ -507,7 +521,14 @@ class DjWorker:
                 value not in '0123456789abcdef' for value in identity
             ):
                 continue
-            directory = self.cache / identity
+            name = self.dj.workspace(identity)
+            if (
+                not isinstance(name, str)
+                or len(name) != 32
+                or any(value not in '0123456789abcdef' for value in name)
+            ):
+                continue
+            directory = self.cache / name
             if directory.is_symlink() or (
                 directory.exists()
                 and not directory.resolve().is_relative_to(
@@ -520,8 +541,14 @@ class DjWorker:
             self.dj.deleted(identity)
         job = self.dj.claim()
         if job is None:
+            flags = self.database.preferences(-1)
+            if not any(
+                flags[key] for key in ('dj_prepared', 'dj_interactive')
+            ) or self.database.metadata('analysis_paused', False):
+                self.close()
             return False
         self.job, self.stage = job, 'preparing'
+        self._committed_workspace = None
         self.checked = self.renewed = 0
         io = None
         ticket = None
@@ -530,7 +557,10 @@ class DjWorker:
 
             while ticket is None:
                 self.checkpoint()
-                ticket = acquire(self.database, 'dj')
+                ticket = acquire(
+                    self.database,
+                    'dj-background' if job.get('background') else 'dj',
+                )
                 if ticket is None:
                     time.sleep(0.25)
             self.compute_ticket = ticket
@@ -539,7 +569,17 @@ class DjWorker:
                 self.roots,
                 budget=self.cache_bytes,
                 min_free=self.min_free,
-                workspace=job['id'],
+                workspace=job.get('render_workspace', job['id'])
+                if job.get('background')
+                else job['id'],
+            )
+            from .dj_assets import Assets
+
+            assets = Assets(
+                self.database, budget=self.cache_bytes, min_free=self.min_free
+            )
+            io.reclaim = lambda requested: assets.reserve(
+                requested, self.checkpoint
             )
             if job['mode'] == 'prepared':
                 self.prepared(io)
@@ -563,7 +603,7 @@ class DjWorker:
                     )
                 ):
                     raise AudioError('interactive_not_validated')
-                first = list(dict.fromkeys(job['ids'][:4]))
+                first = list(dict.fromkeys(job['ids'][:2]))
                 results = {
                     track: self.prepare_deck(track, io) for track in first
                 }
@@ -575,6 +615,8 @@ class DjWorker:
                 ):
                     raise AudioError('validation_set_too_short')
                 renderer.render()
+        except BackgroundDeferred:
+            self.defer_background(io)
         except (
             OSError,
             ValueError,
@@ -586,6 +628,18 @@ class DjWorker:
                 error
             ):
                 raise
+            if (
+                job.get('background')
+                and isinstance(error, PermissionError)
+                and str(error)
+                in {
+                    'weekly_invalidated',
+                    'dj_session_stopped',
+                    'compute_slot_lost',
+                }
+            ):
+                self.defer_background(io)
+                return True
             code = (
                 str(error)
                 if isinstance(error, AudioError)
@@ -606,15 +660,8 @@ class DjWorker:
                 if not is_busy(pending):
                     raise
                 # The lease expires without accepting any late output.
-            # Only this opaque session's private workspace can be removed.
-            if io is not None:
-                directory = io.workspace
-                if (
-                    directory != io.cache
-                    and not directory.is_symlink()
-                    and directory.resolve().is_relative_to(io.cache)
-                ):
-                    shutil.rmtree(directory)
+            # Only this attempt's private workspace can be removed.
+            self.discard_workspace(io)
         finally:
             if io is not None:
                 io.release_snapshots()
@@ -651,7 +698,9 @@ class DjWorker:
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('action', choices=('work', 'analyze'))
+    parser.add_argument(
+        'action', choices=('work', 'analyze', 'analyze-stream', 'preanalyze')
+    )
     parser.add_argument('--database', type=Path)
     parser.add_argument('--cache', type=Path)
     parser.add_argument('--workspace')
@@ -661,13 +710,23 @@ def main():
     parser.add_argument('--min-free', type=int, default=2 * 1024**3)
     parser.add_argument('--once', action='store_true')
     options = parser.parse_args()
+    if options.action == 'analyze-stream':
+        from .dj_analysis import serve
+
+        serve(options)
+        return
     if options.action == 'analyze':
         analyze_child(options)
         return
     if options.database is None:
         parser.error('--database is required')
+    worker_class = DjWorker
+    if options.action == 'preanalyze':
+        from .rhythm_worker import RhythmWorker
+
+        worker_class = RhythmWorker
     worker = retry_busy(
-        lambda: DjWorker(
+        lambda: worker_class(
             Store(options.database),
             options.models,
             options.root,
@@ -676,12 +735,15 @@ def main():
         ),
         seconds=30,
     )
-    while True:
-        worked = worker.run_cycle()
-        if options.once:
-            break
-        if not worked:
-            time.sleep(3)
+    try:
+        while True:
+            worked = worker.run_cycle()
+            if options.once:
+                break
+            if not worked:
+                time.sleep(3)
+    finally:
+        worker.close()
 
 
 if __name__ == '__main__':

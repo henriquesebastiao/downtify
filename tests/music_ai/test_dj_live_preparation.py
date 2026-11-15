@@ -1,5 +1,7 @@
+
 """Deterministic blocked-task checks for the live preparation pipeline."""
 
+import sys
 from collections import deque
 from dataclasses import asdict
 from threading import Event, Thread
@@ -10,6 +12,7 @@ import pytest
 
 from downtify.music_ai import dj_live
 from downtify.music_ai.dj_audio import FRAME_BYTES, RATE, AudioIO
+from downtify.music_ai.dj_pcm_stream import ProgressivePcm
 from downtify.music_ai.dj_plan import Profile
 from downtify.music_ai.dj_prepared_deck import DecodedDeck
 from downtify.music_ai.worker import signature
@@ -197,7 +200,18 @@ def blocked_work(worker):
 
 
 def blocked_decode(worker):
-    def decode(owner_io, row, result, source, key, target, checkpoint):  # noqa: PLR0913, PLR0917 -- Match the preparation task protocol.
+    def decode(  # noqa: PLR0913, PLR0917 -- Match the preparation task protocol.
+        owner_io,
+        row,
+        result,
+        source,
+        key,
+        target,
+        checkpoint,
+        *,
+        progressive=False,
+    ):
+        assert progressive is True
         return blocked_work(worker)(checkpoint)
 
     return decode
@@ -336,26 +350,50 @@ def test_paused_loop_prepares_and_holds_lease_until_task_cleanup(
     assert worker.task_cleaned.is_set()
 
 
+@pytest.mark.parametrize('streaming', [False, True])
 @pytest.mark.parametrize('invalidation', ['source', 'plan', 'cancel'])
 def test_late_decoded_result_is_discarded_after_invalidation(
-    live, monkeypatch, invalidation
+    live, monkeypatch, invalidation, streaming
 ):
     renderer, worker, io = live
     release = Event()
     paths = []
+    streams = []
     row = renderer.plan.rows[0]
     key = renderer.key(row)
 
     def late_decode(  # noqa: PLR0913, PLR0917 -- Match the preparation task protocol.
-        owner_io, captured, result, source, decoded_key, target, checkpoint
+        owner_io,
+        captured,
+        result,
+        source,
+        decoded_key,
+        target,
+        checkpoint,
+        *,
+        progressive=False,
     ):
+        assert progressive is True
         worker.task_started.set()
         try:
             assert release.wait(3)
             # Deliberately model work completing just before observing cancel.
             target.write_bytes(bytes(FRAME_BYTES))
             paths.append(target)
-            return DecodedDeck(decoded_key, target, 1)
+            buffer = None
+            if streaming:
+                buffer = ProgressivePcm(
+                    [
+                        sys.executable,
+                        '-c',
+                        'import sys; sys.stdout.buffer.write(bytes(8))',
+                    ],
+                    1,
+                    lambda: None,
+                )
+                streams.append(buffer)
+                buffer.warm(lambda: None)
+            return DecodedDeck(decoded_key, target, 1, buffer)
         finally:
             worker.task_cleaned.set()
 
@@ -377,5 +415,26 @@ def test_late_decoded_result_is_discarded_after_invalidation(
         assert key not in renderer.sources
         assert len(paths) == 1
         assert not paths[0].exists()
+        for buffer in streams:
+            assert buffer._closed
+            assert buffer._process.poll() is not None
+            assert not buffer._thread.is_alive()
     finally:
         release.set()
+        for buffer in streams:
+            buffer.close()
+
+
+def test_two_initial_profiles_keep_the_rest_of_the_queue_pending(live):
+    original, worker, io = live
+    initial = {key: original.results[key] for key in worker.job['ids'][:2]}
+    renderer = dj_live.LiveRenderer(worker, io, initial)
+    try:
+        assert [row['id'] for row in renderer.plan.rows] == ['0', '1']
+        assert renderer.pending_ids == ['2', '3']
+        assert len(renderer.window()) == 2
+        assert set(renderer.results) == {'0', '1'}
+        assert worker.job['ids'] == ['0', '1', '2', '3']
+    finally:
+        renderer.preparation.close()
+        renderer.preparation.poll()

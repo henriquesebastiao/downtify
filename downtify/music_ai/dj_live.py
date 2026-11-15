@@ -28,15 +28,16 @@ class LiveRenderer:
     ):
         self.worker, self.io, self.results = worker, io, results
         self.clock, self.sleep = clock, sleep
+        initial_count = len(results)
         self.plan = LivePlan(
             [Profile(**value['profile']) for value in results.values()],
             worker.job['theme'],
-            order=worker.job['ids'][:4]
+            order=worker.job['ids'][:initial_count]
             if worker.job.get('queue_order') or worker.job.get('seed_id')
             else None,
         )
         self.sources = {}
-        self.pending_ids = list(worker.job['ids'][4:])
+        self.pending_ids = list(worker.job['ids'][initial_count:])
         if worker.job.get('continuous') and not worker.job.get('queue_order'):
             self.plan.rows = self.plan.rows[:6]
             self.plan.rows[-1]['transition'] = None
@@ -91,10 +92,19 @@ class LiveRenderer:
         """Preflight the entire block before StereoMixer mutates EQ state."""
         end = min(self.mixer.position + RATE, self.mixer.total_frames)
         return all(
-            self.has_source(row)
+            self.has_source(row) and self.range_ready(row, start, finish, end)
             for row, (start, finish) in zip(self.mixer.rows, self.mixer.bounds)
             if start < end and finish > self.mixer.position
         )
+
+    def range_ready(self, row, start, finish, end):
+        source = self.sources[self.key(row)]
+        if hasattr(source, 'ready'):
+            return source.ready(
+                max(start, self.mixer.position) - start,
+                min(end, finish) - start,
+            )
+        return True
 
     def compute_ready(self):
         if hasattr(self.worker, 'try_require_compute'):
@@ -187,8 +197,12 @@ class LiveRenderer:
             self.worker.job['sources'][value.track] = value.source
             self.results[value.track] = value.result
         elif value.key in {self.key(row) for row in self.wanted_rows()}:
-            self.sources[value.key] = np.memmap(
-                value.path, mode='r', dtype='<f4', shape=(value.frames, 2)
+            self.sources[value.key] = (
+                value.buffer
+                if value.buffer is not None
+                else np.memmap(
+                    value.path, mode='r', dtype='<f4', shape=(value.frames, 2)
+                )
             )
             self.files[value.key] = value.path
         else:
@@ -234,7 +248,14 @@ class LiveRenderer:
 
             def work(checkpoint):
                 return decode_deck(
-                    self.io, row, result, source, key, target, checkpoint
+                    self.io,
+                    row,
+                    result,
+                    source,
+                    key,
+                    target,
+                    checkpoint,
+                    progressive=True,
                 )
 
         self.preparing = task
@@ -354,7 +375,7 @@ class LiveRenderer:
 
     @staticmethod
     def key(row):
-        return row['id'], row['cue'], row['speed']
+        return row['id'], row['cue'], row['speed'], row['start']
 
     def source_for(self, index, row):
         key = self.key(row)
@@ -366,7 +387,11 @@ class LiveRenderer:
         active = {self.key(row) for row in self.wanted_rows()}
         for key in list(self.sources):
             if all_sources or key not in active:
-                self.sources.pop(key)._mmap.close()
+                source = self.sources.pop(key)
+                if hasattr(source, 'close'):
+                    source.close()
+                else:
+                    source._mmap.close()
                 self.files.pop(key).unlink(missing_ok=True)
         if hasattr(self.worker, 'release_decks'):
             keep = (
@@ -387,7 +412,17 @@ class LiveRenderer:
             worker.job['id'], worker.job['lease_token']
         ):
             action = command['action']
-            if action in {'pause', 'resume'}:
+            navigation = command.get('navigation')
+            if (
+                navigation
+                and navigation.get('accepted')
+                and 'seek_to_seconds' in navigation
+            ):
+                # A seek changes the transport cursor, never the latest pause intent.
+                self.anchor_position = navigation['seek_to_seconds']
+                self.anchor = self.clock()
+                self.complete(command, navigation)
+            elif action in {'pause', 'resume'}:
                 position = self.position()
                 self.paused = action == 'pause'
                 self.anchor_position, self.anchor = position, self.clock()
@@ -456,8 +491,13 @@ class LiveRenderer:
                     self.paused
                     or self.mixer.position / RATE >= self.position() + 24
                 ):
-                    if not self.preparation.busy and hasattr(
-                        self.worker, 'yield_compute'
+                    if (
+                        not self.preparation.busy
+                        and all(
+                            getattr(source, 'idle', True)
+                            for source in self.sources.values()
+                        )
+                        and hasattr(self.worker, 'yield_compute')
                     ):
                         self.worker.yield_compute()
                     self.sleep(0.1)

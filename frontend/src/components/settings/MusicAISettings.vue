@@ -189,13 +189,17 @@ const features = {
   weekly: 'Mixes de la semaine',
   external_beta: 'Découverte externe — bêta',
   dj_prepared: 'Sets DJ préparés',
+  dj_weekly: 'Sets DJ hebdomadaires personnalisés',
   dj_interactive: 'DJ en temps réel',
   dj_trial: 'Autoriser le DJ non qualifié — essai bêta volontaire',
 }
 const shownFeatures = computed(() =>
   Object.fromEntries(
     Object.entries(features).filter(
-      ([key]) => key.startsWith('dj_') === (mode.value === 'dj')
+      ([key]) =>
+        key.startsWith('dj_') === (mode.value === 'dj') &&
+        (key !== 'dj_weekly' ||
+          musicAI.capabilities.value?.dj_weekly_sets === true)
     )
   )
 )

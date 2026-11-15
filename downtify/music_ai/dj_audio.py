@@ -27,6 +27,16 @@ class AudioError(RuntimeError):
     pass
 
 
+def decode_filter(speed, gain):
+    # A unity-tempo RubberBand pass is not a no-op: some 44.1 kHz MP3s
+    # lose more than the permitted tail tolerance when resampled to 48 kHz.
+    # Keep the original samples when there is no tempo change to make.
+    volume = f'volume={gain:.8f}dB'
+    if speed == 1.0:
+        return volume
+    return f'rubberband=tempo={speed:.10f}:pitch=1:channels=together,{volume}'
+
+
 def run_audio(
     arguments,
     checkpoint,
@@ -128,6 +138,9 @@ class AudioIO:
         )
 
     def check_space(self, requested):
+        reclaim = getattr(self, 'reclaim', None)
+        if reclaim is not None:
+            reclaim(requested)
         used = 0
         for path in self.cache.rglob('*'):
             try:
@@ -288,7 +301,11 @@ class AudioIO:
             timeout=300,
         )
         try:
-            stats = json.loads(diagnostic[diagnostic.rfind(b'{') :])
+            # FFmpeg 7 can append its output summary after the loudnorm JSON.
+            # Decode one object, retaining the bounded diagnostic and finite checks.
+            stats, _ = json.JSONDecoder().raw_decode(
+                diagnostic[diagnostic.rfind(b'{') :].decode('utf-8')
+            )
             result = {
                 key: float(stats[key]) for key in ('input_i', 'input_tp')
             }
@@ -351,13 +368,15 @@ class AudioIO:
             self.original(path, before)
             return {
                 'profile': asdict(profile),
+                'beats': [float(beat) for beat in beats],
+                'transition_points': list(profile.downbeats),
                 'loudness': levels,
                 'source_version': before,
             }
         finally:
             mono.unlink(missing_ok=True)
 
-    def decode(self, value, row, levels, target, checkpoint, *, expected=None):
+    def _decode_plan(self, value, row, levels, checkpoint, expected):
         path, before = self.original(value, expected)
         self.probe(path, checkpoint)
         speed, cue, source_end = row['speed'], row['cue'], row['source_end']
@@ -386,6 +405,69 @@ class AudioIO:
             if abs(planned - frames) > 1:
                 raise AudioError('unsafe_audio_plan')
             frames = planned
+        return path, before, frames, gain
+
+    def stream(self, value, row, levels, checkpoint, *, expected=None):
+        from .dj_pcm_stream import ProgressivePcm
+
+        path, before, frames, gain = self._decode_plan(
+            value, row, levels, checkpoint, expected
+        )
+        self.check_space(24 * RATE * FRAME_BYTES)
+        decoder = ProgressivePcm(
+            [
+                'ffmpeg',
+                '-nostdin',
+                '-hide_banner',
+                '-nostats',
+                '-v',
+                'error',
+                '-xerror',
+                '-threads',
+                '1',
+                '-filter_threads',
+                '1',
+                '-protocol_whitelist',
+                'file,pipe',
+                '-ss',
+                f'{row["cue"]:.9f}',
+                '-i',
+                str(path),
+                '-map',
+                '0:a:0',
+                '-vn',
+                '-sn',
+                '-dn',
+                '-map_metadata',
+                '-1',
+                '-af',
+                decode_filter(row['speed'], gain),
+                '-t',
+                f'{frames / RATE:.9f}',
+                '-ar',
+                str(RATE),
+                '-ac',
+                '2',
+                '-threads',
+                '1',
+                '-f',
+                'f32le',
+                'pipe:1',
+            ],
+            # Match the existing deck's one-frame allowance for absolute rounding.
+            frames + 1,
+            lambda: self.original(path, before),
+        )
+        try:
+            return decoder.warm(checkpoint)
+        except BaseException:
+            decoder.close()
+            raise
+
+    def decode(self, value, row, levels, target, checkpoint, *, expected=None):
+        path, before, frames, gain = self._decode_plan(
+            value, row, levels, checkpoint, expected
+        )
         self.check_space(frames * FRAME_BYTES)
         target = self.destination(target)
         temporary = self.temporary('.stereo.pcm')
@@ -402,7 +484,7 @@ class AudioIO:
                     '-protocol_whitelist',
                     'file,pipe',
                     '-ss',
-                    f'{cue:.9f}',
+                    f'{row["cue"]:.9f}',
                     '-i',
                     str(path),
                     '-map',
@@ -413,7 +495,7 @@ class AudioIO:
                     '-map_metadata',
                     '-1',
                     '-af',
-                    f'rubberband=tempo={speed:.10f}:pitch=1:channels=together,volume={gain:.8f}dB',
+                    decode_filter(row['speed'], gain),
                     '-t',
                     f'{frames / RATE:.9f}',
                     '-ar',

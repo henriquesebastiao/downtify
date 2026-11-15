@@ -140,6 +140,24 @@ def test_commands_are_owned_idempotent_and_report_the_committed_horizon(
         )
 
 
+def test_pausing_the_analysis_never_blocks_a_live_set(database):
+    session = create(database, mode='interactive')
+    job = database.claim(now=10)
+    assert database.publish(
+        session['id'],
+        job['lease_token'],
+        'playing',
+        {'position': 10, 'rendered': 34, 'next_mutable_at': 36},
+        now=11,
+    )
+    with database.database.connect() as db:
+        db.execute(
+            "INSERT OR REPLACE INTO metadata VALUES ('analysis_paused','true')"
+        )
+    result = database.command(1, session['id'], 'n', 'next', {}, now=12)
+    assert result['effective_after_seconds'] == 26
+
+
 @pytest.mark.parametrize('action', ['pause', 'resume'])
 def test_playback_controls_do_not_report_the_musical_transition_delay(
     database, action

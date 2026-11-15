@@ -25,6 +25,7 @@ DEFAULTS = {
     'weekly': False,
     'external_beta': False,
     'dj_prepared': False,
+    'dj_weekly': False,
     'dj_interactive': False,
     'dj_trial': False,
 }
@@ -36,6 +37,12 @@ MOODS = {
     'melancolie': 'Melancholic emotional music with a sad reflective mood',
     'detente': 'Relaxed warm soothing music for unwinding',
 }
+
+# Weekly genre themes narrow the catalog by its native tag and rank against
+# the centroid of the genre's analysed tracks. They live outside MOODS so the
+# analysis worker keeps publishing exactly the six pinned mood vectors that the
+# bundled CLAP release supports (see encoder.verify_manifest / publish_model).
+GENRE_THEMES = ('rap', 'rock', 'electro', 'pop')
 
 
 class Store:
@@ -104,6 +111,13 @@ class Store:
                 db.execute(
                     'ALTER TABLE listens ADD COLUMN sequence INTEGER NOT NULL DEFAULT 0'
                 )
+            # Track-level retry lookup for the reconciliation pass; bounded to analysis jobs.
+            db.execute(
+                "CREATE INDEX IF NOT EXISTS jobs_analysis_track ON jobs(json_extract(payload,'$.track')) WHERE kind='analysis'"
+            )
+            db.execute(
+                "CREATE INDEX IF NOT EXISTS jobs_rhythm_track ON jobs(json_extract(payload,'$.track'),json_extract(payload,'$.model'),json_extract(payload,'$.fingerprint')) WHERE kind='rhythm'"
+            )
             self._freeze_existing_preferences(db)
 
     @staticmethod
@@ -146,12 +160,16 @@ class Store:
             row = db.execute(
                 'SELECT value FROM preferences WHERE owner=?', (owner,)
             ).fetchone()
-        return {**DEFAULTS, **(json.loads(row[0]) if row else {})}
+        merged = {**DEFAULTS, **(json.loads(row[0]) if row else {})}
+        # Always emit booleans: the API contract is features/preferences as
+        # {key: bool}. Stored values can drift to truthy ints (e.g. 1) via other
+        # writers, which would break the clients' Map<String,Boolean> decoding.
+        return {key: bool(value) for key, value in merged.items()}
 
     def effective(self, owner: int) -> dict[str, bool]:
         global_flags = self.preferences(-1)
         own = self.preferences(owner)
-        return {key: global_flags[key] and own[key] for key in DEFAULTS}
+        return {key: bool(global_flags[key] and own[key]) for key in DEFAULTS}
 
     def ensure_user(self, owner: int):
         if owner <= 0:
@@ -462,6 +480,14 @@ class Store:
             )
             db.execute('DELETE FROM listens WHERE owner=?', (owner,))
             db.execute('DELETE FROM playlists WHERE owner=?', (owner,))
+            db.execute(
+                'DELETE FROM metadata WHERE key IN (?,?,?)',
+                (
+                    f'playlist_rotation_history:{owner}',
+                    f'playlist_refresh_receipts:{owner}',
+                    f'selection_revision:{owner}',
+                ),
+            )
 
     def enqueue(self, identity: str, kind: str, payload: dict, *, priority=0):
         with self.connect() as db:

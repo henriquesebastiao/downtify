@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { v4 as uuidv4 } from 'uuid'
 import { ref } from 'vue'
 import config from '/src/config'
 
@@ -16,8 +17,54 @@ let refreshedAt = 0
 let homeCache, homeFlight
 let homeGeneration = 0
 const djStatusCache = new Map()
+const djConsumer = uuidv4()
+const consumerParams = () =>
+  capabilities.value?.dj_asset_consumers ? { consumer: djConsumer } : {}
 
 export const musicAI = {
+  weeklySetsEnabled() {
+    return (
+      capabilities.value?.version === 1 &&
+      capabilities.value?.dj_weekly_sets === true &&
+      ['weekly', 'dj_prepared', 'dj_weekly'].every(
+        (key) => capabilities.value?.features?.[key] === true
+      )
+    )
+  },
+  async weeklySets() {
+    const owner = account.value
+    if (!owner || !this.weeklySetsEnabled()) return null
+    const value = (await http.get('/api/v1/music-ai/dj/weekly')).data
+    return owner === account.value && this.weeklySetsEnabled() ? value : null
+  },
+  async prepareWeekly(theme, requestId) {
+    const owner = account.value
+    if (!owner || !this.weeklySetsEnabled())
+      throw new Error('Sets hebdomadaires désactivés')
+    const value = (
+      await http.post(
+        `/api/v1/music-ai/dj/weekly/${encodeURIComponent(theme)}`,
+        { request_id: requestId }
+      )
+    ).data
+    return owner === account.value && this.weeklySetsEnabled() ? value : null
+  },
+  async copyDj(id, name, requestId) {
+    const owner = account.value
+    if (
+      !owner ||
+      !this.weeklySetsEnabled() ||
+      !capabilities.value?.dj_asset_copies
+    )
+      throw new Error('Copies DJ indisponibles')
+    const value = (
+      await http.post(
+        `/api/v1/music-ai/dj/sessions/${encodeURIComponent(id)}/copies`,
+        { request_id: requestId, name }
+      )
+    ).data
+    return owner === account.value && this.weeklySetsEnabled() ? value : null
+  },
   capabilities,
   preferences,
   error,
@@ -73,7 +120,11 @@ export const musicAI = {
       )
     )
       throw new Error('Adresse de lecture DJ invalide')
-    return `${http.defaults.baseURL}${path}`
+    const suffix =
+      path.endsWith('/media') && capabilities.value?.dj_asset_consumers
+        ? `?consumer=${encodeURIComponent(djConsumer)}`
+        : ''
+    return `${http.defaults.baseURL}${path}${suffix}`
   },
   async djSessions() {
     return (
@@ -89,7 +140,10 @@ export const musicAI = {
     const response = await http.get(
       `/api/v1/music-ai/dj/sessions/${encodeURIComponent(id)}`,
       {
-        params: light ? { view: 'playback', position } : {},
+        params: {
+          ...(light ? { view: 'playback', position } : {}),
+          ...consumerParams(),
+        },
         headers:
           cached?.owner === owner ? { 'If-None-Match': cached.etag } : {},
         validateStatus: (status) => status === 200 || status === 304,
@@ -146,7 +200,7 @@ export const musicAI = {
   async stopDj(id) {
     await http.delete(
       `/api/v1/music-ai/dj/sessions/${encodeURIComponent(id)}`,
-      { timeout: 8000 }
+      { timeout: 8000, params: consumerParams() }
     )
   },
   async discardDj(id) {
@@ -253,6 +307,21 @@ export const musicAI = {
   },
   async playlists() {
     return (await http.get('/api/v1/music-ai/playlists')).data.playlists
+  },
+  async renewPlaylists(requestId) {
+    const owner = account.value
+    if (!owner || !capabilities.value?.playlist_refresh)
+      throw new Error('Renouvellement indisponible sur ce serveur')
+    const response = await http.post('/api/v1/music-ai/playlists/refresh', {
+      request_id: requestId,
+    })
+    if (owner !== account.value) throw new Error('Le compte a changé')
+    if (response.data?.accepted !== true)
+      throw new Error('Le renouvellement n’a pas été accepté')
+    homeGeneration++
+    homeCache = null
+    homeFlight = null
+    return response.data
   },
   async forget() {
     homeGeneration++

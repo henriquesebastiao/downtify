@@ -181,6 +181,10 @@ def public(session, rows):
         'continuous',
         'renewals',
         'media_origin',
+        'title',
+        'weekly_period',
+        'weekly_theme',
+        'immutable_copy',
     )
     result = {key: session[key] for key in keys if key in session}
     result['tracks'] = [
@@ -477,7 +481,7 @@ def create_session(payload, request, *, validation=False):
 class Command(BaseModel):
     model_config = ConfigDict(extra='forbid')
     request_id: str = Field(min_length=1, max_length=128)
-    action: Literal['pause', 'resume', 'next', 'replace', 'theme']
+    action: Literal['pause', 'resume', 'next', 'previous', 'replace', 'theme']
     payload: dict[str, str] = Field(default_factory=dict, max_length=1)
 
 
@@ -494,19 +498,29 @@ def cancel_creation(nonce: str, request: Request):
 
 @router.post('/sessions/{identity}/commands', status_code=202)
 def command(identity: str, payload: Command, request: Request):
+    from . import routes as base
+    from .dj_navigation import navigation
+
     session = owned(request, identity)
     visible_session(request, session)
     try:
+        receipt = navigation(
+            session,
+            payload.action,
+            payload.payload,
+            base.store().path.resolve().parent / 'dj',
+        )
         return database().command(
             session['owner'],
             identity,
             payload.request_id,
             payload.action,
             payload.payload,
+            navigation=receipt,
         )
     except PermissionError:
         raise HTTPException(
-            409, 'Le module interactif est désactivé.'
+            409, 'Le DJ interactif est désactivé dans les réglages.'
         ) from None
     except RuntimeError:
         raise HTTPException(
@@ -598,7 +612,13 @@ def hls(identity: str, filename: str, request: Request):
                 and not re.fullmatch(r'segment-[0-9]{8}\.ts', line)
             ) or 'URI=' in line:
                 raise HTTPException(503, 'Manifeste indisponible.')
+        assets().pin(session['owner'], identity, consumer(request), seconds=60)
         database().consumer(session['owner'], identity)
+        ready = database().record_ready(session['owner'], identity)
+        if ready is not None:
+            from .dj_readiness import record as record_readiness
+
+            record_readiness(base.store(), 'interactive', ready)
         return Response(
             content,
             media_type='application/vnd.apple.mpegurl',
@@ -607,6 +627,26 @@ def hls(identity: str, filename: str, request: Request):
     if target.stat().st_size > 1024**2:
         raise HTTPException(503, 'Segment indisponible.')
     return FileResponse(target, media_type='video/mp2t', headers=headers)
+
+
+@router.get('/analysis')
+def analysis_coverage(request: Request):
+    from . import routes as base
+    from .rhythm_queue import coverage
+
+    base.admin(request)
+    return coverage(database().database)
+
+
+@router.get('/readiness')
+def readiness(request: Request):
+    """Objective check: a warm DJ session should be playable within ten seconds."""
+    from . import routes as base
+
+    base.admin(request)
+    from .dj_readiness import summary
+
+    return summary(base.store())
 
 
 @router.get('/sessions')
@@ -640,6 +680,12 @@ def status(
     position: float | None = None,
 ):
     session = owned(request, identity)
+    if view == 'playback' and session['state'] in {
+        'ready',
+        'playing',
+        'paused',
+    }:
+        pin_reader(request, session)
     from .dj_refill import schedule
 
     schedule(request, session)
@@ -704,6 +750,7 @@ def stop(identity: str, request: Request):
     uid = base.owner(request)
     try:
         database().stop(uid, identity)
+        assets().release(uid, identity, consumer(request))
     except LookupError:
         raise HTTPException(404, 'Set DJ indisponible.') from None
     return {'ok': True}
@@ -718,7 +765,10 @@ def media(identity: str, request: Request):
     if session['mode'] != 'prepared' or session['state'] != 'ready':
         raise HTTPException(409, 'Le set n’est pas prêt.')
     cache = base.store().path.resolve().parent / 'dj'
-    workspace = cache / identity
+    name = session.get('asset_workspace', identity)
+    if not isinstance(name, str) or re.fullmatch('[a-f0-9]{32}', name) is None:
+        raise HTTPException(404, 'Le fichier de ce set n’est plus disponible.')
+    workspace = cache / name
     target = workspace / 'set.m4a'
     if (
         cache.is_symlink()
@@ -728,6 +778,7 @@ def media(identity: str, request: Request):
         or not target.resolve().is_relative_to(cache.resolve())
     ):
         raise HTTPException(404, 'Le fichier de ce set n’est plus disponible.')
+    pin_reader(request, session)
     return FileResponse(
         target,
         media_type='audio/mp4',
@@ -743,7 +794,256 @@ def discard(identity: str, request: Request):
     from . import routes as base
 
     try:
-        database().discard(base.owner(request), identity)
+        assets().discard(base.owner(request), identity)
     except LookupError:
         raise HTTPException(404, 'Set DJ indisponible.') from None
+    except RuntimeError:
+        raise HTTPException(
+            409, 'Ce set est encore utilisé par un lecteur.'
+        ) from None
     return {'state': 'deleting'}
+
+
+def assets():
+    from .dj_assets import Assets
+
+    return Assets(database().database)
+
+
+def consumer(request):
+    value = request.query_params.get('consumer')
+    if value is not None:
+        if not re.fullmatch(r'[A-Za-z0-9_-]{1,128}', value):
+            raise HTTPException(422, 'Identifiant de lecteur invalide.')
+        return 'client:' + value
+    principal = getattr(request.state, 'principal', None)
+    # Legacy paired devices remain independent; browsers should send a per-tab ID.
+    identity = [
+        getattr(principal, 'kind', ''),
+        getattr(principal, 'device_id', ''),
+    ]
+    return (
+        'legacy:' + hashlib.sha256(json.dumps(identity).encode()).hexdigest()
+    )
+
+
+def pin_reader(request, session):
+    try:
+        assets().pin(session['owner'], session['id'], consumer(request))
+    except (LookupError, PermissionError):
+        raise HTTPException(404, 'Set DJ indisponible.') from None
+
+
+class CopyAsset(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    request_id: str = Field(min_length=1, max_length=128)
+    name: str = Field(min_length=1, max_length=160)
+
+
+@router.post('/sessions/{identity}/copies', status_code=201)
+def copy_asset(identity: str, payload: CopyAsset, request: Request):
+    from .dj_audio import AudioError
+
+    session = owned(request, identity)
+    visible_session(request, session)
+    try:
+        copied = assets().copy(
+            session['owner'], identity, payload.name, payload.request_id
+        )
+    except AudioError as error:
+        code = str(error)
+        raise HTTPException(
+            503 if code == 'dj_cache_busy' else 507,
+            'Le cache DJ est occupé. Réessayez plus tard.'
+            if code == 'dj_cache_busy'
+            else 'Espace ou limite de copies DJ atteint.',
+        ) from None
+    except ValueError:
+        raise HTTPException(
+            409, 'Nom ou identifiant de demande invalide.'
+        ) from None
+    except PermissionError:
+        raise HTTPException(409, 'Cette fonction est désactivée.') from None
+    except LookupError:
+        raise HTTPException(
+            404, 'Le fichier de ce set n’est plus disponible.'
+        ) from None
+    return public(copied, visible_session(request, copied))
+
+
+@router.get('/weekly')
+def weekly_sets(request: Request):
+    from datetime import datetime
+
+    from . import routes as base
+    from .dj_background import weekly_period
+    from .dj_weekly import THEMES
+    from .playlists import PARIS
+
+    owner = base.owner(request)
+    for feature in ('weekly', 'dj_prepared', 'dj_weekly'):
+        base.require(request, feature)
+    week = weekly_period()
+    revision = {
+        key: base.store().metadata(metadata, 0)
+        for key, metadata in (
+            ('profile_revision', f'profile_revision:{owner}'),
+            ('selection_revision', f'selection_revision:{owner}'),
+            ('analysis_generation', 'analysis_generation'),
+        )
+    }
+    with base.store().connect() as db:
+        rows = db.execute(
+            "SELECT * FROM dj_sessions WHERE owner=? AND state NOT IN ('deleted','deleting') AND (json_extract(document,'$.immutable_copy')=1 OR (json_extract(document,'$.background')=1 AND json_extract(document,'$.weekly_period')=? AND COALESCE(json_extract(document,'$.profile_revision'),0)=? AND COALESCE(json_extract(document,'$.selection_revision'),0)=? AND COALESCE(json_extract(document,'$.analysis_generation'),0)=?)) ORDER BY created DESC LIMIT 64",
+            (
+                owner,
+                week,
+                revision['profile_revision'],
+                revision['selection_revision'],
+                revision['analysis_generation'],
+            ),
+        ).fetchall()
+    by_theme, copies = {}, []
+    for row in rows:
+        session = {
+            **json.loads(row['document']),
+            'id': row['id'],
+            'owner': owner,
+            'state': row['state'],
+            'mode': row['mode'],
+            'created': row['created'],
+            'updated': row['updated'],
+        }
+        is_copy = session.get('immutable_copy') and session['state'] == 'ready'
+        theme = session.get('weekly_theme')
+        is_current = (
+            session.get('background')
+            and session.get('weekly_period') == week
+            and all(
+                session.get(key, 0) == value for key, value in revision.items()
+            )
+        )
+        if not is_copy and not is_current:
+            continue
+        if not is_copy and theme in by_theme:
+            continue
+        try:
+            visible_session(request, session)
+        except HTTPException as error:
+            if error.status_code == 404:
+                continue
+            raise
+        item = public({**session, 'ids': [], 'timeline': []}, {})
+        item['track_count'] = len(session.get('ids', []))
+        item['cover_ids'] = list(dict.fromkeys(session.get('ids', [])))[:4]
+        if is_copy:
+            copies.append(item)
+        else:
+            by_theme[theme] = item
+    cards = [
+        dict(theme=theme, session=by_theme.get(theme)) for theme in THEMES
+    ]
+    rotation = f'{owner}:{week}:{datetime.now(PARIS).date()}'
+    featured = sorted(
+        cards,
+        key=lambda card: (
+            not (card['session'] and card['session']['state'] == 'ready'),
+            hashlib.sha256(f'{rotation}:{card["theme"]}'.encode()).hexdigest(),
+        ),
+    )[:4]
+    return dict(
+        period=week,
+        cards=cards,
+        featured=[card['theme'] for card in featured],
+        copies=copies[:20],
+    )
+
+
+class PrepareWeekly(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    request_id: str = Field(min_length=1, max_length=128)
+
+
+@router.post('/weekly/{theme}', status_code=202)
+def prepare_weekly(theme: str, payload: PrepareWeekly, request: Request):
+    import math
+
+    from . import routes as base
+    from .dj_background import weekly_period
+    from .dj_weekly import DJ_THEME, THEMES
+
+    uid = base.owner(request)
+    for feature in ('weekly', 'dj_prepared', 'dj_weekly'):
+        base.require(request, feature)
+    if theme not in THEMES:
+        raise HTTPException(404, 'Thème DJ indisponible.')
+    service('prepared')
+    if base.store().metadata('dj', {}).get('weekly_protocol') != 1:
+        raise HTTPException(503, 'Le moteur hebdomadaire est indisponible.')
+    week = weekly_period()
+    background = dict(
+        weekly_period=week,
+        weekly_theme=theme,
+        profile_revision=base.store().metadata(f'profile_revision:{uid}', 0),
+        selection_revision=base.store().metadata(
+            f'selection_revision:{uid}', 0
+        ),
+        analysis_generation=base.store().metadata('analysis_generation', 0),
+    )
+    intent = json.dumps(['weekly-manual', theme, background], sort_keys=True)
+    try:
+        previous = database().find_request(uid, payload.request_id, intent)
+    except ValueError:
+        raise HTTPException(
+            409, 'Cette demande a déjà une autre sélection.'
+        ) from None
+    if previous:
+        if previous['state'] in {'deleted', 'deleting', 'expired'}:
+            raise HTTPException(
+                410, 'Créez une nouvelle demande pour préparer ce set.'
+            )
+        return public(previous, visible_session(request, previous))
+    with base.store().connect() as db:
+        row = db.execute(
+            "SELECT ids FROM playlists WHERE owner=? AND cadence='weekly' AND mood=? AND period=?",
+            (uid, theme, week),
+        ).fetchone()
+    if row is None:
+        raise HTTPException(
+            409, 'Le mix de la semaine est encore en préparation.'
+        )
+    native = {row['id']: row for row in base.catalog(request)}
+    ids = []
+    for identity in dict.fromkeys(json.loads(row[0])):
+        if identity not in native:
+            continue
+        duration = float(native[identity].get('duration') or 0)
+        if math.isfinite(duration) and 0 <= duration <= 1200:
+            ids.append(identity)
+        if len(ids) == 25:
+            break
+    if len(ids) < 2:
+        raise HTTPException(
+            409, 'Pas assez de titres locaux disponibles pour ce set.'
+        )
+    sources = visible(request, ids, sources=True)
+    try:
+        session = database().create(
+            uid,
+            'prepared',
+            DJ_THEME.get(theme, theme),
+            ids,
+            sources,
+            nonce=payload.request_id,
+            request_intent=intent,
+            background=background,
+        )
+    except PermissionError:
+        raise HTTPException(
+            409, 'Les réglages ont changé. Actualisez la page.'
+        ) from None
+    except RuntimeError:
+        raise HTTPException(
+            429, 'Une préparation est déjà en attente.'
+        ) from None
+    return public(session, visible_session(request, session))

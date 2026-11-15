@@ -1,0 +1,15 @@
+# Décodage progressif du DJ interactif
+
+Le direct décode désormais progressivement les pistes au lieu de produire un fichier PCM complet avant leur lecture. Chaque occurrence possède un processus FFmpeg/Rubberband continu et un tampon stéréo de 24 secondes d’avance. Le traitement ne redémarre pas à chaque bloc : le test audio compare les échantillons obtenus à un décodage continu au-delà de la première fenêtre.
+
+Le tampon conserve environ une seconde derrière le curseur, avec une marge d’un bloc de lecture. Les seules données PCM utiles restent en mémoire ; aucun fichier PCM complet n’est créé pour le direct. À 48 kHz, deux canaux et float32, 25 secondes représentent 9,6 Mo, auxquels s’ajoutent un bloc de lecture, les entrées/sorties du décodeur et les données de mixage. Ce calcul ne mesure ni le RSS total, ni les modèles. La fenêtre normale reste le courant et trois pistes ; une modification de plan peut conserver temporairement les deux fenêtres de préparation déjà bornées par le renderer.
+
+Le renderer vérifie la disponibilité du bloc complet avant de toucher au curseur ou à l’égalisation. Une plage non préparée ou déjà abandonnée est refusée au lieu d’être remplacée par des zéros. La tolérance finale de 2048 échantillons et la marge d’un échantillon d’arrondi restent celles du décodeur précédent. Les occurrences répétées d’un même titre ont des curseurs distincts. Les paramètres des décodeurs FFmpeg limitent les threads de décodage/filtrage à un ; les limites CPU et mémoire du conteneur restent à vérifier séparément.
+
+Les signatures des sources, snapshots privés, validation des plans, annulations, générations et adoption sur le thread propriétaire restent appliqués. Un résultat périmé ferme aussi son décodeur. L’arrêt termine et récupère le groupe de processus, y compris si son parent est déjà sorti. Un tampon encore alimenté empêche de céder le créneau de calcul partagé. La production HLS conserve sa limite existante de 24 secondes engagées ; le tampon de décodage est une préparation supplémentaire non engagée.
+
+Cette modification change l’empreinte du moteur de rendu, sans modifier les fonctions utilisées dans l’identité d’analyse des profils. Le mode de fichier préparé conserve le chemin de décodage complet et partage la même validation de plan. Les modèles et profils réutilisables restent ceux du lot précédent.
+
+Validation locale : PCM synthétique identique sur plusieurs fenêtres, refus des plages non prêtes, mémoire PCM bornée, source invalidée, sorties trop courtes/longues, annulation, descendants arrêtés, comparaison avec FFmpeg/Rubberband et commandes réelles du renderer HLS. Les doublures des tests de préparation acceptent explicitement le nouveau protocole et gardent les contrôles existants sur pause et résultats périmés.
+
+Restent à qualifier : bibliothèque réelle, RSS/CPU/IO, 30 démarrages et premier son effectif, pause P95, relais classique sûr, réutilisation des snapshots entre sessions et heure de direct à plus de 1,5×. Aucun résultat de synthèse ou temps de disponibilité de manifeste ne constitue une mesure de premier son sur téléphone ou voiture. Le lot n’est pas déployé.

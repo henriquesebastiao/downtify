@@ -5,18 +5,21 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import json
+import re
 import time
 from functools import lru_cache, wraps
 from pathlib import Path
 from typing import Literal
+from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import FileResponse, JSONResponse, Response
 from pydantic import BaseModel, Field
 
+from . import covers
 from .playlists import period, stored_selections, summaries
 from .ranking import rank
-from .store import MOODS, Store
+from .store import GENRE_THEMES, MOODS, Store
 
 router = APIRouter(prefix='/api/v1/music-ai', tags=['Optional music AI'])
 
@@ -315,14 +318,19 @@ def capabilities(request: Request):
     return {
         'version': 1,
         'home_cards': True,
+        'playlist_refresh': True,
         'dj_request_cancel': True,
         'dj_light_status': True,
+        'dj_navigation': True,
+        'dj_weekly_sets': True,
+        'dj_asset_copies': True,
+        'dj_asset_consumers': True,
         'dj_seed_mix': True,
         'administrator': api.request_is_admin(request),
         'profile_revision': store().metadata(f'profile_revision:{uid}', 0),
         'features': store().effective(uid),
         'model': store().metadata('model', {'ready': False}),
-        'moods': list(MOODS),
+        'moods': list(MOODS) + list(GENRE_THEMES),
         'dj': dj,
         'source_available': Path('/downtify/music-ai-source.tar.gz').is_file(),
     }
@@ -398,6 +406,11 @@ async def recommendations(
         rows,
         vectors,
         seed=seed or None,
+        rotation=''
+        if seed
+        else (
+            f'{uid}:{period("daily")}:{store().metadata(f"selection_revision:{uid}", 0)}'
+        ),
         history=store().history(uid),
         favorites=await asyncio.to_thread(favorite_ids, request, rows),
         limit=limit,
@@ -405,6 +418,21 @@ async def recommendations(
     result = await asyncio.to_thread(current_sources, result)
     require(request, 'similarity' if seed else 'personalization')
     return {'source': 'local', 'tracks': [public(row) for row in result]}
+
+
+class PlaylistRefresh(BaseModel):
+    request_id: UUID
+
+
+@router.post('/playlists/refresh')
+def refresh_playlists(request: Request, payload: PlaylistRefresh):
+    from .playlists import refresh
+
+    uid = owner(request)
+    try:
+        return refresh(store(), uid, str(payload.request_id))
+    except PermissionError as exc:
+        raise HTTPException(403, 'Feature disabled') from exc
 
 
 @router.get('/playlists')
@@ -422,9 +450,12 @@ def playlist_cards(request, home_only=False):
         selections = [
             item
             for item in selections
-            if item['cadence'] == 'daily'
-            and item['mood']
-            in {'detente', 'concentration', 'energie', 'calme'}
+            if (
+                item['cadence'] == 'daily'
+                and item['mood']
+                in {'detente', 'concentration', 'energie', 'calme'}
+            )
+            or (item['cadence'] == 'weekly' and item['mood'] in GENRE_THEMES)
         ]
     identities = list(
         dict.fromkeys(
@@ -445,7 +476,7 @@ async def home(request: Request):
     if any(flags[key] for key in ('daily', 'weekly', 'personalization')):
         ready = (
             await asyncio.to_thread(playlist_cards, request, True)
-            if flags['daily']
+            if flags['daily'] or flags['weekly']
             else []
         )
         for mood, title in [
@@ -474,6 +505,27 @@ async def home(request: Request):
                 }
             )
             result[-1] = {**result[-1], 'title': title}
+    if flags['weekly']:
+        for mood in GENRE_THEMES:
+            card = next(
+                (
+                    item
+                    for item in ready
+                    if item['cadence'] == 'weekly' and item['mood'] == mood
+                ),
+                None,
+            )
+            result.append(
+                card
+                or {
+                    'cadence': 'weekly',
+                    'mood': mood,
+                    'period': period('weekly'),
+                    'count': 0,
+                    'state': 'preparing',
+                    'cover_track_ids': [],
+                }
+            )
     value = {'cards': result}
     etag = (
         '"'
@@ -488,12 +540,41 @@ async def home(request: Request):
     return JSONResponse(value, headers=headers)
 
 
+@router.get('/playlists/{cadence}/{mood}/cover.svg')
+def playlist_cover(
+    cadence: Literal['daily', 'weekly'],
+    mood: str,
+    request: Request,
+    period_key: str = Query('', alias='period'),
+):
+    """Deterministic local cover: the same set always gets the same picture."""
+    require(request, cadence)
+    if mood not in MOODS and not (
+        cadence == 'weekly' and mood in GENRE_THEMES
+    ):
+        raise HTTPException(404, 'Unknown mood')
+    key = period_key or period(cadence)
+    if not re.fullmatch(r'\d{4}-\d{2}-\d{2}', key):
+        raise HTTPException(422, 'Invalid period')
+    uid = owner(request)
+    return Response(
+        covers.svg(f'{uid}:{cadence}:{mood}:{key}', mood),
+        media_type='image/svg+xml',
+        headers={
+            'Cache-Control': 'private, max-age=86400',
+            'X-Content-Type-Options': 'nosniff',
+        },
+    )
+
+
 @router.get('/playlists/{cadence}/{mood}')
 async def mood_playlist(
     cadence: Literal['daily', 'weekly'], mood: str, request: Request
 ):
     uid = require(request, cadence)
-    if mood not in MOODS:
+    if mood not in MOODS and not (
+        cadence == 'weekly' and mood in GENRE_THEMES
+    ):
         raise HTTPException(404, 'Unknown mood')
     selections = stored_selections(store(), uid)
     chosen = next(

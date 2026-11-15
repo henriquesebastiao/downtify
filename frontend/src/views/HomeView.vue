@@ -201,6 +201,7 @@
         />
       </div>
 
+      <WeeklyDjSets featured />
       <MusicForYouShelf />
 
       <!-- Recently added -->
@@ -308,6 +309,7 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import WeeklyDjSets from '/src/components/library/WeeklyDjSets.vue'
 import MusicForYouShelf from '/src/components/home/MusicForYouShelf.vue'
 import { musicAI } from '/src/model/musicAI'
 import AppIcon from '/src/components/ui/AppIcon.vue'

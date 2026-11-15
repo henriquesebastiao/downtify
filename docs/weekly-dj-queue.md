@@ -1,0 +1,17 @@
+# File des sets DJ hebdomadaires
+
+Ce lot ajoute la préparation automatique côté serveur. Les copies enregistrées, le nettoyage global du cache et l’interface Pour vous DJ appartiennent au lot suivant ; activer cette file ne constitue pas une livraison complète de cette interface.
+
+La préférence `dj_weekly` est désactivée par défaut. La préparation exige aussi les préférences effectives `weekly` et `dj_prepared`, une sélection locale déjà générée et un worker préparé récemment disponible. Les réglages existants sont conservés. Le planificateur commence une nouvelle période le lundi à 04 h 30 Europe/Paris et rattrape un créneau manqué lors du passage suivant. Il ne réanalyse pas le catalogue à chaque semaine et ne télécharge aucune musique.
+
+Les dix thèmes sont les six humeurs et rap, rock, électro, pop. Le planificateur prend jusqu’à 25 identifiants distincts de la sélection hebdomadaire du compte, revérifie le catalogue visible et les versions des sources, et exclut les durées connues dépassant la limite de 20 minutes par piste. Il n’annonce pas 25 titres si le catalogue filtré ne les fournit pas. Le thème public du genre reste distinct de la cible d’énergie utilisée par le renderer.
+
+Une seule demande hebdomadaire attend ou s’exécute à la fois pour l’ensemble des comptes. Le tour alterne les propriétaires disposant de sélections. Les demandes manuelles gardent leurs deux places par utilisateur et passent avant la préparation automatique ; le direct passe avant les fichiers préparés. La tâche automatique prend un créneau `dj-background`, sans poser le signal de priorité DJ qui pourrait préempter l’indexation. Elle attend l’absence d’activité native, de pause d’analyse, de pression excessive et de demande manuelle.
+
+Une demande interrompue conserve son identité et réutilise les profils analysés ; les sets déjà finis restent conservés. Le rendu du set incomplet reprend depuis son début, sans prétendre reprendre l’état interne d’un encodeur au milieu d’un fichier. Les baux expirés peuvent relancer uniquement ces demandes automatiques. Chaque tentative utilise son propre espace privé, dérivé du bail, pour qu’un ancien worker ne puisse effacer les fichiers d’une nouvelle tentative.
+
+Les révisions du profil, des sélections et des analyses ainsi que les préférences sont revérifiées à la création, à la prise de tâche, pendant le travail et dans la transaction de publication. Un résultat obsolète n’est pas publié. Les chemins internes ne sont pas renvoyés par l’API ; le média reste associé à son identifiant de session et aux règles de visibilité courantes. Les fichiers publiés sont conservés si une écriture de métrique échoue ensuite. Les originaux restent en lecture seule.
+
+Validation locale : 3632 tests backend et dix sous-tests passent ; deux essais nécessitant les vrais modèles restent exclus. Les 25 cas spécifiques couvrent le créneau Paris et les changements d’heure, les priorités, les révisions, l’opt-in, l’isolation des comptes, la reprise avec un nouvel espace, les résultats périmés et un rendu FFmpeg synthétique accessible en HTTP Range privé. Le test de rendu utilise des profils synthétiques et ne qualifie pas un modèle réel.
+
+Aucun déploiement effectué. Restent les essais sur bibliothèque réelle, les ressources mesurées, les copies immuables, les épingles de lecture et le nettoyage du cache de 5 Gio, puis les cartes d’accueil et la page Pour vous DJ. Les garde-fous actuels refusent toujours un cache plein.

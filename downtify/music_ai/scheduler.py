@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
-from .playlists import generate, period
-from .store import MOODS
+import json
+import time
+
+from .playlists import generate, period, themes
 
 
 def refresh_due(
@@ -40,7 +42,7 @@ def refresh_due(
                         (uid, cadence, current),
                     )
                 }
-            missing = set(MOODS) - existing
+            missing = set(themes(cadence)) - existing
             if not missing:
                 continue
             if rows is None:
@@ -60,35 +62,46 @@ def refresh_due(
     return created
 
 
+def dj_owns_compute(database, *, now=None):
+    """True while a DJ request waits for or holds the shared compute lease."""
+    now = time.time() if now is None else now
+    with database.connect() as db:
+        waiting = db.execute(
+            "SELECT value FROM metadata WHERE key='compute_dj_waiting'"
+        ).fetchone()
+        if waiting and json.loads(waiting[0]) > now:
+            return True
+        lease = db.execute(
+            'SELECT kind FROM compute_lease WHERE id=1 AND expires>?', (now,)
+        ).fetchone()
+    return bool(lease) and lease[0] == 'dj'
+
+
 def native_sweep():
-    from fastapi import Request
+    from fastapi import HTTPException, Request
 
     from .. import api
     from ..auth import ADMIN, USER, Principal
-    from .routes import catalog, store
+    from .routes import catalog, favorite_ids, store
 
     status = store().metadata('model', {})
     if not status.get('ready') or store().metadata('native_busy', False):
         return
     if api.state.auth is None:
         return
+    # Ranking is a bounded read, not model inference: it no longer waits for the
+    # analysis worker's long lease, which used to starve the morning mixes for
+    # hours. A DJ request still keeps priority; the next minute retries.
+    if dj_owns_compute(store()):
+        return
 
     def user_for(uid):
         return api.state.auth.users.get(uid)
 
-    ticket = None
-
-    def rows_for(uid):
-        nonlocal ticket
-        from .compute_budget import acquire
-
-        if ticket is None:
-            ticket = acquire(store(), 'analysis')
-            if ticket is None:
-                return []
+    def request_for(uid):
         user = user_for(uid)
         if user is None:
-            return []
+            return None
         role = str(user.get('role') or 'user')
         principal = Principal(
             'internal',
@@ -105,16 +118,28 @@ def native_sweep():
             'headers': [],
             'state': {'principal': principal},
         })
-        return catalog(request)
+        return request
 
-    try:
-        refresh_due(
-            store(),
-            status['id'],
-            user_for,
-            rows_for,
-            checkpoint=lambda: ticket is None or ticket.renew(),
-        )
-    finally:
-        if ticket is not None:
-            ticket.release()
+    def rows_for(uid):
+        request = request_for(uid)
+        if request is None:
+            return []
+        rows = catalog(request)
+        favorites = favorite_ids(request, rows)
+        return [{**row, 'favorite': row['id'] in favorites} for row in rows]
+
+    refresh_due(store(), status['id'], user_for, rows_for)
+
+    from .dj_routes import visible
+    from .dj_weekly import enqueue_due
+
+    def sources_for(uid, ids):
+        request = request_for(uid)
+        if request is None:
+            return {}
+        try:
+            return visible(request, ids, sources=True)
+        except HTTPException:
+            return {}
+
+    enqueue_due(store(), user_for, rows_for, sources_for)

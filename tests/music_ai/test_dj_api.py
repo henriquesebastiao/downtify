@@ -396,6 +396,14 @@ def test_hls_resources_are_owned_visible_no_store_and_manifest_cannot_escape(
     result = http.get(url + 'index.m3u8', headers=headers)
     assert result.status_code == 200
     assert 'no-store' in result.headers['cache-control']
+    ready = store.get(1, identity)['ready_seconds']
+    assert ready >= 0
+    # Only the first playable manifest read counts, not every reload.
+    assert http.get(url + 'index.m3u8', headers=headers).status_code == 200
+    assert store.get(1, identity)['ready_seconds'] == ready
+    from downtify.music_ai.dj_assets import Assets
+
+    assert Assets(database).pinned(identity)
     assert (
         http.get(
             url + 'segment-00000000.ts',
@@ -425,6 +433,60 @@ def test_hls_resources_are_owned_visible_no_store_and_manifest_cannot_escape(
         http.get(url + 'segment-00000000.ts', headers=headers).status_code
         == 409
     )
+
+
+def test_completed_stream_navigation_is_owned_idempotent_and_does_not_resume(
+    client,
+):
+    from datetime import datetime, timezone
+
+    http, database, _, _ = client
+    identity = validation_session(client).json()['id']
+    store = DjStore(database)
+    job = store.claim()
+    origin = 1_700_000_000
+    assert store.publish(
+        identity,
+        job['lease_token'],
+        'ready',
+        {
+            'media_origin': origin,
+            'timeline': [
+                {'id': 'one', 'start': 0, 'end': 180},
+                {'id': 'two', 'start': 180, 'end': 360},
+            ],
+        },
+    )
+    folder = database.path.parent / 'dj' / identity
+    folder.mkdir(parents=True)
+    stamp = datetime.fromtimestamp(origin + 180, timezone.utc).isoformat()
+    (folder / 'index.m3u8').write_text(
+        f'#EXTM3U\n#EXT-X-PROGRAM-DATE-TIME:{stamp}\n'
+        '#EXTINF:6,\nsegment-00000030.ts\n'
+    )
+    (folder / 'segment-00000030.ts').write_bytes(b'audio')
+    url = f'/api/v1/music-ai/dj/sessions/{identity}/commands'
+    payload = {
+        'request_id': 'jump',
+        'action': 'next',
+        'payload': {'position': '175'},
+    }
+    headers = {'x-test-user': '1'}
+    result = http.post(url, headers=headers, json=payload)
+    assert result.status_code == 202
+    assert result.json()['seek_to_seconds'] == 180
+    assert (
+        http.post(url, headers=headers, json=payload).json() == result.json()
+    )
+    assert store.get(1, identity)['state'] == 'ready'
+    assert (
+        http.post(url, headers={'x-test-user': '2'}, json=payload).status_code
+        == 404
+    )
+    changed = {**payload, 'payload': {'position': '176'}}
+    assert http.post(url, headers=headers, json=changed).status_code == 422
+    database.set_preferences(1, {'dj_interactive': False})
+    assert http.post(url, headers=headers, json=payload).status_code == 409
 
 
 def test_command_api_receipts_and_continuity_remain_owner_scoped(client):
@@ -614,3 +676,211 @@ def test_seed_handover_excludes_the_audible_title_and_requires_two_analyzed_foll
         create(http, ids=[], skip_seed=True, request_id='no-seed').status_code
         == 422
     )
+
+
+def accepted_asset(http, database):
+    from downtify.music_ai.dj_assets import Assets
+
+    session = create(http).json()
+    dj = DjStore(database)
+    job = dj.claim()
+    assets = Assets(database, min_free=0)
+    directory = assets.directory(session['id'])
+    directory.mkdir(mode=0o700)
+    (directory / 'set.m4a').write_bytes(b'accepted-audio')
+    assert dj.publish(
+        session['id'],
+        job['lease_token'],
+        'ready',
+        {'duration': 10, 'timeline': [{'id': 'one', 'start': 0, 'end': 10}]},
+    )
+    return session['id'], assets
+
+
+def test_prepared_readers_are_independent_and_stop_keeps_audio(client):
+    http, database, _, _ = client
+    identity, assets = accepted_asset(http, database)
+    url = f'/api/v1/music-ai/dj/sessions/{identity}'
+    headers = {'x-test-user': '1'}
+    for consumer in ('phone', 'browser'):
+        assert (
+            http.get(
+                url + '/media?consumer=' + consumer, headers=headers
+            ).content
+            == b'accepted-audio'
+        )
+    assert (
+        http.delete(url + '?consumer=phone', headers=headers).status_code
+        == 200
+    )
+    assert DjStore(database).get(1, identity)['state'] == 'ready'
+    assert http.delete(url + '/cache', headers=headers).status_code == 409
+    assert (
+        http.delete(url + '?consumer=browser', headers=headers).status_code
+        == 200
+    )
+    assert not assets.pinned(identity)
+    assert http.delete(url + '/cache', headers=headers).status_code == 202
+
+
+def test_copy_api_is_owner_scoped_and_weekly_cards_are_metadata_only(
+    client, monkeypatch
+):
+    from downtify.music_ai import compute_budget
+    from downtify.music_ai.dj_background import weekly_period
+
+    monkeypatch.setattr(compute_budget, 'pressure_high', lambda: False)
+    http, database, _, _ = client
+    identity, _ = accepted_asset(http, database)
+    url = f'/api/v1/music-ai/dj/sessions/{identity}/copies'
+    body = {'request_id': 'my-copy', 'name': 'Mon rock de la semaine'}
+    assert (
+        http.post(url, headers={'x-test-user': '2'}, json=body).status_code
+        == 404
+    )
+    response = http.post(url, headers={'x-test-user': '1'}, json=body)
+    assert response.status_code == 201
+    result = response.json()
+    assert result['title'] == body['name']
+    assert result['immutable_copy']
+    assert 'copy_sha256' not in result
+    assert 'asset_workspace' not in result
+    assert (
+        http.post(url, headers={'x-test-user': '1'}, json=body).json()['id']
+        == result['id']
+    )
+    for owner in (-1, 1, 2):
+        database.set_preferences(owner, {'dj_weekly': True})
+    before = database.metadata('dj')
+    weekly = http.get(
+        '/api/v1/music-ai/dj/weekly', headers={'x-test-user': '1'}
+    )
+    assert weekly.status_code == 200
+    value = weekly.json()
+    assert value['period'] == weekly_period()
+    assert len(value['cards']) == 10
+    assert len(value['featured']) == 4
+    assert {'rock', 'rap', 'pop', 'electro'} <= {
+        card['theme'] for card in value['cards']
+    }
+    assert value['copies'][0]['id'] == result['id']
+    assert value['copies'][0]['tracks'] == []
+    assert value['copies'][0]['timeline'] == []
+    assert (
+        http.get(
+            '/api/v1/music-ai/dj/weekly', headers={'x-test-user': '2'}
+        ).json()['copies']
+        == []
+    )
+    assert database.metadata('dj') == before
+
+
+def test_playback_304_renews_pin_and_invalid_consumer_is_rejected(client):
+    http, database, _, _ = client
+    identity, assets = accepted_asset(http, database)
+    url = (
+        f'/api/v1/music-ai/dj/sessions/{identity}?view=playback&consumer=phone'
+    )
+    headers = {'x-test-user': '1'}
+    first = http.get(url, headers=headers)
+    assert first.status_code == 200
+    assets.release(1, identity, 'client:phone')
+    assert not assets.pinned(identity)
+    assert (
+        http.get(
+            url, headers={**headers, 'if-none-match': first.headers['etag']}
+        ).status_code
+        == 304
+    )
+    assert assets.pinned(identity)
+    assert (
+        http.get(
+            url.replace('consumer=phone', 'consumer=bad%2Fpath'),
+            headers=headers,
+        ).status_code
+        == 422
+    )
+
+
+def test_weekly_preparation_is_explicit_and_idempotent(client, monkeypatch):
+    import json
+
+    from downtify.music_ai.dj_background import weekly_period
+
+    http, database, _, _ = client
+    for owner in (-1, 1):
+        database.set_preferences(owner, {'dj_weekly': True})
+    database.set_metadata(
+        'dj',
+        {'prepared_ready': True, 'weekly_protocol': 1, 'seen': time.time()},
+    )
+    monkeypatch.setattr(
+        routes,
+        'catalog',
+        lambda request: [
+            {'id': 'one', 'duration': 180},
+            {'id': 'two', 'duration': 180},
+        ],
+    )
+    with database.connect() as db:
+        db.execute(
+            'INSERT INTO playlists VALUES (?,?,?,?,?,?)',
+            (
+                1,
+                'weekly',
+                'rock',
+                weekly_period(),
+                json.dumps(['one', 'two']),
+                time.time(),
+            ),
+        )
+    url = '/api/v1/music-ai/dj/weekly/rock'
+    headers = {'x-test-user': '1'}
+    response = http.post(
+        url, headers=headers, json={'request_id': 'weekly-explicit'}
+    )
+    assert response.status_code == 202
+    identity = response.json()['id']
+    assert response.json()['weekly_theme'] == 'rock'
+    assert (
+        http.post(
+            url, headers=headers, json={'request_id': 'weekly-explicit'}
+        ).json()['id']
+        == identity
+    )
+    value = http.get('/api/v1/music-ai/dj/weekly', headers=headers).json()
+    card = next(card for card in value['cards'] if card['theme'] == 'rock')
+    assert card['session']['id'] == identity
+    assert card['session']['tracks'] == []
+    assert card['session']['cover_ids'] == ['one', 'two']
+    assert (
+        http.post(
+            '/api/v1/music-ai/dj/weekly/no-such-theme',
+            headers=headers,
+            json={'request_id': 'invalid'},
+        ).status_code
+        == 404
+    )
+    database.set_preferences(1, {'dj_weekly': False})
+    assert (
+        http.post(url, headers=headers, json={'request_id': 'off'}).status_code
+        == 409
+    )
+
+
+def test_completed_interactive_audio_is_pinned_by_a_playback_reader(client):
+    from downtify.music_ai.dj_assets import Assets
+
+    http, database, _, _ = client
+    identity = validation_session(client).json()['id']
+    dj = DjStore(database)
+    job = dj.claim()
+    assert dj.publish(identity, job['lease_token'], 'ready', {'duration': 24})
+    headers = {'x-test-user': '1'}
+    url = f'/api/v1/music-ai/dj/sessions/{identity}?view=playback&consumer=browser'
+    assert http.get(url, headers=headers).status_code == 200
+    assets = Assets(database)
+    assert assets.pinned(identity)
+    assert not assets.expire(identity)
+    assert http.delete(url, headers=headers).status_code == 200
+    assert not assets.pinned(identity)

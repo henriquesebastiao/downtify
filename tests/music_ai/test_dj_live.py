@@ -151,6 +151,41 @@ def test_real_hls_encoder_handles_live_controls_without_rewriting_originals(
     }
 
 
+def test_published_audio_navigation_updates_renderer_cursor_without_resuming(
+    tmp_path,
+):
+    worker, io, results, _, _ = fixture(tmp_path)
+    renderer = LiveRenderer(worker, io, results, clock=lambda: 10.0)
+    renderer.paused = True
+    renderer.anchor_position, renderer.anchor = 2.0, 0.0
+    receipt = {
+        'accepted': True,
+        'seek_to_seconds': 18.0,
+        'effective_after_seconds': 0.0,
+    }
+    assert (
+        worker.dj.command(
+            1,
+            worker.job['id'],
+            'navigate',
+            'next',
+            {'position': '2'},
+            navigation=receipt,
+        )
+        == receipt
+    )
+    renderer.commands()
+    assert renderer.paused is True
+    assert renderer.position() == 18.0
+    assert (
+        worker.dj.pending_commands(worker.job['id'], worker.job['lease_token'])
+        == []
+    )
+    assert worker.dj.command_results(worker.job['id']) == [
+        {'request_id': 'navigate', **receipt}
+    ]
+
+
 def test_live_module_disable_stops_encoder_and_cleans_decoded_audio(tmp_path):
     worker, io, results, _, store = fixture(tmp_path)
     clock = [0.0]
@@ -203,6 +238,67 @@ def test_continuous_hls_renews_without_restarting_encoder_and_bounds_history(
     )
     assert renderer.media_origin > 0
     assert not list(io.workspace.glob('decoded-*.pcm'))
+    assert original == {
+        path.name: hashlib.sha256(path.read_bytes()).hexdigest()
+        for path in music.iterdir()
+    }
+
+
+def test_repeated_track_occurrences_do_not_share_a_consumed_pcm_cursor():
+    row = {'id': 'same', 'cue': 0, 'speed': 1, 'start': 0}
+    assert LiveRenderer.key(row) != LiveRenderer.key({**row, 'start': 60})
+
+
+def test_progressive_deck_covers_the_absolute_grid_guard_frame(tmp_path):
+    from downtify.music_ai.dj_audio import RATE
+    from downtify.music_ai.dj_prepared_deck import decode_deck, discard_decoded
+
+    worker, io, results, _, _ = fixture(tmp_path)
+    source = dict(worker.job['sources']['0'])
+    source['snapshot'] = io.freeze(
+        source['path'], source['source_version'], 0, worker.checkpoint
+    )
+    start = 0.45 / RATE
+    row = dict(id='0', cue=0.0, speed=1.01, start=start, end=start + 36 / 1.01)
+    needed = round(row['end'] * RATE) - round(start * RATE)
+    decoded = decode_deck(
+        io,
+        row,
+        results['0'],
+        source,
+        LiveRenderer.key(row),
+        io.workspace / 'decoded-1.pcm',
+        worker.checkpoint,
+        progressive=True,
+    )
+    try:
+        assert needed == round(36 / 1.01 * RATE) + 1
+        assert decoded.frames >= needed
+        assert decoded.frames <= round(36 / 1.01 * RATE) + 1
+    finally:
+        discard_decoded(decoded, io)
+
+
+def test_background_preparation_preserves_the_owner_cache_guard(tmp_path):
+    from downtify.music_ai.dj_audio import AudioError
+    from downtify.music_ai.dj_prepared_deck import prepare_analysis
+
+    worker, io, _, music, _ = fixture(tmp_path)
+    original = {
+        path.name: hashlib.sha256(path.read_bytes()).hexdigest()
+        for path in music.iterdir()
+    }
+
+    def refuse(requested):
+        if requested > 0:
+            raise AudioError('owner_cache_full')
+
+    io.reclaim = refuse
+    with pytest.raises(AudioError, match='owner_cache_full'):
+        prepare_analysis(
+            worker, io, '0', worker.job['sources']['0'], 0, worker.checkpoint
+        )
+    assert not list(io.workspace.glob('source-*.audio'))
     assert original == {
         path.name: hashlib.sha256(path.read_bytes()).hexdigest()
         for path in music.iterdir()
