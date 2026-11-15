@@ -8,7 +8,8 @@ from datetime import datetime, timezone
 
 import pytest
 
-from downtify import navidrome_ratings
+from downtify import deezer, navidrome_ratings
+from downtify.navidrome import SubsonicError
 
 EPOCH = datetime(1970, 1, 1, tzinfo=timezone.utc)
 
@@ -150,6 +151,8 @@ class FakeClient:
     def __init__(self, library):
         self.library = library
         self.set_calls = []
+        self.missing_albums = set()
+        self.missing_songs = set()
 
     def artists(self):
         return [{'id': f'ar-{name}', 'name': name} for name in self.library]
@@ -169,10 +172,14 @@ class FakeClient:
         ]
 
     def album(self, album_id):
+        if album_id in self.missing_albums:
+            raise SubsonicError('Data not found', 70)
         name, artist, songs = self._albums()[album_id]
         return {'id': album_id, 'name': name, 'artist': artist, 'songs': songs}
 
     def set_rating(self, song_id, rating):
+        if song_id in self.missing_songs:
+            raise SubsonicError('Data not found', 70)
         self.set_calls.append((song_id, rating))
 
 
@@ -280,13 +287,57 @@ def test_not_found_leaves_stars_alone(monkeypatch):
 
 
 def test_low_rank_clears_stars(monkeypatch):
-    client = FakeClient(one_album(song('s1', 'Quiet')))
+    client = FakeClient(one_album(song('s1', 'Quiet', rating=3)))
     run, _fake, _ = make_run(
-        monkeypatch, client, {(SEARCH, 'Drake Quiet'): hit(5_000)}
+        monkeypatch,
+        client,
+        {(SEARCH, 'Drake Quiet'): hit(5_000)},
+        options={'skip_rated': False},
     )
     summary = run.run()
     assert client.set_calls == [('s1', 0)]
     assert summary['rated'] == 1
+
+
+def test_unchanged_stars_are_not_written_again(monkeypatch):
+    songs = [song('s1', 'Same', rating=5), song('s2', 'Zero')]
+    client = FakeClient(one_album(*songs))
+    routes = {
+        (SEARCH, 'Drake Same'): hit(900_000),
+        (SEARCH, 'Drake Zero'): hit(5_000),
+    }
+    run, _fake, _ = make_run(
+        monkeypatch, client, routes, options={'skip_rated': False}
+    )
+    summary = run.run()
+    assert client.set_calls == []
+    assert summary['rated'] == 2
+    assert [c['stars'] for c in summary['changes']] == [5, 0]
+
+
+def test_empty_library_is_done_with_zero_counts(monkeypatch):
+    run, _fake, _ = make_run(monkeypatch, FakeClient({}), {})
+    summary = run.run()
+    assert summary['state'] == 'done'
+    assert [
+        summary[k] for k in ('total', 'rated', 'skipped', 'not_found')
+    ] == [0, 0, 0, 0]
+    assert summary['changes'] == summary['unmatched'] == []
+
+
+def test_reference_top_of_zero_falls_back_to_absolute(monkeypatch):
+    client = FakeClient(one_album(song('s1', 'A')))
+    top = 'https://api.deezer.com/artist/77/top'
+    routes = {
+        (ARTIST_SEARCH, 'Drake'): {'data': [{'id': 77}]},
+        (top, None): {'data': [{'rank': 0}]},
+        (SEARCH, 'Drake A'): hit(900_000),
+    }
+    run, _fake, _ = make_run(
+        monkeypatch, client, routes, options={'grading': 'artist'}
+    )
+    run.run()
+    assert client.set_calls == [('s1', 5)]
 
 
 def test_preview_sets_nothing(monkeypatch):
@@ -437,3 +488,125 @@ def test_progress_reports_library_then_songs(monkeypatch):
     run.run()
     assert calls[:2] == [(1, 2, 'library'), (2, 2, 'library')]
     assert calls[-1] == (2, 2, 'rating')
+
+
+def refused(code):
+    return deezer.DeezerRefused('Deezer refused the request', code)
+
+
+@pytest.mark.parametrize('grading', ['artist', 'album'])
+def test_reference_refused_with_no_data_is_absolute(monkeypatch, grading):
+    client = FakeClient(one_album(song('s1', 'A')))
+    routes = {
+        (ARTIST_SEARCH, 'Drake'): refused(800),
+        (ALBUM_SEARCH, 'Drake Views'): refused(800),
+        (SEARCH, 'Drake A'): hit(900_000),
+    }
+    run, _fake, sleeps = make_run(
+        monkeypatch, client, routes, options={'grading': grading}
+    )
+    summary = run.run()
+    assert summary['state'] == 'done'
+    assert client.set_calls == [('s1', 5)]
+    assert 5.0 not in sleeps
+
+
+def test_reference_top_refused_is_absolute(monkeypatch):
+    client = FakeClient(one_album(song('s1', 'A')))
+    top = 'https://api.deezer.com/album/9/tracks'
+    routes = {
+        (ALBUM_SEARCH, 'Drake Views'): {'data': [{'id': 9}]},
+        (top, None): refused(800),
+        (SEARCH, 'Drake A'): hit(900_000),
+    }
+    run, _fake, _ = make_run(
+        monkeypatch, client, routes, options={'grading': 'album'}
+    )
+    run.run()
+    assert client.set_calls == [('s1', 5)]
+
+
+def test_song_search_refused_counts_as_not_found(monkeypatch):
+    client = FakeClient(one_album(song('s1', 'A'), song('s2', 'B')))
+    routes = {
+        (SEARCH, 'Drake A'): refused(800),
+        (SEARCH, 'Drake B'): hit(900_000),
+    }
+    run, _fake, sleeps = make_run(monkeypatch, client, routes)
+    summary = run.run()
+    assert summary['state'] == 'done'
+    assert summary['not_found'] == 1
+    assert client.set_calls == [('s2', 5)]
+    assert sleeps == [0.2, 0.2]
+
+
+@pytest.mark.parametrize('code', [4, 700])
+def test_quota_or_busy_twice_is_unavailable(monkeypatch, code):
+    client = FakeClient(one_album(song('s1', 'A')))
+    routes = {(SEARCH, 'Drake A'): [refused(code), refused(code)]}
+    run, _fake, sleeps = make_run(monkeypatch, client, routes)
+    with pytest.raises(navidrome_ratings.DeezerUnavailable):
+        run.run()
+    assert sleeps == [5.0]
+
+
+def test_quota_once_is_retried(monkeypatch):
+    client = FakeClient(one_album(song('s1', 'A')))
+    routes = {(SEARCH, 'Drake A'): [refused(4), hit(900_000)]}
+    run, _fake, sleeps = make_run(monkeypatch, client, routes)
+    run.run()
+    assert client.set_calls == [('s1', 5)]
+    assert sleeps == [5.0, 0.2]
+
+
+def test_album_removed_during_the_run_is_skipped(monkeypatch):
+    library = {
+        'Drake': [
+            ('al1', 'Views', 'Drake', [song('s1', 'A'), song('s2', 'B')]),
+            ('al2', 'Care', 'Drake', [song('s3', 'C')]),
+        ]
+    }
+    client = FakeClient(library)
+    client.missing_albums.add('al1')
+    calls = []
+    run, _fake, _ = make_run(
+        monkeypatch,
+        client,
+        {(SEARCH, 'Drake C'): hit(900_000)},
+        progress=lambda *args: calls.append(args),
+    )
+    summary = run.run()
+    assert summary['state'] == 'done'
+    assert summary['total'] == 3
+    assert summary['skipped'] == 2
+    assert summary['rated'] == 1
+    assert client.set_calls == [('s3', 5)]
+    assert calls[-1] == (3, 3, 'rating')
+
+
+def test_other_navidrome_errors_still_propagate(monkeypatch):
+    client = FakeClient(one_album(song('s1', 'A')))
+
+    def boom(album_id):
+        raise SubsonicError('Wrong username or password', 40)
+
+    client.album = boom
+    run, _fake, _ = make_run(monkeypatch, client, {})
+    with pytest.raises(SubsonicError):
+        run.run()
+
+
+def test_song_removed_during_the_run_counts_as_skipped(monkeypatch):
+    client = FakeClient(one_album(song('s1', 'A'), song('s2', 'B')))
+    client.missing_songs.add('s1')
+    routes = {
+        (SEARCH, 'Drake A'): hit(900_000),
+        (SEARCH, 'Drake B'): hit(900_000),
+    }
+    run, _fake, _ = make_run(monkeypatch, client, routes)
+    summary = run.run()
+    assert summary['state'] == 'done'
+    assert summary['skipped'] == 1
+    assert summary['rated'] == 1
+    assert [c['title'] for c in summary['changes']] == ['B']
+    assert client.set_calls == [('s2', 5)]

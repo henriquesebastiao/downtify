@@ -1729,7 +1729,7 @@ export default {
     ratingsRepeatMonthly: 'Κάθε μήνα',
     ratingsSkipRated: 'Παράλειψη τραγουδιών που έχουν αστέρια',
     ratingsSkipRatedHint:
-      'Τα αστέρια που έβαλες εσύ μένουν και οι επόμενες εκτελέσεις βαθμολογούν μόνο νέα τραγούδια.',
+      'Τα αστέρια που έβαλες εσύ μένουν. Οι επόμενες εκτελέσεις παραλείπουν κάθε τραγούδι που έχει ήδη αστέρια.',
     ratingsSkipStarred: 'Παράλειψη αγαπημένων',
     ratingsGrading: 'Βαθμολόγηση',
     ratingsGradingAbsolute: 'Παγκόσμια δημοφιλία',
@@ -1760,6 +1760,7 @@ export default {
     ratingsColRank: 'Δημοφιλία στο Deezer',
     ratingsColStars: 'Αστέρια',
     ratingsUnmatched: 'Δεν βρέθηκαν στο Deezer ({count})',
+    ratingsFirstRows: 'Εμφανίζονται τα πρώτα {count} τραγούδια.',
     navidromeTitle: 'Navidrome',
     navidromeHint:
       'Αντιγράφει τις λίστες στο Navidrome. Ο φάκελος μουσικής του πρέπει να περιλαμβάνει τις λήψεις του Downtify.',

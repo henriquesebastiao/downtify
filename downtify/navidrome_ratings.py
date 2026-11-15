@@ -39,6 +39,13 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Optional
 
 from . import deezer
+from .navidrome import SubsonicError
+
+#: Subsonic error code for "not found" (a song or album removed mid-run).
+SUBSONIC_NOT_FOUND = 70
+
+#: Deezer error codes worth a retry: quota exceeded, service busy.
+DEEZER_RETRY_CODES = (4, 700)
 
 #: The options a rating run takes, with their defaults.
 DEFAULTS: dict[str, Any] = {
@@ -211,19 +218,32 @@ class RatingRun:
     def run(self) -> dict[str, Any]:
         """Walk the library and rate it; return the summary."""
         albums = self._library()
-        for artist_name, album_id in albums:
+        for artist_name, album_id, song_count in albums:
             if self._stopped:
                 break
-            self._rate_album(artist_name, self._client.album(album_id))
+            try:
+                album = self._client.album(album_id)
+            except SubsonicError as exc:
+                if exc.code != SUBSONIC_NOT_FOUND:
+                    raise
+                # Removed since the library pass: skip its songs.
+                self._skipped += song_count
+                self._done += song_count
+                self._progress(
+                    self._done, max(self._total, self._done), 'rating'
+                )
+                continue
+            self._rate_album(artist_name, album)
         return self._summary()
 
     # -- the library pass ---------------------------------------------
 
-    def _library(self) -> list[tuple[str, str]]:
-        """Every unique album as ``(navidrome artist name, album id)``."""
+    def _library(self) -> list[tuple[str, str, int]]:
+        """Every unique album as ``(navidrome artist name, album id,
+        listed song count)``."""
         artists = self._client.artists()
         seen: set[str] = set()
-        albums: list[tuple[str, str]] = []
+        albums: list[tuple[str, str, int]] = []
         for index, artist in enumerate(artists, start=1):
             if self._cancelled():
                 self._stopped = True
@@ -232,8 +252,9 @@ class RatingRun:
                 if album['id'] in seen:
                     continue
                 seen.add(album['id'])
-                albums.append((artist['name'], album['id']))
-                self._total += int(album.get('song_count') or 0)
+                count = int(album.get('song_count') or 0)
+                albums.append((artist['name'], album['id'], count))
+                self._total += count
             self._progress(index, len(artists), 'library')
         return albums
 
@@ -269,10 +290,19 @@ class RatingRun:
                 )
             return
         stars = (
-            stars_from_rank(rank)
-            if top is None
-            else stars_from_relative_rank(rank, top)
+            stars_from_relative_rank(rank, top)
+            if top
+            else stars_from_rank(rank)
         )
+        if not self._preview and stars != song['rating']:
+            try:
+                self._client.set_rating(song['id'], stars)
+            except SubsonicError as exc:
+                if exc.code != SUBSONIC_NOT_FOUND:
+                    raise
+                # Removed since the album was read.
+                self._skipped += 1
+                return
         self._rated += 1
         if len(self._changes) < EXAMPLES:
             self._changes.append({
@@ -283,21 +313,31 @@ class RatingRun:
                 'stars': stars,
                 'was': song['rating'],
             })
-        if not self._preview:
-            self._client.set_rating(song['id'], stars)
 
     # -- Deezer -------------------------------------------------------
 
     def _call(self, url: str, **params: Any) -> dict[str, Any]:
-        """A Deezer GET, paced; one retry, then :class:`DeezerUnavailable`."""
-        try:
-            data = deezer._get_json(url, **params)
-        except ValueError:
-            self._sleep(RETRY_PAUSE)
+        """A Deezer GET, paced.
+
+        A transport failure, quota (4) or busy (700) is retried once,
+        then :class:`DeezerUnavailable`. Any other refusal (such as 800,
+        no data) is final for that item and reads as an empty answer.
+        """
+        data: dict[str, Any] = {}
+        for attempt in (1, 2):
             try:
                 data = deezer._get_json(url, **params)
+                break
+            except deezer.DeezerRefused as exc:
+                if exc.code not in DEEZER_RETRY_CODES:
+                    data = {}
+                    break
+                failure: ValueError = exc
             except ValueError as exc:
-                raise DeezerUnavailable('Deezer is not answering') from exc
+                failure = exc
+            if attempt == 2:
+                raise DeezerUnavailable('Deezer is not answering') from failure
+            self._sleep(RETRY_PAUSE)
         self._sleep(DEEZER_PAUSE)
         return data
 

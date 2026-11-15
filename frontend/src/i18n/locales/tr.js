@@ -1692,7 +1692,7 @@ export default {
     ratingsRepeatMonthly: 'Her ay',
     ratingsSkipRated: 'Yıldızı olan şarkıları atla',
     ratingsSkipRatedHint:
-      'Kendi verdiğin yıldızlar kalır, sonraki çalıştırmalar yalnızca yeni şarkıları puanlar.',
+      'Kendi verdiğin yıldızlar kalır. Sonraki çalıştırmalar zaten yıldızı olan her şarkıyı atlar.',
     ratingsSkipStarred: 'Favorileri atla',
     ratingsGrading: 'Puanlama',
     ratingsGradingAbsolute: 'Dünya çapında popülerlik',
@@ -1723,6 +1723,7 @@ export default {
     ratingsColRank: 'Deezer popülerliği',
     ratingsColStars: 'Yıldız',
     ratingsUnmatched: 'Deezer’da bulunamayanlar ({count})',
+    ratingsFirstRows: 'İlk {count} şarkı gösteriliyor.',
     navidromeTitle: 'Navidrome',
     navidromeHint:
       'İndirilen çalma listelerini Navidrome’a yansıt. Müzik klasörü Downtify indirmelerini içermeli.',

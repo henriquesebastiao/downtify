@@ -1581,7 +1581,8 @@ export default {
     ratingsRepeatWeekly: '每周',
     ratingsRepeatMonthly: '每月',
     ratingsSkipRated: '跳过已有星级的歌曲',
-    ratingsSkipRatedHint: '你自己打的星级会保留，之后的运行只会为新歌打分。',
+    ratingsSkipRatedHint:
+      '你自己打的星级会保留。之后的运行会跳过所有已有星级的歌曲。',
     ratingsSkipStarred: '跳过收藏',
     ratingsGrading: '评分方式',
     ratingsGradingAbsolute: '全球热度',
@@ -1611,6 +1612,7 @@ export default {
     ratingsColRank: 'Deezer 热度',
     ratingsColStars: '星级',
     ratingsUnmatched: '在 Deezer 上未找到（{count}）',
+    ratingsFirstRows: '显示前 {count} 首歌曲。',
     navidromeTitle: 'Navidrome',
     navidromeHint:
       '将下载的播放列表同步到 Navidrome，其音乐文件夹必须包含 Downtify 的下载目录。',

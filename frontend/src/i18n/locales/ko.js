@@ -1694,7 +1694,7 @@ export default {
     ratingsRepeatMonthly: '매월',
     ratingsSkipRated: '별점이 있는 곡 건너뛰기',
     ratingsSkipRatedHint:
-      '직접 준 별점은 그대로 유지되고, 이후 실행에서는 새 곡만 평가합니다.',
+      '직접 준 별점은 그대로 유지됩니다. 이후 실행에서는 이미 별점이 있는 곡을 모두 건너뜁니다.',
     ratingsSkipStarred: '즐겨찾기 건너뛰기',
     ratingsGrading: '평가 기준',
     ratingsGradingAbsolute: '전 세계 인기도',
@@ -1725,6 +1725,7 @@ export default {
     ratingsColRank: 'Deezer 인기도',
     ratingsColStars: '별점',
     ratingsUnmatched: 'Deezer에서 찾지 못함 ({count})',
+    ratingsFirstRows: '처음 {count}곡을 표시합니다.',
     navidromeTitle: 'Navidrome',
     navidromeHint:
       '다운로드한 재생목록을 Navidrome에 미러링합니다. Navidrome의 음악 폴더에 Downtify 다운로드 경로가 포함되어 있어야 합니다.',

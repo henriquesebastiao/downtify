@@ -1707,7 +1707,7 @@ export default {
     ratingsRepeatMonthly: 'Havonta',
     ratingsSkipRated: 'A már csillagozott dalok kihagyása',
     ratingsSkipRatedHint:
-      'A saját magad adta csillagok megmaradnak, a későbbi futtatások csak az új dalokat értékelik.',
+      'A saját magad adta csillagok megmaradnak. A későbbi futtatások kihagyják az összes olyan dalt, amelynek már van csillaga.',
     ratingsSkipStarred: 'Kedvencek kihagyása',
     ratingsGrading: 'Értékelés',
     ratingsGradingAbsolute: 'Világszintű népszerűség',
@@ -1738,6 +1738,7 @@ export default {
     ratingsColRank: 'Deezer-népszerűség',
     ratingsColStars: 'Csillagok',
     ratingsUnmatched: 'Nem található a Deezeren ({count})',
+    ratingsFirstRows: 'Az első {count} dal látható.',
     navidromeTitle: 'Navidrome',
     navidromeHint:
       'Tükrözi a letöltött listákat a Navidrome-ba. A zenemappájának tartalmaznia kell a Downtify letöltéseit.',

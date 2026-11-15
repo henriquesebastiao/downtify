@@ -119,6 +119,47 @@ describe('useNavidromeRatings', () => {
     })
   })
 
+  it('ignores a second start while the first is in flight', async () => {
+    let finish
+    api.navidromeRatingsRun.mockReturnValueOnce(
+      new Promise((resolve) => {
+        finish = resolve
+      })
+    )
+    await open()
+    const first = ratings.start(false)
+    expect(ratings.starting.value).toBe(true)
+    await ratings.start(true)
+    expect(api.navidromeRatingsRun).toHaveBeenCalledTimes(1)
+    finish({ data: job({ id: 'posted' }) })
+    await first
+    expect(ratings.starting.value).toBe(false)
+    expect(api.navidromeRatingsRun).toHaveBeenCalledTimes(1)
+  })
+
+  it('clears the guard when the start fails', async () => {
+    await open()
+    api.navidromeRatingsRun.mockRejectedValueOnce(new Error('Network down'))
+    await ratings.start(false)
+    expect(ratings.starting.value).toBe(false)
+    await ratings.start(false)
+    expect(api.navidromeRatingsRun).toHaveBeenCalledTimes(2)
+  })
+
+  it('shows the job from the start reply before the refresh answers', async () => {
+    await open()
+    let answer
+    api.navidromeRatingsStatus.mockReturnValueOnce(
+      new Promise((resolve) => {
+        answer = resolve
+      })
+    )
+    const started = ratings.start(false)
+    await vi.waitFor(() => expect(ratings.view.value.running).toBe(true))
+    answer({ data: { job: job(), last: null, next_run_at: null } })
+    await started
+  })
+
   it('looks again right after a start and a stop', async () => {
     await open()
     await ratings.start(false)
@@ -239,6 +280,23 @@ describe('describeRatings', () => {
       'Navidrome answered with an error: boom'
     )
     expect(failed('ratings_failed')).toBe('The ratings run failed: boom')
+  })
+
+  it('says how many preview songs are shown when the list is cut', () => {
+    const cut = previewRun()
+    cut.result.rated = 1200
+    expect(view({ last: cut }).changesTruncated).toBe(true)
+    const whole = previewRun()
+    whole.result.rated = 1
+    expect(view({ last: whole }).changesTruncated).toBe(false)
+  })
+
+  it('promises no next run while a run is going', () => {
+    const now = Date.parse('2026-05-01T12:00:00Z')
+    const next = (state) => describeRatings(state, now).nextText
+    const nextRunAt = '2026-05-02T03:00:00Z'
+    expect(next({ nextRunAt })).toMatch(/^Next run /)
+    expect(next({ nextRunAt, job: job() })).toBe('')
   })
 
   it('words the next run by how far away it is', () => {

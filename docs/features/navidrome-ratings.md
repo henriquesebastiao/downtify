@@ -28,7 +28,7 @@ The default **Grading**, **Worldwide popularity**, uses Deezer's number as it is
 
 | Deezer popularity | Stars |
 |-------------------|-------|
-| Under 10,000 | 0 (clears any stars) |
+| Under 10,000 | 0 (removes stars when **Skip songs that have stars** is off) |
 | 10,000–99,999 | 1 |
 | 100,000–299,999 | 2 |
 | 300,000–599,999 | 3 |
@@ -54,7 +54,7 @@ The top song is the highest popularity among the artist's top 100 songs on Deeze
 | Option | Default | What it does |
 |--------|---------|--------------|
 | **Repeat** | **Off** | **Off**, **Every day**, **Every week** or **Every month**. See [Repeating](#repeating). |
-| **Skip songs that have stars** | On | Stars you set by hand stay, and later runs only rate new songs. Turn it off to rate everything again: that can also clear the stars of songs Deezer ranks under 10,000. |
+| **Skip songs that have stars** | On | Stars you set by hand stay, and later runs skip every song that already has stars. Turn it off to rate everything again: that can also clear the stars of songs Deezer ranks under 10,000. |
 | **Skip favourites** | Off | Leaves the songs you have marked as favourites alone. |
 | **Grading** | **Worldwide popularity** | How popularity becomes stars, as above. |
 
@@ -74,7 +74,7 @@ A Preview shows what a real run would do, so you can try the **Grading** and **S
 
 ### How long it takes
 
-Downtify waits 0.2 seconds after every Deezer request, to stay within Deezer's rate limit. A first run over 10,000 songs takes about 35 to 50 minutes. With **Skip songs that have stars** on, later runs only look up the new songs, so they are much shorter. Comparing with the top song adds two Deezer requests for every artist or album that has a song to rate.
+Downtify waits 0.2 seconds after every Deezer request, to stay within Deezer's rate limit. Looking up one song takes roughly 0.35 to 0.5 seconds, so a first run takes about an hour for every 10,000 songs. With **Skip songs that have stars** on, later runs skip every song that already has stars. They look up again the songs Deezer didn't find and the songs that were given 0 stars (Navidrome stores 0 as no rating), so they are much shorter. Comparing with the top song adds two Deezer requests for every artist or album that has a song to rate.
 
 ## Repeating
 
@@ -89,8 +89,9 @@ If it has never run, the first check starts one. A run that failed is tried agai
 
 ## When something goes wrong
 
-- If Deezer stops answering, Downtify waits 5 seconds and tries once more. If that fails too, the run stops with "Deezer couldn't be reached. Stars already given are kept."
-- If Navidrome answers with an error, the run stops and shows Navidrome's message.
+- If Deezer stops answering or says it is busy or over its limit, Downtify waits 5 seconds and tries once more. If that fails too, the run stops with "Deezer couldn't be reached. Stars already given are kept."
+- If Deezer refuses one request for another reason, such as having no data for an artist or album, only that item is affected: a song counts as not found, and a missing reference falls back to the worldwide stars.
+- If Navidrome answers with an error, the run stops and shows a short message, never the address or login details. A song or album removed while the run goes is skipped.
 - If the Navidrome login isn't saved, **Run now** asks you to save it first.
 - While [library-only mode](library-only.md) is on, **Run now** is refused and the schedule doesn't start, because the ratings contact Deezer.
 

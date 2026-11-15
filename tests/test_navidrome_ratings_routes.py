@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import threading
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
@@ -178,15 +179,40 @@ def test_unreadable_state_file_reads_as_empty(env):
     assert status == {'job': None, 'last': None, 'next_run_at': None}
 
 
+def _http_error(status: int) -> httpx.HTTPStatusError:
+    url = 'http://navidrome.local/rest/getAlbum?u=u&t=SECRET&s=SALT'
+    request = httpx.Request('GET', url)
+    return httpx.HTTPStatusError(
+        f'Server error {status} for url {url}',
+        request=request,
+        response=httpx.Response(status, request=request),
+    )
+
+
 @pytest.mark.parametrize(
-    ('error', 'code'),
+    ('error', 'code', 'message'),
     [
-        (SubsonicError('bad credentials'), 'navidrome_failed'),
-        (httpx.ConnectError('down'), 'navidrome_failed'),
-        (RuntimeError('boom'), 'ratings_failed'),
+        (SubsonicError('bad credentials'), 'navidrome_failed', None),
+        (
+            httpx.ConnectError('down http://x/?t=SECRET'),
+            'navidrome_failed',
+            'Could not reach Navidrome (ConnectError)',
+        ),
+        (_http_error(502), 'navidrome_failed', 'HTTP 502'),
+        (
+            ValueError('Invalid Subsonic response'),
+            'navidrome_failed',
+            routes.UNREADABLE_NAVIDROME,
+        ),
+        (
+            json.JSONDecodeError('Expecting value', '<html>', 0),
+            'navidrome_failed',
+            routes.UNREADABLE_NAVIDROME,
+        ),
+        (RuntimeError('boom'), 'ratings_failed', None),
     ],
 )
-def test_navidrome_error_fails_the_job(env, error, code):
+def test_navidrome_error_fails_the_job(env, error, code, message):
     env['run'].outcome = error
 
     async def go():
@@ -195,9 +221,47 @@ def test_navidrome_error_fails_the_job(env, error, code):
 
     job = asyncio.run(go())
     assert job['state'] == 'failed'
-    assert job['error'] == {'code': code, 'message': str(error)}
+    assert job['error'] == {'code': code, 'message': message or str(error)}
+    for text in (
+        job['error']['message'],
+        json.dumps(asyncio.run(routes.ratings_status())),
+        json.dumps(_state_file(env)),
+    ):
+        assert 'SECRET' not in text
+        assert 'SALT' not in text
     assert job['finished_at']
     assert _state_file(env)['last_rating_run']['state'] == 'failed'
+
+
+def test_shutdown_mid_run_marks_the_job_stopped(env):
+    release = threading.Event()
+    outcome = env['run'].outcome
+
+    def slow(self):
+        release.wait(5)
+        return dict(outcome)
+
+    env['run'].run = slow
+
+    async def go():
+        await routes.ratings_run(routes.RunRequest())
+        task = next(
+            t
+            for t in asyncio.all_tasks()
+            if t.get_name() == 'navidrome-ratings'
+        )
+        await asyncio.sleep(0.05)
+        task.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await task
+        release.set()
+        return routes._public_job()
+
+    job = asyncio.run(go())
+    assert job['state'] == 'stopped'
+    assert job['finished_at']
+    assert _state_file(env)['last_run']['state'] == 'stopped'
+    assert _state_file(env)['last_rating_run']['state'] == 'stopped'
 
 
 def test_deezer_error_fails_the_job(env):
@@ -297,6 +361,31 @@ def test_status_reports_the_next_run(env):
     assert asyncio.run(routes.ratings_status())['next_run_at'] is None
 
 
+def test_status_has_no_next_run_in_library_only_mode(env):
+    env['settings']['navidrome_ratings']['repeat'] = 'weekly'
+    assert asyncio.run(routes.ratings_status())['next_run_at'] is not None
+    env['settings']['library_only'] = True
+    assert asyncio.run(routes.ratings_status())['next_run_at'] is None
+
+
+def test_run_merges_the_cleaned_saved_options(env):
+    env['settings']['navidrome_ratings'] = 'junk'
+
+    async def go():
+        await routes.ratings_run(routes.RunRequest(skip_starred=True))
+        return await _finished()
+
+    assert asyncio.run(go())['state'] == 'done'
+    assert env['seen']['options'] == [
+        {
+            'repeat': 'off',
+            'skip_rated': True,
+            'skip_starred': True,
+            'grading': 'absolute',
+        }
+    ]
+
+
 def test_library_only_blocks_run_and_schedule(env):
     env['settings']['library_only'] = True
     env['settings']['navidrome_ratings']['repeat'] = 'daily'
@@ -314,7 +403,8 @@ def test_library_only_blocks_run_and_schedule(env):
 
 def test_settings_update_coerces_ratings_options(env, monkeypatch):
     class Request:
-        async def json(self):  # noqa: PLR6301
+        @staticmethod
+        async def json():
             return {'navidrome_ratings': {'repeat': 'hourly'}}
 
     monkeypatch.setattr(

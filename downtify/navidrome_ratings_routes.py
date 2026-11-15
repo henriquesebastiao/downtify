@@ -44,6 +44,8 @@ router = APIRouter(
 
 STATE_FILE = 'navidrome_ratings.json'
 
+UNREADABLE_NAVIDROME = 'Navidrome sent an answer Downtify could not read'
+
 _lock = threading.Lock()
 _job: dict[str, Any] = {}
 
@@ -103,6 +105,15 @@ def _saved_options() -> dict[str, Any]:
 
 def _finish(job: dict[str, Any]) -> None:
     job['finished_at'] = _now()
+    result = job.get('result') or {}
+    logger.info(
+        'ratings: run {} (preview={}): rated {}, skipped {}, not found {}',
+        job['state'],
+        job['preview'],
+        result.get('rated', 0),
+        result.get('skipped', 0),
+        result.get('not_found', 0),
+    )
     state = _read_state()
     state['last_run'] = {k: v for k, v in job.items() if k != 'cancel'}
     if not job['preview']:
@@ -141,6 +152,13 @@ def start_run(
             'cancel': False,
         }
 
+        logger.info(
+            'ratings: run started (trigger={}, preview={}, options={})',
+            trigger,
+            preview,
+            options,
+        )
+
         def progress(done: int, total: int, step: str) -> None:
             job['progress'] = {'done': done, 'total': total, 'step': step}
 
@@ -156,13 +174,22 @@ def start_run(
                 result = await asyncio.to_thread(run.run)
                 job['state'] = result['state']
                 job['result'] = result
+            except asyncio.CancelledError:
+                # Shutdown mid-run: record it, then let the cancel go on.
+                job['state'] = 'stopped'
+                _finish(job)
+                raise
             except DeezerUnavailable as exc:
-                _fail(job, 'deezer_unreachable', exc)
+                _fail(job, 'deezer_unreachable', str(exc))
             except (SubsonicError, httpx.HTTPError) as exc:
-                _fail(job, 'navidrome_failed', exc)
+                _fail(job, 'navidrome_failed', _navidrome_message(exc))
+            except ValueError:
+                # Navidrome's "Invalid Subsonic response", or a proxy's
+                # login page that is not JSON.
+                _fail(job, 'navidrome_failed', UNREADABLE_NAVIDROME)
             except Exception as exc:
                 logger.exception('ratings: run failed')
-                _fail(job, 'ratings_failed', exc)
+                _fail(job, 'ratings_failed', str(exc))
             _finish(job)
 
         # Raises the library-only 409 itself (and closes the coroutine).
@@ -171,9 +198,21 @@ def start_run(
         return _public_job()
 
 
-def _fail(job: dict[str, Any], code: str, exc: Exception) -> None:
+def _navidrome_message(exc: Exception) -> str:
+    """A message for a Navidrome failure that never holds a URL (the
+    request URL carries the Subsonic token and salt)."""
+
+    if isinstance(exc, SubsonicError):
+        return str(exc)[:160]
+    if isinstance(exc, httpx.HTTPStatusError):
+        return f'HTTP {exc.response.status_code}'
+    return f'Could not reach Navidrome ({type(exc).__name__})'
+
+
+def _fail(job: dict[str, Any], code: str, message: str) -> None:
     job['state'] = 'failed'
-    job['error'] = {'code': code, 'message': str(exc)}
+    job['error'] = {'code': code, 'message': message}
+    logger.warning('ratings: run failed ({}): {}', code, message)
 
 
 def maybe_start_scheduled(now: datetime) -> bool:
@@ -219,7 +258,9 @@ async def ratings_status() -> dict[str, Any]:
 
     state = _read_state()
     due = None
-    if _navidrome_ready() is not None:
+    if _navidrome_ready() is not None and not library_only.enabled(
+        api.state.settings
+    ):
         due = next_run_at(_saved_options(), state.get('last_rating_run'))
     return {
         'job': _public_job() or None,
@@ -235,8 +276,7 @@ async def ratings_run(body: RunRequest) -> dict[str, Any]:
         for k, v in body.model_dump().items()
         if v is not None and k != 'preview'
     }
-    saved = api.state.settings.get('navidrome_ratings')
-    options = effective_settings({**(saved or {}), **given})
+    options = effective_settings({**_saved_options(), **given})
     return start_run(preview=body.preview, options=options, trigger='manual')
 
 

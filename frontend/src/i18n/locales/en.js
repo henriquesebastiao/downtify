@@ -1670,7 +1670,7 @@ export default {
     ratingsRepeatMonthly: 'Every month',
     ratingsSkipRated: 'Skip songs that have stars',
     ratingsSkipRatedHint:
-      'Stars you set yourself stay, and later runs only rate new songs.',
+      'Stars you set yourself stay. Later runs skip every song that already has stars.',
     ratingsSkipStarred: 'Skip favourites',
     ratingsGrading: 'Grading',
     ratingsGradingAbsolute: 'Worldwide popularity',
@@ -1701,6 +1701,7 @@ export default {
     ratingsColRank: 'Deezer popularity',
     ratingsColStars: 'Stars',
     ratingsUnmatched: 'Not found on Deezer ({count})',
+    ratingsFirstRows: 'Showing the first {count} songs.',
     navidromeTitle: 'Navidrome',
     navidromeHint:
       'Mirror downloaded playlists into Navidrome. Its music folder must include Downtify’s downloads.',

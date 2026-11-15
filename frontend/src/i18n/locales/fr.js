@@ -1744,7 +1744,7 @@ export default {
     ratingsRepeatMonthly: 'Tous les mois',
     ratingsSkipRated: 'Ignorer les morceaux qui ont déjà des étoiles',
     ratingsSkipRatedHint:
-      'Les étoiles que tu as mises toi-même sont conservées, et les exécutions suivantes ne notent que les nouveaux morceaux.',
+      'Les étoiles que tu as mises toi-même sont conservées. Les exécutions suivantes ignorent tout morceau qui a déjà des étoiles.',
     ratingsSkipStarred: 'Ignorer les favoris',
     ratingsGrading: 'Notation',
     ratingsGradingAbsolute: 'Popularité mondiale',
@@ -1775,6 +1775,7 @@ export default {
     ratingsColRank: 'Popularité sur Deezer',
     ratingsColStars: 'Étoiles',
     ratingsUnmatched: 'Introuvables sur Deezer ({count})',
+    ratingsFirstRows: 'Affichage des {count} premiers morceaux.',
     navidromeTitle: 'Navidrome',
     navidromeHint:
       'Reproduit les playlists téléchargées dans Navidrome. Son dossier musical doit inclure les téléchargements de Downtify.',

@@ -39,6 +39,7 @@ export function describeRatings({ job, last, nextRunAt }, now = Date.now()) {
     lastText: t('settings.ratingsNever'),
     nextText: '',
     changes: [],
+    changesTruncated: false,
     unmatched: [],
     unmatchedCount: 0,
   }
@@ -72,10 +73,13 @@ export function describeRatings({ job, last, nextRunAt }, now = Date.now()) {
   // Only a finished preview has changes worth listing.
   if (last?.preview && last.result) {
     view.changes = last.result.changes || []
+    // The server keeps the first 500 songs of a long preview.
+    view.changesTruncated = (last.result.rated ?? 0) > view.changes.length
     view.unmatched = last.result.unmatched || []
     view.unmatchedCount = last.result.not_found ?? view.unmatched.length
   }
-  const when = nextRunAt ? new Date(nextRunAt).getTime() : NaN
+  // Nothing starts while a run is going, so no next run is promised.
+  const when = nextRunAt && !running ? new Date(nextRunAt).getTime() : NaN
   if (!Number.isNaN(when)) {
     // The server sends the Unix epoch when nothing has run yet, and a
     // past time while it waits for its hourly check.
@@ -104,6 +108,8 @@ export function useNavidromeRatings(getOptions) {
   const last = ref(null)
   const nextRunAt = ref(null)
   const runError = ref('')
+  // True while the start request is in flight: both buttons wait.
+  const starting = ref(false)
   let timer = null
   let gone = false
 
@@ -134,11 +140,19 @@ export function useNavidromeRatings(getOptions) {
   }
 
   async function start(preview) {
+    if (starting.value) return
+    starting.value = true
     runError.value = ''
     try {
-      await API.navidromeRatingsRun({ preview, ...getOptions() })
+      const { data } = await API.navidromeRatingsRun({
+        preview,
+        ...getOptions(),
+      })
+      if (data?.state) job.value = data
     } catch (err) {
       runError.value = runErrorText(err)
+    } finally {
+      starting.value = false
     }
     await refresh()
   }
@@ -157,5 +171,5 @@ export function useNavidromeRatings(getOptions) {
     clearTimeout(timer)
   }
 
-  return { view, runError, refresh, start, stop, dispose }
+  return { view, runError, starting, refresh, start, stop, dispose }
 }

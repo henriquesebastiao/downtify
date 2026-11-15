@@ -3,12 +3,12 @@
     <div class="flex flex-wrap items-center gap-2">
       <UiButton
         variant="primary"
-        :disabled="view.running"
+        :disabled="busy"
         @click="ratings.start(false)"
       >
         {{ t('settings.ratingsRun') }}
       </UiButton>
-      <UiButton :disabled="view.running" @click="ratings.start(true)">
+      <UiButton :disabled="busy" @click="ratings.start(true)">
         {{ t('settings.ratingsPreview') }}
       </UiButton>
       <UiButton v-if="view.running" variant="ghost" @click="ratings.stop">
@@ -66,6 +66,9 @@
         </tbody>
       </table>
     </div>
+    <p v-if="view.changesTruncated" class="text-[13px] text-muted">
+      {{ t('settings.ratingsFirstRows', { count: view.changes.length }) }}
+    </p>
 
     <details v-if="view.unmatched.length" class="text-[13px]">
       <summary class="cursor-pointer text-fg-3">
@@ -81,7 +84,7 @@
 </template>
 
 <script setup>
-import { onBeforeUnmount, onMounted } from 'vue'
+import { computed, onBeforeUnmount, onMounted } from 'vue'
 
 import { useI18n } from '/src/i18n'
 import { useNavidromeRatings } from '/src/lib/navidromeRatings'
@@ -97,6 +100,7 @@ const props = defineProps({
 const { t } = useI18n()
 const ratings = useNavidromeRatings(() => props.options)
 const view = ratings.view
+const busy = computed(() => view.value.running || ratings.starting.value)
 
 onMounted(ratings.refresh)
 onBeforeUnmount(ratings.dispose)

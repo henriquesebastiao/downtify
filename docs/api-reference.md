@@ -938,7 +938,7 @@ Admins only. The state of [Ratings from Deezer](features/navidrome-ratings.md): 
 }
 ```
 
-`job` is the job of this server session (`null` before the first run); `last` is the job that finished last, kept across restarts (`null` if none). `next_run_at` is `null` while `navidrome_ratings.repeat` is `off` or Navidrome isn't set up; a time in the past means a run is due at the next hourly check.
+`job` is the job of this server session (`null` before the first run); `last` is the job that finished last, kept across restarts (`null` if none). `next_run_at` is `null` while `navidrome_ratings.repeat` is `off`, Navidrome isn't set up or [library-only mode](features/library-only.md) is on; a time in the past means a run is due at the next hourly check.
 
 A job has these fields:
 
@@ -951,7 +951,7 @@ A job has these fields:
 | `started_at`, `finished_at` | ISO 8601 times; `finished_at` is `null` while running. |
 | `progress` | `{ "done", "total", "step" }`, where `step` is `library` (reading Navidrome) or `rating`. |
 | `result` | `null` until the run ends, then `{ "state", "preview", "total", "rated", "skipped", "not_found", "changes", "unmatched" }`. `changes` lists `{ "artist", "album", "title", "rank", "stars", "was" }` for the songs rated (or, in a preview, that would be); `unmatched` lists the songs Deezer didn't have. Each list keeps up to 500 rows. |
-| `error` | `null`, or `{ "code", "message" }` when `state` is `failed`: `deezer_unreachable`, `navidrome_failed` (the message is Navidrome's) or `ratings_failed`. |
+| `error` | `null`, or `{ "code", "message" }` when `state` is `failed`: `deezer_unreachable`, `navidrome_failed` (the message is short and never holds the Navidrome address or login: the server's own error text, `HTTP <status>`, or a note that Navidrome could not be reached or sent an answer Downtify could not read) or `ratings_failed`. |
 
 ---
 

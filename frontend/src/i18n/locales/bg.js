@@ -1691,7 +1691,7 @@ export default {
     ratingsRepeatMonthly: 'Всеки месец',
     ratingsSkipRated: 'Пропускане на песни със звезди',
     ratingsSkipRatedHint:
-      'Звездите, които си сложил сам, остават, а следващите пускания оценяват само нови песни.',
+      'Звездите, които си сложил сам, остават. Следващите пускания пропускат всяка песен, която вече има звезди.',
     ratingsSkipStarred: 'Пропускане на любими',
     ratingsGrading: 'Оценяване',
     ratingsGradingAbsolute: 'Световна популярност',
@@ -1722,6 +1722,7 @@ export default {
     ratingsColRank: 'Популярност в Deezer',
     ratingsColStars: 'Звезди',
     ratingsUnmatched: 'Не са намерени в Deezer ({count})',
+    ratingsFirstRows: 'Показани са първите {count} песни.',
     navidromeTitle: 'Navidrome',
     navidromeHint:
       'Копира изтеглените плейлисти в Navidrome. Музикалната му папка трябва да включва изтеглянията на Downtify.',
