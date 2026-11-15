@@ -77,6 +77,12 @@ const settings = ref({
     client_name: 'Downtify',
     api_version: '1.16.1',
   },
+  navidrome_ratings: {
+    repeat: 'off',
+    skip_rated: true,
+    skip_starred: false,
+    grading: 'absolute',
+  },
   organize_by_artist: true,
   cache_cover_art: false,
   organize_by_album: true,
@@ -227,6 +233,10 @@ function loadServerSettings() {
         slskd: { ...settings.value.slskd, ...(rest.slskd || {}) },
         deemix: { ...settings.value.deemix, ...(rest.deemix || {}) },
         navidrome: { ...settings.value.navidrome, ...(rest.navidrome || {}) },
+        navidrome_ratings: {
+          ...settings.value.navidrome_ratings,
+          ...(rest.navidrome_ratings || {}),
+        },
         external_library: {
           ...settings.value.external_library,
           ...(rest.external_library || {}),
@@ -312,6 +322,10 @@ async function saveSettings() {
       slskd: { ...settings.value.slskd, ...(rest.slskd || {}) },
       deemix: { ...settings.value.deemix, ...(rest.deemix || {}) },
       navidrome: { ...settings.value.navidrome, ...(rest.navidrome || {}) },
+      navidrome_ratings: {
+        ...settings.value.navidrome_ratings,
+        ...(rest.navidrome_ratings || {}),
+      },
       external_library: {
         ...settings.value.external_library,
         ...(rest.external_library || {}),
