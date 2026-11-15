@@ -3826,3 +3826,61 @@ When an app is paired, the web page showing the code learns it at once:
 ```json
 { "type": "device_paired", "pairing_id": "rfLmICXqGfRBXyXl", "device": { "id": "8uz4d35zjpn2", "name": "Pixel 8", "platform": "android", "…": "…" } }
 ```
+
+## Cached device DJ plans (optional beta)
+
+### `POST /api/v1/music-ai/dj/local-plans`
+
+Native authentication and current track visibility are required. Both the
+administrator and listener must enable `dj_interactive`; the endpoint does not
+require a live renderer. `/api/v1/music-ai/capabilities` advertises
+`dj.local_plans_version: 1`. No profile creation, inference, rendering, catalog
+walk or original-audio open occurs here. Up to four current source signatures
+are checked through the native confined resolver, in one daemon slot. Metadata
+I/O has a two-second response timeout; while an earlier check remains blocked,
+new requests return `source_busy` without starting more workers.
+
+Request `ids` contains two to four nonempty track ID strings (at most 80
+characters each), in playback order; duplicates are independent occurrences.
+`transition_ms` is an integer from 1000 through 12000, default 5000. Unknown
+fields, coerced numeric values and out-of-range values return 422.
+
+```json
+{"ids":["track-a","track-b","track-a"],"transition_ms":5000}
+```
+
+The response has `version: 1`, an opaque `revision`, an opaque `analysis_model`,
+`tracks` and `plans`. Each track contains its zero-based `index`, original `id`,
+opaque `revision`, `validity` and `status`: `ready`, `missing`, `stale` or `unreliable`.
+Every ready track must have `validity: source_verified`. Other validity values
+are `cached_only`, `source_changed`, `source_unavailable`, `source_busy` and
+`source_timeout`; clients must not substitute an older grid in those cases.
+Only ready tracks contain `bpm` (30 through 300), `confidence` (0.75 through 1)
+and `downbeats_ms` (at most 20000 strictly increasing nonnegative integers).
+The cached model, catalog fingerprint and observed physical source signature
+must match current derived records and the visible native row.
+
+One plan is returned for each adjacent occurrence pair: `from_index`,
+`to_index`, `state`, `aligned` and a machine-readable `reason`. Ready plans
+add `outgoing_start_ms`, `source_end_ms`, `incoming_cue_ms`, `duration_ms` and
+`speed` (0.96 through 1.04). Times refer to original media, assuming outgoing
+speed 1.0. The positive overlap ends on an observed outgoing downbeat, never
+exceeds the requested ceiling and may be below 1000 ms for fast measures.
+`reason: bars_aligned` promises a tempo/grid plan, not a device EQ effect.
+
+Unavailable plans have `aligned: false` and no timing or speed fields. Reasons
+include `missing_analysis`, `stale_analysis`, `unreliable_analysis`,
+`tempo_mismatch`, `alignment_unavailable`, `duration_too_short`, `source_changed`,
+`source_unavailable`, `source_busy` and `source_timeout`. No fallback
+fade is labeled as aligned DJ. Clients may explicitly offer the server engine.
+
+Response revisions are scoped to the owner, request, profile and analysis
+generation; they are cache validators, not permission tokens. Every call checks
+visibility again. Clients must additionally discard replies from obsolete queue
+or playback generations. Replies use `Cache-Control: private, no-cache` and
+`Vary: Authorization, Cookie`. Paths, source signatures and model filenames
+are never exposed.
+
+Errors: 401 when signed out, 404 for any missing or inaccessible requested track,
+409 when the module is disabled and 503 when the derived database is unavailable.
+The endpoint does not distinguish hidden from unknown tracks.

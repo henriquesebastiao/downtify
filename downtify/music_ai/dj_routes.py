@@ -5,19 +5,51 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+import sqlite3
 import time
 from functools import lru_cache
 from typing import Literal
 
 from fastapi import APIRouter, HTTPException, Request
-from fastapi.responses import FileResponse, Response
+from fastapi.responses import FileResponse, JSONResponse, Response
 from pydantic import BaseModel, ConfigDict, Field
 
 from .dj_store import CancelledDjRequest, DjStore
+from .local_plans import LocalPlansRequest
 from .ranking import rank
 from .worker import signature
 
 router = APIRouter(prefix='/dj')
+
+
+@router.post('/local-plans')
+def local_plans(payload: LocalPlansRequest, request: Request) -> JSONResponse:
+    from .. import api
+    from . import routes as base
+    from .local_plans import lookup
+    from .local_sources import attest, guard
+
+    uid = base.require(request, 'dj_interactive')
+    rows = base.visible_rows(request, payload.ids)
+    if {row['id'] for row in rows} != set(payload.ids):
+        raise HTTPException(404, 'Un titre n’est plus accessible.')
+    try:
+        result, expected = lookup(
+            base.store(), rows, payload.ids, payload.transition_ms, uid
+        )
+    except sqlite3.Error as error:
+        raise HTTPException(
+            503, 'Les analyses DJ sont temporairement indisponibles.'
+        ) from error
+    result = attest(result, guard.check(rows, api.library_context(), expected))
+    base.require(request, 'dj_interactive')
+    return JSONResponse(
+        result,
+        headers={
+            'Cache-Control': 'private, no-cache',
+            'Vary': 'Authorization, Cookie',
+        },
+    )
 
 
 def database():

@@ -393,6 +393,38 @@ timestamps as an independent playback clock. No transport or threshold changes
 are made. The administrator validation action remains visible when trial mode
 makes an unqualified engine usable, avoiding a preference change just to test it.
 
+## Cached plans for device DJ (beta)
+
+An optional device engine can request two to four upcoming occurrences through
+`POST /api/v1/music-ai/dj/local-plans`. The capability
+`dj.local_plans_version: 1` advertises this contract independently of the server
+renderer's heartbeat or live qualification. The interactive module must still
+be enabled by both administrator and listener. Older clients keep working.
+
+The endpoint performs bounded native visibility checks and indexed reads of
+existing rhythm profiles. It does not scan the catalog, open original audio,
+load a model, start analysis, create a session or render a set. Cached model,
+catalog fingerprint and observed source signature must agree. Before returning
+ready profiles, it verifies up to four actual file signatures through the
+native confined resolver. One daemon slot bounds this metadata work; requests
+time out after two seconds and return an explicit busy state while earlier
+I/O remains blocked. No additional worker starts until that I/O exits. A file
+replaced outside the catalog therefore cannot silently reuse an old grid.
+
+Only tracks marked `validity: source_verified` can produce ready plans.
+Confident grids produce measure-aligned plans with at most a four-percent tempo
+adjustment and the requested overlap ceiling. Vocal uncertainty restricts the
+overlap using the existing server planner. Missing, stale or unreliable grids
+and incompatible tempi return an explicit unavailable plan. They never become
+a plain fade advertised as tempo-aligned DJ. Device clients must honor their
+own queue, account and playback-generation fences, preserve pause and keep one
+system media session; cached plans do not establish device audio quality,
+sample-accurate synchronization, thermal suitability or live qualification.
+
+See the [API contract](api-reference.md#post-apiv1music-aidjlocal-plans) for
+occurrence indices, revision semantics and numeric limits. Device DJ remains
+an explicit beta choice; the endpoint does not enable it automatically.
+
 Official references rechecked 6 November 2026:
 - https://developer.android.com/media/media3/session/player
 - https://developer.android.com/topic/performance/benchmarking/macrobenchmark-overview

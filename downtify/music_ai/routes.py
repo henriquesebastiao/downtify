@@ -312,6 +312,7 @@ def capabilities(request: Request):
     uid = owner(request)
     store().ensure_user(uid)
     dj = store().metadata('dj', {'ready': False})
+    dj = {**dj, 'local_plans_version': 1}
     if not 0 <= time.time() - dj.get('seen', 0) <= 20:
         dj = {
             **dj,

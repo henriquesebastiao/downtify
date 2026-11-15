@@ -289,3 +289,25 @@ Unsupported formats or filesystem failures are reported per track. The server
 updates the library change feed after successful edits; clients should sync
 again and regroup albums from the returned rows. Editing tags does not rename
 files. Embedded artwork and other unrelated tags are retained.
+
+## Optional device DJ plans
+
+Only offer cached tempo-aligned device DJ when the authenticated music-AI
+capabilities report `dj.local_plans_version: 1` and the interactive module is
+enabled. Request the current occurrence and at most three following occurrences
+from [the local-plans API](api-reference.md#post-apiv1music-aidjlocal-plans).
+Require `validity: source_verified` on every ready track before applying a
+tempo plan. Source changes and unavailable, busy or timed-out file metadata
+produce unavailable plans; never reuse an earlier ready response in their place.
+Keep duplicate track IDs as separate occurrences. Map `from_index` and
+`to_index` back to that captured queue window and reject replies after queue,
+account, server, mode or playback-generation changes. An unavailable plan is
+an explicit reason to offer the server engine or plain transition mode; it
+does not qualify as tempo-aligned DJ. Do not repeatedly probe an older server.
+
+Plans assume nominal outgoing speed 1.0. Finish any previous speed recovery
+before arming another plan and keep pitch at 1.0 when applying the incoming
+speed. Millisecond positions refer to the original tracks; `duration_ms` may
+be below 1000 when one complete fast measure fits under the requested ceiling.
+Profiles and plans are derived data, not a second transport: pause, navigation,
+audio focus and Android Auto must remain under the single playback service.
