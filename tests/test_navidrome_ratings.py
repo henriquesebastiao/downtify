@@ -129,3 +129,12 @@ def test_next_run_at_converts_offsets_to_utc():
     assert navidrome_ratings.next_run_at({'repeat': 'daily'}, last) == (
         datetime(2026, 11, 2, 4, tzinfo=timezone.utc)
     )
+
+
+@pytest.mark.parametrize('repeat', [[], {}, ['daily']])
+def test_unhashable_repeat_is_treated_as_off(repeat):
+    assert (
+        navidrome_ratings.effective_settings({'repeat': repeat})['repeat']
+        == 'off'
+    )
+    assert navidrome_ratings.next_run_at({'repeat': repeat}, None) is None

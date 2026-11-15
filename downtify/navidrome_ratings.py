@@ -71,7 +71,9 @@ def effective_settings(raw: Any) -> dict[str, Any]:
     repeat = data.get('repeat')
     grading = data.get('grading')
     return {
-        'repeat': repeat if repeat in REPEAT_DAYS else DEFAULTS['repeat'],
+        'repeat': repeat
+        if repeat in tuple(REPEAT_DAYS)
+        else DEFAULTS['repeat'],
         'skip_rated': bool(data.get('skip_rated', DEFAULTS['skip_rated'])),
         'skip_starred': bool(
             data.get('skip_starred', DEFAULTS['skip_starred'])
@@ -137,7 +139,8 @@ def next_run_at(
     is no usable last run. A failed run is retried after
     ``RETRY_AFTER_FAILURE``, any other after the repeat interval.
     """
-    days = REPEAT_DAYS.get(settings.get('repeat'), 0)
+    repeat = settings.get('repeat')
+    days = REPEAT_DAYS[repeat] if repeat in tuple(REPEAT_DAYS) else 0
     if not days:
         return None
     started = _started_at(last_rating_run)
