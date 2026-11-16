@@ -1183,6 +1183,25 @@ export default {
       'Der Equalizer konnte nicht gestartet werden. Die Wiedergabe wird ohne ihn fortgesetzt.',
   },
   monitor: {
+    select: 'Auswählen',
+    selectDone: 'Fertig',
+    selectAllShown: 'Alle angezeigten auswählen',
+    selectWatch: '{name} auswählen',
+    selectedCount: { one: '{count} ausgewählt', other: '{count} ausgewählt' },
+    selectRangeHint: 'Umschalt-Klick wählt einen Bereich',
+    bulkInterval: 'Prüfintervall ändern auf…',
+    bulkUpdated: {
+      one: '{count} Überwachung geändert',
+      other: '{count} Überwachungen geändert',
+    },
+    bulkChecking: {
+      one: '{count} Überwachung wird geprüft…',
+      other: '{count} Überwachungen werden geprüft…',
+    },
+    bulkStopped: {
+      one: '{count} Überwachung beendet',
+      other: '{count} Überwachungen beendet',
+    },
     tableColumns: 'Spalten',
     resetTableColumns: 'Spalten zurücksetzen',
     releaseTypes: 'Veröffentlichungen',
@@ -2308,6 +2327,10 @@ export default {
     playbackSpeed: 'Wiedergabegeschwindigkeit',
   },
   confirm: {
+    stopWatchingManyTitle: {
+      one: '{count} Überwachung beenden?',
+      other: '{count} Überwachungen beenden?',
+    },
     deleteTrackTitle: '„{title}“ löschen?',
     deleteTracksTitle: '{count} Titel löschen?',
     deleteTracksBody:

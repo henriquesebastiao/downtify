@@ -1149,6 +1149,25 @@ export default {
       '이퀄라이저를 시작할 수 없습니다. 이퀄라이저 없이 재생을 계속합니다.',
   },
   monitor: {
+    select: '선택',
+    selectDone: '완료',
+    selectAllShown: '표시된 항목 모두 선택',
+    selectWatch: '{name} 선택',
+    selectedCount: { one: '{count}개 선택됨', other: '{count}개 선택됨' },
+    selectRangeHint: 'Shift+클릭으로 범위 선택',
+    bulkInterval: '확인 주기 변경…',
+    bulkUpdated: {
+      one: '감시 {count}개 변경됨',
+      other: '감시 {count}개 변경됨',
+    },
+    bulkChecking: {
+      one: '감시 {count}개 확인 중…',
+      other: '감시 {count}개 확인 중…',
+    },
+    bulkStopped: {
+      one: '감시 {count}개 중지됨',
+      other: '감시 {count}개 중지됨',
+    },
     tableColumns: '열',
     resetTableColumns: '열 초기화',
     releaseTypes: '다운로드할 종류',
@@ -2239,6 +2258,10 @@ export default {
     playbackSpeed: '재생 속도',
   },
   confirm: {
+    stopWatchingManyTitle: {
+      one: '감시 {count}개를 중지할까요?',
+      other: '감시 {count}개를 중지할까요?',
+    },
     deleteTrackTitle: '“{title}” 트랙을 삭제하시겠습니까?',
     deleteTracksTitle: '트랙 {count}개를 삭제하시겠습니까?',
     deleteTracksBody:

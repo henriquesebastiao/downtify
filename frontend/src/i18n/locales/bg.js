@@ -1145,6 +1145,25 @@ export default {
       'Еквалайзерът не можа да стартира. Възпроизвеждането продължава без него.',
   },
   monitor: {
+    select: 'Избор',
+    selectDone: 'Готово',
+    selectAllShown: 'Избери всички показани',
+    selectWatch: 'Избери {name}',
+    selectedCount: { one: '{count} избран', other: '{count} избрани' },
+    selectRangeHint: 'Shift+клик избира диапазон',
+    bulkInterval: 'Промени проверките на…',
+    bulkUpdated: {
+      one: 'Обновено {count} наблюдение',
+      other: 'Обновени {count} наблюдения',
+    },
+    bulkChecking: {
+      one: 'Проверка на {count} наблюдение…',
+      other: 'Проверка на {count} наблюдения…',
+    },
+    bulkStopped: {
+      one: 'Спряно {count} наблюдение',
+      other: 'Спрени {count} наблюдения',
+    },
     tableColumns: 'Колони',
     resetTableColumns: 'Нулиране на колоните',
     releaseTypes: 'Изтегляне',
@@ -2246,6 +2265,10 @@ export default {
     playbackSpeed: 'Скорост на възпроизвеждане',
   },
   confirm: {
+    stopWatchingManyTitle: {
+      one: 'Да се спре ли {count} наблюдение?',
+      other: 'Да се спрат ли {count} наблюдения?',
+    },
     deleteTrackTitle: 'Изтриване на „{title}“?',
     deleteTracksTitle: 'Изтриване на {count} песни?',
     deleteTracksBody:

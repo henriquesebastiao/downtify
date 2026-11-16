@@ -10641,6 +10641,75 @@ async def update_monitor_playlist(
     return updated.to_dict()
 
 
+#: Most watches one bulk edit may name.
+MONITOR_BULK_LIMIT = 5000
+
+
+@router.patch('/api/monitor/playlists')
+async def update_monitor_playlists(request: Request) -> dict[str, Any]:
+    """Give several watches the same ``interval_minutes`` and/or
+    ``enabled`` at once (the Monitor page's selection). Watches that
+    don't exist or belong to another account are left out and listed
+    under ``missing``."""
+
+    db = _require_monitor_db()
+    payload = await _json_object(request)
+
+    raw_ids = payload.get('ids')
+    if not isinstance(raw_ids, list) or not raw_ids:
+        raise HTTPException(
+            status_code=400, detail='ids is a non-empty list of watch ids'
+        )
+    if len(raw_ids) > MONITOR_BULK_LIMIT:
+        raise HTTPException(
+            status_code=400,
+            detail=f'At most {MONITOR_BULK_LIMIT} watches at once',
+        )
+    try:
+        ids = list(dict.fromkeys(int(i) for i in raw_ids))
+    except (TypeError, ValueError):
+        raise HTTPException(
+            status_code=400, detail='ids is a non-empty list of watch ids'
+        )
+
+    kwargs: dict[str, Any] = {}
+    if 'interval_minutes' in payload:
+        try:
+            interval = int(payload['interval_minutes'])
+        except (TypeError, ValueError):
+            interval = 0
+        if interval < 1:
+            raise HTTPException(
+                status_code=400,
+                detail='interval_minutes is a positive number of minutes',
+            )
+        kwargs['interval_minutes'] = interval
+    if 'enabled' in payload:
+        kwargs['enabled'] = bool(payload['enabled'])
+    if not kwargs:
+        raise HTTPException(
+            status_code=400,
+            detail='Nothing to change: send interval_minutes or enabled',
+        )
+
+    def _apply() -> tuple[list[dict[str, Any]], list[int]]:
+        updated: list[dict[str, Any]] = []
+        missing: list[int] = []
+        for watch_id in ids:
+            if _monitor_watch_for_request(watch_id, request) is None:
+                missing.append(watch_id)
+                continue
+            watch = db.update_playlist(watch_id, **kwargs)
+            if watch is None:
+                missing.append(watch_id)
+            else:
+                updated.append(watch.to_dict())
+        return updated, missing
+
+    updated, missing = await asyncio.to_thread(_apply)
+    return {'updated': updated, 'missing': missing}
+
+
 @router.delete('/api/monitor/playlists/{playlist_id}')
 async def delete_monitor_playlist(
     playlist_id: int, request: Request

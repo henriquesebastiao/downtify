@@ -1065,6 +1065,25 @@ export default {
     equalizerError: '无法启动均衡器，将继续以原方式播放。',
   },
   monitor: {
+    select: '选择',
+    selectDone: '完成',
+    selectAllShown: '全选当前显示',
+    selectWatch: '选择 {name}',
+    selectedCount: { one: '已选 {count} 项', other: '已选 {count} 项' },
+    selectRangeHint: '按住 Shift 点击可选择一段范围',
+    bulkInterval: '将检查间隔改为…',
+    bulkUpdated: {
+      one: '已更新 {count} 个监控',
+      other: '已更新 {count} 个监控',
+    },
+    bulkChecking: {
+      one: '正在检查 {count} 个监控…',
+      other: '正在检查 {count} 个监控…',
+    },
+    bulkStopped: {
+      one: '已停止 {count} 个监控',
+      other: '已停止 {count} 个监控',
+    },
     tableColumns: '列',
     resetTableColumns: '重置列',
     releaseTypes: '下载类型',
@@ -2079,6 +2098,10 @@ export default {
     playbackSpeed: '播放速度',
   },
   confirm: {
+    stopWatchingManyTitle: {
+      one: '停止 {count} 个监控？',
+      other: '停止 {count} 个监控？',
+    },
     deleteTrackTitle: '删除“{title}”？',
     deleteTracksTitle: '删除 {count} 首歌曲？',
     deleteTracksBody: '将从磁盘删除文件，并更新包含这些歌曲的播放列表。',

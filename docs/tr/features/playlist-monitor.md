@@ -144,11 +144,12 @@ Sunucu izlemeyi ekledikten sonra düğme, aralığı ve seçenekleri değiştire
 | Her 6 saat | 360 | |
 | Her 12 saat | 720 | |
 | Her gün | 1 440 | Yavaş değişen çalma listeleri |
+| 3 günde bir | 4 320 | |
 | Her hafta | 10 080 | Haftalık güncellenen çalma listeleri |
 | Her 2 haftada | 20 160 | |
 | Her ay | 43 200 | Arşiv veya nadiren güncellenen çalma listeleri |
 
-Var olan bir çalma listesinin aralığını, kaldırıp yeniden eklemeden, izleyici kartından istediğiniz zaman değiştirebilirsiniz.
+Var olan bir çalma listesinin aralığını, kaldırıp yeniden eklemeden, izleyici kartından istediğiniz zaman değiştirebilirsiniz. Ya da birçok takibi tek seferde değiştirin: bkz. [Birçok takibi tek seferde değiştirme](#changing-many-watches-at-once).
 
 ## İzlenen çalma listelerini yönetme
 
@@ -170,6 +171,17 @@ Her satırda:
 - **⋯** — **Etkinlik ve şarkılar** (izlemenin kendi sayfası), duraklat/sürdür, bağlantıyı kopyala, orijinali aç veya **İzlemeyi bırak** (kayıt silinir; indirilen dosyalar korunur)
 
 **Etkinlik** ve **Depolama** diğerleri gibi birer sütundur: **Sütunlar** menüsünden gizleyebilir ya da genişliklerini değiştirebilirsin.
+
+### Birçok takibi tek seferde değiştirme
+
+Listenin üstündeki **Seç** düğmesine tıklayınca her satırda bir kutu çıkar. Takipleri işaretleyin (**Shift**+tıklama iki tıklama arasındakilerin hepsini işaretler) ya da arama ve **Tümü / Duraklatılan** filtresine uyan **Gösterilenlerin tümünü seç** seçeneğini kullanın. Listenin üstündeki çubuk tek bir değişikliği işaretlenen tüm takiplere uygular:
+
+- **Kontrol sıklığını değiştir…** — hepsine aynı aralık
+- **Duraklat** / **Sürdür**
+- **Şimdi kontrol et** — etkin olanları hemen kontrol eder
+- **Takibi bırak** — onaydan sonra; indirilen dosyalar kalır
+
+**Çalma listeleri** ve **Sanatçılar** sekmelerinde aynı şekilde çalışır. Arama değişince işaretli takipler işaretli kalır. **Bitti** (veya **Esc**) seçimden çıkar; sekme değiştirmek seçimi temizler.
 
 ### Bir izlemeyi düzenleme
 

@@ -1156,6 +1156,28 @@ export default {
       'Não foi possível iniciar o equalizador. A reprodução continua sem ele.',
   },
   monitor: {
+    select: 'Selecionar',
+    selectDone: 'Concluir',
+    selectAllShown: 'Selecionar todos os exibidos',
+    selectWatch: 'Selecionar {name}',
+    selectedCount: {
+      one: '{count} selecionado',
+      other: '{count} selecionados',
+    },
+    selectRangeHint: 'Shift+clique seleciona um intervalo',
+    bulkInterval: 'Mudar verificações para…',
+    bulkUpdated: {
+      one: '{count} monitoramento atualizado',
+      other: '{count} monitoramentos atualizados',
+    },
+    bulkChecking: {
+      one: 'Verificando {count} monitoramento…',
+      other: 'Verificando {count} monitoramentos…',
+    },
+    bulkStopped: {
+      one: '{count} monitoramento parado',
+      other: '{count} monitoramentos parados',
+    },
     tableColumns: 'Colunas',
     resetTableColumns: 'Redefinir colunas',
     releaseTypes: 'Baixar',
@@ -2255,6 +2277,10 @@ export default {
     playbackSpeed: 'Velocidade de reprodução',
   },
   confirm: {
+    stopWatchingManyTitle: {
+      one: 'Parar de monitorar {count} item?',
+      other: 'Parar de monitorar {count} itens?',
+    },
     deleteTrackTitle: 'Excluir “{title}”?',
     deleteTracksTitle: 'Excluir {count} faixas?',
     deleteTracksBody:

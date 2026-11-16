@@ -144,11 +144,12 @@ Cuando el servidor ha añadido la vigilancia, el botón pasa a ser un enlace a *
 | Cada 6 horas | 360 | |
 | Cada 12 horas | 720 | |
 | Cada día | 1 440 | Playlists que cambian despacio |
+| Cada 3 días | 4 320 | |
 | Cada semana | 10 080 | Playlists actualizadas semanalmente |
 | Cada 2 semanas | 20 160 | |
 | Cada mes | 43 200 | Archivo o playlists que rara vez se actualizan |
 
-Puedes cambiar el intervalo de una playlist existente en cualquier momento desde la tarjeta del monitor, sin quitarla y volver a añadirla.
+Puedes cambiar el intervalo de una playlist existente en cualquier momento desde la tarjeta del monitor, sin quitarla y volver a añadirla. O para muchos seguimientos a la vez: consulta [Cambiar muchos seguimientos a la vez](#changing-many-watches-at-once).
 
 ## Gestionar las playlists vigiladas
 
@@ -170,6 +171,17 @@ En cada fila:
 - **⋯** — **Actividad y canciones** (la página de la vigilancia), pausar/reanudar, copiar el enlace, abrir el original o **Dejar de vigilar** (se borra el registro; los archivos descargados se conservan)
 
 **Actividad** y **Almacenamiento** son columnas como las demás: ocúltalas o cambia su ancho desde **Columnas**.
+
+### Cambiar muchos seguimientos a la vez
+
+Pulsa **Seleccionar** sobre la lista y cada fila tendrá una casilla. Marca los seguimientos (con **Mayús**+clic se marcan todos entre dos clics) o usa **Seleccionar todo lo mostrado**, que respeta la búsqueda y el filtro **Todos / En pausa**. La barra sobre la lista aplica un mismo cambio a todos los marcados:
+
+- **Cambiar comprobaciones a…** — el mismo intervalo para todos
+- **Pausar** / **Reanudar**
+- **Comprobar ahora** — comprueba los activos de inmediato
+- **Dejar de seguir** — tras una confirmación; los archivos descargados se conservan
+
+Funciona igual en las pestañas **Listas** y **Artistas**. Los marcados siguen marcados al cambiar la búsqueda. **Listo** (o **Esc**) sale de la selección; cambiar de pestaña la vacía.
 
 ### Editar una vigilancia
 

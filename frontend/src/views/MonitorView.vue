@@ -142,6 +142,15 @@
         </label>
         <UiChips v-model="show" :items="showFilters" />
         <div class="ml-auto flex items-center gap-2">
+          <UiButton
+            size="sm"
+            :variant="selecting ? 'secondary' : 'ghost'"
+            :icon="selecting ? 'x' : 'check'"
+            :aria-pressed="selecting"
+            @click="setSelecting(!selecting)"
+          >
+            {{ selecting ? t('monitor.selectDone') : t('monitor.select') }}
+          </UiButton>
           <span class="hidden lg:inline-flex">
             <UiMenu :items="tableColumnMenu" :label="t('monitor.tableColumns')"
               ><template #trigger
@@ -166,6 +175,89 @@
             "
             @click="sortDir = sortDir === 'asc' ? 'desc' : 'asc'"
           />
+        </div>
+      </div>
+
+      <div
+        v-if="selecting"
+        class="sticky top-[76px] z-20 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-[14px] border border-accent/40 bg-surface-2/95 px-4 py-3 shadow-float backdrop-blur-xl md:top-[84px]"
+        role="toolbar"
+        :aria-label="t('monitor.selectedCount', { count: selectedIds.length })"
+      >
+        <label class="flex cursor-pointer items-center gap-2.5 text-sm">
+          <input
+            ref="selectAllBox"
+            type="checkbox"
+            class="size-4 cursor-pointer accent-accent"
+            :checked="shownSelection === 'all'"
+            :disabled="!visibleIds.length"
+            @change="selected = toggleShown(selected, visibleIds)"
+          />
+          {{ t('monitor.selectAllShown') }}
+        </label>
+        <span class="tabular text-sm font-semibold">
+          {{ t('monitor.selectedCount', { count: selectedIds.length }) }}
+        </span>
+        <span class="hidden text-[12px] text-faint xl:inline">
+          {{ t('monitor.selectRangeHint') }}
+        </span>
+        <div
+          class="flex w-full flex-wrap items-center gap-2 sm:ml-auto sm:w-auto"
+        >
+          <UiSelect
+            :model-value="''"
+            :options="bulkIntervalOptions"
+            :label="t('monitor.bulkInterval')"
+            icon="clock"
+            size="sm"
+            :class="
+              selectedIds.length && !bulkBusy
+                ? ''
+                : 'pointer-events-none opacity-50'
+            "
+            @update:model-value="
+              (value) => value && bulkUpdate({ interval_minutes: value })
+            "
+          />
+          <UiButton
+            size="sm"
+            variant="ghost"
+            icon="pause"
+            :disabled="!selectedEnabled.length || bulkBusy"
+            @click="bulkUpdate({ enabled: false })"
+          >
+            {{ t('monitor.pause') }}
+          </UiButton>
+          <UiButton
+            size="sm"
+            variant="ghost"
+            icon="play"
+            :disabled="
+              selectedEnabled.length === selectedIds.length || bulkBusy
+            "
+            @click="bulkUpdate({ enabled: true })"
+          >
+            {{ t('monitor.resume') }}
+          </UiButton>
+          <UiButton
+            size="sm"
+            variant="ghost"
+            icon="retry"
+            :disabled="!selectedEnabled.length || bulkBusy"
+            @click="bulkCheck"
+          >
+            {{ t('monitor.checkNow') }}
+          </UiButton>
+          <UiButton
+            size="sm"
+            variant="ghost"
+            icon="trash"
+            class="text-danger"
+            :disabled="!selectedIds.length || bulkBusy"
+            @click="bulkStop"
+          >
+            {{ t('monitor.stop') }}
+          </UiButton>
         </div>
       </div>
 
@@ -235,58 +327,73 @@
               v-for="item in visible"
               :key="item.id"
               class="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-2 rounded-[12px] px-4 py-3 transition-colors hover:bg-surface monitor-table-grid"
+              :class="
+                selecting && selected.has(item.id)
+                  ? 'bg-surface ring-1 ring-accent/40 ring-inset'
+                  : ''
+              "
             >
-              <div
-                class="flex min-w-0 items-center gap-3 transition-opacity"
-                :class="item.enabled ? '' : 'opacity-50'"
-              >
-                <CoverArt
-                  :src="tab === 'artist' ? artistCover(item) : ''"
-                  :name="item.name"
-                  :round="tab === 'artist'"
-                  :icon="tab === 'artist' ? 'user' : 'playlist'"
-                  rounded="rounded-[8px]"
-                  :letter-size="16"
-                  class="size-11"
+              <div class="flex min-w-0 items-center gap-3">
+                <input
+                  v-if="selecting"
+                  type="checkbox"
+                  class="size-4 shrink-0 cursor-pointer accent-accent"
+                  :checked="selected.has(item.id)"
+                  :aria-label="t('monitor.selectWatch', { name: item.name })"
+                  @click="pick(item, $event)"
                 />
-                <div class="min-w-0">
-                  <button
-                    type="button"
-                    class="block max-w-full whitespace-normal break-words text-left text-sm font-semibold hover:underline"
-                    :title="item.name"
-                    @click="editing = item"
-                  >
-                    {{ item.name }}
-                  </button>
-                  <a
-                    :href="item.url"
-                    target="_blank"
-                    rel="noopener"
-                    :title="item.url"
-                    class="block truncate font-mono text-[11.5px] text-muted hover:text-fg hover:underline"
-                    >{{ displayUrl(item.url) }}</a
-                  >
-                  <span
-                    v-if="
-                      releaseFilterSummary(item).types.length ||
-                      releaseFilterSummary(item).newOnly
-                    "
-                    class="mt-1 flex flex-wrap gap-1"
-                  >
-                    <UiBadge v-if="releaseFilterSummary(item).types.length">
-                      {{
-                        releaseFilterSummary(item)
-                          .types.map((type) => t(`monitor.release.${type}`))
-                          .join(' · ')
-                      }}
-                    </UiBadge>
-                    <UiBadge
-                      v-if="releaseFilterSummary(item).newOnly"
-                      tone="accent"
+                <div
+                  class="flex min-w-0 items-center gap-3 transition-opacity"
+                  :class="item.enabled ? '' : 'opacity-50'"
+                >
+                  <CoverArt
+                    :src="tab === 'artist' ? artistCover(item) : ''"
+                    :name="item.name"
+                    :round="tab === 'artist'"
+                    :icon="tab === 'artist' ? 'user' : 'playlist'"
+                    rounded="rounded-[8px]"
+                    :letter-size="16"
+                    class="size-11"
+                  />
+                  <div class="min-w-0">
+                    <button
+                      type="button"
+                      class="block max-w-full whitespace-normal break-words text-left text-sm font-semibold hover:underline"
+                      :title="item.name"
+                      @click="editing = item"
                     >
-                      {{ t('monitor.newOnlyBadge') }}
-                    </UiBadge>
-                  </span>
+                      {{ item.name }}
+                    </button>
+                    <a
+                      :href="item.url"
+                      target="_blank"
+                      rel="noopener"
+                      :title="item.url"
+                      class="block truncate font-mono text-[11.5px] text-muted hover:text-fg hover:underline"
+                      >{{ displayUrl(item.url) }}</a
+                    >
+                    <span
+                      v-if="
+                        releaseFilterSummary(item).types.length ||
+                        releaseFilterSummary(item).newOnly
+                      "
+                      class="mt-1 flex flex-wrap gap-1"
+                    >
+                      <UiBadge v-if="releaseFilterSummary(item).types.length">
+                        {{
+                          releaseFilterSummary(item)
+                            .types.map((type) => t(`monitor.release.${type}`))
+                            .join(' · ')
+                        }}
+                      </UiBadge>
+                      <UiBadge
+                        v-if="releaseFilterSummary(item).newOnly"
+                        tone="accent"
+                      >
+                        {{ t('monitor.newOnlyBadge') }}
+                      </UiBadge>
+                    </span>
+                  </div>
                 </div>
               </div>
 
@@ -542,6 +649,12 @@ import {
   watchKind,
   watchKindOfUrl,
 } from '/src/lib/watches'
+import {
+  keepExisting,
+  shownState,
+  toggleShown,
+  toggleWatch,
+} from '/src/lib/watchSelection'
 import { useI18n } from '/src/i18n'
 import {
   MONITOR_COLUMNS,
@@ -904,7 +1017,136 @@ watch(tab, () => {
   query.value = ''
   show.value = 'all'
   wrongKind.value = null
+  setSelecting(false)
 })
+
+// Picking several watches of the tab to change together ("Select").
+// What's picked stays picked when the filter hides it; the actions apply
+// to every picked watch of the tab.
+const selecting = ref(false)
+const selected = ref(new Set())
+const selectAllBox = ref(null)
+const bulkBusy = ref(false)
+let lastPicked = null
+
+const visibleIds = computed(() => visible.value.map((item) => item.id))
+const selectedItems = computed(() =>
+  inTab.value.filter((item) => selected.value.has(item.id))
+)
+const selectedIds = computed(() => selectedItems.value.map((item) => item.id))
+const selectedEnabled = computed(() =>
+  selectedItems.value.filter((item) => item.enabled)
+)
+const shownSelection = computed(() =>
+  shownState(selected.value, visibleIds.value)
+)
+const bulkIntervalOptions = computed(() => [
+  { value: '', label: t('monitor.bulkInterval') },
+  ...intervalOptions(t),
+])
+
+watch([shownSelection, selectAllBox], ([state, box]) => {
+  if (box) box.indeterminate = state === 'some'
+})
+watch(
+  () => inTab.value.map((item) => item.id),
+  (ids) => {
+    selected.value = keepExisting(selected.value, ids)
+  }
+)
+
+function setSelecting(on) {
+  selecting.value = on
+  selected.value = new Set()
+  lastPicked = null
+}
+
+function pick(item, event) {
+  selected.value = toggleWatch(selected.value, visibleIds.value, item.id, {
+    anchor: lastPicked,
+    range: event.shiftKey,
+  })
+  lastPicked = item.id
+}
+
+// Escape leaves "Select", unless it is closing a dialog (the capture
+// phase sees the dialog before Escape closes it).
+function onSelectKey(event) {
+  if (event.key !== 'Escape' || !selecting.value) return
+  if (editing.value || ui.dialog.value || ui.modals.value.length) return
+  setSelecting(false)
+}
+onMounted(() => window.addEventListener('keydown', onSelectKey, true))
+onBeforeUnmount(() => window.removeEventListener('keydown', onSelectKey, true))
+
+async function bulkUpdate(changes) {
+  const ids = selectedIds.value
+  if (!ids.length || bulkBusy.value) return
+  bulkBusy.value = true
+  try {
+    const res = await monitorAPI.updateMonitoredPlaylists(ids, changes)
+    const byId = new Map((res.data?.updated || []).map((w) => [w.id, w]))
+    for (const item of items.value) {
+      if (byId.has(item.id)) Object.assign(item, byId.get(item.id))
+    }
+    ui.toast(t('monitor.bulkUpdated', { count: byId.size }), {
+      kind: 'success',
+    })
+  } catch {
+    ui.toast(t('toast.actionFailed'), { kind: 'error' })
+  } finally {
+    bulkBusy.value = false
+  }
+}
+
+async function bulkCheck() {
+  const targets = selectedEnabled.value
+  if (!targets.length || bulkBusy.value) return
+  bulkBusy.value = true
+  ui.toast(t('monitor.bulkChecking', { count: targets.length }))
+  try {
+    for (const item of targets) {
+      await monitorAPI.checkMonitoredPlaylist(item.id).catch(() => {})
+    }
+  } finally {
+    bulkBusy.value = false
+    setTimeout(load, 4000)
+  }
+}
+
+async function bulkStop() {
+  const targets = selectedItems.value
+  if (!targets.length || bulkBusy.value) return
+  const ok = await ui.confirm({
+    title: t('confirm.stopWatchingManyTitle', { count: targets.length }),
+    body: t('confirm.stopWatchingBody'),
+    confirmLabel: t('monitor.stop'),
+    danger: true,
+  })
+  if (!ok) return
+  bulkBusy.value = true
+  const stopped = new Set()
+  try {
+    for (const item of targets) {
+      try {
+        await monitorAPI.deleteMonitoredPlaylist(item.id)
+        stopped.add(item.id)
+      } catch {
+        // Left in the list (and picked) to try again.
+      }
+    }
+  } finally {
+    items.value = items.value.filter((item) => !stopped.has(item.id))
+    bulkBusy.value = false
+  }
+  if (stopped.size === targets.length) {
+    ui.toast(t('monitor.bulkStopped', { count: stopped.size }), {
+      kind: 'success',
+    })
+  } else {
+    ui.toast(t('toast.actionFailed'), { kind: 'error' })
+  }
+}
 
 function clearFilters() {
   query.value = ''

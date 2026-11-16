@@ -144,11 +144,12 @@ Depois que o servidor adiciona o monitoramento, o botão vira um link para o **M
 | A cada 6 horas | 360 | |
 | A cada 12 horas | 720 | |
 | Todo dia | 1 440 | Playlists que mudam devagar |
+| A cada 3 dias | 4 320 | |
 | Toda semana | 10 080 | Playlists atualizadas semanalmente |
 | A cada 2 semanas | 20 160 | |
 | Todo mês | 43 200 | Arquivo ou playlists raramente atualizadas |
 
-Você pode mudar o intervalo de uma playlist existente a qualquer momento pelo cartão do monitor, sem removê-la e adicioná-la de novo.
+Você pode mudar o intervalo de uma playlist existente a qualquer momento pelo cartão do monitor, sem removê-la e adicioná-la de novo. Ou para muitos monitoramentos de uma vez: veja [Alterar muitos monitoramentos de uma vez](#changing-many-watches-at-once).
 
 ## Gerenciando playlists monitoradas
 
@@ -170,6 +171,17 @@ Em cada linha:
 - **⋯** — **Atividade e músicas** (a página do monitoramento), pausar/retomar, copiar o link, abrir o original ou **Parar de monitorar** (o registro é excluído; os arquivos baixados são mantidos)
 
 **Atividade** e **Armazenamento** são colunas como as outras: esconda ou redimensione em **Colunas**.
+
+### Alterar muitos monitoramentos de uma vez
+
+Clique em **Selecionar** acima da lista para mostrar uma caixa em cada linha. Marque os monitoramentos (Shift+clique marca todos entre dois cliques) ou use **Selecionar todos os exibidos**, que respeita a busca e o filtro **Todos / Pausados**. A barra acima da lista aplica uma mesma mudança a todos os marcados:
+
+- **Mudar verificações para…** — o mesmo intervalo para todos
+- **Pausar** / **Retomar**
+- **Verificar agora** — verifica os ativos na hora
+- **Parar de monitorar** — após confirmação; os arquivos baixados ficam
+
+Funciona do mesmo jeito nas abas **Playlists** e **Artistas**. Os marcados continuam marcados quando a busca muda. **Concluir** (ou **Esc**) sai da seleção; trocar de aba a limpa.
 
 ### Editando um monitoramento
 

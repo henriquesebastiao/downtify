@@ -2527,6 +2527,24 @@ Changing `release_types`, `new_only` or `musicbrainz_kinds` starts a check in th
 
 ---
 
+### `PATCH /api/monitor/playlists`
+
+Give several watches the same interval and/or active state at once (the Monitor page's **Select**).
+
+**Request body:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `ids` | array | The watches to change (at most 5 000) |
+| `interval_minutes` | integer | Check interval, at least 1 |
+| `enabled` | boolean | Pause (`false`) or resume (`true`) |
+
+At least one of `interval_minutes` and `enabled` is required. Nothing else about the watches changes, and no check starts.
+
+**Response:** `{ "updated": [watch…], "missing": [id…] }` — the updated watch objects, and the ids that don't exist or belong to another account (unless you're an admin), which are left alone. `400` for an empty or invalid `ids`, a bad `interval_minutes`, or nothing to change.
+
+---
+
 ### `DELETE /api/monitor/playlists/{playlist_id}`
 
 Stop monitoring a playlist.

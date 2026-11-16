@@ -1135,6 +1135,25 @@ export default {
       "The equalizer couldn't start. Playback continues without it.",
   },
   monitor: {
+    select: 'Select',
+    selectDone: 'Done',
+    selectAllShown: 'Select all shown',
+    selectWatch: 'Select {name}',
+    selectedCount: { one: '{count} selected', other: '{count} selected' },
+    selectRangeHint: 'Shift-click to select a range',
+    bulkInterval: 'Change checks to…',
+    bulkUpdated: {
+      one: 'Updated {count} watch',
+      other: 'Updated {count} watches',
+    },
+    bulkChecking: {
+      one: 'Checking {count} watch…',
+      other: 'Checking {count} watches…',
+    },
+    bulkStopped: {
+      one: 'Stopped watching {count}',
+      other: 'Stopped watching {count}',
+    },
     tableColumns: 'Columns',
     resetTableColumns: 'Reset columns',
     releaseTypes: 'Download',
@@ -2209,6 +2228,10 @@ export default {
     playbackSpeed: 'Playback speed',
   },
   confirm: {
+    stopWatchingManyTitle: {
+      one: 'Stop watching {count} watch?',
+      other: 'Stop watching {count} watches?',
+    },
     deleteTrackTitle: 'Delete “{title}”?',
     deleteTracksTitle: 'Delete {count} tracks?',
     deleteTracksBody:

@@ -1093,6 +1093,25 @@ export default {
     equalizerError: '等化器無法啟動，播放會繼續，但不套用等化器。',
   },
   monitor: {
+    select: '選取',
+    selectDone: '完成',
+    selectAllShown: '全選目前顯示',
+    selectWatch: '選取 {name}',
+    selectedCount: { one: '已選取 {count} 項', other: '已選取 {count} 項' },
+    selectRangeHint: '按住 Shift 點擊可選取一段範圍',
+    bulkInterval: '將檢查間隔改為…',
+    bulkUpdated: {
+      one: '已更新 {count} 個監控',
+      other: '已更新 {count} 個監控',
+    },
+    bulkChecking: {
+      one: '正在檢查 {count} 個監控…',
+      other: '正在檢查 {count} 個監控…',
+    },
+    bulkStopped: {
+      one: '已停止 {count} 個監控',
+      other: '已停止 {count} 個監控',
+    },
     tableColumns: '欄位',
     resetTableColumns: '重設欄位',
     releaseTypes: '下載',
@@ -2133,6 +2152,10 @@ export default {
     playbackSpeed: '播放速度',
   },
   confirm: {
+    stopWatchingManyTitle: {
+      one: '停止 {count} 個監控？',
+      other: '停止 {count} 個監控？',
+    },
     deleteTrackTitle: '要刪除「{title}」嗎？',
     deleteTracksTitle: '要刪除 {count} 首歌曲嗎？',
     deleteTracksBody: '檔案會從磁碟中移除，包含這些歌曲的播放清單也會更新。',
