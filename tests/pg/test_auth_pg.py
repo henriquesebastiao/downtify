@@ -174,7 +174,8 @@ def test_devices_are_paired_checked_and_revoked(backend_db, tmp_path) -> None:
     }
     # Only a hash of the secret is stored.
     stored = query(backend_db, 'SELECT token_hash FROM auth_devices')
-    assert token.rsplit('_', 1)[-1] not in stored[0][0]
+    secret = token.removeprefix(TOKEN_PREFIX + device['id'] + '_')
+    assert secret not in stored[0][0]
 
     # Seen a moment ago: the last-seen time and address are not rewritten.
     store._signed_in.clear()

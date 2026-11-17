@@ -169,7 +169,8 @@ def test_device_token_round_trip(tmp_path):
     # Only a hash is stored.
     with store._connect() as conn:
         stored = conn.execute('SELECT token_hash FROM auth_devices').fetchone()
-    assert token.split('_')[-1] not in stored['token_hash']
+    secret = token.removeprefix(auth.TOKEN_PREFIX + device['id'] + '_')
+    assert secret not in stored['token_hash']
 
 
 def test_a_revoked_token_fails(tmp_path):
