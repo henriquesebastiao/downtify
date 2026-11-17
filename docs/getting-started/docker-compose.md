@@ -153,6 +153,8 @@ docker compose up -d
 
 Your music and settings are preserved in the volumes.
 
+`latest` always follows the newest release. Every release is also published under its full version and its minor and major lines, so `ghcr.io/henriquesebastiao/downtify:3.12.0` never changes, `:3.12` gets only that line's fixes and `:3` moves to every 3.x release. The same tags exist on Docker Hub (`henriquesebastiao/downtify`).
+
 ## Volumes
 
 | Path inside the compose file | Purpose |

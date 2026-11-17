@@ -146,6 +146,8 @@ environment:
 
 The remaining deployment options (timezone, monitor sync time, cookies file, IPv4) are listed under **[Environment variables](https://henriquesebastiao.github.io/downtify/getting-started/environment-variables/)**. Everything else is configured from **Settings** in the web interface.
 
+To stay on one release line instead of `latest`, pin a major, minor or exact version tag (`:3`, `:3.12`, `:3.12.0`); see [Updating](https://downtify.henriquesebastiao.com/getting-started/docker-compose/#updating).
+
 The example above keeps SQLite. The repository's own `docker-compose.yml` also has an opt-in `postgres` service (profile `postgres`); see [Database](https://downtify.henriquesebastiao.com/database/).
 
 ### Home server platforms

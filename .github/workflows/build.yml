@@ -27,6 +27,19 @@ jobs:
         id: meta
         uses: docker/metadata-action@v6
         with:
+          images: |
+            henriquesebastiao/downtify
+            ghcr.io/${{ github.repository }}
+          # A release 3.12.0 is pushed as 3.12.0, 3.12, 3 and latest, so
+          # users can pin a major or minor line and still get its fixes.
+          # Pre-releases (3.12.0-rc.1) get only their own tag.
+          flavor: |
+            latest=false
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=raw,value=latest,enable=${{ !github.event.release.prerelease }}
           annotations: |
             type=org.opencontainers.image.description, value=Download your Spotify playlists and songs along with album art and metadata in a self-hosted way via Docker.
             type=org.opencontainers.image.url, value=https://github.com/henriquesebastiao/downtify
@@ -57,11 +70,7 @@ jobs:
         with:
           context: .
           push: true
-          tags: |
-            henriquesebastiao/downtify:latest
-            henriquesebastiao/downtify:${{ steps.version.outputs.VERSION }}
-            ghcr.io/${{ github.repository }}:latest
-            ghcr.io/${{ github.repository }}:${{ steps.version.outputs.VERSION }}
+          tags: ${{ steps.meta.outputs.tags }}
           platforms: linux/amd64,linux/arm64
           build-args: |
             DOCKER_METADATA_OUTPUT_JSON
