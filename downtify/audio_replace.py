@@ -43,6 +43,7 @@ from typing import Any, Callable, Optional
 
 from loguru import logger
 from mutagen import File as MutagenFile
+from mutagen.flac import FLAC
 from mutagen.id3 import ID3, ID3NoHeaderError
 
 from . import providers
@@ -257,6 +258,8 @@ def copy_tags(source: Path, target: Path) -> None:
         for key in list(old.tags.keys()):
             new.tags[key] = old.tags[key]
     # FLAC keeps pictures outside the Vorbis comments.
+    if isinstance(new, FLAC):
+        new.clear_pictures()
     for picture in getattr(old, 'pictures', None) or []:
         new.add_picture(picture)
     new.save()
