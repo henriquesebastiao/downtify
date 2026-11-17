@@ -1153,6 +1153,25 @@ export default {
     equalizerError: 'Ekolayzır başlatılamadı. Çalma onsuz devam ediyor.',
   },
   monitor: {
+    select: 'Seç',
+    selectDone: 'Bitti',
+    selectAllShown: 'Gösterilenlerin tümünü seç',
+    selectWatch: '{name} öğesini seç',
+    selectedCount: { one: '{count} seçildi', other: '{count} seçildi' },
+    selectRangeHint: 'Aralık seçmek için Shift+tıklayın',
+    bulkInterval: 'Kontrol sıklığını değiştir…',
+    bulkUpdated: {
+      one: '{count} takip güncellendi',
+      other: '{count} takip güncellendi',
+    },
+    bulkChecking: {
+      one: '{count} takip kontrol ediliyor…',
+      other: '{count} takip kontrol ediliyor…',
+    },
+    bulkStopped: {
+      one: '{count} takip durduruldu',
+      other: '{count} takip durduruldu',
+    },
     tableColumns: 'Sütunlar',
     resetTableColumns: 'Sütunları sıfırla',
     releaseTypes: 'İndir',
@@ -1717,6 +1736,10 @@ export default {
     syncDelay: 'Eşitleme araması arası bekleme',
     syncDelayHint:
       'İçe aktarılan her parça grubundan sonra (boyut = Eşzamanlı indirmeler) söz, kapak ve tür aramadan önce bekler. Büyük klasörlerde kota sınırını azaltır.',
+    idsGroup: 'Şarkı kimlikleri',
+    isrc: 'ISRC kodlarını yaz',
+    isrcHint:
+      'Her yeni indirmeye, bir kaydı tanımlayan ISRC kodunu yazar; böylece aynı şarkı başka bir adla da tanınır. Deezer’da aranır; emin olunmadığında yazılmaz.',
     artGroup: 'Kapak',
     coverArt: 'Kapağı göm',
     coverArtHint: 'Daha küçük dosyalar ve daha hızlı indirmeler için kapat.',
@@ -1750,6 +1773,48 @@ export default {
     lyricsLrclibHint: 'Topluluk veritabanı — düz ve zamanlı sözler',
     lyricsNetease: 'NetEase Cloud Music',
     lyricsNeteaseHint: 'Geniş katalog, genellikle zamanlı',
+    ratingsGroup: "Deezer'dan puanlar",
+    ratingsHint:
+      'Navidrome’daki şarkılarına Deezer’daki popülerliğine göre 0–5 yıldız verir, tıpkı dztnr gibi. Yıldızlar yukarıdaki Navidrome hesabına aittir.',
+    ratingsRepeat: 'Tekrarla',
+    ratingsRepeatOff: 'Kapalı',
+    ratingsRepeatDaily: 'Her gün',
+    ratingsRepeatWeekly: 'Her hafta',
+    ratingsRepeatMonthly: 'Her ay',
+    ratingsSkipRated: 'Yıldızı olan şarkıları atla',
+    ratingsSkipRatedHint:
+      'Kendi verdiğin yıldızlar kalır. Sonraki çalıştırmalar zaten yıldızı olan her şarkıyı atlar.',
+    ratingsSkipStarred: 'Favorileri atla',
+    ratingsGrading: 'Puanlama',
+    ratingsGradingAbsolute: 'Dünya çapında popülerlik',
+    ratingsGradingArtist: 'Sanatçının en popüler şarkısına göre',
+    ratingsGradingAlbum: 'Albümün en popüler şarkısına göre',
+    ratingsGradingHint:
+      'Sanatçının en popüler şarkısıyla karşılaştırmak, az bilinen sanatçıların hit şarkılarına da 5 yıldız verir.',
+    ratingsRun: 'Şimdi çalıştır',
+    ratingsPreview: 'Önizleme',
+    ratingsStop: 'Durdur',
+    ratingsReading: 'Navidrome kitaplığın okunuyor…',
+    ratingsProgress: '{done} / {total} şarkı',
+    ratingsLast:
+      'Son çalıştırma {when}: {rated} puanlandı, {skipped} atlandı, {notFound} Deezer’da bulunamadı',
+    ratingsLastPreview:
+      'Önizleme {when}: {rated} puanlanacak, {skipped} atlanacak, {notFound} Deezer’da bulunamadı',
+    ratingsStopped: 'Durduruldu',
+    ratingsNext: 'Sonraki çalıştırma {when}',
+    ratingsNextSoon: 'Sonraki çalıştırma bir saat içinde',
+    ratingsNever: 'Henüz çalıştırılmadı',
+    ratingsFailedDeezer:
+      'Deezer’a ulaşılamadı. Daha önce verilen yıldızlar korunur.',
+    ratingsFailedNavidrome: 'Navidrome hatası: {message}',
+    ratingsFailed: 'Puanlama başarısız oldu: {message}',
+    ratingsNotConfigured: 'Önce Navidrome girişini kaydet.',
+    ratingsBusy: 'Bir puanlama zaten çalışıyor.',
+    ratingsColSong: 'Şarkı',
+    ratingsColRank: 'Deezer popülerliği',
+    ratingsColStars: 'Yıldız',
+    ratingsUnmatched: 'Deezer’da bulunamayanlar ({count})',
+    ratingsFirstRows: 'İlk {count} şarkı gösteriliyor.',
     navidromeTitle: 'Navidrome',
     navidromeHint:
       'İndirilen çalma listelerini Navidrome’a yansıt. Müzik klasörü Downtify indirmelerini içermeli.',
@@ -2310,6 +2375,10 @@ export default {
     playbackSpeed: 'Oynatma hızı',
   },
   confirm: {
+    stopWatchingManyTitle: {
+      one: '{count} takip durdurulsun mu?',
+      other: '{count} takip durdurulsun mu?',
+    },
     deleteTrackTitle: '“{title}” silinsin mi?',
     deleteTracksTitle: '{count} parça silinsin mi?',
     deleteTracksBody:

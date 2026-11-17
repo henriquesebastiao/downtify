@@ -1145,6 +1145,25 @@ export default {
       'Еквалайзерът не можа да стартира. Възпроизвеждането продължава без него.',
   },
   monitor: {
+    select: 'Избор',
+    selectDone: 'Готово',
+    selectAllShown: 'Избери всички показани',
+    selectWatch: 'Избери {name}',
+    selectedCount: { one: '{count} избран', other: '{count} избрани' },
+    selectRangeHint: 'Shift+клик избира диапазон',
+    bulkInterval: 'Промени проверките на…',
+    bulkUpdated: {
+      one: 'Обновено {count} наблюдение',
+      other: 'Обновени {count} наблюдения',
+    },
+    bulkChecking: {
+      one: 'Проверка на {count} наблюдение…',
+      other: 'Проверка на {count} наблюдения…',
+    },
+    bulkStopped: {
+      one: 'Спряно {count} наблюдение',
+      other: 'Спрени {count} наблюдения',
+    },
     tableColumns: 'Колони',
     resetTableColumns: 'Нулиране на колоните',
     releaseTypes: 'Изтегляне',
@@ -1716,6 +1735,10 @@ export default {
     syncDelay: 'Пауза между синхронизациите',
     syncDelayHint:
       'Изчаква след всяка група импортирани песни (размер = Едновременни изтегляния) преди да търси текст, обложка и жанр. Намалява лимитите при големи папки.',
+    idsGroup: 'Идентификатори на песни',
+    isrc: 'Записвай ISRC кодове',
+    isrcHint:
+      'Записва ISRC на всяко ново изтегляне – кода на един запис – така че една и съща песен се разпознава и под друго име. Търси се в Deezer; пропуска се, ако не е сигурен.',
     artGroup: 'Обложка',
     coverArt: 'Вграждай обложка',
     coverArtHint: 'Изключи за по-малки файлове и по-бързи изтегляния.',
@@ -1749,6 +1772,48 @@ export default {
     lyricsLrclibHint: 'Общностна база — обикновени и синхронизирани текстове',
     lyricsNetease: 'NetEase Cloud Music',
     lyricsNeteaseHint: 'Голям каталог, обикновено синхронизиран',
+    ratingsGroup: 'Оценки от Deezer',
+    ratingsHint:
+      'Дава на песните ти в Navidrome от 0 до 5 звезди според популярността им в Deezer, като dztnr. Звездите принадлежат на акаунта в Navidrome по-горе.',
+    ratingsRepeat: 'Повтаряне',
+    ratingsRepeatOff: 'Изключено',
+    ratingsRepeatDaily: 'Всеки ден',
+    ratingsRepeatWeekly: 'Всяка седмица',
+    ratingsRepeatMonthly: 'Всеки месец',
+    ratingsSkipRated: 'Пропускане на песни със звезди',
+    ratingsSkipRatedHint:
+      'Звездите, които си сложил сам, остават. Следващите пускания пропускат всяка песен, която вече има звезди.',
+    ratingsSkipStarred: 'Пропускане на любими',
+    ratingsGrading: 'Оценяване',
+    ratingsGradingAbsolute: 'Световна популярност',
+    ratingsGradingArtist: 'Спрямо най-популярната песен на изпълнителя',
+    ratingsGradingAlbum: 'Спрямо най-популярната песен на албума',
+    ratingsGradingHint:
+      'Сравнението с най-популярната песен на изпълнителя дава 5 звезди и на хитовете на по-малко известни изпълнители.',
+    ratingsRun: 'Пусни сега',
+    ratingsPreview: 'Преглед',
+    ratingsStop: 'Спри',
+    ratingsReading: 'Четене на библиотеката ти в Navidrome…',
+    ratingsProgress: '{done} от {total} песни',
+    ratingsLast:
+      'Последно пускане {when}: {rated} оценени, {skipped} пропуснати, {notFound} не са намерени в Deezer',
+    ratingsLastPreview:
+      'Преглед {when}: {rated} биха били оценени, {skipped} пропуснати, {notFound} не са намерени в Deezer',
+    ratingsStopped: 'Спряно',
+    ratingsNext: 'Следващо пускане {when}',
+    ratingsNextSoon: 'Следващо пускане до един час',
+    ratingsNever: 'Още не е пускано',
+    ratingsFailedDeezer:
+      'Deezer не може да бъде достигнат. Вече дадените звезди остават.',
+    ratingsFailedNavidrome: 'Грешка от Navidrome: {message}',
+    ratingsFailed: 'Оценяването не успя: {message}',
+    ratingsNotConfigured: 'Първо запази входа в Navidrome.',
+    ratingsBusy: 'Вече тече оценяване.',
+    ratingsColSong: 'Песен',
+    ratingsColRank: 'Популярност в Deezer',
+    ratingsColStars: 'Звезди',
+    ratingsUnmatched: 'Не са намерени в Deezer ({count})',
+    ratingsFirstRows: 'Показани са първите {count} песни.',
     navidromeTitle: 'Navidrome',
     navidromeHint:
       'Копира изтеглените плейлисти в Navidrome. Музикалната му папка трябва да включва изтеглянията на Downtify.',
@@ -2314,6 +2379,10 @@ export default {
     playbackSpeed: 'Скорост на възпроизвеждане',
   },
   confirm: {
+    stopWatchingManyTitle: {
+      one: 'Да се спре ли {count} наблюдение?',
+      other: 'Да се спрат ли {count} наблюдения?',
+    },
     deleteTrackTitle: 'Изтриване на „{title}“?',
     deleteTracksTitle: 'Изтриване на {count} песни?',
     deleteTracksBody:

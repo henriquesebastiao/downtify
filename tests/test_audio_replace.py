@@ -13,6 +13,7 @@ from typing import Any
 
 import pytest
 from mutagen import File as MutagenFile
+from mutagen.flac import FLAC, Picture
 from starlette.testclient import TestClient
 
 import main
@@ -283,6 +284,217 @@ def test_a_missing_file_is_refused(tmp_path):
         audio_replace.replace_audio(
             _FakeDownloader(), tmp_path / 'gone.mp3', 'bbbbbbbbbbb', song=SONG
         )
+
+
+def _set_flac_pictures(path: Path, count: int, label: str) -> list[bytes]:
+    audio = FLAC(path)
+    audio.clear_pictures()
+    for index in range(count):
+        picture = Picture()
+        picture.type = 3 if index == 0 else 4
+        picture.mime = 'image/jpeg'
+        picture.desc = f'{label} {index}'
+        picture.width = picture.height = 1
+        picture.depth = 24
+        picture.data = _JPEG + f'{label} {index}'.encode()
+        audio.add_picture(picture)
+    audio.save()
+    return [picture.write() for picture in audio.pictures]
+
+
+def _audio_hash(path: Path) -> bytes:
+    result = subprocess.run(
+        [
+            'ffmpeg',
+            '-nostdin',
+            '-v',
+            'error',
+            '-i',
+            str(path),
+            '-map',
+            '0:a:0',
+            '-f',
+            'hash',
+            '-hash',
+            'sha256',
+            '-',
+        ],
+        check=True,
+        capture_output=True,
+    )
+    return result.stdout
+
+
+@_needs_ffmpeg
+@pytest.mark.parametrize('picture_count', [0, 1, 3])
+@pytest.mark.parametrize('has_comments', [True, False])
+def test_copying_flac_tags_replaces_all_replacement_artwork(
+    tmp_path: Path, picture_count: int, has_comments: bool
+) -> None:
+    source = _tagged(tmp_path / 'old.flac', seconds=1)
+    pictures = _set_flac_pictures(source, picture_count, 'original')
+    if not has_comments:
+        FLAC(source).delete()
+    target = _tagged(tmp_path / 'new.flac', seconds=2)
+    _set_flac_pictures(target, 2, 'replacement')
+    original = source.read_bytes()
+    audio = _audio_hash(target)
+
+    audio_replace.copy_tags(source, target)
+
+    copied = FLAC(target)
+    assert [picture.write() for picture in copied.pictures] == pictures
+    assert dict(copied.tags) == dict(FLAC(source).tags or {})
+    assert source.read_bytes() == original
+    assert _audio_hash(target) == audio
+
+
+@_needs_ffmpeg
+def test_copying_flac_tags_twice_does_not_duplicate_pictures(
+    tmp_path: Path,
+) -> None:
+    source = _tagged(tmp_path / 'old.flac', seconds=1)
+    pictures = _set_flac_pictures(source, 3, 'original')
+    target = _tagged(tmp_path / 'new.flac', seconds=2)
+
+    audio_replace.copy_tags(source, target)
+    audio_replace.copy_tags(source, target)
+
+    assert [picture.write() for picture in FLAC(target).pictures] == pictures
+
+
+@_needs_ffmpeg
+def test_copying_flac_artwork_accepts_uppercase_extensions(
+    tmp_path: Path,
+) -> None:
+    source = _tagged(tmp_path / 'old.flac', seconds=1)
+    pictures = _set_flac_pictures(source, 1, 'original')
+    target = _tagged(tmp_path / 'new.flac', seconds=2)
+    source = source.rename(source.with_suffix('.FLAC'))
+    target = target.rename(target.with_suffix('.FLAC'))
+
+    audio_replace.copy_tags(source, target)
+
+    assert [picture.write() for picture in FLAC(target).pictures] == pictures
+
+
+@_needs_ffmpeg
+@pytest.mark.parametrize('fmt', ['mp3', 'm4a', 'opus', 'ogg'])
+def test_copying_tags_still_replaces_artwork_in_other_formats(
+    tmp_path: Path, fmt: str
+) -> None:
+    source = _tagged(tmp_path / f'old.{fmt}', seconds=1)
+    target = _audio(tmp_path / f'new.{fmt}', seconds=2)
+    embed_metadata(
+        target,
+        {**SONG, 'name': 'Other song'},
+        download_cover=True,
+        cover_bytes=_JPEG + b'replacement',
+    )
+
+    audio_replace.copy_tags(source, target)
+
+    assert main._extract_cover(target) == (_JPEG, 'image/jpeg')
+    assert read_audio_metadata(target)['title'] == SONG['name']
+    assert (
+        read_track_lyrics(target)['plain']
+        == read_track_lyrics(source)['plain']
+    )
+
+
+@_needs_ffmpeg
+@pytest.mark.parametrize('picture_count', [0, 2])
+def test_downloaded_flac_replacement_keeps_only_original_artwork(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, picture_count: int
+) -> None:
+    target = _tagged(tmp_path / 'Roads.flac', seconds=1)
+    pictures = _set_flac_pictures(target, picture_count, 'original')
+    before = dict(FLAC(target).tags)
+    sidecar = target.with_suffix('.lrc').read_bytes()
+    old_mtime_ns = 1_600_000_000_000_000_000
+    os.utime(target, ns=(old_mtime_ns, old_mtime_ns))
+    loader = _FakeDownloader()
+    downloaded: list[bytes] = []
+
+    def fetch(
+        _video_id: str,
+        target_dir: Path,
+        basename: str,
+        **_kwargs: Any,
+    ) -> Path:
+        staged = _tagged(target_dir / f'{basename}.flac', seconds=2)
+        _set_flac_pictures(staged, 2, 'replacement')
+        downloaded.append(_audio_hash(staged))
+        return staged
+
+    monkeypatch.setattr(loader, 'fetch_audio', fetch)
+
+    result = audio_replace.replace_audio(
+        loader, target, 'bbbbbbbbbbb', song=SONG
+    )
+
+    assert [picture.write() for picture in FLAC(target).pictures] == pictures
+    assert dict(FLAC(target).tags) == before
+    assert result['duration_after'] > result['duration_before']
+    assert _audio_hash(target) == downloaded[0]
+    assert target.stat().st_mtime_ns == old_mtime_ns
+    assert target.with_suffix('.lrc').read_bytes() == sidecar
+    assert sorted(path.name for path in tmp_path.iterdir()) == [
+        'Roads.flac',
+        'Roads.lrc',
+    ]
+
+
+@_needs_ffmpeg
+@pytest.mark.parametrize('picture_count', [0, 2])
+def test_uploaded_flac_replacement_keeps_only_original_artwork(
+    tmp_path: Path, picture_count: int
+) -> None:
+    target = _tagged(tmp_path / 'Roads.flac', seconds=1)
+    pictures = _set_flac_pictures(target, picture_count, 'original')
+    before = dict(FLAC(target).tags)
+    sidecar = target.with_suffix('.lrc').read_bytes()
+    old_mtime_ns = 1_600_000_000_000_000_000
+    os.utime(target, ns=(old_mtime_ns, old_mtime_ns))
+    upload = audio_replace.upload_staging_path(target, 'flac')
+    _tagged(upload, seconds=2)
+    _set_flac_pictures(upload, 2, 'replacement')
+    audio = _audio_hash(upload)
+
+    result = audio_replace.replace_from_file(target, upload)
+
+    assert [picture.write() for picture in FLAC(target).pictures] == pictures
+    assert dict(FLAC(target).tags) == before
+    assert result['converted'] is False
+    assert result['duration_after'] > result['duration_before']
+    assert _audio_hash(target) == audio
+    assert target.stat().st_mtime_ns == old_mtime_ns
+    assert target.with_suffix('.lrc').read_bytes() == sidecar
+    assert not upload.exists()
+
+
+@_needs_ffmpeg
+def test_failed_flac_artwork_copy_leaves_original_file_untouched(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    target = _tagged(tmp_path / 'Roads.flac', seconds=1)
+    _set_flac_pictures(target, 2, 'original')
+    original = target.read_bytes()
+    upload = audio_replace.upload_staging_path(target, 'flac')
+    _tagged(upload, seconds=2)
+    copy_tags = audio_replace.copy_tags
+
+    def fail_after_copy(source: Path, staged: Path) -> None:
+        copy_tags(source, staged)
+        raise audio_replace.ReplaceError('Could not save artwork')
+
+    monkeypatch.setattr(audio_replace, 'copy_tags', fail_after_copy)
+
+    with pytest.raises(audio_replace.ReplaceError, match='save artwork'):
+        audio_replace.replace_from_file(target, upload)
+
+    assert target.read_bytes() == original
+    assert not upload.exists()
 
 
 # ── Over HTTP ───────────────────────────────────────────────────────────

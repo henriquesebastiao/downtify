@@ -1183,6 +1183,25 @@ export default {
       'Der Equalizer konnte nicht gestartet werden. Die Wiedergabe wird ohne ihn fortgesetzt.',
   },
   monitor: {
+    select: 'Auswählen',
+    selectDone: 'Fertig',
+    selectAllShown: 'Alle angezeigten auswählen',
+    selectWatch: '{name} auswählen',
+    selectedCount: { one: '{count} ausgewählt', other: '{count} ausgewählt' },
+    selectRangeHint: 'Umschalt-Klick wählt einen Bereich',
+    bulkInterval: 'Prüfintervall ändern auf…',
+    bulkUpdated: {
+      one: '{count} Überwachung geändert',
+      other: '{count} Überwachungen geändert',
+    },
+    bulkChecking: {
+      one: '{count} Überwachung wird geprüft…',
+      other: '{count} Überwachungen werden geprüft…',
+    },
+    bulkStopped: {
+      one: '{count} Überwachung beendet',
+      other: '{count} Überwachungen beendet',
+    },
     tableColumns: 'Spalten',
     resetTableColumns: 'Spalten zurücksetzen',
     releaseTypes: 'Veröffentlichungen',
@@ -1779,6 +1798,10 @@ export default {
     syncDelay: 'Pause zwischen Synchronisierungsabfragen',
     syncDelayHint:
       'Warte nach jedem Stapel importierter Titel (Größe = parallele Downloads), bevor Songtexte, Cover und Genre gesucht werden. Das hilft, bei großen Ordnern Ratenbegrenzungen zu vermeiden.',
+    idsGroup: 'Song-IDs',
+    isrc: 'ISRC-Codes schreiben',
+    isrcHint:
+      'Speichert bei jedem neuen Download den ISRC – den Code einer Aufnahme –, damit derselbe Song auch unter anderem Namen erkannt wird. Wird bei Deezer nachgeschlagen und weggelassen, wenn er nicht sicher ist.',
     artGroup: 'Cover',
     coverArt: 'Cover einbetten',
     coverArtHint:
@@ -1814,6 +1837,48 @@ export default {
       'Community-Datenbank - einfache und zeitsynchronisierte Songtexte',
     lyricsNetease: 'NetEase Cloud Music',
     lyricsNeteaseHint: 'Großer Katalog, meist zeitsynchronisierte Songtexte',
+    ratingsGroup: 'Bewertungen von Deezer',
+    ratingsHint:
+      'Vergibt an deine Songs in Navidrome 0–5 Sterne danach, wie beliebt sie auf Deezer sind – wie dztnr. Die Sterne gehören zum oben eingetragenen Navidrome-Konto.',
+    ratingsRepeat: 'Wiederholen',
+    ratingsRepeatOff: 'Aus',
+    ratingsRepeatDaily: 'Jeden Tag',
+    ratingsRepeatWeekly: 'Jede Woche',
+    ratingsRepeatMonthly: 'Jeden Monat',
+    ratingsSkipRated: 'Songs mit Sternen überspringen',
+    ratingsSkipRatedHint:
+      'Sterne, die du selbst vergeben hast, bleiben erhalten. Spätere Durchläufe überspringen jeden Song, der schon Sterne hat.',
+    ratingsSkipStarred: 'Favoriten überspringen',
+    ratingsGrading: 'Bewertung',
+    ratingsGradingAbsolute: 'Weltweite Beliebtheit',
+    ratingsGradingArtist: 'Im Vergleich zum Top-Song des Künstlers',
+    ratingsGradingAlbum: 'Im Vergleich zum Top-Song des Albums',
+    ratingsGradingHint:
+      'Der Vergleich mit dem Top-Song des Künstlers gibt auch den Hits kleinerer Künstler 5 Sterne.',
+    ratingsRun: 'Jetzt ausführen',
+    ratingsPreview: 'Vorschau',
+    ratingsStop: 'Stopp',
+    ratingsReading: 'Deine Navidrome-Bibliothek wird gelesen…',
+    ratingsProgress: '{done} von {total} Songs',
+    ratingsLast:
+      'Letzter Durchlauf {when}: {rated} bewertet, {skipped} übersprungen, {notFound} auf Deezer nicht gefunden',
+    ratingsLastPreview:
+      'Vorschau {when}: {rated} würden bewertet, {skipped} übersprungen, {notFound} auf Deezer nicht gefunden',
+    ratingsStopped: 'Angehalten',
+    ratingsNext: 'Nächster Durchlauf {when}',
+    ratingsNextSoon: 'Nächster Durchlauf innerhalb der nächsten Stunde',
+    ratingsNever: 'Noch nicht ausgeführt',
+    ratingsFailedDeezer:
+      'Deezer war nicht erreichbar. Bereits vergebene Sterne bleiben erhalten.',
+    ratingsFailedNavidrome: 'Navidrome-Fehler: {message}',
+    ratingsFailed: 'Der Bewertungslauf ist fehlgeschlagen: {message}',
+    ratingsNotConfigured: 'Speichere zuerst die Navidrome-Anmeldung.',
+    ratingsBusy: 'Ein Bewertungslauf läuft bereits.',
+    ratingsColSong: 'Song',
+    ratingsColRank: 'Deezer-Beliebtheit',
+    ratingsColStars: 'Sterne',
+    ratingsUnmatched: 'Auf Deezer nicht gefunden ({count})',
+    ratingsFirstRows: 'Die ersten {count} Songs werden angezeigt.',
     navidromeTitle: 'Navidrome',
     navidromeHint:
       'Spiegele heruntergeladene Playlists in Navidrome. Der Musikordner muss Downtifys Downloads enthalten.',
@@ -2387,6 +2452,10 @@ export default {
     playbackSpeed: 'Wiedergabegeschwindigkeit',
   },
   confirm: {
+    stopWatchingManyTitle: {
+      one: '{count} Überwachung beenden?',
+      other: '{count} Überwachungen beenden?',
+    },
     deleteTrackTitle: '„{title}“ löschen?',
     deleteTracksTitle: '{count} Titel löschen?',
     deleteTracksBody:

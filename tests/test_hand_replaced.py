@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+from mutagen.flac import FLAC
 from starlette.testclient import TestClient
 
 import main
@@ -30,6 +31,7 @@ from downtify.library_upgrade import (
     UpgradeOptions,
 )
 from downtify.lyrics import Lyrics, read_track_lyrics
+from tests.test_audio_replace import _set_flac_pictures
 
 _needs_ffmpeg = pytest.mark.skipif(
     shutil.which('ffmpeg') is None, reason='no ffmpeg'
@@ -372,6 +374,38 @@ def test_the_upload_route_replaces_and_protects_the_file(client, tmp_path):
         ).json()['hand_replaced']
         is None
     )
+
+
+@_needs_ffmpeg
+@pytest.mark.parametrize('picture_count', [0, 2])
+def test_flac_upload_route_preserves_original_cover_and_protection(
+    client: TestClient, tmp_path: Path, picture_count: int
+) -> None:
+    target = _tagged(client.downloads / 'Roads.flac', seconds=1)
+    pictures = _set_flac_pictures(target, picture_count, 'original')
+    original_cover = main._extract_cover(target)
+    sent = _tagged(tmp_path / 'from my computer.flac', seconds=2)
+    _set_flac_pictures(sent, 2, 'replacement')
+
+    response = _upload(client, 'Roads.flac', sent.name, sent.read_bytes())
+
+    assert response.status_code == 200, response.text
+    assert response.json()['converted'] is False
+    assert response.json()['hand_replaced']['source'] == 'file'
+    assert [picture.write() for picture in FLAC(target).pictures] == pictures
+    cover = client.get('/cover', params={'file': 'Roads.flac'})
+    if picture_count:
+        assert cover.status_code == 200
+        assert cover.content == original_cover[0]
+        assert cover.headers['content-type'] == 'image/jpeg'
+    else:
+        assert cover.status_code == 404
+    assert read_audio_metadata(target)['title'] == 'Roads'
+    assert read_track_lyrics(target)['plain']
+    assert sorted(path.name for path in client.downloads.iterdir()) == [
+        'Roads.flac',
+        'Roads.lrc',
+    ]
 
 
 @_needs_ffmpeg

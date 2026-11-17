@@ -144,11 +144,12 @@ Amint a szerver létrehozta a figyelést, a gomb a **Figyelő** oldalra mutató 
 | 6 óránként | 360 | |
 | 12 óránként | 720 | |
 | Naponta | 1 440 | Lassan változó lejátszási listák |
+| 3 naponta | 4 320 | |
 | Hetente | 10 080 | Hetente frissülő lejátszási listák |
 | 2 hetente | 20 160 | |
 | Havonta | 43 200 | Archívum vagy ritkán frissülő lejátszási listák |
 
-Egy meglévő lejátszási lista intervallumát bármikor módosíthatod a figyelőkártyáról, eltávolítás és újbóli hozzáadás nélkül.
+Egy meglévő lejátszási lista intervallumát bármikor módosíthatod a figyelőkártyáról, eltávolítás és újbóli hozzáadás nélkül. Vagy egyszerre sok figyelésnél: lásd [Sok figyelés módosítása egyszerre](#changing-many-watches-at-once).
 
 ## A figyelt lejátszási listák kezelése
 
@@ -170,6 +171,17 @@ Minden soron:
 - **⋯** — **Aktivitás és számok** (a figyelés saját oldala), szüneteltetés/folytatás, a hivatkozás másolása, az eredeti megnyitása, vagy **Figyelés leállítása** (a bejegyzés törlődik; a letöltött fájlok megmaradnak)
 
 Az **Aktivitás** és a **Tárhely** ugyanolyan oszlop, mint a többi: az **Oszlopok** alatt elrejtheted vagy átméretezheted őket.
+
+### Sok figyelés módosítása egyszerre
+
+Kattints a lista feletti **Kijelölés** gombra, és minden sorban megjelenik egy jelölőnégyzet. Jelöld be a figyeléseket (**Shift**+kattintással két kattintás között mindet), vagy használd **Az összes látható kijelölése** lehetőséget, amely figyelembe veszi a keresést és a **Mind / Szüneteltetett** szűrőt. A lista feletti sáv egy módosítást alkalmaz minden bejelöltre:
+
+- **Ellenőrzés módosítása erre…** — ugyanaz az időköz mindegyiknek
+- **Szüneteltetés** / **Folytatás**
+- **Ellenőrzés most** — az aktívakat azonnal ellenőrzi
+- **Figyelés leállítása** — megerősítés után; a letöltött fájlok megmaradnak
+
+A **Lejátszási listák** és az **Előadók** lapon ugyanígy működik. A bejelöltek a keresés módosításakor is bejelölve maradnak. A **Kész** (vagy az **Esc**) kilép a kijelölésből; lapváltáskor a kijelölés törlődik.
 
 ### Figyelés szerkesztése
 

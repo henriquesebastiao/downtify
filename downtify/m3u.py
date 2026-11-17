@@ -84,7 +84,7 @@ def is_manual_m3u(m3u_path: Path) -> bool:
 
 
 def iter_m3u_files(download_dir: Path) -> list[Path]:
-    """Every ``.m3u`` under *download_dir*, sorted by path."""
+    """Every ``.m3u`` / ``.m3u8`` under *download_dir*, sorted by path."""
 
     base = Path(download_dir)
     found: list[Path] = []
@@ -96,7 +96,7 @@ def iter_m3u_files(download_dir: Path) -> list[Path]:
     for dirpath, _dirnames, filenames in os.walk(base, followlinks=False):
         current = Path(dirpath)
         for name in filenames:
-            if name.lower().endswith('.m3u'):
+            if name.lower().endswith(('.m3u', '.m3u8')):
                 found.append(current / name)
     found.sort()
     return found

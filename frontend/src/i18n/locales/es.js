@@ -1167,6 +1167,28 @@ export default {
       'No se pudo iniciar el ecualizador. La reproducción continúa sin él.',
   },
   monitor: {
+    select: 'Seleccionar',
+    selectDone: 'Listo',
+    selectAllShown: 'Seleccionar todo lo mostrado',
+    selectWatch: 'Seleccionar {name}',
+    selectedCount: {
+      one: '{count} seleccionado',
+      other: '{count} seleccionados',
+    },
+    selectRangeHint: 'Mayús+clic selecciona un rango',
+    bulkInterval: 'Cambiar comprobaciones a…',
+    bulkUpdated: {
+      one: '{count} seguimiento actualizado',
+      other: '{count} seguimientos actualizados',
+    },
+    bulkChecking: {
+      one: 'Comprobando {count} seguimiento…',
+      other: 'Comprobando {count} seguimientos…',
+    },
+    bulkStopped: {
+      one: '{count} seguimiento detenido',
+      other: '{count} seguimientos detenidos',
+    },
     tableColumns: 'Columnas',
     resetTableColumns: 'Restablecer columnas',
     releaseTypes: 'Descargar',
@@ -1751,6 +1773,10 @@ export default {
     syncDelay: 'Pausa entre la sincronización',
     syncDelayHint:
       'Espera después de cada lote de canciones importadas (tamaño = Descargas simultáneas) antes de buscar letra, portada y género. Evita límites de tasa en carpetas grandes.',
+    idsGroup: 'IDs de canciones',
+    isrc: 'Escribir códigos ISRC',
+    isrcHint:
+      'Guarda el ISRC de cada nueva descarga, el código que identifica una grabación, para reconocer la misma canción aunque tenga otro nombre. Se busca en Deezer; se omite si no es seguro.',
     artGroup: 'Portada',
     coverArt: 'Incrustar portada',
     coverArtHint:
@@ -1785,6 +1811,48 @@ export default {
     lyricsLrclibHint: 'Base comunitaria — letras simples y sincronizadas',
     lyricsNetease: 'NetEase Cloud Music',
     lyricsNeteaseHint: 'Catálogo amplio, normalmente sincronizado',
+    ratingsGroup: 'Valoraciones de Deezer',
+    ratingsHint:
+      'Da a tus canciones de Navidrome de 0 a 5 estrellas según su popularidad en Deezer, como dztnr. Las estrellas pertenecen a la cuenta de Navidrome indicada arriba.',
+    ratingsRepeat: 'Repetir',
+    ratingsRepeatOff: 'Desactivado',
+    ratingsRepeatDaily: 'Cada día',
+    ratingsRepeatWeekly: 'Cada semana',
+    ratingsRepeatMonthly: 'Cada mes',
+    ratingsSkipRated: 'Omitir canciones que ya tienen estrellas',
+    ratingsSkipRatedHint:
+      'Las estrellas que pusiste tú se conservan. Las siguientes ejecuciones omiten toda canción que ya tenga estrellas.',
+    ratingsSkipStarred: 'Omitir favoritas',
+    ratingsGrading: 'Puntuación',
+    ratingsGradingAbsolute: 'Popularidad mundial',
+    ratingsGradingArtist: 'Respecto a la canción más popular del artista',
+    ratingsGradingAlbum: 'Respecto a la canción más popular del álbum',
+    ratingsGradingHint:
+      'Comparar con la canción más popular del artista da también 5 estrellas a los éxitos de artistas poco conocidos.',
+    ratingsRun: 'Ejecutar ahora',
+    ratingsPreview: 'Vista previa',
+    ratingsStop: 'Detener',
+    ratingsReading: 'Leyendo tu biblioteca de Navidrome…',
+    ratingsProgress: '{done} de {total} canciones',
+    ratingsLast:
+      'Última ejecución {when}: {rated} valoradas, {skipped} omitidas, {notFound} no encontradas en Deezer',
+    ratingsLastPreview:
+      'Vista previa {when}: se valorarían {rated}, {skipped} omitidas, {notFound} no encontradas en Deezer',
+    ratingsStopped: 'Detenida',
+    ratingsNext: 'Próxima ejecución {when}',
+    ratingsNextSoon: 'Próxima ejecución en la próxima hora',
+    ratingsNever: 'Aún no se ha ejecutado',
+    ratingsFailedDeezer:
+      'No se pudo conectar con Deezer. Las estrellas ya asignadas se conservan.',
+    ratingsFailedNavidrome: 'Error de Navidrome: {message}',
+    ratingsFailed: 'La valoración falló: {message}',
+    ratingsNotConfigured: 'Guarda primero el acceso a Navidrome.',
+    ratingsBusy: 'Ya hay una valoración en curso.',
+    ratingsColSong: 'Canción',
+    ratingsColRank: 'Popularidad en Deezer',
+    ratingsColStars: 'Estrellas',
+    ratingsUnmatched: 'No encontradas en Deezer ({count})',
+    ratingsFirstRows: 'Se muestran las primeras {count} canciones.',
     navidromeTitle: 'Navidrome',
     navidromeHint:
       'Replica las playlists descargadas en Navidrome. Su carpeta de música debe incluir las descargas de Downtify.',
@@ -2348,6 +2416,10 @@ export default {
     playbackSpeed: 'Velocidad de reproducción',
   },
   confirm: {
+    stopWatchingManyTitle: {
+      one: '¿Dejar de seguir {count} elemento?',
+      other: '¿Dejar de seguir {count} elementos?',
+    },
     deleteTrackTitle: '¿Eliminar «{title}»?',
     deleteTracksTitle: '¿Eliminar {count} canciones?',
     deleteTracksBody:

@@ -30,7 +30,9 @@ Downtify keeps a background task running every 60 seconds. On each sweep it chec
 
 The first check, which starts as soon as you add the watch, downloads everything already in the playlist; later checks download only what was added since. "Already downloaded" is tracked in a small SQLite database (`downtify_monitor.db` under `/data`), not by checking the downloads folder — so moving a downloaded file elsewhere on disk (into your own library layout, another drive, wherever) does **not** make Downtify think it's missing and re-download it on the next check.
 
-A separate sweep runs every hour and checks whether each downloaded track's file is still there. Genuinely deleted files (as opposed to ones you moved) are forgotten at that point, so the track becomes eligible for download again — on the next watch check after that hourly sweep, not instantly.
+A separate sweep runs every hour and checks whether each downloaded track's file is still available in the registered library folders: the downloads folder, the slskd source folder and **Existing music folders**, including read-only mounts. Tracks still present in a configured external folder keep their download records. Files no longer found in any of those locations are forgotten, so the track becomes eligible for download again on the next watch check after that hourly sweep, not instantly.
+
+The external folder list is read again on every hourly sweep, so saving or reordering it takes effect without restarting Downtify. Removing a folder from Settings leaves its audio untouched, but watch records pointing only into that now-unmapped folder are no longer considered available. A temporarily unavailable mount is also treated as missing; the sweep does not distinguish that from deletion.
 
 A watch is never checked twice at the same time. Adding a watch starts its first check immediately; if that check is still downloading when the next scheduled sweep comes around, the sweep skips the watch instead of starting a second, overlapping download of the same tracks.
 
@@ -150,11 +152,12 @@ Once the server has added the watch, the button turns into a **Monitor** link, w
 | Every 6 hours | 360 | |
 | Every 12 hours | 720 | |
 | Every day | 1 440 | Slowly changing playlists |
+| Every 3 days | 4 320 | |
 | Every week | 10 080 | Playlists updated weekly |
 | Every 2 weeks | 20 160 | |
 | Every month | 43 200 | Archive or rarely updated playlists |
 
-You can change the interval of an existing playlist at any time from the monitor card without removing and re-adding it.
+You can change the interval of an existing playlist at any time from the monitor card without removing and re-adding it, or for many watches at once (see [Changing many watches at once](#changing-many-watches-at-once)).
 
 ## Managing monitored playlists
 
@@ -176,6 +179,17 @@ On each row:
 - **⋯** — **Activity and songs** (the watch's own page), pause/resume, copy the link, open the original, or **Stop watching** (the record is deleted; downloaded files are kept)
 
 **Activity** and **Storage** are columns like the others: hide or resize them from **Columns**.
+
+### Changing many watches at once
+
+Click **Select** above the list to put a box on every row. Tick the watches to change — hold **Shift** while clicking to tick every watch between two clicks — or use **Select all shown**, which takes the search and the **All / Paused** filter into account. A bar above the list then applies one change to every ticked watch:
+
+- **Change checks to…** — the same check interval for all of them
+- **Pause** / **Resume**
+- **Check now** — check the active ones straight away
+- **Stop watching** — after a confirmation; downloaded files are kept
+
+It works the same on the **Playlists** and **Artists** tabs. Ticked watches stay ticked while you change the search, so you can gather them from several searches. **Done** (or **Esc**) leaves the selection; switching tabs clears it.
 
 ### Editing a watch
 

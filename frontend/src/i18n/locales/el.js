@@ -1170,6 +1170,25 @@ export default {
       'Ο ισοσταθμιστής δεν ξεκίνησε. Η αναπαραγωγή συνεχίζει χωρίς αυτόν.',
   },
   monitor: {
+    select: 'Επιλογή',
+    selectDone: 'Τέλος',
+    selectAllShown: 'Επιλογή όλων των εμφανιζόμενων',
+    selectWatch: 'Επιλογή {name}',
+    selectedCount: { one: '{count} επιλεγμένο', other: '{count} επιλεγμένα' },
+    selectRangeHint: 'Shift+κλικ για επιλογή εύρους',
+    bulkInterval: 'Αλλαγή ελέγχων σε…',
+    bulkUpdated: {
+      one: 'Ενημερώθηκε {count} παρακολούθηση',
+      other: 'Ενημερώθηκαν {count} παρακολουθήσεις',
+    },
+    bulkChecking: {
+      one: 'Έλεγχος {count} παρακολούθησης…',
+      other: 'Έλεγχος {count} παρακολουθήσεων…',
+    },
+    bulkStopped: {
+      one: 'Σταμάτησε {count} παρακολούθηση',
+      other: 'Σταμάτησαν {count} παρακολουθήσεις',
+    },
     tableColumns: 'Στήλες',
     resetTableColumns: 'Επαναφορά στηλών',
     releaseTypes: 'Λήψη',
@@ -1758,6 +1777,10 @@ export default {
     syncDelay: 'Παύση μεταξύ συγχρονισμού',
     syncDelayHint:
       'Περιμένει μετά από κάθε ομάδα εισαγόμενων κομματιών (μέγεθος = Ταυτόχρονες λήψεις) πριν αναζητήσει στίχους, εξώφυλλο και είδος. Αποφεύγει όρια ρυθμού σε μεγάλους φακέλους.',
+    idsGroup: 'Αναγνωριστικά τραγουδιών',
+    isrc: 'Εγγραφή κωδικών ISRC',
+    isrcHint:
+      'Αποθηκεύει το ISRC κάθε νέας λήψης, τον κωδικό μιας ηχογράφησης, ώστε το ίδιο τραγούδι να αναγνωρίζεται και με άλλο όνομα. Αναζητείται στο Deezer· παραλείπεται όταν δεν είναι βέβαιο.',
     artGroup: 'Εξώφυλλο',
     coverArt: 'Ενσωμάτωση εξωφύλλου',
     coverArtHint:
@@ -1792,6 +1815,48 @@ export default {
     lyricsLrclibHint: 'Κοινοτική βάση — απλοί και συγχρονισμένοι στίχοι',
     lyricsNetease: 'NetEase Cloud Music',
     lyricsNeteaseHint: 'Μεγάλος κατάλογος, συνήθως συγχρονισμένος',
+    ratingsGroup: 'Βαθμολογίες από το Deezer',
+    ratingsHint:
+      'Δίνει στα τραγούδια σου στο Navidrome 0–5 αστέρια ανάλογα με τη δημοφιλία τους στο Deezer, όπως το dztnr. Τα αστέρια ανήκουν στον λογαριασμό Navidrome παραπάνω.',
+    ratingsRepeat: 'Επανάληψη',
+    ratingsRepeatOff: 'Ανενεργό',
+    ratingsRepeatDaily: 'Κάθε μέρα',
+    ratingsRepeatWeekly: 'Κάθε εβδομάδα',
+    ratingsRepeatMonthly: 'Κάθε μήνα',
+    ratingsSkipRated: 'Παράλειψη τραγουδιών που έχουν αστέρια',
+    ratingsSkipRatedHint:
+      'Τα αστέρια που έβαλες εσύ μένουν. Οι επόμενες εκτελέσεις παραλείπουν κάθε τραγούδι που έχει ήδη αστέρια.',
+    ratingsSkipStarred: 'Παράλειψη αγαπημένων',
+    ratingsGrading: 'Βαθμολόγηση',
+    ratingsGradingAbsolute: 'Παγκόσμια δημοφιλία',
+    ratingsGradingArtist: 'Σε σχέση με το κορυφαίο τραγούδι του καλλιτέχνη',
+    ratingsGradingAlbum: 'Σε σχέση με το κορυφαίο τραγούδι του άλμπουμ',
+    ratingsGradingHint:
+      'Η σύγκριση με το κορυφαίο τραγούδι του καλλιτέχνη δίνει 5 αστέρια και στις επιτυχίες λιγότερο γνωστών καλλιτεχνών.',
+    ratingsRun: 'Εκτέλεση τώρα',
+    ratingsPreview: 'Προεπισκόπηση',
+    ratingsStop: 'Διακοπή',
+    ratingsReading: 'Ανάγνωση της βιβλιοθήκης σου στο Navidrome…',
+    ratingsProgress: '{done} από {total} τραγούδια',
+    ratingsLast:
+      'Τελευταία εκτέλεση {when}: {rated} βαθμολογήθηκαν, {skipped} παραλείφθηκαν, {notFound} δεν βρέθηκαν στο Deezer',
+    ratingsLastPreview:
+      'Προεπισκόπηση {when}: {rated} θα βαθμολογούνταν, {skipped} παραλείφθηκαν, {notFound} δεν βρέθηκαν στο Deezer',
+    ratingsStopped: 'Διακόπηκε',
+    ratingsNext: 'Επόμενη εκτέλεση {when}',
+    ratingsNextSoon: 'Επόμενη εκτέλεση μέσα στην ώρα',
+    ratingsNever: 'Δεν έχει εκτελεστεί ακόμη',
+    ratingsFailedDeezer:
+      'Δεν ήταν δυνατή η σύνδεση με το Deezer. Τα αστέρια που δόθηκαν ήδη παραμένουν.',
+    ratingsFailedNavidrome: 'Σφάλμα Navidrome: {message}',
+    ratingsFailed: 'Η βαθμολόγηση απέτυχε: {message}',
+    ratingsNotConfigured: 'Αποθήκευσε πρώτα τη σύνδεση στο Navidrome.',
+    ratingsBusy: 'Μια βαθμολόγηση εκτελείται ήδη.',
+    ratingsColSong: 'Τραγούδι',
+    ratingsColRank: 'Δημοφιλία στο Deezer',
+    ratingsColStars: 'Αστέρια',
+    ratingsUnmatched: 'Δεν βρέθηκαν στο Deezer ({count})',
+    ratingsFirstRows: 'Εμφανίζονται τα πρώτα {count} τραγούδια.',
     navidromeTitle: 'Navidrome',
     navidromeHint:
       'Αντιγράφει τις λίστες στο Navidrome. Ο φάκελος μουσικής του πρέπει να περιλαμβάνει τις λήψεις του Downtify.',
@@ -2360,6 +2425,10 @@ export default {
     playbackSpeed: 'Ταχύτητα αναπαραγωγής',
   },
   confirm: {
+    stopWatchingManyTitle: {
+      one: 'Διακοπή {count} παρακολούθησης;',
+      other: 'Διακοπή {count} παρακολουθήσεων;',
+    },
     deleteTrackTitle: 'Διαγραφή «{title}»;',
     deleteTracksTitle: 'Διαγραφή {count} κομματιών;',
     deleteTracksBody:

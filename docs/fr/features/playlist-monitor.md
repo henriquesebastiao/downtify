@@ -144,11 +144,12 @@ Une fois la surveillance ajoutée par le serveur, le bouton devient un lien vers
 | Toutes les 6 heures | 360 | |
 | Toutes les 12 heures | 720 | |
 | Chaque jour | 1 440 | Playlists qui changent lentement |
+| Tous les 3 jours | 4 320 | |
 | Chaque semaine | 10 080 | Playlists mises à jour chaque semaine |
 | Toutes les 2 semaines | 20 160 | |
 | Chaque mois | 43 200 | Archives ou playlists rarement mises à jour |
 
-Vous pouvez changer l’intervalle d’une playlist existante à tout moment depuis la carte de surveillance, sans la retirer ni la rajouter.
+Vous pouvez changer l’intervalle d’une playlist existante à tout moment depuis la carte de surveillance, sans la retirer ni la rajouter. Ou pour plusieurs surveillances à la fois : voir [Modifier plusieurs surveillances à la fois](#changing-many-watches-at-once).
 
 ## Gérer les playlists surveillées
 
@@ -170,6 +171,17 @@ Sur chaque ligne :
 - **⋯** — **Activité et titres** (la page de la surveillance), pause/reprise, copier le lien, ouvrir l’original, ou **Arrêter la surveillance** (l’enregistrement est supprimé ; les fichiers téléchargés sont conservés)
 
 **Activité** et **Stockage** sont des colonnes comme les autres : masquez-les ou redimensionnez-les depuis **Colonnes**.
+
+### Modifier plusieurs surveillances à la fois
+
+Cliquez sur **Sélectionner** au-dessus de la liste pour afficher une case sur chaque ligne. Cochez les surveillances (Maj+clic coche toutes celles entre deux clics) ou utilisez **Tout sélectionner (affichés)**, qui tient compte de la recherche et du filtre **Toutes / En pause**. La barre au-dessus de la liste applique une même modification à toutes les cochées :
+
+- **Changer la fréquence en…** — le même intervalle pour toutes
+- **Pause** / **Reprendre**
+- **Vérifier maintenant** — vérifie tout de suite les actives
+- **Arrêter la surveillance** — après confirmation ; les fichiers téléchargés sont conservés
+
+Cela fonctionne de la même façon dans les onglets **Playlists** et **Artistes**. Les surveillances cochées le restent quand la recherche change. **Terminé** (ou **Échap**) quitte la sélection ; changer d’onglet la vide.
 
 ### Modifier une surveillance
 

@@ -38,6 +38,7 @@ from downtify import (
     doctor_routes,
     download_policy_routes,
     mobile_routes,
+    navidrome_ratings_routes,
     trash_routes,
     wanted_routes,
 )
@@ -672,13 +673,14 @@ def build_app() -> FastAPI:
             name='traffic-flush',
         )
         # Separate hourly sweep that forgets a downloaded-track record once
-        # its file is gone from the downloads directory — see
+        # its file is gone from the registered library folders — see
         # downtify/monitor.py:reconcile_loop for why this is a distinct,
         # slower cadence from the per-watch monitor_loop above.
         api.spawn_task(
             reconcile_loop(
                 db=api.state.monitor_db,
                 get_downloader=lambda: api.state.downloader,
+                settings=api.state.settings,
             ),
             name='reconcile-loop',
         )
@@ -695,6 +697,13 @@ def build_app() -> FastAPI:
         # The library's size once an hour, for the growth on the library
         # usage page (downtify/library_usage.py).
         api.spawn_task(api.usage_snapshot_loop(), name='usage-snapshot-loop')
+        # The repeat schedule of the Navidrome star ratings. Its name must
+        # not start with "navidrome-ratings": that prefix is the
+        # library-only lease a running job holds.
+        api.spawn_task(
+            navidrome_ratings_routes.schedule_loop(),
+            name='ratings-schedule-loop',
+        )
         # "Found on this network" in the apps (downtify/discovery.py).
         if discovery_enabled() and api.state.identity is not None:
             announcer = Announcer(
@@ -839,6 +848,7 @@ def build_app() -> FastAPI:
         cover_min_resolution=api._clamp_cover_min_resolution(
             api.state.settings.get('cover_min_resolution', 0)
         ),
+        write_isrc=bool(api.state.settings.get('write_isrc', True)),
         overwrite_existing_files=bool(
             api.state.settings.get('overwrite_existing_files', True)
         ),
@@ -869,6 +879,7 @@ def build_app() -> FastAPI:
     app.include_router(mobile_routes.router)
     app.include_router(trash_routes.router)
     app.include_router(doctor_routes.router)
+    app.include_router(navidrome_ratings_routes.router)
     app.include_router(download_policy_routes.router)
     app.include_router(wanted_routes.router)
 

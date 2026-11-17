@@ -291,7 +291,7 @@ export default {
     home: 'Accueil',
     search: 'Recherche',
     library: 'Bibliothèque',
-    queue: 'File',
+    queue: 'File d’attente',
     monitor: 'Surveillance',
     discover: 'Découvrir',
     podcasts: 'Podcasts',
@@ -1185,6 +1185,28 @@ export default {
       'Impossible de démarrer l’égaliseur. La lecture continue sans lui.',
   },
   monitor: {
+    select: 'Sélectionner',
+    selectDone: 'Terminé',
+    selectAllShown: 'Tout sélectionner (affichés)',
+    selectWatch: 'Sélectionner {name}',
+    selectedCount: {
+      one: '{count} sélectionné',
+      other: '{count} sélectionnés',
+    },
+    selectRangeHint: 'Maj+clic pour sélectionner une plage',
+    bulkInterval: 'Changer la fréquence en…',
+    bulkUpdated: {
+      one: '{count} surveillance modifiée',
+      other: '{count} surveillances modifiées',
+    },
+    bulkChecking: {
+      one: 'Vérification de {count} surveillance…',
+      other: 'Vérification de {count} surveillances…',
+    },
+    bulkStopped: {
+      one: '{count} surveillance arrêtée',
+      other: '{count} surveillances arrêtées',
+    },
     tableColumns: 'Colonnes',
     resetTableColumns: 'Réinitialiser les colonnes',
     releaseTypes: 'Télécharger',
@@ -1770,6 +1792,10 @@ export default {
     syncDelay: 'Pause entre les recherches de synchro',
     syncDelayHint:
       'Attend après chaque lot de titres importés (taille = Téléchargements simultanés) avant de chercher paroles, pochette et genre. Évite les limites de débit sur les gros dossiers.',
+    idsGroup: 'Identifiants des titres',
+    isrc: 'Écrire les codes ISRC',
+    isrcHint:
+      'Enregistre l’ISRC de chaque nouveau téléchargement, le code qui désigne un enregistrement, pour reconnaître le même titre sous un autre nom. Recherché sur Deezer ; omis s’il n’est pas certain.',
     artGroup: 'Pochette',
     coverArt: 'Intégrer la pochette',
     coverArtHint:
@@ -1804,6 +1830,48 @@ export default {
     lyricsLrclibHint: 'Base communautaire — paroles simples et synchronisées',
     lyricsNetease: 'NetEase Cloud Music',
     lyricsNeteaseHint: 'Vaste catalogue, généralement synchronisé',
+    ratingsGroup: 'Notes depuis Deezer',
+    ratingsHint:
+      'Attribue à tes morceaux dans Navidrome de 0 à 5 étoiles selon leur popularité sur Deezer, comme dztnr. Les étoiles appartiennent au compte Navidrome ci-dessus.',
+    ratingsRepeat: 'Répéter',
+    ratingsRepeatOff: 'Désactivé',
+    ratingsRepeatDaily: 'Tous les jours',
+    ratingsRepeatWeekly: 'Toutes les semaines',
+    ratingsRepeatMonthly: 'Tous les mois',
+    ratingsSkipRated: 'Ignorer les morceaux qui ont déjà des étoiles',
+    ratingsSkipRatedHint:
+      'Les étoiles que tu as mises toi-même sont conservées. Les exécutions suivantes ignorent tout morceau qui a déjà des étoiles.',
+    ratingsSkipStarred: 'Ignorer les favoris',
+    ratingsGrading: 'Notation',
+    ratingsGradingAbsolute: 'Popularité mondiale',
+    ratingsGradingArtist: "Par rapport au meilleur morceau de l'artiste",
+    ratingsGradingAlbum: "Par rapport au meilleur morceau de l'album",
+    ratingsGradingHint:
+      "La comparaison avec le meilleur morceau de l'artiste donne aussi 5 étoiles aux tubes des artistes peu connus.",
+    ratingsRun: 'Lancer maintenant',
+    ratingsPreview: 'Aperçu',
+    ratingsStop: 'Arrêter',
+    ratingsReading: 'Lecture de ta bibliothèque Navidrome…',
+    ratingsProgress: '{done} sur {total} morceaux',
+    ratingsLast:
+      'Dernière exécution {when} : {rated} notés, {skipped} ignorés, {notFound} introuvables sur Deezer',
+    ratingsLastPreview:
+      'Aperçu {when} : {rated} seraient notés, {skipped} ignorés, {notFound} introuvables sur Deezer',
+    ratingsStopped: 'Arrêtée',
+    ratingsNext: 'Prochaine exécution {when}',
+    ratingsNextSoon: "Prochaine exécution dans l'heure",
+    ratingsNever: 'Pas encore exécutée',
+    ratingsFailedDeezer:
+      'Deezer est injoignable. Les étoiles déjà attribuées sont conservées.',
+    ratingsFailedNavidrome: 'Erreur Navidrome : {message}',
+    ratingsFailed: 'La notation a échoué : {message}',
+    ratingsNotConfigured: "Enregistre d'abord la connexion à Navidrome.",
+    ratingsBusy: 'Une notation est déjà en cours.',
+    ratingsColSong: 'Morceau',
+    ratingsColRank: 'Popularité sur Deezer',
+    ratingsColStars: 'Étoiles',
+    ratingsUnmatched: 'Introuvables sur Deezer ({count})',
+    ratingsFirstRows: 'Affichage des {count} premiers morceaux.',
     navidromeTitle: 'Navidrome',
     navidromeHint:
       'Reproduit les playlists téléchargées dans Navidrome. Son dossier musical doit inclure les téléchargements de Downtify.',
@@ -2369,6 +2437,10 @@ export default {
     playbackSpeed: 'Vitesse de lecture',
   },
   confirm: {
+    stopWatchingManyTitle: {
+      one: 'Arrêter {count} surveillance ?',
+      other: 'Arrêter {count} surveillances ?',
+    },
     deleteTrackTitle: 'Supprimer « {title} » ?',
     deleteTracksTitle: 'Supprimer {count} titres ?',
     deleteTracksBody:

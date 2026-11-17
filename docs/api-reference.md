@@ -791,6 +791,7 @@ The `format` setting accepts `mp3`, `flac`, `m4a`, `ogg`, `opus` or `original`. 
   "cover_resolution": 600,
   "download_cover_art": true,
   "overwrite_existing_files": true,
+  "write_isrc": true,
   "organize_by_artist": true,
   "organize_by_album": true,
   "search_albums": true,
@@ -839,6 +840,7 @@ The `format` setting accepts `mp3`, `flac`, `m4a`, `ogg`, `opus` or `original`. 
 | `download_cover_art` | boolean | Whether to fetch and embed cover art at all. See [Download cover art](features/download-settings.md#download-cover-art). |
 | `cover_resolution` | integer | Target pixel size (width & height) for YouTube Music-sourced cover art. Clamped to `300–1200`. Only used when `download_cover_art` is true. See [Cover art resolution](features/download-settings.md#cover-art-resolution). |
 | `overwrite_existing_files` | boolean | When `false`, a song already in the library (matched by output filename, or by Spotify track ID through the [library track index](features/library-catalog.md)) isn't downloaded again; the download returns the existing file's path instead. See [Overwrite existing files](features/download-settings.md#overwrite-existing-files). |
+| `write_isrc` | boolean | Write the recording's ISRC into each new download, looked up on Deezer and written only when certain. Songs are matched by it first. See [Embedded metadata](features/download-settings.md#embedded-metadata). |
 | `download_cover_art_playlists` | boolean | Save the playlist's own cover art alongside its M3U file, as `<playlist-name>.jpg`. Only applies while `generate_m3u` is true. Default: `true`. See [Playlist cover art](features/playlist-cover-art.md). |
 | `download_cover_art_artist` | boolean | Let Downtify save an artist's photo on its own - when an artist's page is opened for the first time and when one of their tracks finishes downloading (see [`POST /api/artists/profile/ensure`](#post-apiartistsprofileensure)). The manual picker on an artist's Library page is always available regardless of this setting. Default: `true`. See [Artist photo, banner & bio](features/artist-images.md). |
 | `download_cover_art_artist_banner` | boolean | Same as above, for the artist's banner image - independent of the photo setting. Default: `false`. See [Artist photo, banner & bio](features/artist-images.md). |
@@ -850,6 +852,7 @@ The `format` setting accepts `mp3`, `flac`, `m4a`, `ogg`, `opus` or `original`. 
 | `slskd` | object | slskd connection and matching options. Saving with `enabled: true` but no `base_url` or `api_key` returns `400`. |
 | `navidrome` | object | Navidrome connection. Saving with `enabled: true` but no `url`, `username` or `password` returns `400`. |
 | `sync_navidrome` | boolean | Create/update a Navidrome playlist after playlist downloads, Playlist Monitor sweeps and library changes. |
+| `navidrome_ratings` | object | [Ratings from Deezer](features/navidrome-ratings.md) options: `repeat` (`off`, `daily`, `weekly`, `monthly`; default `off`), `skip_rated` (default `true`), `skip_starred` (default `false`) and `grading` (`absolute`, `artist`, `album`; default `absolute`). The run itself is started through [`POST /api/navidrome/ratings/run`](#post-apinavidromeratingsrun). |
 | `allow_playlist_sharing` | boolean | Whether users may [share their playlists](features/users.md#sharing-playlists) (default `true`). While `false` every share is hidden from the people it was shared with and nobody can share or follow; the shares come back when it is turned on again. |
 | `cache_cover_art` | boolean | Keep extracted cover images under `/data/cover_cache` to speed up `/cover`. Covers fetched for [read-only extra folders](features/external-library.md) are always stored there, even when this is `false`. |
 | `library_upgrade` | object | Defaults a library upgrade scan starts from: `artwork_min_px` (clamped to `100–3000`), `artwork_source` (`highest`, `spotify`, `itunes`, `youtube-music`) and `recheck_days` (`0–3650`, `0` meaning always re-check). A scan request may override them. See [Upgrade library](features/library-upgrade.md#options). |
@@ -922,6 +925,66 @@ Try a Navidrome connection without saving anything. Same behaviour and answer sh
 | `scan` | `ok`, `not_admin`, `not_admin_separate`, `bad_admin` |
 
 The `scan` check reads whether the account used for library scans (the admin login when set, else the normal one) is an admin — Navidrome only lets admins start a scan — and never starts one. It is left out when the account can't be looked up, and when scanning after a download is turned off.
+
+---
+
+### `GET /api/navidrome/ratings`
+
+Admins only. The state of [Ratings from Deezer](features/navidrome-ratings.md): the running or most recent job, the last saved result, and when the next scheduled run is due.
+
+```json
+{
+  "job": { "id": "k3Jx9aQ", "state": "running", "…": "…" },
+  "last": { "id": "Wm2dTq0", "state": "done", "…": "…" },
+  "next_run_at": "2026-11-16T09:30:00+00:00"
+}
+```
+
+`job` is the job of this server session (`null` before the first run); `last` is the job that finished last, kept across restarts (`null` if none). `next_run_at` is `null` while `navidrome_ratings.repeat` is `off`, Navidrome isn't set up or [library-only mode](features/library-only.md) is on; a time in the past means a run is due at the next hourly check.
+
+A job has these fields:
+
+| Field | Description |
+|-------|-------------|
+| `id` | Job id. |
+| `state` | `running`, `done`, `stopped` or `failed`. |
+| `trigger` | `manual` or `schedule`. |
+| `preview` | `true` for a preview, which changes nothing in Navidrome. |
+| `started_at`, `finished_at` | ISO 8601 times; `finished_at` is `null` while running. |
+| `progress` | `{ "done", "total", "step" }`, where `step` is `library` (reading Navidrome) or `rating`. |
+| `result` | `null` until the run ends, then `{ "state", "preview", "total", "rated", "skipped", "not_found", "changes", "unmatched" }`. `changes` lists `{ "artist", "album", "title", "rank", "stars", "was" }` for the songs rated (or, in a preview, that would be); `unmatched` lists the songs Deezer didn't have. Each list keeps up to 500 rows. |
+| `error` | `null`, or `{ "code", "message" }` when `state` is `failed`: `deezer_unreachable`, `navidrome_failed` (the message is short and never holds the Navidrome address or login: the server's own error text, `HTTP <status>`, or a note that Navidrome could not be reached or sent an answer Downtify could not read) or `ratings_failed`. |
+
+---
+
+### `POST /api/navidrome/ratings/run`
+
+Admins only. Start a ratings run or a preview. The options saved in `navidrome_ratings` apply; any value in the body overrides them for this run.
+
+```json
+{ "preview": true, "skip_rated": true, "skip_starred": false, "grading": "artist" }
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `preview` | boolean | `true` looks everything up without changing any stars. Default `false`. |
+| `skip_rated` | boolean | Optional. Leave songs that already have stars alone. |
+| `skip_starred` | boolean | Optional. Leave favourite songs alone. |
+| `grading` | string | Optional. `absolute` (worldwide popularity), `artist` or `album` (against that artist's or album's top song). |
+
+Returns the job (see above) with `state: "running"`. Only one job runs at a time.
+
+| Status | `detail.code` | When |
+|--------|---------------|------|
+| `400` | `navidrome_not_configured` | Navidrome is off or its login isn't saved. |
+| `409` | `ratings_busy` | A ratings run is already going. |
+| `409` | | [Library-only mode](features/library-only.md) is on. |
+
+---
+
+### `POST /api/navidrome/ratings/cancel`
+
+Admins only. Ask the running job to stop. Stars already given are kept. Returns the job, which turns `stopped` shortly after; with no job it returns `{}`.
 
 ---
 
@@ -1144,6 +1207,8 @@ Return cover art for a library file: `/data/cover_cache` first (including covers
 | `size` | integer | no | `150`, `300` or `600` (longest side, px; other values round up to the next one, anything above `600` is full size). Serves a scaled JPEG made once with ffmpeg and kept under `/data/cover_thumbs`, with an `ETag`. The web UI asks for `300` in grids and `150` in lists. A cover only found in `/data/cover_cache` (or without ffmpeg) comes back full size. |
 
 **Response:** Image bytes (`image/jpeg` or `image/png`). Returns `404` if none of those sources have a cover.
+
+Thumbnail cache entries and their `ETag`s are keyed by the resolved audio-file path, size and nanosecond modification time. Files in different library folders do not share a thumbnail even when their names, sizes and timestamps match; alternate paths resolving to the same file reuse its cached cover. Older basename-only thumbnail entries are ignored and regenerated on demand. Moving a file to another path may regenerate its thumbnails.
 
 ---
 
@@ -2329,6 +2394,8 @@ A track's full audio, downloaded once into `/data/stream_cache` and served from 
 
 The first request for a video downloads it (concurrent requests share one download); the cache is pruned least-recently-used past `DOWNTIFY_STREAM_CACHE_MB` (default 1024) with at most `DOWNTIFY_STREAM_CONCURRENCY` downloads at once (default 2). `400` for a malformed id and for tracks over 10 minutes (the served file's probed length is enforced either way, so long uploads never accumulate), `503` when YouTube can't provide the audio — including age-gated tracks without usable cookies (see [YouTube Cookies](features/youtube-cookies.md)). A stream never lands in the library, the activity log or the saved player session.
 
+Cancelling a cache request does not cancel another caller waiting for the same video. When the last caller cancels before the download starts, the queued download is removed. A download already running in yt-dlp finishes into the cache and still counts toward the concurrency limit until it finishes; a new playback or prefetch request for that video shares the running download instead of starting another one. An unsuccessful download can be retried.
+
 A cached file keeps its `ETag` across requests while the audio is unchanged. Clients can send that validator in `If-Range` to get `206 Partial Content` for a satisfiable range.
 
 The web UI plays the queue through undownloaded rows without stopping and warms one track ahead: at each track's start, and again the moment it has fully loaded, the next track's download starts in the background (see [`POST /api/stream/prefetch`](#post-apistreamprefetch)), so skipping starts instantly. A run of unresolvable tracks is skipped (an error after three in a row).
@@ -2524,6 +2591,24 @@ Update a watch.
 Changing `release_types`, `new_only` or `musicbrainz_kinds` starts a check in the background if the watch is enabled, and is a `400` on a playlist watch. A `url` that points at the **same** playlist or artist only replaces the stored `url`. One that points at a **different** playlist or artist of the same kind retargets the watch: `spotify_id`, `name` and `url` change, `last_checked` becomes `null`, `last_track_count` becomes `0`, and its downloaded-track and seen-release history is cleared. If the watch is enabled, a first check starts in the background, as after `POST`. An unchanged `url` is ignored.
 
 **Response:** Updated watch object. `404` if there is no such watch; for a new `url`: `400` if it isn't a supported link or is the other kind (an artist link for a playlist watch, or the reverse), `409` if another watch already follows it, `404`/`502` if it can't be resolved. On an error nothing is changed.
+
+---
+
+### `PATCH /api/monitor/playlists`
+
+Give several watches the same interval and/or active state at once (the Monitor page's **Select**).
+
+**Request body:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `ids` | array | The watches to change (at most 5 000) |
+| `interval_minutes` | integer | Check interval, at least 1 |
+| `enabled` | boolean | Pause (`false`) or resume (`true`) |
+
+At least one of `interval_minutes` and `enabled` is required. Nothing else about the watches changes, and no check starts.
+
+**Response:** `{ "updated": [watch…], "missing": [id…] }` — the updated watch objects, and the ids that don't exist or belong to another account (unless you're an admin), which are left alone. `400` for an empty or invalid `ids`, a bad `interval_minutes`, or nothing to change.
 
 ---
 
@@ -3245,6 +3330,8 @@ The web page shows `code` and a QR code for `downtify://pair?url=<this page's or
 
 User (the one who started it, or an admin). `{ "status": "pending", "expires_in": 241 }`, `{ "status": "paired", "device": { … } }` or `{ "status": "expired" }`.
 
+Pending pairings expire at the five-minute deadline. A completed pairing's result stays available until one minute after that original deadline; its later `expired` status does not revoke the device token.
+
 ---
 
 ### `DELETE /api/auth/pairing/{pairing_id}`
@@ -3270,7 +3357,7 @@ Public, rate-limited per address (10 failures per 5 minutes). An app trades a pa
 }
 ```
 
-The device belongs to the user who showed the code. A code works once and for five minutes; `401` otherwise. The token is shown only here — the server keeps a hash.
+The device belongs to the user who showed the code. A code works once and only before its five-minute deadline; at or after the deadline, `401`. The expiry check uses the time the server claims the code, including any wait for the pairing lock. The token is shown only here — the server keeps a hash.
 
 ---
 
@@ -3287,6 +3374,8 @@ Public, rate-limited per address together with [`POST /api/auth/login`](#post-ap
 ### `POST /api/auth/ws-ticket`
 
 Client. A single-use ticket, valid for 60 seconds, for opening the [WebSocket](#websocket) as `/api/ws?client_id=…&ticket=…` without an `Authorization` header. **Response:** `{ "ticket": "…" }`.
+
+At or after the 60-second deadline the ticket is expired; an unauthenticated handshake with it closes with code `4401`. Request a new ticket before retrying. Pairing codes and WebSocket tickets receive their full lifetime when stored, without counting time spent waiting for their store's lock.
 
 ---
 
@@ -3649,6 +3738,8 @@ The track's cover. Also `HEAD`.
 | `size` | integer | no | `150`, `300` or `600` (longest side, px; others round up). Omit for the full-size picture |
 
 **Response:** the image (thumbnails are JPEG), `ETag`, `Cache-Control: private, max-age=604800`; `304` for a matching `If-None-Match`. `404` when the file has no cover. Every size is made once and kept in `/data/cover_thumbs`.
+
+The cache and validators are specific to the resolved audio file, as for [`GET /cover`](#get-cover), so a cover cached for a file in another folder never validates this response.
 
 ---
 

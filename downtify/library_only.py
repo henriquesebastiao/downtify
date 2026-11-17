@@ -61,6 +61,7 @@ REMOTE_ACTIONS = {
     '/api/library/replace',
     '/api/deemix/test',
     '/api/slskd/test',
+    '/api/navidrome/ratings/run',
 }
 
 

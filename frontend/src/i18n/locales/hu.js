@@ -1157,6 +1157,25 @@ export default {
       'A hangszínszabályzó nem indult el. A lejátszás nélküle folytatódik.',
   },
   monitor: {
+    select: 'Kijelölés',
+    selectDone: 'Kész',
+    selectAllShown: 'Az összes látható kijelölése',
+    selectWatch: '{name} kijelölése',
+    selectedCount: { one: '{count} kijelölve', other: '{count} kijelölve' },
+    selectRangeHint: 'Shift+kattintással tartomány jelölhető ki',
+    bulkInterval: 'Ellenőrzés módosítása erre…',
+    bulkUpdated: {
+      one: '{count} figyelés módosítva',
+      other: '{count} figyelés módosítva',
+    },
+    bulkChecking: {
+      one: '{count} figyelés ellenőrzése…',
+      other: '{count} figyelés ellenőrzése…',
+    },
+    bulkStopped: {
+      one: '{count} figyelés leállítva',
+      other: '{count} figyelés leállítva',
+    },
     tableColumns: 'Oszlopok',
     resetTableColumns: 'Oszlopok visszaállítása',
     releaseTypes: 'Letöltés',
@@ -1735,6 +1754,10 @@ export default {
     syncDelay: 'Szünet a szinkronizálás között',
     syncDelayHint:
       'Minden importált köteg után vár (méret = Párhuzamos letöltések), mielőtt dalszöveget, borítót és műfajt keres. Nagy mappáknál elkerüli a korlátokat.',
+    idsGroup: 'Dalazonosítók',
+    isrc: 'ISRC-kódok írása',
+    isrcHint:
+      'Minden új letöltésbe beírja az ISRC-t, egy felvétel azonosító kódját, így ugyanaz a dal más néven is felismerhető. A Deezeren keresi ki; kihagyja, ha nem biztos.',
     artGroup: 'Borító',
     coverArt: 'Borító beágyazása',
     coverArtHint: 'Kapcsold ki a kisebb fájlokért és gyorsabb letöltésért.',
@@ -1768,6 +1791,48 @@ export default {
     lyricsLrclibHint: 'Közösségi adatbázis — sima és időzített dalszöveg',
     lyricsNetease: 'NetEase Cloud Music',
     lyricsNeteaseHint: 'Nagy katalógus, általában időzített',
+    ratingsGroup: 'Értékelések a Deezerről',
+    ratingsHint:
+      'A Navidrome-ban lévő daloknak 0–5 csillagot ad aszerint, mennyire népszerűek a Deezeren, mint a dztnr. A csillagok a fenti Navidrome-fiókhoz tartoznak.',
+    ratingsRepeat: 'Ismétlés',
+    ratingsRepeatOff: 'Ki',
+    ratingsRepeatDaily: 'Naponta',
+    ratingsRepeatWeekly: 'Hetente',
+    ratingsRepeatMonthly: 'Havonta',
+    ratingsSkipRated: 'A már csillagozott dalok kihagyása',
+    ratingsSkipRatedHint:
+      'A saját magad adta csillagok megmaradnak. A későbbi futtatások kihagyják az összes olyan dalt, amelynek már van csillaga.',
+    ratingsSkipStarred: 'Kedvencek kihagyása',
+    ratingsGrading: 'Értékelés',
+    ratingsGradingAbsolute: 'Világszintű népszerűség',
+    ratingsGradingArtist: 'Az előadó legnépszerűbb dalához képest',
+    ratingsGradingAlbum: 'Az album legnépszerűbb dalához képest',
+    ratingsGradingHint:
+      'Az előadó legnépszerűbb dalával összevetve a kevésbé ismert előadók slágerei is 5 csillagot kapnak.',
+    ratingsRun: 'Futtatás most',
+    ratingsPreview: 'Előnézet',
+    ratingsStop: 'Leállítás',
+    ratingsReading: 'A Navidrome-könyvtár beolvasása…',
+    ratingsProgress: '{done} / {total} dal',
+    ratingsLast:
+      'Utolsó futtatás: {when}: {rated} értékelve, {skipped} kihagyva, {notFound} nem található a Deezeren',
+    ratingsLastPreview:
+      'Előnézet {when}: {rated} lenne értékelve, {skipped} kihagyva, {notFound} nem található a Deezeren',
+    ratingsStopped: 'Leállítva',
+    ratingsNext: 'Következő futtatás: {when}',
+    ratingsNextSoon: 'Következő futtatás egy órán belül',
+    ratingsNever: 'Még nem futott',
+    ratingsFailedDeezer:
+      'A Deezer nem érhető el. A már megadott csillagok megmaradnak.',
+    ratingsFailedNavidrome: 'Navidrome-hiba: {message}',
+    ratingsFailed: 'Az értékelés sikertelen: {message}',
+    ratingsNotConfigured: 'Előbb mentsd el a Navidrome-bejelentkezést.',
+    ratingsBusy: 'Már fut egy értékelés.',
+    ratingsColSong: 'Dal',
+    ratingsColRank: 'Deezer-népszerűség',
+    ratingsColStars: 'Csillagok',
+    ratingsUnmatched: 'Nem található a Deezeren ({count})',
+    ratingsFirstRows: 'Az első {count} dal látható.',
     navidromeTitle: 'Navidrome',
     navidromeHint:
       'Tükrözi a letöltött listákat a Navidrome-ba. A zenemappájának tartalmaznia kell a Downtify letöltéseit.',
@@ -2334,6 +2399,10 @@ export default {
     playbackSpeed: 'Lejátszási sebesség',
   },
   confirm: {
+    stopWatchingManyTitle: {
+      one: 'Leállítod {count} figyelést?',
+      other: 'Leállítod {count} figyelést?',
+    },
     deleteTrackTitle: 'Törlöd: „{title}”?',
     deleteTracksTitle: 'Törlöd a(z) {count} számot?',
     deleteTracksBody:

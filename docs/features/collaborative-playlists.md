@@ -30,6 +30,8 @@ A few things hold for everyone who edits it, the owner included:
 - **Changes show up at once** for the owner and the other editors, without reloading the page.
 - **Nobody's songs get lost.** Two people adding songs at the same moment both get theirs in: edits are applied one after the other.
 
+Playlist maintenance follows the same rule. Removing deleted tracks or songs from an unmapped music folder cannot overwrite a concurrent addition or removal, or recreate a playlist that was renamed or deleted. Track order, repeated songs and custom cover art are kept. If maintenance changes the songs while someone is reordering an older list, the reorder is rejected as a conflict: reload the playlist and try again.
+
 ## When editing ends
 
 Editing goes with the share:

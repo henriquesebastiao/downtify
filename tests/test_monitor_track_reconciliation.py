@@ -15,8 +15,13 @@ downloader, no network.
 from __future__ import annotations
 
 import asyncio
+import threading
+from pathlib import Path
+
+import pytest
 
 from downtify import monitor
+from downtify.library_paths import extra_dir_id
 
 
 class _FakeDownloader:
@@ -201,6 +206,166 @@ def test_reconcile_is_a_no_op_when_all_files_present(tmp_path):
     assert db.get_track_filenames(pl.id) == {'a': 'a.mp3'}
 
 
+@pytest.mark.parametrize('reverse_folders', [False, True])
+def test_reconcile_keeps_external_tracks_and_prevents_redownload(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    reverse_folders: bool,
+) -> None:
+    downloads = tmp_path / 'downloads'
+    downloads.mkdir()
+    external = tmp_path / 'collection'
+    external.mkdir()
+    audio = external / 'a.mp3'
+    audio.write_bytes(b'audio')
+    other = tmp_path / 'other-collection'
+    other.mkdir()
+    folders = [str(external), str(other)]
+    if reverse_folders:
+        folders.reverse()
+    settings = {
+        'external_library': {'folders': folders},
+        'generate_m3u': False,
+    }
+    db, pl = _playlist(tmp_path)
+    stored = f'ext/{extra_dir_id(external)}/a.mp3'
+    db.mark_track_downloaded(pl.id, 'a', stored)
+    downloader = _FakeDownloader(downloads, fail=True)
+
+    removed = asyncio.run(
+        monitor.reconcile_downloaded_tracks(db, downloader, settings=settings)
+    )
+
+    assert removed == 0
+    assert db.get_track_filenames(pl.id) == {'a': stored}
+    monkeypatch.setattr(
+        monitor.spotify,
+        'playlist_tracks_from_id',
+        lambda _id: [{'song_id': 'a', 'name': 'A', 'artists': ['Artist']}],
+    )
+
+    async def _scenario() -> int:
+        return await monitor.check_playlist(
+            pl,
+            db,
+            downloader,
+            _noop_broadcast,
+            asyncio.get_running_loop(),
+            settings=settings,
+        )
+
+    assert asyncio.run(_scenario()) == 0
+    assert downloader.calls == []
+    assert audio.read_bytes() == b'audio'
+
+
+def test_reconcile_prunes_only_missing_files_across_library_roots(
+    tmp_path: Path,
+) -> None:
+    downloads = tmp_path / 'downloads'
+    downloads.mkdir()
+    (downloads / 'local.mp3').write_bytes(b'local')
+    external = tmp_path / 'collection'
+    external.mkdir()
+    (external / 'a.mp3').write_bytes(b'external')
+    slskd = tmp_path / 'slskd'
+    slskd.mkdir()
+    (slskd / 'soulseek.mp3').write_bytes(b'slskd')
+    stored = f'ext/{extra_dir_id(external)}/a.mp3'
+    missing = f'ext/{extra_dir_id(external)}/missing.mp3'
+    settings = {'external_library': {'folders': [str(external)]}}
+    db, pl = _playlist(tmp_path)
+    filenames = {
+        'local': 'local.mp3',
+        'external': stored,
+        'slskd': 'slskd/soulseek.mp3',
+        'missing-external': missing,
+        'missing-local': 'missing.mp3',
+    }
+    for tid, filename in filenames.items():
+        db.mark_track_downloaded(pl.id, tid, filename)
+    downloader = _FakeDownloader(downloads)
+    downloader.slskd_settings = {'source_dir': str(slskd)}
+
+    removed = asyncio.run(
+        monitor.reconcile_downloaded_tracks(db, downloader, settings=settings)
+    )
+
+    assert removed == 2
+    assert db.get_track_filenames(pl.id) == {
+        'local': 'local.mp3',
+        'external': stored,
+        'slskd': 'slskd/soulseek.mp3',
+    }
+
+
+def test_reconcile_forgets_external_tracks_after_folder_is_unmapped(
+    tmp_path: Path,
+) -> None:
+    downloads = tmp_path / 'downloads'
+    downloads.mkdir()
+    external = tmp_path / 'collection'
+    external.mkdir()
+    audio = external / 'a.mp3'
+    audio.write_bytes(b'audio')
+    db, pl = _playlist(tmp_path)
+    db.mark_track_downloaded(pl.id, 'a', f'ext/{extra_dir_id(external)}/a.mp3')
+
+    removed = asyncio.run(
+        monitor.reconcile_downloaded_tracks(
+            db,
+            _FakeDownloader(downloads),
+            settings={'external_library': {'folders': []}},
+        )
+    )
+
+    assert removed == 1
+    assert db.get_track_filenames(pl.id) == {}
+    assert audio.read_bytes() == b'audio'
+
+
+def test_reconcile_resolves_external_roots_off_the_event_loop(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    db, pl = _playlist(tmp_path)
+    (tmp_path / 'a.mp3').write_bytes(b'audio')
+    db.mark_track_downloaded(pl.id, 'a', 'a.mp3')
+    event_thread = threading.get_ident()
+    resolve = monitor.extra_dirs_from_settings
+    locate = monitor.locate_library_file
+    calls: list[str] = []
+
+    def _resolve(
+        settings: dict, download_dir: Path, slskd_dir: Path | None
+    ) -> tuple[Path, ...]:
+        assert threading.get_ident() != event_thread
+        calls.append('roots')
+        return resolve(settings, download_dir, slskd_dir)
+
+    def _locate(
+        stored: str,
+        download_dir: Path,
+        slskd_dir: Path | None,
+        extra_dirs: tuple[Path, ...],
+    ) -> Path | None:
+        assert threading.get_ident() != event_thread
+        calls.append('file')
+        return locate(stored, download_dir, slskd_dir, extra_dirs)
+
+    monkeypatch.setattr(monitor, 'extra_dirs_from_settings', _resolve)
+    monkeypatch.setattr(monitor, 'locate_library_file', _locate)
+
+    assert (
+        asyncio.run(
+            monitor.reconcile_downloaded_tracks(
+                db, _FakeDownloader(tmp_path), settings={}
+            )
+        )
+        == 0
+    )
+    assert calls == ['roots', 'file']
+
+
 # ── reconcile_loop ────────────────────────────────────────────────────────────
 
 
@@ -257,3 +422,45 @@ def test_reconcile_loop_tolerates_no_downloader_yet(monkeypatch, tmp_path):
 
     # No downloader available yet -> nothing was reconciled.
     assert db.get_track_filenames(pl.id) == {'a': 'a.mp3'}
+
+
+def test_reconcile_loop_uses_current_external_folder_settings(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    downloads = tmp_path / 'downloads'
+    downloads.mkdir()
+    external = tmp_path / 'collection'
+    external.mkdir()
+    (external / 'a.mp3').write_bytes(b'audio')
+    stored = f'ext/{extra_dir_id(external)}/a.mp3'
+    db, pl = _playlist(tmp_path)
+    db.mark_track_downloaded(pl.id, 'a', stored)
+    settings = {'external_library': {'folders': [str(external)]}}
+    downloader = _FakeDownloader(downloads)
+    sleeps: list[float] = []
+
+    async def _sleep(seconds: float) -> None:
+        sleeps.append(seconds)
+        if len(sleeps) == 1:
+            assert db.get_track_filenames(pl.id) == {'a': stored}
+            settings['external_library'] = {'folders': []}
+        else:
+            raise _Stop
+
+    monkeypatch.setattr(monitor.asyncio, 'sleep', _sleep)
+
+    async def _scenario() -> None:
+        try:
+            await monitor.reconcile_loop(
+                db,
+                lambda: downloader,
+                interval_seconds=123,
+                settings=settings,
+            )
+        except _Stop:
+            pass
+
+    asyncio.run(_scenario())
+
+    assert sleeps == [123, 123]
+    assert db.get_track_filenames(pl.id) == {}

@@ -1135,6 +1135,25 @@ export default {
       "The equalizer couldn't start. Playback continues without it.",
   },
   monitor: {
+    select: 'Select',
+    selectDone: 'Done',
+    selectAllShown: 'Select all shown',
+    selectWatch: 'Select {name}',
+    selectedCount: { one: '{count} selected', other: '{count} selected' },
+    selectRangeHint: 'Shift-click to select a range',
+    bulkInterval: 'Change checks to…',
+    bulkUpdated: {
+      one: 'Updated {count} watch',
+      other: 'Updated {count} watches',
+    },
+    bulkChecking: {
+      one: 'Checking {count} watch…',
+      other: 'Checking {count} watches…',
+    },
+    bulkStopped: {
+      one: 'Stopped watching {count}',
+      other: 'Stopped watching {count}',
+    },
     tableColumns: 'Columns',
     resetTableColumns: 'Reset columns',
     releaseTypes: 'Download',
@@ -1694,6 +1713,10 @@ export default {
     syncDelay: 'Pause between sync lookups',
     syncDelayHint:
       'Wait after each batch of imported tracks (size = Parallel downloads) before looking up lyrics, covers and genre. Helps avoid rate limits on large folders.',
+    idsGroup: 'Song IDs',
+    isrc: 'Write ISRC codes',
+    isrcHint:
+      'Saves each new download’s ISRC, the code that names one recording, so the same song is recognised even under another name. Looked up on Deezer; left out when it isn’t certain.',
     artGroup: 'Cover art',
     coverArt: 'Embed cover art',
     coverArtHint: 'Turn off for smaller files and faster downloads.',
@@ -1727,6 +1750,48 @@ export default {
     lyricsLrclibHint: 'Community database — plain and time-synced lyrics',
     lyricsNetease: 'NetEase Cloud Music',
     lyricsNeteaseHint: 'Large catalogue, usually time-synced',
+    ratingsGroup: 'Ratings from Deezer',
+    ratingsHint:
+      'Gives your songs in Navidrome 0–5 stars from how popular they are on Deezer, like dztnr. The stars belong to the Navidrome account above.',
+    ratingsRepeat: 'Repeat',
+    ratingsRepeatOff: 'Off',
+    ratingsRepeatDaily: 'Every day',
+    ratingsRepeatWeekly: 'Every week',
+    ratingsRepeatMonthly: 'Every month',
+    ratingsSkipRated: 'Skip songs that have stars',
+    ratingsSkipRatedHint:
+      'Stars you set yourself stay. Later runs skip every song that already has stars.',
+    ratingsSkipStarred: 'Skip favourites',
+    ratingsGrading: 'Grading',
+    ratingsGradingAbsolute: 'Worldwide popularity',
+    ratingsGradingArtist: "Against the artist's top song",
+    ratingsGradingAlbum: "Against the album's top song",
+    ratingsGradingHint:
+      "Comparing with the artist's top song gives niche artists' hits 5 stars too.",
+    ratingsRun: 'Run now',
+    ratingsPreview: 'Preview',
+    ratingsStop: 'Stop',
+    ratingsReading: 'Reading your Navidrome library…',
+    ratingsProgress: '{done} of {total} songs',
+    ratingsLast:
+      'Last run {when}: {rated} rated, {skipped} skipped, {notFound} not found on Deezer',
+    ratingsLastPreview:
+      'Preview {when}: {rated} would be rated, {skipped} skipped, {notFound} not found on Deezer',
+    ratingsStopped: 'Stopped',
+    ratingsNext: 'Next run {when}',
+    ratingsNextSoon: 'Next run within the hour',
+    ratingsNever: 'Not run yet',
+    ratingsFailedDeezer:
+      "Deezer couldn't be reached. Stars already given are kept.",
+    ratingsFailedNavidrome: 'Navidrome error: {message}',
+    ratingsFailed: 'The ratings run failed: {message}',
+    ratingsNotConfigured: 'Save the Navidrome login first.',
+    ratingsBusy: 'A ratings run is already going.',
+    ratingsColSong: 'Song',
+    ratingsColRank: 'Deezer popularity',
+    ratingsColStars: 'Stars',
+    ratingsUnmatched: 'Not found on Deezer ({count})',
+    ratingsFirstRows: 'Showing the first {count} songs.',
     navidromeTitle: 'Navidrome',
     navidromeHint:
       'Mirror downloaded playlists into Navidrome. Its music folder must include Downtify’s downloads.',
@@ -2276,6 +2341,10 @@ export default {
     playbackSpeed: 'Playback speed',
   },
   confirm: {
+    stopWatchingManyTitle: {
+      one: 'Stop watching {count} watch?',
+      other: 'Stop watching {count} watches?',
+    },
     deleteTrackTitle: 'Delete “{title}”?',
     deleteTracksTitle: 'Delete {count} tracks?',
     deleteTracksBody:

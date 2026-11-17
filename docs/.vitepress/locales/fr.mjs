@@ -88,6 +88,7 @@ export default {
       'features/server.md': 'Réglages du serveur',
       'features/outbound-proxy.md': 'Proxy sortant',
       'features/slskd-navidrome.md': 'slskd et Navidrome',
+      'features/navidrome-ratings.md': 'Notes depuis Deezer',
       'features/deemix.md': 'Deemix',
       'features/soundcloud.md': 'SoundCloud',
       'features/library-catalog.md': 'Catalogue de la bibliothèque',

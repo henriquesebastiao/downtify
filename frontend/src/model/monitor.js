@@ -38,6 +38,12 @@ function updateMonitoredPlaylist(id, updates) {
   return API.patch(`/api/monitor/playlists/${id}`, updates)
 }
 
+// The same `interval_minutes` and/or `enabled` for several watches:
+// `{ updated: [watch…], missing: [id…] }`.
+function updateMonitoredPlaylists(ids, updates) {
+  return API.patch('/api/monitor/playlists', { ids, ...updates })
+}
+
 function deleteMonitoredPlaylist(id) {
   return API.delete(`/api/monitor/playlists/${id}`)
 }
@@ -136,6 +142,7 @@ export default {
   listMonitoredPlaylists,
   addMonitoredPlaylist,
   updateMonitoredPlaylist,
+  updateMonitoredPlaylists,
   deleteMonitoredPlaylist,
   checkMonitoredPlaylist,
 }

@@ -818,6 +818,17 @@
                 />
               </SettingRow>
             </SettingGroup>
+            <SettingGroup :title="t('settings.idsGroup')">
+              <SettingRow
+                :label="t('settings.isrc')"
+                :description="t('settings.isrcHint')"
+              >
+                <UiSwitch
+                  v-model="s.write_isrc"
+                  :aria-label="t('settings.isrc')"
+                />
+              </SettingRow>
+            </SettingGroup>
           </template>
 
           <!-- Navidrome -->
@@ -901,6 +912,45 @@
                   />
                 </SettingRow>
               </template>
+            </SettingGroup>
+            <SettingGroup
+              v-if="s.navidrome.enabled"
+              :title="t('settings.ratingsGroup')"
+              :description="t('settings.ratingsHint')"
+            >
+              <SettingRow :label="t('settings.ratingsRepeat')">
+                <UiSelect
+                  v-model="s.navidrome_ratings.repeat"
+                  :options="ratingsRepeatOptions"
+                  :label="t('settings.ratingsRepeat')"
+                />
+              </SettingRow>
+              <SettingRow
+                :label="t('settings.ratingsSkipRated')"
+                :description="t('settings.ratingsSkipRatedHint')"
+              >
+                <UiSwitch
+                  v-model="s.navidrome_ratings.skip_rated"
+                  :aria-label="t('settings.ratingsSkipRated')"
+                />
+              </SettingRow>
+              <SettingRow :label="t('settings.ratingsSkipStarred')">
+                <UiSwitch
+                  v-model="s.navidrome_ratings.skip_starred"
+                  :aria-label="t('settings.ratingsSkipStarred')"
+                />
+              </SettingRow>
+              <SettingRow
+                :label="t('settings.ratingsGrading')"
+                :description="t('settings.ratingsGradingHint')"
+              >
+                <UiSelect
+                  v-model="s.navidrome_ratings.grading"
+                  :options="ratingsGradingOptions"
+                  :label="t('settings.ratingsGrading')"
+                />
+              </SettingRow>
+              <NavidromeRatings :options="s.navidrome_ratings" />
             </SettingGroup>
           </template>
 
@@ -1124,6 +1174,7 @@ import AccountSettings from '/src/components/settings/AccountSettings.vue'
 import NormalizationSettings from '/src/components/settings/NormalizationSettings.vue'
 import ActivitySettings from '/src/components/settings/ActivitySettings.vue'
 import DoctorSettings from '/src/components/settings/DoctorSettings.vue'
+import NavidromeRatings from '/src/components/settings/NavidromeRatings.vue'
 import AppsSettings from '/src/components/settings/AppsSettings.vue'
 import ServerPortSetting from '/src/components/settings/ServerPortSetting.vue'
 import HiddenLibrarySettings from '/src/components/settings/HiddenLibrarySettings.vue'
@@ -1164,6 +1215,22 @@ const update = useUpdateCheck().status
 
 const hasTrack = computed(() => !!player.currentTrack.value)
 const s = sm.settings
+const ratingsRepeatOptions = computed(() =>
+  ['off', 'daily', 'weekly', 'monthly'].map((value) => ({
+    value,
+    label: t(
+      `settings.ratingsRepeat${value[0].toUpperCase()}${value.slice(1)}`
+    ),
+  }))
+)
+const ratingsGradingOptions = computed(() =>
+  ['absolute', 'artist', 'album'].map((value) => ({
+    value,
+    label: t(
+      `settings.ratingsGrading${value[0].toUpperCase()}${value.slice(1)}`
+    ),
+  }))
+)
 const slskdFormatsText = computed({
   get: () => (s.value.slskd.extensions || []).join(', '),
   set: (value) => {

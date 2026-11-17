@@ -789,8 +789,19 @@ def parse_deezer_url(url: str) -> Optional[tuple[str, str]]:
     return match.group(1).lower(), match.group(2)
 
 
+class DeezerRefused(ValueError):
+    """A 200 reply carrying an ``error`` object, with Deezer's error code
+    (4 quota, 700 busy, 800 no data; 0 when it sent none)."""
+
+    def __init__(self, message: str, code: int = 0) -> None:
+        super().__init__(message)
+        self.code = code
+
+
 def _get_json(url: str, **params: Any) -> dict[str, Any]:
     """A Deezer REST GET, or raise :class:`ValueError`.
+
+    A refusal raises :class:`DeezerRefused` (a ``ValueError``).
 
     Same "HTTP 200 but an ``error`` object instead of data" trap as
     :func:`_search_rows` - an invalid id, a rate limit, all read this
@@ -808,7 +819,12 @@ def _get_json(url: str, **params: Any) -> dict[str, Any]:
         raise ValueError('Deezer sent an unexpected answer')
     if data.get('error'):
         logger.debug('Deezer refused {}: {}', url, data['error'])
-        raise ValueError('Deezer refused the request')
+        error = data['error']
+        code = error.get('code') if isinstance(error, dict) else 0
+        raise DeezerRefused(
+            'Deezer refused the request',
+            code if isinstance(code, int) else 0,
+        )
     return data
 
 

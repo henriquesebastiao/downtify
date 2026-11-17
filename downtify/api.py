@@ -250,6 +250,12 @@ downloads are shared, and files are never stored twice.
   fields, ``?path=``)
 * ``POST /api/slskd/test`` and ``POST /api/navidrome/test`` (try the
   connection with the settings as they are in the form, saved or not)
+* ``GET  /api/navidrome/ratings`` (admin: the running or last ratings job,
+  the saved last result and when the next scheduled run is due),
+  ``POST /api/navidrome/ratings/run`` (``preview``, and optional
+  ``skip_rated`` / ``skip_starred`` / ``grading`` over the saved options)
+  and ``POST /api/navidrome/ratings/cancel`` (Deezer-popularity star
+  ratings for the Navidrome library, see downtify/navidrome_ratings.py)
 * ``POST /api/proxy/test`` (admin: test outbound proxy reachability)
 * ``GET  /api/cookies`` (current YouTube cookie configuration)
 * ``POST /api/cookies`` (upload a Netscape cookies.txt as the raw request
@@ -435,6 +441,7 @@ from . import (
     lyrics,
     m3u,
     musicbrainz,
+    navidrome_ratings,
     providers,
     spotify,
     stream,
@@ -733,6 +740,8 @@ DEFAULT_SETTINGS: dict[str, Any] = {
     # Smallest acceptable cover (px, short side); 0 = off. Below it a
     # larger one is looked for (downloader._download_cover_meeting).
     'cover_min_resolution': 0,
+    # Write each download's ISRC, the recording's own code (downtify.isrc).
+    'write_isrc': True,
     'download_cover_art': True,
     'overwrite_existing_files': True,
     'organize_by_artist': True,
@@ -799,6 +808,9 @@ DEFAULT_SETTINGS: dict[str, Any] = {
         'client_name': 'Downtify',
         'api_version': '1.16.1',
     },
+    # Deezer-popularity star ratings for the Navidrome library (see
+    # downtify.navidrome_ratings).
+    'navidrome_ratings': dict(navidrome_ratings.DEFAULTS),
     # Folders of already-tagged audio to include in the library (in
     # place). Synced from Settings → Library; see
     # ``downtify.external_library``.
@@ -824,6 +836,7 @@ _NESTED_SETTINGS = (
     'deemix',
     'slskd',
     'navidrome',
+    'navidrome_ratings',
     'library_upgrade',
     'external_library',
 )
@@ -1366,6 +1379,7 @@ def spawn_task(coro: Any, *, name: Optional[str] = None) -> asyncio.Task[Any]:
         'monitor-manual-check',
         'monitor-wanted',
         'queue-restore',
+        'navidrome-ratings',
     )):
         lease = contextlib.ExitStack()
         try:
@@ -8990,6 +9004,10 @@ async def update_settings_endpoint(
                 }
             elif key == 'navidrome':
                 state.settings[key] = navidrome_cfg
+            elif key == 'navidrome_ratings':
+                state.settings[key] = navidrome_ratings.effective_settings(
+                    raw_value
+                )
             elif key == 'deemix':
                 state.settings[key] = deemix_cfg
             elif key == 'external_library':
@@ -9058,6 +9076,10 @@ async def update_settings_endpoint(
                 state.downloader.cover_min_resolution = state.settings[
                     'cover_min_resolution'
                 ]
+            if 'write_isrc' in payload:
+                state.downloader.write_isrc = bool(
+                    state.settings['write_isrc']
+                )
             if 'overwrite_existing_files' in payload:
                 state.downloader.overwrite_existing_files = bool(
                     payload['overwrite_existing_files']
@@ -10654,6 +10676,75 @@ async def update_monitor_playlist(
     if (retargeted is not None or filters_changed) and updated.enabled:
         _start_initial_check(updated, db)
     return updated.to_dict()
+
+
+#: Most watches one bulk edit may name.
+MONITOR_BULK_LIMIT = 5000
+
+
+@router.patch('/api/monitor/playlists')
+async def update_monitor_playlists(request: Request) -> dict[str, Any]:
+    """Give several watches the same ``interval_minutes`` and/or
+    ``enabled`` at once (the Monitor page's selection). Watches that
+    don't exist or belong to another account are left out and listed
+    under ``missing``."""
+
+    db = _require_monitor_db()
+    payload = await _json_object(request)
+
+    raw_ids = payload.get('ids')
+    if not isinstance(raw_ids, list) or not raw_ids:
+        raise HTTPException(
+            status_code=400, detail='ids is a non-empty list of watch ids'
+        )
+    if len(raw_ids) > MONITOR_BULK_LIMIT:
+        raise HTTPException(
+            status_code=400,
+            detail=f'At most {MONITOR_BULK_LIMIT} watches at once',
+        )
+    try:
+        ids = list(dict.fromkeys(int(i) for i in raw_ids))
+    except (TypeError, ValueError):
+        raise HTTPException(
+            status_code=400, detail='ids is a non-empty list of watch ids'
+        )
+
+    kwargs: dict[str, Any] = {}
+    if 'interval_minutes' in payload:
+        try:
+            interval = int(payload['interval_minutes'])
+        except (TypeError, ValueError):
+            interval = 0
+        if interval < 1:
+            raise HTTPException(
+                status_code=400,
+                detail='interval_minutes is a positive number of minutes',
+            )
+        kwargs['interval_minutes'] = interval
+    if 'enabled' in payload:
+        kwargs['enabled'] = bool(payload['enabled'])
+    if not kwargs:
+        raise HTTPException(
+            status_code=400,
+            detail='Nothing to change: send interval_minutes or enabled',
+        )
+
+    def _apply() -> tuple[list[dict[str, Any]], list[int]]:
+        updated: list[dict[str, Any]] = []
+        missing: list[int] = []
+        for watch_id in ids:
+            if _monitor_watch_for_request(watch_id, request) is None:
+                missing.append(watch_id)
+                continue
+            watch = db.update_playlist(watch_id, **kwargs)
+            if watch is None:
+                missing.append(watch_id)
+            else:
+                updated.append(watch.to_dict())
+        return updated, missing
+
+    updated, missing = await asyncio.to_thread(_apply)
+    return {'updated': updated, 'missing': missing}
 
 
 @router.delete('/api/monitor/playlists/{playlist_id}')

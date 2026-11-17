@@ -6,8 +6,11 @@ import asyncio
 import json
 import shutil
 import subprocess
+from contextlib import contextmanager
 from pathlib import Path
-from typing import Any
+from types import SimpleNamespace
+from typing import Any, Iterator
+from xml.etree import ElementTree
 
 import pytest
 from fastapi import HTTPException
@@ -15,7 +18,7 @@ from mutagen.mp3 import MP3
 from mutagen.mp4 import MP4
 from starlette.requests import Request
 
-from downtify import api, monitor
+from downtify import api, monitor, podcasts
 from downtify.auth import Principal
 from downtify.downloader import Downloader
 from downtify.library_catalog import (
@@ -188,6 +191,215 @@ def test_parse_feed_publish_dates_are_iso_utc_and_in_order():
 def test_parse_feed_survives_garbage_bytes_without_raising():
     feed = parse_feed_bytes(b'not xml at all <<<', 'https://example.com/x')
     assert feed.episodes == []
+
+
+def _feed_with_enclosures(
+    feed_format: str, enclosures: list[tuple[str, str | None]]
+) -> bytes:
+    if feed_format == 'atom':
+        root = ElementTree.Element('feed', xmlns='http://www.w3.org/2005/Atom')
+        channel = root
+        entry_tag = 'entry'
+    else:
+        root = ElementTree.Element('rss', version='2.0')
+        channel = ElementTree.SubElement(root, 'channel')
+        entry_tag = 'item'
+    ElementTree.SubElement(channel, 'title').text = 'Attachment Show'
+    entry = ElementTree.SubElement(channel, entry_tag)
+    ElementTree.SubElement(entry, 'title').text = 'An Episode'
+    for url, mime in enclosures:
+        if feed_format == 'atom':
+            enclosure = ElementTree.SubElement(
+                entry, 'link', rel='enclosure', href=url
+            )
+        else:
+            enclosure = ElementTree.SubElement(entry, 'enclosure', url=url)
+        if mime is not None:
+            enclosure.set('type', mime)
+    return ElementTree.tostring(root, encoding='utf-8')
+
+
+@pytest.mark.parametrize('feed_format', ['rss', 'atom'])
+@pytest.mark.parametrize(
+    'attachment_type',
+    ['application/pdf', 'image/jpeg', 'text/html', 'video/mp4'],
+)
+def test_parse_feed_selects_audio_after_non_audio_attachments(
+    feed_format: str, attachment_type: str
+) -> None:
+    content = _feed_with_enclosures(
+        feed_format,
+        [
+            ('https://example.com/attachment', attachment_type),
+            ('https://example.com/episode.mp3', 'audio/mpeg'),
+        ],
+    )
+    feed = parse_feed_bytes(content, 'https://example.com/feed')
+    assert len(feed.episodes) == 1
+    episode = feed.episodes[0]
+    assert episode.enclosure_url == 'https://example.com/episode.mp3'
+    assert episode.enclosure_type == 'audio/mpeg'
+    assert episode.guid == episode.enclosure_url
+
+
+@pytest.mark.parametrize('feed_format', ['rss', 'atom'])
+def test_parse_feed_drops_entries_with_only_non_audio_attachments(
+    feed_format: str,
+) -> None:
+    content = _feed_with_enclosures(
+        feed_format,
+        [
+            ('https://example.com/notes.pdf', 'application/pdf'),
+            ('https://example.com/image.jpg', 'image/jpeg'),
+            ('https://example.com/page', 'text/html'),
+            ('https://example.com/video.mp4', 'video/mp4'),
+        ],
+    )
+    assert parse_feed_bytes(content, 'https://example.com/feed').episodes == []
+
+
+def test_parse_feed_drops_atom_enclosures_with_the_default_html_type() -> None:
+    content = _feed_with_enclosures(
+        'atom', [('https://example.com/episode.mp3', None)]
+    )
+    assert parse_feed_bytes(content, 'https://example.com/feed').episodes == []
+
+
+@pytest.mark.parametrize(
+    ('feed_format', 'fallback_type'),
+    [
+        ('rss', None),
+        ('rss', 'application/octet-stream'),
+        ('atom', 'application/octet-stream'),
+    ],
+)
+def test_parse_feed_prefers_explicit_audio_over_generic_enclosures(
+    feed_format: str, fallback_type: str | None
+) -> None:
+    content = _feed_with_enclosures(
+        feed_format,
+        [
+            ('https://example.com/unknown', fallback_type),
+            ('https://example.com/episode.mp3', 'audio/mpeg'),
+        ],
+    )
+    episode = parse_feed_bytes(content, 'https://example.com/feed').episodes[0]
+    assert episode.enclosure_url == 'https://example.com/episode.mp3'
+
+
+@pytest.mark.parametrize(
+    ('feed_format', 'fallback_type'),
+    [
+        ('rss', None),
+        ('rss', 'application/octet-stream'),
+        ('atom', 'application/octet-stream'),
+    ],
+)
+def test_parse_feed_keeps_generic_enclosures_as_a_compatibility_fallback(
+    feed_format: str, fallback_type: str | None
+) -> None:
+    content = _feed_with_enclosures(
+        feed_format,
+        [
+            ('https://example.com/notes.pdf', 'application/pdf'),
+            ('https://example.com/episode.mp3', fallback_type),
+            ('https://example.com/other.mp3', fallback_type),
+        ],
+    )
+    feed = parse_feed_bytes(content, 'https://example.com/feed')
+    assert len(feed.episodes) == 1
+    episode = feed.episodes[0]
+    assert episode.enclosure_url == 'https://example.com/episode.mp3'
+    assert episode_filename(episode).endswith('.mp3')
+
+
+@pytest.mark.parametrize('feed_format', ['rss', 'atom'])
+def test_parse_feed_normalizes_audio_mime_parameters(
+    feed_format: str,
+) -> None:
+    content = _feed_with_enclosures(
+        feed_format,
+        [('https://example.com/download?id=1', ' Audio/MP4 ; codecs="mp4a" ')],
+    )
+    episode = parse_feed_bytes(content, 'https://example.com/feed').episodes[0]
+    assert episode.enclosure_type == 'audio/mp4'
+    assert episode_filename(episode).endswith('.m4a')
+
+
+@pytest.mark.parametrize('feed_format', ['rss', 'atom'])
+def test_parse_feed_keeps_the_first_usable_audio_enclosure(
+    feed_format: str,
+) -> None:
+    content = _feed_with_enclosures(
+        feed_format,
+        [
+            ('', 'audio/mpeg'),
+            ('https://example.com/first.mp3', 'audio/mpeg'),
+            ('https://example.com/second.m4a', 'audio/mp4'),
+        ],
+    )
+    feed = parse_feed_bytes(content, 'https://example.com/feed')
+    assert len(feed.episodes) == 1
+    assert feed.episodes[0].enclosure_url == 'https://example.com/first.mp3'
+
+
+def test_parse_feed_ignores_generic_enclosures_without_a_url() -> None:
+    content = _feed_with_enclosures('rss', [('', 'application/octet-stream')])
+    assert parse_feed_bytes(content, 'https://example.com/feed').episodes == []
+
+
+def test_sync_show_downloads_selected_audio_not_the_attachment(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    content = _feed_with_enclosures(
+        'rss',
+        [
+            ('https://example.com/notes.pdf', 'application/pdf'),
+            ('https://example.com/episode.mp3', 'audio/mpeg'),
+        ],
+    )
+    feed = parse_feed_bytes(content, 'https://example.com/feed')
+    monkeypatch.setattr(podcasts, 'fetch_feed', lambda _url: feed)
+    monkeypatch.setattr(podcasts, 'best_cover_bytes', lambda _url: None)
+    tagged_paths: list[Path] = []
+    monkeypatch.setattr(
+        podcasts,
+        'embed_podcast_tags',
+        lambda path, **_kwargs: tagged_paths.append(path),
+    )
+    audio_bytes = b'audio-' * 25000
+    requests: list[tuple[str, str]] = []
+
+    def _chunks(size: int) -> Iterator[bytes]:
+        assert size == 1 << 16
+        for offset in range(0, len(audio_bytes), size):
+            yield audio_bytes[offset : offset + size]
+
+    @contextmanager
+    def _stream(
+        method: str, url: str, **_kwargs: Any
+    ) -> Iterator[SimpleNamespace]:
+        requests.append((method, url))
+        yield SimpleNamespace(
+            headers={'content-length': str(len(audio_bytes))},
+            raise_for_status=lambda: None,
+            iter_bytes=_chunks,
+        )
+
+    monkeypatch.setattr(podcasts.httpx, 'stream', _stream)
+    store = _store(tmp_path)
+    show = store.add_show(feed.feed_url, feed.name)
+    downloads = tmp_path / 'downloads'
+    assert podcasts.sync_show(store, show, downloads) == 1
+    assert requests == [('GET', 'https://example.com/episode.mp3')]
+    episode = store.list_episodes(show['id'])[0]
+    target = downloads / episode['filename']
+    assert target.suffix == '.mp3'
+    assert target.read_bytes() == audio_bytes
+    assert tagged_paths == [target]
+    assert not list(downloads.rglob('*.part'))
+    assert podcasts.sync_show(store, show, downloads) == 0
+    assert len(requests) == 1
 
 
 # ── match_episode ────────────────────────────────────────────────────

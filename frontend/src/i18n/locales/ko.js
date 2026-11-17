@@ -1149,6 +1149,25 @@ export default {
       '이퀄라이저를 시작할 수 없습니다. 이퀄라이저 없이 재생을 계속합니다.',
   },
   monitor: {
+    select: '선택',
+    selectDone: '완료',
+    selectAllShown: '표시된 항목 모두 선택',
+    selectWatch: '{name} 선택',
+    selectedCount: { one: '{count}개 선택됨', other: '{count}개 선택됨' },
+    selectRangeHint: 'Shift+클릭으로 범위 선택',
+    bulkInterval: '확인 주기 변경…',
+    bulkUpdated: {
+      one: '감시 {count}개 변경됨',
+      other: '감시 {count}개 변경됨',
+    },
+    bulkChecking: {
+      one: '감시 {count}개 확인 중…',
+      other: '감시 {count}개 확인 중…',
+    },
+    bulkStopped: {
+      one: '감시 {count}개 중지됨',
+      other: '감시 {count}개 중지됨',
+    },
     tableColumns: '열',
     resetTableColumns: '열 초기화',
     releaseTypes: '다운로드할 종류',
@@ -1716,6 +1735,10 @@ export default {
     syncDelay: '동기화 조회 간격',
     syncDelayHint:
       '가져온 트랙 묶음(동시 다운로드 수 단위)마다 가사, 커버, 장르를 조회하기 전 잠시 대기합니다. 대규모 폴더 처리 시 API 요청 제한(Rate Limit)을 방지합니다.',
+    idsGroup: '곡 ID',
+    isrc: 'ISRC 코드 쓰기',
+    isrcHint:
+      '새로 받은 곡마다 녹음 하나를 가리키는 ISRC 코드를 저장해, 같은 곡이 다른 이름이어도 알아봅니다. Deezer에서 찾으며 확실하지 않으면 쓰지 않습니다.',
     artGroup: '커버 아트',
     coverArt: '커버 아트 포함',
     coverArtHint:
@@ -1751,6 +1774,48 @@ export default {
       '커뮤니티 기반 데이터베이스 — 일반 가사 및 싱크 가사 제공',
     lyricsNetease: 'NetEase Cloud Music (왕이윈)',
     lyricsNeteaseHint: '방대한 데이터베이스 보유, 대부분 싱크 가사 지원',
+    ratingsGroup: 'Deezer 기반 별점',
+    ratingsHint:
+      'Deezer에서의 인기도에 따라 Navidrome의 곡에 0~5개의 별을 매깁니다. dztnr과 같은 방식입니다. 별점은 위의 Navidrome 계정에 저장됩니다.',
+    ratingsRepeat: '반복',
+    ratingsRepeatOff: '끔',
+    ratingsRepeatDaily: '매일',
+    ratingsRepeatWeekly: '매주',
+    ratingsRepeatMonthly: '매월',
+    ratingsSkipRated: '별점이 있는 곡 건너뛰기',
+    ratingsSkipRatedHint:
+      '직접 준 별점은 그대로 유지됩니다. 이후 실행에서는 이미 별점이 있는 곡을 모두 건너뜁니다.',
+    ratingsSkipStarred: '즐겨찾기 건너뛰기',
+    ratingsGrading: '평가 기준',
+    ratingsGradingAbsolute: '전 세계 인기도',
+    ratingsGradingArtist: '아티스트의 대표곡 기준',
+    ratingsGradingAlbum: '앨범의 대표곡 기준',
+    ratingsGradingHint:
+      '아티스트의 대표곡과 비교하면 마이너 아티스트의 히트곡도 별 5개를 받을 수 있습니다.',
+    ratingsRun: '지금 실행',
+    ratingsPreview: '미리보기',
+    ratingsStop: '중지',
+    ratingsReading: 'Navidrome 라이브러리를 읽는 중…',
+    ratingsProgress: '{total}곡 중 {done}곡',
+    ratingsLast:
+      '마지막 실행 {when}: {rated}곡 평가, {skipped}곡 건너뜀, Deezer에서 {notFound}곡 찾지 못함',
+    ratingsLastPreview:
+      '미리보기 {when}: {rated}곡 평가 예정, {skipped}곡 건너뜀, Deezer에서 {notFound}곡 찾지 못함',
+    ratingsStopped: '중지됨',
+    ratingsNext: '다음 실행 {when}',
+    ratingsNextSoon: '한 시간 안에 다음 실행',
+    ratingsNever: '아직 실행하지 않음',
+    ratingsFailedDeezer:
+      'Deezer에 연결할 수 없습니다. 이미 준 별점은 그대로 유지됩니다.',
+    ratingsFailedNavidrome: 'Navidrome 오류: {message}',
+    ratingsFailed: '별점 실행에 실패했습니다: {message}',
+    ratingsNotConfigured: '먼저 Navidrome 로그인 정보를 저장하세요.',
+    ratingsBusy: '별점 실행이 이미 진행 중입니다.',
+    ratingsColSong: '곡',
+    ratingsColRank: 'Deezer 인기도',
+    ratingsColStars: '별점',
+    ratingsUnmatched: 'Deezer에서 찾지 못함 ({count})',
+    ratingsFirstRows: '처음 {count}곡을 표시합니다.',
     navidromeTitle: 'Navidrome',
     navidromeHint:
       '다운로드한 재생목록을 Navidrome에 미러링합니다. Navidrome의 음악 폴더에 Downtify 다운로드 경로가 포함되어 있어야 합니다.',
@@ -2306,6 +2371,10 @@ export default {
     playbackSpeed: '재생 속도',
   },
   confirm: {
+    stopWatchingManyTitle: {
+      one: '감시 {count}개를 중지할까요?',
+      other: '감시 {count}개를 중지할까요?',
+    },
     deleteTrackTitle: '“{title}” 트랙을 삭제하시겠습니까?',
     deleteTracksTitle: '트랙 {count}개를 삭제하시겠습니까?',
     deleteTracksBody:
