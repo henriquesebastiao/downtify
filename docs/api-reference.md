@@ -3159,6 +3159,8 @@ The web page shows `code` and a QR code for `downtify://pair?url=<this page's or
 
 User (the one who started it, or an admin). `{ "status": "pending", "expires_in": 241 }`, `{ "status": "paired", "device": { … } }` or `{ "status": "expired" }`.
 
+Pending pairings expire at the five-minute deadline. A completed pairing's result stays available until one minute after that original deadline; its later `expired` status does not revoke the device token.
+
 ---
 
 ### `DELETE /api/auth/pairing/{pairing_id}`
@@ -3184,7 +3186,7 @@ Public, rate-limited per address (10 failures per 5 minutes). An app trades a pa
 }
 ```
 
-The device belongs to the user who showed the code. A code works once and for five minutes; `401` otherwise. The token is shown only here — the server keeps a hash.
+The device belongs to the user who showed the code. A code works once and only before its five-minute deadline; at or after the deadline, `401`. The expiry check uses the time the server claims the code, including any wait for the pairing lock. The token is shown only here — the server keeps a hash.
 
 ---
 
@@ -3201,6 +3203,8 @@ Public, rate-limited per address together with [`POST /api/auth/login`](#post-ap
 ### `POST /api/auth/ws-ticket`
 
 Client. A single-use ticket, valid for 60 seconds, for opening the [WebSocket](#websocket) as `/api/ws?client_id=…&ticket=…` without an `Authorization` header. **Response:** `{ "ticket": "…" }`.
+
+At or after the 60-second deadline the ticket is expired; an unauthenticated handshake with it closes with code `4401`. Request a new ticket before retrying. Pairing codes and WebSocket tickets receive their full lifetime when stored, without counting time spent waiting for their store's lock.
 
 ---
 
