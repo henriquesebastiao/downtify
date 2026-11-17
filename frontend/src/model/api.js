@@ -929,6 +929,19 @@ function scanLibraryUsage(refresh = false) {
   return API.get('/api/library/usage/scan', { params: { refresh } })
 }
 
+// ── Navidrome ratings from Deezer (admins) ────────────────────────────
+function navidromeRatingsStatus() {
+  return API.get('/api/navidrome/ratings')
+}
+
+function navidromeRatingsRun(body) {
+  return API.post('/api/navidrome/ratings/run', body)
+}
+
+function navidromeRatingsCancel() {
+  return API.post('/api/navidrome/ratings/cancel')
+}
+
 // ── Doctor (admins): find and repair what older versions left ────────
 function doctorStatus() {
   return API.get('/api/doctor')
@@ -1245,6 +1258,9 @@ export default {
   resumeLibraryUpgrade,
   cancelLibraryUpgrade,
   getLibraryUsage,
+  navidromeRatingsStatus,
+  navidromeRatingsRun,
+  navidromeRatingsCancel,
   doctorStatus,
   doctorScan,
   doctorCancel,

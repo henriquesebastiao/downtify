@@ -852,6 +852,7 @@ The `format` setting accepts `mp3`, `flac`, `m4a`, `ogg`, `opus` or `original`. 
 | `slskd` | object | slskd connection and matching options. Saving with `enabled: true` but no `base_url` or `api_key` returns `400`. |
 | `navidrome` | object | Navidrome connection. Saving with `enabled: true` but no `url`, `username` or `password` returns `400`. |
 | `sync_navidrome` | boolean | Create/update a Navidrome playlist after playlist downloads, Playlist Monitor sweeps and library changes. |
+| `navidrome_ratings` | object | [Ratings from Deezer](features/navidrome-ratings.md) options: `repeat` (`off`, `daily`, `weekly`, `monthly`; default `off`), `skip_rated` (default `true`), `skip_starred` (default `false`) and `grading` (`absolute`, `artist`, `album`; default `absolute`). The run itself is started through [`POST /api/navidrome/ratings/run`](#post-apinavidromeratingsrun). |
 | `allow_playlist_sharing` | boolean | Whether users may [share their playlists](features/users.md#sharing-playlists) (default `true`). While `false` every share is hidden from the people it was shared with and nobody can share or follow; the shares come back when it is turned on again. |
 | `cache_cover_art` | boolean | Keep extracted cover images under `/data/cover_cache` to speed up `/cover`. Covers fetched for [read-only extra folders](features/external-library.md) are always stored there, even when this is `false`. |
 | `library_upgrade` | object | Defaults a library upgrade scan starts from: `artwork_min_px` (clamped to `100–3000`), `artwork_source` (`highest`, `spotify`, `itunes`, `youtube-music`) and `recheck_days` (`0–3650`, `0` meaning always re-check). A scan request may override them. See [Upgrade library](features/library-upgrade.md#options). |
@@ -924,6 +925,66 @@ Try a Navidrome connection without saving anything. Same behaviour and answer sh
 | `scan` | `ok`, `not_admin`, `not_admin_separate`, `bad_admin` |
 
 The `scan` check reads whether the account used for library scans (the admin login when set, else the normal one) is an admin — Navidrome only lets admins start a scan — and never starts one. It is left out when the account can't be looked up, and when scanning after a download is turned off.
+
+---
+
+### `GET /api/navidrome/ratings`
+
+Admins only. The state of [Ratings from Deezer](features/navidrome-ratings.md): the running or most recent job, the last saved result, and when the next scheduled run is due.
+
+```json
+{
+  "job": { "id": "k3Jx9aQ", "state": "running", "…": "…" },
+  "last": { "id": "Wm2dTq0", "state": "done", "…": "…" },
+  "next_run_at": "2026-11-16T09:30:00+00:00"
+}
+```
+
+`job` is the job of this server session (`null` before the first run); `last` is the job that finished last, kept across restarts (`null` if none). `next_run_at` is `null` while `navidrome_ratings.repeat` is `off`, Navidrome isn't set up or [library-only mode](features/library-only.md) is on; a time in the past means a run is due at the next hourly check.
+
+A job has these fields:
+
+| Field | Description |
+|-------|-------------|
+| `id` | Job id. |
+| `state` | `running`, `done`, `stopped` or `failed`. |
+| `trigger` | `manual` or `schedule`. |
+| `preview` | `true` for a preview, which changes nothing in Navidrome. |
+| `started_at`, `finished_at` | ISO 8601 times; `finished_at` is `null` while running. |
+| `progress` | `{ "done", "total", "step" }`, where `step` is `library` (reading Navidrome) or `rating`. |
+| `result` | `null` until the run ends, then `{ "state", "preview", "total", "rated", "skipped", "not_found", "changes", "unmatched" }`. `changes` lists `{ "artist", "album", "title", "rank", "stars", "was" }` for the songs rated (or, in a preview, that would be); `unmatched` lists the songs Deezer didn't have. Each list keeps up to 500 rows. |
+| `error` | `null`, or `{ "code", "message" }` when `state` is `failed`: `deezer_unreachable`, `navidrome_failed` (the message is short and never holds the Navidrome address or login: the server's own error text, `HTTP <status>`, or a note that Navidrome could not be reached or sent an answer Downtify could not read) or `ratings_failed`. |
+
+---
+
+### `POST /api/navidrome/ratings/run`
+
+Admins only. Start a ratings run or a preview. The options saved in `navidrome_ratings` apply; any value in the body overrides them for this run.
+
+```json
+{ "preview": true, "skip_rated": true, "skip_starred": false, "grading": "artist" }
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `preview` | boolean | `true` looks everything up without changing any stars. Default `false`. |
+| `skip_rated` | boolean | Optional. Leave songs that already have stars alone. |
+| `skip_starred` | boolean | Optional. Leave favourite songs alone. |
+| `grading` | string | Optional. `absolute` (worldwide popularity), `artist` or `album` (against that artist's or album's top song). |
+
+Returns the job (see above) with `state: "running"`. Only one job runs at a time.
+
+| Status | `detail.code` | When |
+|--------|---------------|------|
+| `400` | `navidrome_not_configured` | Navidrome is off or its login isn't saved. |
+| `409` | `ratings_busy` | A ratings run is already going. |
+| `409` | | [Library-only mode](features/library-only.md) is on. |
+
+---
+
+### `POST /api/navidrome/ratings/cancel`
+
+Admins only. Ask the running job to stop. Stars already given are kept. Returns the job, which turns `stopped` shortly after; with no job it returns `{}`.
 
 ---
 

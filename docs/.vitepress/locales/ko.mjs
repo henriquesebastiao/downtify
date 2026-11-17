@@ -87,6 +87,7 @@ export default {
       'features/server.md': '서버 설정',
       'features/outbound-proxy.md': '아웃바운드 프록시',
       'features/slskd-navidrome.md': 'slskd와 Navidrome',
+      'features/navidrome-ratings.md': 'Deezer 별점',
       'features/deemix.md': 'Deemix',
       'features/soundcloud.md': 'SoundCloud',
       'features/library-catalog.md': '라이브러리 카탈로그',

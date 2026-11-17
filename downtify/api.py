@@ -250,6 +250,12 @@ downloads are shared, and files are never stored twice.
   fields, ``?path=``)
 * ``POST /api/slskd/test`` and ``POST /api/navidrome/test`` (try the
   connection with the settings as they are in the form, saved or not)
+* ``GET  /api/navidrome/ratings`` (admin: the running or last ratings job,
+  the saved last result and when the next scheduled run is due),
+  ``POST /api/navidrome/ratings/run`` (``preview``, and optional
+  ``skip_rated`` / ``skip_starred`` / ``grading`` over the saved options)
+  and ``POST /api/navidrome/ratings/cancel`` (Deezer-popularity star
+  ratings for the Navidrome library, see downtify/navidrome_ratings.py)
 * ``POST /api/proxy/test`` (admin: test outbound proxy reachability)
 * ``GET  /api/cookies`` (current YouTube cookie configuration)
 * ``POST /api/cookies`` (upload a Netscape cookies.txt as the raw request
@@ -424,6 +430,7 @@ from . import (
     lyrics,
     m3u,
     musicbrainz,
+    navidrome_ratings,
     providers,
     spotify,
     stream,
@@ -790,6 +797,9 @@ DEFAULT_SETTINGS: dict[str, Any] = {
         'client_name': 'Downtify',
         'api_version': '1.16.1',
     },
+    # Deezer-popularity star ratings for the Navidrome library (see
+    # downtify.navidrome_ratings).
+    'navidrome_ratings': dict(navidrome_ratings.DEFAULTS),
     # Folders of already-tagged audio to include in the library (in
     # place). Synced from Settings → Library; see
     # ``downtify.external_library``.
@@ -815,6 +825,7 @@ _NESTED_SETTINGS = (
     'deemix',
     'slskd',
     'navidrome',
+    'navidrome_ratings',
     'library_upgrade',
     'external_library',
 )
@@ -1356,6 +1367,7 @@ def spawn_task(coro: Any, *, name: Optional[str] = None) -> asyncio.Task[Any]:
         'monitor-initial-check',
         'monitor-manual-check',
         'queue-restore',
+        'navidrome-ratings',
     )):
         lease = contextlib.ExitStack()
         try:
@@ -8980,6 +8992,10 @@ async def update_settings_endpoint(
                 }
             elif key == 'navidrome':
                 state.settings[key] = navidrome_cfg
+            elif key == 'navidrome_ratings':
+                state.settings[key] = navidrome_ratings.effective_settings(
+                    raw_value
+                )
             elif key == 'deemix':
                 state.settings[key] = deemix_cfg
             elif key == 'external_library':
