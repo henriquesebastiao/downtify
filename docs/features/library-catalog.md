@@ -96,6 +96,8 @@ Every account sees the same library: what an admin [hides from users](users.md#h
 
 **Download as ZIP** saves the selected tracks to the device you're browsing from as a single ZIP, keeping their folder layout — handy when Downtify runs on a home server and you want a batch of tracks locally. Combine it with **Select all** to take everything the current filter shows. The archive is built while it downloads, so nothing is written to the server's disk, and it's capped at 2000 tracks per download.
 
+Individual audio files over 2 GiB are supported: Downtify selects ZIP64 headers before streaming large files. Use a ZIP64-compatible extractor for large downloads. ZIP64 is used only when needed, keeping ordinary small downloads compatible with standard ZIP extractors. Audio is stored without compression.
+
 ## API
 
 | Method | Path | Description |

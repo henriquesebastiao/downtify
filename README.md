@@ -91,6 +91,8 @@ Existing Library `.m3u` playlists can use UTF-8 or the Windows-1252 legacy fallb
 
 Playlist Monitor's hourly file check includes configured existing music folders, so tracks still available there keep their download records instead of being queued again. See [Playlist Monitor](docs/features/playlist-monitor.md#how-it-works).
 
+Library ZIP downloads support individual audio files over 2 GiB with ZIP64, without buffering the archive in memory or writing a temporary ZIP. See [Library catalog](docs/features/library-catalog.md#library-page).
+
 ## Quick start
 
 You only need [Docker](https://docs.docker.com/get-docker/).
