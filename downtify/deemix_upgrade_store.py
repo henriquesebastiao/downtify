@@ -2,15 +2,28 @@
 
 from __future__ import annotations
 
+import contextlib
 import json
-import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
 
-from .sqlite_utils import connect_sqlite
+from .db.config import Dialect
+from .db.core import Connection, Database, as_database
+from .db.dialect import table_exists
 
 _LINKED = ('linked', 'retained', 'removed', 'complete')
+
+# Authoritative tables that carry a library file path.
+_PATH_REFERENCES = (
+    ('library_tracks', 'filename'),
+    ('playlist_tracks', 'filename'),
+    ('liked_tracks', 'stored_path'),
+    ('track_owners', 'stored_path'),
+    ('hidden_library_items', 'item_path'),
+)
+
+_RELINK_TEMP_TABLES = ('audio_relink', 'audio_owners', 'audio_hidden')
 
 
 def _now() -> str:
@@ -18,28 +31,38 @@ def _now() -> str:
 
 
 def replacement_for_id(
-    conn: sqlite3.Connection, track_id: str
+    conn: Connection, track_id: str
 ) -> Optional[dict[str, Any]]:
     """Compatibility for a previously issued mobile id, without a feed duplicate."""
-    try:
-        row = conn.execute(
-            """SELECT r.new_metadata FROM library_audio_sync_aliases a
-               JOIN library_audio_replacements r ON r.old_file = a.old_file
-               WHERE a.track_id = ? AND r.state IN ('linked','retained','removed','complete')""",
-            (track_id,),
-        ).fetchone()
-    except sqlite3.OperationalError as exc:
-        if 'no such table' in str(exc):
-            return None
-        raise
+    if not (
+        table_exists(conn, 'library_audio_sync_aliases')
+        and table_exists(conn, 'library_audio_replacements')
+    ):
+        return None
+    row = conn.execute(
+        """SELECT r.new_metadata FROM library_audio_sync_aliases a
+           JOIN library_audio_replacements r ON r.old_file = a.old_file
+           WHERE a.track_id = ? AND r.state IN ('linked','retained','removed','complete')""",
+        (track_id,),
+    ).fetchone()
     return json.loads(row[0]) if row else None
 
 
 class AudioReplacementStore:
     """Operation state only; never an audio backup or an age-based cleanup list."""
 
-    def __init__(self, db_path: Path) -> None:
-        self.path = str(db_path)
+    def __init__(self, path_or_db: str | Path | Database) -> None:
+        self.db = as_database(path_or_db, 'library')
+        if isinstance(path_or_db, Database):
+            self.path = str(self.db.path) if self.db.path else None
+        else:
+            self.path = str(path_or_db)
+        self._init_db()
+
+    def _init_db(self) -> None:
+        # PostgreSQL gets its schema from the migrations.
+        if self.db.dialect is not Dialect.SQLITE:
+            return
         with self.connect() as db:
             db.execute("""CREATE TABLE IF NOT EXISTS library_audio_replacements (
                 old_file TEXT PRIMARY KEY,
@@ -65,15 +88,21 @@ class AudioReplacementStore:
                 old_file TEXT NOT NULL
             )""")
 
-    def connect(self) -> sqlite3.Connection:
-        return connect_sqlite(self.path, row_factory=True)
+    def connect(self) -> contextlib.AbstractContextManager[Connection]:
+        return self.db.connect()
 
     @staticmethod
-    def _row(row: sqlite3.Row) -> dict[str, Any]:
-        out = dict(row)
+    def _row(row: Any) -> dict[str, Any]:
+        out = dict(zip(row.keys(), row))
         out['new_metadata'] = json.loads(out['new_metadata'])
         out['catalog'] = json.loads(out['catalog'])
         return out
+
+    def _binary_order(self) -> str:
+        """ORDER BY clause suffix matching SQLite's byte-wise text order."""
+        if self.db.dialect is Dialect.POSTGRES:
+            return ' COLLATE "C"'
+        return ''
 
     def get(self, old_file: str) -> Optional[dict[str, Any]]:
         with self.connect() as db:
@@ -85,17 +114,25 @@ class AudioReplacementStore:
 
     def save_prepared(self, receipt: dict[str, Any]) -> None:
         """Insert once; a changed original must never silently replace its receipt."""
-        values = {**receipt, 'updated_at': _now()}
-        values['new_metadata'] = json.dumps(values['new_metadata'])
-        values['catalog'] = json.dumps(values['catalog'])
         with self.connect() as db:
             db.execute(
                 """INSERT INTO library_audio_replacements
                 (old_file, run_id, new_file, old_key, new_key, old_sha, new_sha,
                  new_metadata, catalog, delete_original, updated_at)
-                VALUES (:old_file,:run_id,:new_file,:old_key,:new_key,:old_sha,:new_sha,
-                        :new_metadata,:catalog,:delete_original,:updated_at)""",
-                values,
+                VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
+                (
+                    receipt['old_file'],
+                    int(receipt['run_id']),
+                    receipt['new_file'],
+                    receipt['old_key'],
+                    receipt['new_key'],
+                    receipt['old_sha'],
+                    receipt['new_sha'],
+                    json.dumps(receipt['new_metadata']),
+                    json.dumps(receipt['catalog']),
+                    int(receipt['delete_original']),
+                    _now(),
+                ),
             )
 
     def reuse(self, old_file: str, run_id: int, delete_original: bool) -> None:
@@ -109,7 +146,8 @@ class AudioReplacementStore:
     def for_run(self, run_id: int) -> list[dict[str, Any]]:
         with self.connect() as db:
             rows = db.execute(
-                'SELECT * FROM library_audio_replacements WHERE run_id = ? ORDER BY old_file',
+                'SELECT * FROM library_audio_replacements WHERE run_id = ? '
+                f'ORDER BY old_file{self._binary_order()}',
                 (run_id,),
             ).fetchall()
         return [self._row(row) for row in rows]
@@ -122,12 +160,15 @@ class AudioReplacementStore:
         *,
         deleted: bool = False,
     ) -> None:
+        flag = int(deleted)
         with self.connect() as db:
             db.execute(
                 """UPDATE library_audio_replacements
-                SET state = ?, detail = ?, source_deleted = MAX(source_deleted, ?),
+                SET state = ?, detail = ?,
+                    source_deleted = CASE WHEN source_deleted >= ?
+                        THEN source_deleted ELSE ? END,
                     updated_at = ? WHERE old_file = ?""",
-                (state, detail[:200], int(deleted), _now(), old_file),
+                (state, detail[:200], flag, flag, _now(), old_file),
             )
 
     def path_alias(self, stored: str) -> Optional[str]:
@@ -165,20 +206,8 @@ class AudioReplacementStore:
     def assert_relinked(self, receipts: list[dict[str, Any]]) -> None:
         """Fail closed if authoritative tables still reference an old path."""
         with self.connect() as db:
-            tables = {
-                row[0]
-                for row in db.execute(
-                    "SELECT name FROM sqlite_master WHERE type='table'"
-                )
-            }
-            for table, column in (
-                ('library_tracks', 'filename'),
-                ('playlist_tracks', 'filename'),
-                ('liked_tracks', 'stored_path'),
-                ('track_owners', 'stored_path'),
-                ('hidden_library_items', 'item_path'),
-            ):
-                if table not in tables:
+            for table, column in _PATH_REFERENCES:
+                if not table_exists(db, table):
                     continue
                 paths = [r['old_file'] for r in receipts]
                 for start in range(0, len(paths), 400):
@@ -201,13 +230,20 @@ class AudioReplacementStore:
         """
         if not receipts:
             return
-        with self.connect() as db:
-            db.execute('BEGIN IMMEDIATE')
-            db.execute("""CREATE TEMP TABLE audio_relink (
+        postgres = self.db.dialect is Dialect.POSTGRES
+        temp_schema = 'pg_temp' if postgres else 'temp'
+        # Temp tables vanish at COMMIT on PostgreSQL; SQLite drops them
+        # with the connection. Dropping any leftovers first keeps a second
+        # relink on the same open connection from failing.
+        on_commit = ' ON COMMIT DROP' if postgres else ''
+        with self.db.transaction(lock=True) as db:
+            for name in _RELINK_TEMP_TABLES:
+                db.execute(f'DROP TABLE IF EXISTS {temp_schema}.{name}')
+            db.execute(f"""CREATE TEMP TABLE audio_relink (
                 old_file TEXT PRIMARY KEY,new_file TEXT NOT NULL,
                 old_key TEXT NOT NULL,new_key TEXT NOT NULL,
-                title TEXT,artist TEXT,duration REAL
-            )""")
+                title TEXT,artist TEXT,duration DOUBLE PRECISION
+            ){on_commit}""")
             db.executemany(
                 'INSERT INTO audio_relink VALUES (?,?,?,?,?,?,?)',
                 [
@@ -227,10 +263,17 @@ class AudioReplacementStore:
                 'CREATE INDEX audio_relink_old_key ON audio_relink(old_key)'
             )
             tables = {
-                row[0]
-                for row in db.execute(
-                    "SELECT name FROM sqlite_master WHERE type='table'"
+                name
+                for name in (
+                    'library_tracks',
+                    'playlist_tracks',
+                    'navidrome_tracks',
+                    'liked_tracks',
+                    'track_owners',
+                    'hidden_library_items',
+                    'sync_tracks',
                 )
+                if table_exists(db, name)
             }
             for table in ('library_tracks', 'playlist_tracks'):
                 if table in tables:
@@ -249,16 +292,17 @@ class AudioReplacementStore:
                     (stored_path,user_id,content_key,title,artist,duration,liked_at)
                     SELECT m.new_file,l.user_id,m.new_key,m.title,m.artist,m.duration,l.liked_at
                     FROM liked_tracks l JOIN audio_relink m ON l.stored_path=m.old_file
-                    WHERE 1
+                    WHERE true
                     ON CONFLICT(user_id,stored_path) DO UPDATE SET
                       content_key=excluded.content_key,title=excluded.title,
                       artist=excluded.artist,duration=excluded.duration,
-                      liked_at=MIN(liked_tracks.liked_at,excluded.liked_at)""")
+                      liked_at=CASE WHEN liked_tracks.liked_at <= excluded.liked_at
+                        THEN liked_tracks.liked_at ELSE excluded.liked_at END""")
                 db.execute(
                     'DELETE FROM liked_tracks WHERE stored_path IN (SELECT old_file FROM audio_relink)'
                 )
             if 'track_owners' in tables:
-                db.execute("""CREATE TEMP TABLE audio_owners AS
+                db.execute(f"""CREATE TEMP TABLE audio_owners{on_commit} AS
                     SELECT m.new_key,o.user_id,o.added_at,m.new_file
                     FROM track_owners o JOIN audio_relink m
                     ON o.stored_path=m.old_file OR (o.stored_path='' AND o.content_key=m.old_key)""")
@@ -267,14 +311,15 @@ class AudioReplacementStore:
                 )
                 db.execute("""DELETE FROM track_owners WHERE stored_path='' AND content_key IN
                     (SELECT old_key FROM audio_relink)""")
-                db.execute(
-                    'INSERT OR IGNORE INTO track_owners(content_key,user_id,added_at,stored_path) SELECT * FROM audio_owners'
-                )
+                db.execute("""INSERT INTO track_owners(content_key,user_id,added_at,stored_path)
+                    SELECT new_key,user_id,added_at,new_file FROM audio_owners
+                    WHERE true
+                    ON CONFLICT DO NOTHING""")
                 db.execute("""UPDATE track_owners SET stored_path=(SELECT new_file FROM audio_owners a
                     WHERE a.new_key=track_owners.content_key AND a.user_id=track_owners.user_id LIMIT 1)
                     WHERE EXISTS(SELECT 1 FROM audio_owners a WHERE a.new_key=track_owners.content_key AND a.user_id=track_owners.user_id)""")
             if 'hidden_library_items' in tables:
-                db.execute("""CREATE TEMP TABLE audio_hidden AS
+                db.execute(f"""CREATE TEMP TABLE audio_hidden{on_commit} AS
                     SELECT h.kind,m.new_key,m.new_file,h.label,h.detail,h.hidden_at
                     FROM hidden_library_items h JOIN audio_relink m
                     ON h.item_path=m.old_file OR (h.item_path='' AND h.item_key=m.old_key)
@@ -283,16 +328,19 @@ class AudioReplacementStore:
                     AND item_path IN (SELECT old_file FROM audio_relink)""")
                 db.execute("""DELETE FROM hidden_library_items WHERE kind='track' AND item_path=''
                     AND item_key IN (SELECT old_key FROM audio_relink)""")
-                db.execute(
-                    'INSERT OR IGNORE INTO hidden_library_items(kind,item_key,item_path,label,detail,hidden_at) SELECT * FROM audio_hidden'
-                )
+                db.execute("""INSERT INTO hidden_library_items(kind,item_key,item_path,label,detail,hidden_at)
+                    SELECT kind,new_key,new_file,label,detail,hidden_at FROM audio_hidden
+                    WHERE true
+                    ON CONFLICT DO NOTHING""")
                 db.execute("""UPDATE hidden_library_items SET item_path=(SELECT new_file FROM audio_hidden a WHERE a.new_key=hidden_library_items.item_key LIMIT 1)
                     WHERE kind='track' AND item_key IN (SELECT new_key FROM audio_hidden)""")
             if 'sync_tracks' in tables:
-                db.execute("""INSERT OR REPLACE INTO library_audio_sync_aliases(track_id,old_file)
+                db.execute("""INSERT INTO library_audio_sync_aliases(track_id,old_file)
                     SELECT s.track_id,m.old_file FROM sync_tracks s JOIN audio_relink m
                     ON s.path=m.old_file OR (s.path IS NULL AND s.content_key=m.old_key
-                    AND (SELECT count(*) FROM audio_relink a WHERE a.old_key=m.old_key)=1)""")
+                    AND (SELECT count(*) FROM audio_relink a WHERE a.old_key=m.old_key)=1)
+                    WHERE true
+                    ON CONFLICT(track_id) DO UPDATE SET old_file=excluded.old_file""")
             db.execute(
                 """UPDATE library_audio_replacements SET state='linked',detail='',updated_at=?
                 WHERE old_file IN (SELECT old_file FROM audio_relink)""",

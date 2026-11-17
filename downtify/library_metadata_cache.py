@@ -1,22 +1,22 @@
-"""SQLite cache of per-file library display metadata (title/artist/album)."""
+"""SQLite/PostgreSQL cache of per-file library display metadata."""
 
 from __future__ import annotations
 
 import json
-import sqlite3
 import stat
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
 
+from .db.config import Dialect
+from .db.core import Connection, Database, as_database
 from .library_cache_keys import (
     file_content_key,
     file_content_key_from_name_and_size,
 )
 from .library_metadata import library_entry_for_file
 from .library_paths import locate_library_file
-from .sqlite_utils import connect_sqlite
 
 _TAG_READ_THREADS = 8
 
@@ -61,6 +61,28 @@ _ROW_COLUMNS = (
     'genre, explicit, artists, compilation, isrc'
 )
 
+#: Columns written by the SQLite-only legacy table rebuild.
+_LEGACY_COLUMNS = (
+    'content_key',
+    'filename',
+    'title',
+    'artist',
+    'album',
+    'file_mtime_ns',
+    'file_size',
+    'cached_at',
+)
+_LEGACY_INSERT = (
+    f'INSERT INTO library_metadata_new ({", ".join(_LEGACY_COLUMNS)}) '
+    f'VALUES ({", ".join("?" * len(_LEGACY_COLUMNS))}) '
+    'ON CONFLICT (content_key) DO UPDATE SET '
+    + ', '.join(
+        f'{column} = excluded.{column}'
+        for column in _LEGACY_COLUMNS
+        if column != 'content_key'
+    )
+)
+
 
 def _now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
@@ -82,9 +104,7 @@ def _chunked(values: list[str], size: int):
             yield chunk
 
 
-def _row_entry(
-    stored: str, row: sqlite3.Row, item: dict[str, Any]
-) -> dict[str, Any]:
+def _row_entry(stored: str, row: Any, item: dict[str, Any]) -> dict[str, Any]:
     """A ``/tracks`` row from a fresh cache row plus the file's stat."""
 
     return {
@@ -128,14 +148,21 @@ def _artists_from_json(raw: Any) -> list[str]:
 class LibraryMetadataCache:
     """Caches ``/list`` rows; primary key is basename+size, not full path."""
 
-    def __init__(self, db_path: Path) -> None:
-        self._path = str(db_path)
+    def __init__(self, path_or_db: str | Path | Database) -> None:
+        self.db = as_database(path_or_db, 'library')
+        if isinstance(path_or_db, Database):
+            self._path = str(self.db.path) if self.db.path else None
+        else:
+            self._path = str(path_or_db)
         self._init_db()
 
-    def _connect(self) -> sqlite3.Connection:
-        return connect_sqlite(self._path, row_factory=True)
+    def _connect(self):
+        return self.db.connect()
 
     def _init_db(self) -> None:
+        # The Postgres schema is created by migrations; only SQLite needs DDL.
+        if self.db.dialect is not Dialect.SQLITE:
+            return
         with self._connect() as conn:
             row = conn.execute(
                 "SELECT sql FROM sqlite_master WHERE name='library_metadata'"
@@ -180,7 +207,7 @@ class LibraryMetadataCache:
             self._ensure_columns(conn)
 
     @staticmethod
-    def _ensure_columns(conn: sqlite3.Connection) -> None:
+    def _ensure_columns(conn: Connection) -> None:
         cols = {
             str(r[1])
             for r in conn.execute('PRAGMA table_info(library_metadata)')
@@ -192,7 +219,7 @@ class LibraryMetadataCache:
                 )
 
     @staticmethod
-    def _migrate_legacy_table(conn: sqlite3.Connection) -> None:
+    def _migrate_legacy_table(conn: Connection) -> None:
         conn.execute("""
             CREATE TABLE library_metadata_new (
                 content_key TEXT PRIMARY KEY,
@@ -213,10 +240,7 @@ class LibraryMetadataCache:
             if not ck:
                 continue
             conn.execute(
-                """INSERT OR REPLACE INTO library_metadata_new
-                   (content_key, filename, title, artist, album,
-                    file_mtime_ns, file_size, cached_at)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+                _LEGACY_INSERT,
                 (
                     ck,
                     filename,
@@ -296,8 +320,8 @@ class LibraryMetadataCache:
         ]
         filenames = [str(p['name']) for p in prepared if p.get('ready')]
 
-        by_ck: dict[str, sqlite3.Row] = {}
-        by_name: dict[str, sqlite3.Row] = {}
+        by_ck: dict[str, Any] = {}
+        by_name: dict[str, Any] = {}
         with self._connect() as conn:
             for chunk in _chunked(content_keys, 400):
                 placeholders = ','.join('?' * len(chunk))
@@ -510,7 +534,7 @@ class LibraryMetadataCache:
 
     @staticmethod
     def _store_conn(
-        conn: sqlite3.Connection,
+        conn: Connection,
         filename: str,
         content_key: Optional[str],
         entry: dict[str, Any],

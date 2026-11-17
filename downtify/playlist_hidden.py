@@ -29,7 +29,6 @@ song from one is simply editing it.
 
 from __future__ import annotations
 
-import sqlite3
 import threading
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -37,10 +36,12 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Iterable, Optional
 
 from . import m3u
+from .db.config import Dialect
+from .db.core import Connection, Database, as_database
+from .db.dialect import insertion_order_col
 from .library_cache_keys import file_content_key
 from .library_catalog import LibraryContext, resolve_library_file
 from .library_paths_cache import invalidate_library_paths_cache
-from .sqlite_utils import connect_sqlite
 from .track_index import normalize_spotify_track_id
 
 if TYPE_CHECKING:
@@ -110,16 +111,23 @@ class HiddenSongs:
 class PlaylistHiddenSongs:
     """The hidden songs of every playlist, in ``downtify_library.db``."""
 
-    def __init__(self, db_path: Path) -> None:
-        self._path = str(db_path)
+    def __init__(self, path_or_db: str | Path | Database) -> None:
+        self.db = as_database(path_or_db, 'library')
+        if isinstance(path_or_db, Database):
+            self._path = str(self.db.path) if self.db.path else None
+        else:
+            self._path = str(path_or_db)
         self._lock = threading.Lock()
         self._loaded: Optional[dict[str, HiddenSongs]] = None
         self._init_db()
 
-    def _connect(self) -> sqlite3.Connection:
-        return connect_sqlite(self._path, row_factory=True)
+    def _connect(self) -> Connection:
+        return self.db.connect()
 
     def _init_db(self) -> None:
+        # PostgreSQL: the library migrations already created the table.
+        if self.db.dialect is not Dialect.SQLITE:
+            return
         with self._connect() as conn:
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS playlist_hidden_songs (
@@ -240,11 +248,13 @@ class PlaylistHiddenSongs:
         if not key or not wanted:
             return []
         removed: list[dict[str, Any]] = []
+        # FOR UPDATE keeps two shows of one song from both returning it.
+        lock_sql = ' FOR UPDATE' if self.db.dialect is Dialect.POSTGRES else ''
         with self._lock, self._connect() as conn:
             for item in wanted:
                 row = conn.execute(
                     'SELECT * FROM playlist_hidden_songs '
-                    'WHERE name_key = ? AND item_key = ?',
+                    'WHERE name_key = ? AND item_key = ?' + lock_sql,
                     (key, item),
                 ).fetchone()
                 if row is None:
@@ -262,10 +272,11 @@ class PlaylistHiddenSongs:
     def items(self, name: Any) -> list[dict[str, Any]]:
         """Playlist *name*'s hidden songs, most recently hidden first."""
 
+        order = insertion_order_col(self.db.dialect)
         with self._connect() as conn:
             rows = conn.execute(
                 'SELECT * FROM playlist_hidden_songs WHERE name_key = ? '
-                'ORDER BY hidden_at DESC, rowid DESC',
+                f'ORDER BY hidden_at DESC, {order} DESC',
                 (hidden_key(name),),
             ).fetchall()
         return [_public_row(row) for row in rows]
@@ -293,8 +304,10 @@ class PlaylistHiddenSongs:
             return 0
         normal = _norm_path(stored_path)
         with self._lock, self._connect() as conn:
+            # No UNIQUE constraint other than the (name_key, item_key) key,
+            # which this UPDATE never changes, so no row can collide.
             cur = conn.execute(
-                'UPDATE OR IGNORE playlist_hidden_songs SET content_key = ?, '
+                'UPDATE playlist_hidden_songs SET content_key = ?, '
                 "file = COALESCE(NULLIF(?, ''), file) WHERE content_key = ?",
                 (new, normal, old),
             )
@@ -303,7 +316,7 @@ class PlaylistHiddenSongs:
             return cur.rowcount
 
 
-def _public_row(row: sqlite3.Row) -> dict[str, Any]:
+def _public_row(row: Any) -> dict[str, Any]:
     return {
         'key': row['item_key'],
         'track_id': row['track_id'],

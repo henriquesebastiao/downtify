@@ -29,6 +29,7 @@ from pydantic import BaseModel, Field
 
 from . import api, m3u, trash_routes
 from .admin_access import admin_user
+from .db.runtime import db_target
 from .doctor import (
     STATUS_VERIFIED,
     CopyResult,
@@ -108,14 +109,14 @@ def _data_dir() -> Path:
 def _hash_cache() -> AudioHashCache:
     global _hashes
     if _hashes is None:
-        _hashes = AudioHashCache(_data_dir() / 'doctor' / 'audio_hashes.db')
+        _hashes = AudioHashCache(db_target('doctor_hashes', _data_dir()))
     return _hashes
 
 
 def _kept_apart() -> KeptApart:
     global _kept
     if _kept is None:
-        _kept = KeptApart(_data_dir() / 'doctor' / 'duplicates.db')
+        _kept = KeptApart(db_target('doctor_dupes', _data_dir()))
     return _kept
 
 

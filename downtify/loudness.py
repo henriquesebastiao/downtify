@@ -8,14 +8,15 @@ import math
 import os
 import re
 import shutil
-import sqlite3
 import subprocess
 import threading
 from pathlib import Path
 from typing import Any, Callable
 
+from .db.config import Dialect
+from .db.core import Database, as_database
+from .db.errors import DatabaseError
 from .library_catalog import LibraryContext, resolve_library_file
-from .sqlite_utils import connect_sqlite
 
 ALGORITHM_VERSION = 1
 TARGET_LUFS = -18.0
@@ -111,12 +112,16 @@ class LoudnessAnalyzer:
 
     def __init__(
         self,
-        db_path: Path,
+        db_path: str | Path | Database,
         context: Callable[[], LibraryContext],
         *,
         workers: int | None = None,
     ) -> None:
-        self.path = str(db_path)
+        self.db = as_database(db_path, 'library')
+        if isinstance(db_path, Database):
+            self.path: str | None = str(self.db.path) if self.db.path else None
+        else:
+            self.path = str(db_path)
         self.context = context
         self._lock = threading.RLock()
         self._pause = threading.Event()
@@ -126,14 +131,20 @@ class LoudnessAnalyzer:
         self._workers = max(
             1, min(2, workers if workers is not None else analysis_workers())
         )
-        with connect_sqlite(self.path) as conn:
-            conn.execute("""CREATE TABLE IF NOT EXISTS loudness_measurements (
-                file TEXT PRIMARY KEY, signature TEXT NOT NULL, profile TEXT NOT NULL)""")
-            conn.execute("""CREATE TABLE IF NOT EXISTS loudness_jobs (
-                file TEXT PRIMARY KEY, position INTEGER NOT NULL, status TEXT NOT NULL)""")
-            conn.execute(
-                'CREATE INDEX IF NOT EXISTS loudness_jobs_pending ON loudness_jobs(status, position)'
-            )
+        self._init_db()
+
+    def _init_db(self) -> None:
+        # On PostgreSQL the library migrations already created these tables.
+        with self.db.connect() as conn:
+            if self.db.dialect is Dialect.SQLITE:
+                conn.execute("""CREATE TABLE IF NOT EXISTS loudness_measurements (
+                    file TEXT PRIMARY KEY, signature TEXT NOT NULL, profile TEXT NOT NULL)""")
+                conn.execute("""CREATE TABLE IF NOT EXISTS loudness_jobs (
+                    file TEXT PRIMARY KEY, position INTEGER NOT NULL, status TEXT NOT NULL)""")
+                conn.execute(
+                    'CREATE INDEX IF NOT EXISTS loudness_jobs_pending ON loudness_jobs(status, position)'
+                )
+            # A job left running by a crash starts over on every backend.
             conn.execute(
                 "UPDATE loudness_jobs SET status='pending' WHERE status='running'"
             )
@@ -143,7 +154,7 @@ class LoudnessAnalyzer:
             signature = file_signature(full_path)
         except OSError:
             return None
-        with connect_sqlite(self.path) as conn:
+        with self.db.connect() as conn:
             row = conn.execute(
                 'SELECT profile FROM loudness_measurements WHERE file=? AND signature=?',
                 (file, signature),
@@ -151,7 +162,7 @@ class LoudnessAnalyzer:
         return json.loads(row[0]) if row else None
 
     def status(self) -> dict[str, Any]:
-        with connect_sqlite(self.path) as conn:
+        with self.db.connect() as conn:
             counts = dict(
                 conn.execute(
                     'SELECT status, COUNT(*) FROM loudness_jobs GROUP BY status'
@@ -174,10 +185,11 @@ class LoudnessAnalyzer:
     def start(self, files: list[str]) -> None:
         with self._lock:
             self._check_idle()
-            with connect_sqlite(self.path) as conn:
+            with self.db.connect() as conn:
                 conn.execute('DELETE FROM loudness_jobs')
                 conn.executemany(
-                    "INSERT OR IGNORE INTO loudness_jobs VALUES (?, ?, 'pending')",
+                    'INSERT INTO loudness_jobs (file, position, status) '
+                    "VALUES (?, ?, 'pending') ON CONFLICT DO NOTHING",
                     [(file, index) for index, file in enumerate(files)],
                 )
             self.resume()
@@ -328,7 +340,7 @@ class LoudnessAnalyzer:
             with self._lock:
                 if self._pause.is_set() or self._closed.is_set():
                     return
-                with connect_sqlite(self.path) as conn:
+                with self.db.connect() as conn:
                     row = conn.execute(
                         "SELECT file FROM loudness_jobs WHERE status='pending' ORDER BY position LIMIT 1"
                     ).fetchone()
@@ -356,7 +368,7 @@ class LoudnessAnalyzer:
                     profile['fingerprint'] = before
                     profile['source_size'] = stat.st_size
                     profile['source_etag'] = file_etag(stat)
-                    with connect_sqlite(self.path) as conn:
+                    with self.db.connect() as conn:
                         conn.execute(
                             'INSERT INTO loudness_measurements VALUES (?, ?, ?) '
                             'ON CONFLICT(file) DO UPDATE SET signature=excluded.signature, profile=excluded.profile',
@@ -367,12 +379,12 @@ class LoudnessAnalyzer:
                             ),
                         )
                 result = 'done'
-            except (OSError, ValueError, KeyError, IndexError, sqlite3.Error):
+            except (OSError, ValueError, KeyError, IndexError, DatabaseError):
                 # Do not export FFmpeg stderr: tags and filenames can be private.
                 if self._closed.is_set():
                     result = 'pending'
             finally:
-                with connect_sqlite(self.path) as conn:
+                with self.db.connect() as conn:
                     conn.execute(
                         'UPDATE loudness_jobs SET status=? WHERE file=?',
                         (result, file),

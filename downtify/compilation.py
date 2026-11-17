@@ -28,7 +28,6 @@ from __future__ import annotations
 
 import os
 import shutil
-import sqlite3
 from collections import Counter
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -44,10 +43,11 @@ from mutagen.oggopus import OggOpus
 from mutagen.oggvorbis import OggVorbis
 
 from .album_artist import VARIOUS_ARTISTS, is_various_artists
+from .db.config import Dialect
+from .db.core import Database, as_database
 from .file_naming import file_name_key
 from .library_metadata import read_audio_metadata
 from .library_upgrade import staging_path
-from .sqlite_utils import connect_sqlite
 
 #: A rewritten file must still play for as long as the original did.
 _DURATION_TOLERANCE_SECONDS = 1.0
@@ -88,14 +88,21 @@ class CompilationMarks:
     album artist to use instead for one unmarked against its source.
     """
 
-    def __init__(self, db_path: Path) -> None:
-        self._path = str(db_path)
+    def __init__(self, db_path: str | Path | Database) -> None:
+        self.db = as_database(db_path, 'library')
+        if isinstance(db_path, Database):
+            self._path = str(self.db.path) if self.db.path else None
+        else:
+            self._path = str(db_path)
         self._init_db()
 
-    def _connect(self) -> sqlite3.Connection:
-        return connect_sqlite(self._path, row_factory=True)
+    def _connect(self):
+        return self.db.connect()
 
     def _init_db(self) -> None:
+        # PostgreSQL gets its schema from the migrations.
+        if self.db.dialect is not Dialect.SQLITE:
+            return
         with self._connect() as conn:
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS album_compilation_marks (

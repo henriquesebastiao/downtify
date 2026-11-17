@@ -1,12 +1,13 @@
 import json
-import sqlite3
 import subprocess
 import sys
 import tempfile
 import unittest
 from pathlib import Path
 
+from downtify.db.core import Database
 from downtify.library_trash import LibraryTrash, TrashRoot
+from tests.db.helpers import execute
 
 
 class WorkerTest(unittest.TestCase):
@@ -23,11 +24,9 @@ class WorkerTest(unittest.TestCase):
         self.lyrics.write_text('[00:01.00] synthetic')
         self.db = self.base / 'library.db'
         self.auth = self.base / 'auth.db'
-        with sqlite3.connect(self.auth) as conn:
-            conn.execute(
-                'CREATE TABLE users (id INTEGER PRIMARY KEY, role TEXT)'
-            )
-            conn.execute("INSERT INTO users VALUES (1, 'admin')")
+        auth = Database.sqlite(self.auth)
+        execute(auth, 'CREATE TABLE users (id INTEGER PRIMARY KEY, role TEXT)')
+        execute(auth, "INSERT INTO users VALUES (1, 'admin')")
         self.config = self.base / 'roots.json'
         self.config.write_text(
             json.dumps({
@@ -93,8 +92,10 @@ class WorkerTest(unittest.TestCase):
         assert self.lyrics.read_text() == '[00:01.00] synthetic'
 
     def test_revoked_admin_does_not_move_file(self):
-        with sqlite3.connect(self.auth) as conn:
-            conn.execute("UPDATE users SET role='user' WHERE id=1")
+        execute(
+            Database.sqlite(self.auth),
+            "UPDATE users SET role='user' WHERE id=1",
+        )
         assert json.loads(self.worker().stdout)['failed'] == 1
         assert self.audio.exists()
 

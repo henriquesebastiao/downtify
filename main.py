@@ -51,6 +51,15 @@ from downtify.cover_art import extract_cover_art
 from downtify.cover_cache import CoverArtCache
 from downtify.cover_thumbs import CoverThumbs
 from downtify.cover_thumbs import normalize_size as normalize_cover_size
+from downtify.db import runtime as db_runtime
+from downtify.db.config import DbConfig
+from downtify.db.core import Database
+from downtify.db.migrate_sqlite import (
+    MARKER_NAME,
+    MigrationError,
+    format_report,
+    migrate,
+)
 from downtify.deemix_upgrade import DeemixLibraryUpgrade, alias_file
 from downtify.deemix_upgrade_store import AudioReplacementStore
 from downtify.discover import DiscoverStore
@@ -421,11 +430,11 @@ def _warm_library_listing() -> None:
         logger.opt(exception=True).debug('Library listing warm failed')
 
 
-def _open_library_stores(monitor_db_path: Path) -> None:
+def _open_library_stores(monitor_db_path: Path | Database) -> None:
     """Open the library catalog/index/cache stores in /data and backfill the
     track index and playlist catalog from Playlist Monitor history."""
 
-    library_db = DATABASE_DIR / 'downtify_library.db'
+    library_db = db_runtime.db_target('library', DATABASE_DIR)
     api.state.track_index = TrackIndex(library_db)
     api.state.navidrome_index = NavidromeIndex(library_db)
     api.state.metadata_cache = LibraryMetadataCache(library_db)
@@ -595,7 +604,7 @@ def open_auth_store() -> AuthStore:
             'else can reach.'
         )
     return AuthStore(
-        DATABASE_DIR / 'downtify_auth.db',
+        db_runtime.db_target('auth', DATABASE_DIR),
         DATABASE_DIR / '.auth_secret',
         existing_install=existing,
         auth_disabled=disabled,
@@ -605,6 +614,7 @@ def open_auth_store() -> AuthStore:
 def build_app() -> FastAPI:
     DOWNLOAD_DIR.mkdir(parents=True, exist_ok=True)
     DATABASE_DIR.mkdir(parents=True, exist_ok=True)
+    _warn_if_migrated_to_sqlite()
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
@@ -616,7 +626,7 @@ def build_app() -> FastAPI:
                 api.state.settings.get('max_parallel_downloads', 3)
             )
         )
-        db_path = DATABASE_DIR / 'downtify_monitor.db'
+        db_path = db_runtime.db_target('monitor', DATABASE_DIR)
         api.state.monitor_db = PlaylistMonitorDB(db_path)
         api.state.downloader.download_policy = (
             api.state.monitor_db.download_policy
@@ -742,6 +752,7 @@ def build_app() -> FastAPI:
             await api.state.discovery.stop()
             api.state.discovery = None
         await api.shutdown_resources()
+        db_runtime.shutdown()
 
     app = FastAPI(
         lifespan=lifespan,
@@ -774,7 +785,9 @@ def build_app() -> FastAPI:
             'DOWNTIFY_DISABLE_LOCAL_LOGIN requires OIDC to be configured'
         )
     api.state.oidc = OIDCProvider(oidc_config) if oidc_config else None
-    api.state.activity = ActivityLog(DATABASE_DIR / 'downtify_activity.db')
+    api.state.activity = ActivityLog(
+        db_runtime.db_target('activity', DATABASE_DIR)
+    )
     app.add_middleware(
         AuthMiddleware,
         get_store=lambda: api.state.auth,
@@ -1301,6 +1314,12 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument('--keep-alive', action='store_true')
     parser.add_argument('--keep-sessions', action='store_true')
     parser.add_argument('--web-use-output-dir', action='store_true')
+    # db-migrate only: copy an SQLite install into PostgreSQL.
+    parser.add_argument('--from-sqlite', default=str(DATABASE_DIR))
+    parser.add_argument(
+        '--to', default=os.getenv('DATABASE_URL') or '', metavar='URL'
+    )
+    parser.add_argument('--force', action='store_true')
     args, _ = parser.parse_known_args()
     return args
 
@@ -1319,12 +1338,71 @@ def _auth_reset() -> None:
     )
 
 
+def _db_migrate(args: argparse.Namespace) -> int:
+    """``python main.py db-migrate --from-sqlite DIR --to URL [--force]``:
+    copy an SQLite install into the PostgreSQL database at URL. Returns the
+    exit status: 0 when every table checks out, 1 otherwise."""
+
+    url = (args.to or '').strip()
+    if not url:
+        logger.error(
+            'db-migrate needs a PostgreSQL URL: pass --to or set DATABASE_URL.'
+        )
+        return 1
+    data_dir = Path(args.from_sqlite)
+    try:
+        cfg = DbConfig.from_env({**os.environ, 'DATABASE_URL': url})
+    except ValueError as exc:
+        logger.error('db-migrate: {}', exc)
+        return 1
+    db = Database.for_group(cfg, 'library')
+    try:
+        report = migrate(data_dir, db, force=args.force)
+    except MigrationError as exc:
+        logger.error('db-migrate failed: {}', exc)
+        return 1
+    finally:
+        db_runtime.shutdown()
+        db.close()
+    print(format_report(report))
+    if not report.ok:
+        logger.error('db-migrate: verification failed, see the report above')
+        return 1
+    logger.info(
+        'db-migrate done. Set DATABASE_URL to use PostgreSQL; the SQLite '
+        'files in {} are left as they were.',
+        data_dir,
+    )
+    return 0
+
+
+def _warn_if_migrated_to_sqlite() -> None:
+    """Warn when the server runs on SQLite although the data was migrated
+    to PostgreSQL: the SQLite files are then stale."""
+
+    if (os.getenv('DATABASE_URL') or '').strip():
+        return
+    data_dir = Path(os.getenv('DATABASE_DIR') or '/data')
+    if not (data_dir / MARKER_NAME).exists():
+        return
+    logger.warning(
+        'This data was migrated to PostgreSQL ({} exists), but DATABASE_URL '
+        'is not set, so the server is using the SQLite files in {}, which '
+        'may be stale. To go back to the migrated data, set DATABASE_URL to '
+        'the PostgreSQL URL.',
+        MARKER_NAME,
+        data_dir,
+    )
+
+
 def main() -> None:
     args = _parse_args()
     _setup_logging(args.log_level)
     if args.mode == 'auth-reset':
         _auth_reset()
         return None
+    if args.mode == 'db-migrate':
+        sys.exit(_db_migrate(args))
 
     configure_outbound_proxy()
     _fix_mime_types()
@@ -1394,6 +1472,7 @@ if __name__ == '__main__':
         except Exception:
             logger.exception('Shutdown cleanup failed')
         api.release_thread_pools()
+        db_runtime.shutdown()
         if exit_code == 0 and restart_wanted():
             # A new port from Settings: the same process starts over.
             logger.info('Restarting Downtify')

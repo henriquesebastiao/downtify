@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import functools
 import os
 import re
 import sqlite3
+from collections.abc import Iterator
 from dataclasses import asdict, dataclass
 from datetime import datetime, time, timedelta, timezone
 from pathlib import Path
@@ -19,6 +21,9 @@ from .artist_catalogue import ArtistCatalogue, release_key, watch_kinds
 from .artist_catalogue import wanted as release_wanted
 from .artist_release_store import ArtistReleaseStore
 from .cover_cache import CoverArtCache
+from .db.config import Dialect
+from .db.core import Connection, Database, as_database
+from .db.dialect import insert_returning_id
 from .download_policy import DownloadPolicy, DownloadPolicyBlocked
 from .download_queue import queue_pause
 from .downloader import (
@@ -47,7 +52,6 @@ from .playlist_hidden import HiddenSongs, PlaylistHiddenSongs
 from .playlist_spotify_cache import PlaylistSpotifyCache
 from .podcasts import PodcastStore, sync_show
 from .release_files import matches_release
-from .sqlite_utils import ClosingConnection
 from .track_index import TrackIndex, normalize_spotify_track_id
 from .track_owners import TrackOwners
 from .watch_history import (
@@ -354,9 +358,9 @@ class MonitoredPlaylist:
 
 
 class PlaylistMonitorDB:
-    def __init__(self, db_path: Path) -> None:
-        self._path = str(db_path)
-        self._lock = asyncio.Lock()
+    def __init__(self, path_or_db: str | Path | Database) -> None:
+        self.db = as_database(path_or_db, 'monitor')
+        self._path = None if self.db.path is None else str(self.db.path)
         self._init_db()
         self.releases = ArtistReleaseStore(self._connect)
         # Each artist's whole catalogue, and the user's per-release choice.
@@ -365,15 +369,19 @@ class PlaylistMonitorDB:
         # What each watch added and failed to (provenance and statistics).
         self.history = WatchHistoryStore(self._connect)
 
-    def _connect(self) -> sqlite3.Connection:
-        conn = sqlite3.connect(
-            self._path, check_same_thread=False, factory=ClosingConnection
-        )
-        conn.execute('PRAGMA foreign_keys = ON')
-        conn.row_factory = sqlite3.Row
-        return conn
+    @contextlib.contextmanager
+    def _connect(self) -> Iterator[Connection]:
+        with self.db.connect() as conn:
+            # SQLite needs this per connection for ON DELETE CASCADE.
+            # PostgreSQL always enforces foreign keys.
+            if conn.dialect is Dialect.SQLITE:
+                conn.execute('PRAGMA foreign_keys = ON')
+            yield conn
 
     def _init_db(self) -> None:
+        # PostgreSQL gets the final schema from the migrations.
+        if self.db.dialect is not Dialect.SQLITE:
+            return
         with self._connect() as conn:
             conn.executescript("""
                 CREATE TABLE IF NOT EXISTS monitored_playlists (
@@ -533,7 +541,8 @@ class PlaylistMonitorDB:
         user_id: int = 0,
     ) -> MonitoredPlaylist:
         with self._connect() as conn:
-            cur = conn.execute(
+            new_id = insert_returning_id(
+                conn,
                 """INSERT INTO monitored_playlists
                    (spotify_id, name, url, interval_minutes, enabled,
                     created_at, kind, release_types, new_only,
@@ -554,7 +563,7 @@ class PlaylistMonitorDB:
             )
             row = conn.execute(
                 'SELECT * FROM monitored_playlists WHERE id = ?',
-                (cur.lastrowid,),
+                (new_id,),
             ).fetchone()
             return _row_to_playlist(row)
 
@@ -642,7 +651,11 @@ class PlaylistMonitorDB:
         if not updates:
             return self.get_playlist(playlist_id)
         set_clause = ', '.join(f'{k} = ?' for k in updates)
-        values = list(updates.values()) + [playlist_id]
+        # Flags are BIGINT columns; PostgreSQL rejects a bool for them.
+        values = [
+            int(v) if isinstance(v, bool) else v for v in updates.values()
+        ]
+        values.append(playlist_id)
         with self._connect() as conn:
             conn.execute(
                 f'UPDATE monitored_playlists SET {set_clause} WHERE id = ?',
@@ -952,7 +965,7 @@ def repoint_downloaded_file(db: PlaylistMonitorDB, old: str, new: str) -> int:
     return moved
 
 
-def _row_to_playlist(row: sqlite3.Row) -> MonitoredPlaylist:
+def _row_to_playlist(row: Any) -> MonitoredPlaylist:
     keys = row.keys()
     return MonitoredPlaylist(
         id=row['id'],

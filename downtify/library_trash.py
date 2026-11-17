@@ -17,7 +17,6 @@ import os
 import platform
 import re
 import secrets
-import sqlite3
 import stat
 import sys
 import time
@@ -31,6 +30,9 @@ if os.name == 'nt':
     import msvcrt
 else:
     import fcntl
+
+from downtify.db.config import Dialect
+from downtify.db.core import Connection, Database, as_database
 
 TRASH_DIR = '.downtify-trash'
 RETENTION_DAYS = 30
@@ -56,6 +58,21 @@ BLOCKING_STATES = (
     'purging',
     'purged',
     'error',
+)
+
+
+_TRASH_COLUMNS = (
+    'id',
+    'batch',
+    'user_id',
+    'root_key',
+    'relative',
+    'stored',
+    'track_id',
+    'row_json',
+    'manifest',
+    'state',
+    'created',
 )
 
 
@@ -392,7 +409,7 @@ class _Hidden:
 class LibraryTrash:
     def __init__(
         self,
-        db: Path,
+        db: str | Path | Database,
         roots: dict[str, TrashRoot],
         *,
         clock: Callable[[], float] = time.time,
@@ -400,14 +417,21 @@ class LibraryTrash:
     ):
         if worker not in WORKER_MODES:
             raise TrashError('unsupported_configuration')
-        self.db = Path(db)
+        self.db = as_database(db, 'library')
+        # The file behind a SQLite database; None on PostgreSQL.
+        self._path: Optional[Path] = self.db.path
         self.roots = roots
         self.clock = clock
         self.worker = worker
         self._hidden: Optional[_Hidden] = None
-        self.db.parent.mkdir(parents=True, exist_ok=True)
-        with self.connect() as conn:
-            conn.executescript("""
+        self._init_db()
+
+    def _init_db(self) -> None:
+        # PostgreSQL gets its tables from the migrations; the revision seed
+        # row is needed on both backends.
+        if self.db.dialect is Dialect.SQLITE:
+            with self.connect() as conn:
+                conn.executescript("""
                 CREATE TABLE IF NOT EXISTS library_trash (
                     id TEXT PRIMARY KEY, batch TEXT NOT NULL,
                     user_id INTEGER NOT NULL, root_key TEXT NOT NULL,
@@ -426,48 +450,60 @@ class LibraryTrash:
                 CREATE TABLE IF NOT EXISTS library_trash_meta (
                     key TEXT PRIMARY KEY, value INTEGER NOT NULL
                 );
-                INSERT OR IGNORE INTO library_trash_meta VALUES ('revision',0);
-            """)
-            block_columns = conn.execute(
-                'PRAGMA table_info(library_trash_blocks)'
-            ).fetchall()
-            if not any(
-                row[1] == 'item_id' and row[5] for row in block_columns
-            ):
-                # Old development journals used only identity as the key;
-                # several independently trashed copies must remain excluded.
-                conn.execute('BEGIN IMMEDIATE')
-                conn.execute(
-                    'CREATE TABLE library_trash_blocks_v2 (identity TEXT NOT NULL, item_id TEXT NOT NULL, PRIMARY KEY(identity,item_id))'
-                )
-                conn.execute(
-                    'INSERT OR IGNORE INTO library_trash_blocks_v2 SELECT identity,item_id FROM library_trash_blocks'
-                )
-                conn.execute('DROP TABLE library_trash_blocks')
-                conn.execute(
-                    'ALTER TABLE library_trash_blocks_v2 RENAME TO library_trash_blocks'
-                )
-            columns = {
-                r[1] for r in conn.execute('PRAGMA table_info(library_trash)')
-            }
-            if 'blocked' not in columns:
-                conn.execute(
-                    'ALTER TABLE library_trash ADD COLUMN blocked INTEGER NOT NULL DEFAULT 1'
-                )
-            if 'requested_by' not in columns:
-                conn.execute(
-                    'ALTER TABLE library_trash ADD COLUMN requested_by INTEGER NOT NULL DEFAULT 0'
-                )
+                """)
+        with self.db.transaction(lock=True) as conn:
+            conn.execute(
+                'INSERT INTO library_trash_meta (key,value) '
+                "VALUES ('revision',0) ON CONFLICT (key) DO NOTHING"
+            )
+            if self.db.dialect is Dialect.SQLITE:
+                self._migrate_sqlite(conn)
 
-    @contextmanager
+    @staticmethod
+    def _migrate_sqlite(conn: Connection) -> None:
+        """Bring a development SQLite journal up to the current shape."""
+        block_columns = conn.execute(
+            'PRAGMA table_info(library_trash_blocks)'
+        ).fetchall()
+        if not any(row[1] == 'item_id' and row[5] for row in block_columns):
+            # Old development journals used only identity as the key;
+            # several independently trashed copies must remain excluded.
+            conn.execute(
+                'CREATE TABLE library_trash_blocks_v2 (identity TEXT NOT NULL, item_id TEXT NOT NULL, PRIMARY KEY(identity,item_id))'
+            )
+            conn.execute(
+                'INSERT OR IGNORE INTO library_trash_blocks_v2 '
+                'SELECT identity,item_id FROM library_trash_blocks'
+            )
+            conn.execute('DROP TABLE library_trash_blocks')
+            conn.execute(
+                'ALTER TABLE library_trash_blocks_v2 RENAME TO library_trash_blocks'
+            )
+        columns = {
+            r[1] for r in conn.execute('PRAGMA table_info(library_trash)')
+        }
+        if 'blocked' not in columns:
+            conn.execute(
+                'ALTER TABLE library_trash ADD COLUMN blocked INTEGER NOT NULL DEFAULT 1'
+            )
+        if 'requested_by' not in columns:
+            conn.execute(
+                'ALTER TABLE library_trash ADD COLUMN requested_by INTEGER NOT NULL DEFAULT 0'
+            )
+
     def connect(self):
-        conn = sqlite3.connect(self.db, timeout=15)
-        conn.row_factory = sqlite3.Row
-        try:
-            with conn:
-                yield conn
-        finally:
-            conn.close()
+        """A connection to the journal, re-entrant per thread."""
+        return self.db.connect()
+
+    def _row_lock(self) -> str:
+        """Lock the rows a read-then-write sequence depends on (PostgreSQL)."""
+        return ' FOR UPDATE' if self.db.dialect is Dialect.POSTGRES else ''
+
+    def _claim_lock(self) -> str:
+        """Pick work without waiting on rows another worker already holds."""
+        if self.db.dialect is Dialect.POSTGRES:
+            return ' FOR UPDATE SKIP LOCKED'
+        return ''
 
     def _root(self, key: str) -> Path:
         if key not in self.roots:
@@ -549,8 +585,8 @@ class LibraryTrash:
                 conn.execute(
                     """INSERT INTO library_trash
                     (id,batch,user_id,root_key,relative,stored,track_id,row_json,manifest,state,created)
-                    VALUES (:id,:batch,:user_id,:root_key,:relative,:stored,:track_id,:row_json,:manifest,:state,:created)""",
-                    row,
+                    VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
+                    tuple(row[k] for k in _TRASH_COLUMNS),
                 )
         return {
             'confirmation': batch,
@@ -575,10 +611,10 @@ class LibraryTrash:
         }
 
     def confirm(self, user_id: int, batch: str) -> list[str]:
-        with self.connect() as conn:
-            conn.execute('BEGIN IMMEDIATE')
+        with self.db.transaction(lock=True) as conn:
             rows = conn.execute(
-                'SELECT * FROM library_trash WHERE batch=? AND user_id=?',
+                'SELECT * FROM library_trash WHERE batch=? AND user_id=?'
+                + self._row_lock(),
                 (batch, user_id),
             ).fetchall()
             if not rows:
@@ -615,7 +651,8 @@ class LibraryTrash:
             for row in rows:
                 for key in identity_keys(json.loads(row['row_json'])):
                     conn.execute(
-                        'INSERT OR IGNORE INTO library_trash_blocks(identity,item_id) VALUES (?,?)',
+                        'INSERT INTO library_trash_blocks(identity,item_id) VALUES (?,?) '
+                        'ON CONFLICT (identity,item_id) DO NOTHING',
                         (key, row['id']),
                     )
         self._hidden = None
@@ -655,11 +692,12 @@ class LibraryTrash:
     def request_restore(self, ids: list[str], *, user_id: int = 0) -> None:
         if not ids or len(ids) > 200:
             raise TrashError('invalid_selection')
-        with self.connect() as conn:
-            conn.execute('BEGIN IMMEDIATE')
+        with self.db.transaction(lock=True) as conn:
             for item in set(ids):
                 row = conn.execute(
-                    'SELECT * FROM library_trash WHERE id=?', (item,)
+                    'SELECT * FROM library_trash WHERE id=?'
+                    + self._row_lock(),
+                    (item,),
                 ).fetchone()
                 if row is None or row['state'] == 'preview':
                     raise TrashError('item_not_found')
@@ -746,8 +784,14 @@ class LibraryTrash:
         authorized: Callable[[int], bool],
         skip_ids: frozenset[str] = frozenset(),
     ) -> list[dict]:
+        if self._path is None:
+            # PostgreSQL has no file to lock. Every row is claimed by an
+            # atomic UPDATE in _process_item, so two workers never move one.
+            return self._process(
+                limit=limit, authorized=authorized, skip_ids=skip_ids
+            )
         with worker_lock(
-            self.db.with_suffix('.trash-worker.lock')
+            self._path.with_suffix('.trash-worker.lock')
         ) as acquired:
             if not acquired:
                 return []
@@ -772,7 +816,9 @@ class LibraryTrash:
         with self.connect() as conn:
             for item in ids:
                 row = conn.execute(
-                    'SELECT state FROM library_trash WHERE id=?', (item,)
+                    'SELECT state FROM library_trash WHERE id=?'
+                    + self._row_lock(),
+                    (item,),
                 ).fetchone()
                 if row is None or row['state'] not in {
                     'trashed',
@@ -794,7 +840,9 @@ class LibraryTrash:
         with self.connect() as conn:
             for item in ids:
                 row = conn.execute(
-                    'SELECT * FROM library_trash WHERE id=?', (item,)
+                    'SELECT * FROM library_trash WHERE id=?'
+                    + self._row_lock(),
+                    (item,),
                 ).fetchone()
                 if row is None or row['state'] != 'error':
                     raise TrashError('operation_not_complete')
@@ -852,7 +900,10 @@ class LibraryTrash:
         result = []
         with self.connect() as conn:
             rows = conn.execute(
-                'SELECT * ' + _WORK + ' ORDER BY created LIMIT ?',
+                'SELECT * '
+                + _WORK
+                + ' ORDER BY created LIMIT ?'
+                + self._claim_lock(),
                 (self.clock(), limit + len(skip_ids)),
             ).fetchall()
         for row in rows:
@@ -987,7 +1038,9 @@ class LibraryTrash:
         return True
 
 
-def trash_from_config(config_path: Path, db: Path) -> LibraryTrash:
+def trash_from_config(
+    config_path: Path, db: str | Path | Database
+) -> LibraryTrash:
     config = json.loads(config_path.read_text(encoding='utf-8'))
     if config.get('version') != 1:
         raise TrashError('unsupported_configuration')
@@ -1011,7 +1064,7 @@ def trash_from_config(config_path: Path, db: Path) -> LibraryTrash:
 
 def trash_from_env(
     download_dir: Path,
-    db: Path,
+    db: str | Path | Database,
     env: Optional[Mapping[str, str]] = None,
 ) -> Optional[LibraryTrash]:
     """The trash the operator turned on, or ``None``.

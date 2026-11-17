@@ -18,14 +18,15 @@ from __future__ import annotations
 
 import json
 import re
-import sqlite3
 import threading
 import time
+from contextlib import AbstractContextManager
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Optional
 
-from .sqlite_utils import connect_sqlite
+from .db.config import Dialect
+from .db.core import Connection, Database, as_database
 
 #: How long entries are kept.
 RETENTION_DAYS = 90
@@ -112,10 +113,17 @@ def track_label(track: dict[str, Any]) -> str:
 class ActivityLog:
     """The history of what users did, newest first."""
 
-    def __init__(self, db_path: Path) -> None:
-        self._path = str(db_path)
+    def __init__(self, db_path: str | Path | Database) -> None:
+        self.db = as_database(db_path, 'activity')
+        self._path = None if self.db.path is None else str(self.db.path)
         self._lock = threading.Lock()
         self._since_prune = 0
+        if self.db.dialect is Dialect.SQLITE:
+            self._init_db()
+        self.prune()
+
+    def _init_db(self) -> None:
+        # SQLite only: on PostgreSQL the migration made this schema.
         with self._connect() as conn:
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS activity (
@@ -134,10 +142,9 @@ class ActivityLog:
                 'CREATE INDEX IF NOT EXISTS activity_user '
                 'ON activity (user_id, id)'
             )
-        self.prune()
 
-    def _connect(self) -> sqlite3.Connection:
-        return connect_sqlite(self._path, row_factory=True)
+    def _connect(self) -> AbstractContextManager[Connection]:
+        return self.db.connect()
 
     def record(
         self,

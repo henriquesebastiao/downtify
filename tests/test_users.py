@@ -3,7 +3,6 @@ downtify/account_routes.py, downtify/activity.py)."""
 
 from __future__ import annotations
 
-import sqlite3
 from pathlib import Path
 
 import pytest
@@ -18,6 +17,7 @@ from downtify.activity import (
     describe_user_agent,
 )
 from downtify.auth import AuthStore
+from downtify.db.core import Database
 from downtify.users import (
     DEFAULT_PASSWORD,
     DEFAULT_USERNAME,
@@ -25,6 +25,7 @@ from downtify.users import (
     UserStore,
     hash_password,
 )
+from tests.db.helpers import execute
 
 PASSWORD = 'correct horse battery'
 DEFAULT_LOGIN = {'username': 'admin', 'password': 'downtify'}
@@ -63,36 +64,40 @@ def test_the_old_sign_in_password_becomes_the_admins(tmp_path):
     # A database from the version with a single password and devices
     # that belonged to nobody.
     db = tmp_path / 'auth.db'
-    with sqlite3.connect(db) as conn:
-        conn.execute(
-            'CREATE TABLE auth_config (key TEXT PRIMARY KEY, value TEXT)'
-        )
-        conn.execute(
-            "INSERT INTO auth_config VALUES ('password_hash', ?)",
-            (hash_password(PASSWORD),),
-        )
-        conn.execute("INSERT INTO auth_config VALUES ('require_sign_in', '1')")
-        conn.execute(
-            'CREATE TABLE auth_devices (id TEXT PRIMARY KEY, name TEXT NOT '
-            "NULL, platform TEXT NOT NULL DEFAULT '', token_hash TEXT NOT "
-            'NULL, created_at TEXT NOT NULL, last_seen_at TEXT, last_ip '
-            "TEXT NOT NULL DEFAULT '', revoked_at TEXT)"
-        )
-        conn.execute(
-            "INSERT INTO auth_devices VALUES ('dev', 'Pixel', '', 'x', "
-            "'2026-01-01', NULL, '', NULL)"
-        )
-        conn.execute(
-            'CREATE TABLE auth_sessions (id_hash TEXT PRIMARY KEY, '
-            'created_at TEXT NOT NULL, expires_at TEXT NOT NULL, touched_at '
-            "TEXT NOT NULL, ip TEXT NOT NULL DEFAULT '', user_agent TEXT NOT "
-            "NULL DEFAULT '')"
-        )
-        conn.execute(
-            "INSERT INTO auth_sessions VALUES ('s', '2026-01-01', "
-            "'2099-01-01', '2026-01-01', '', '')"
-        )
-    conn.close()
+    seed = Database.sqlite(db)
+    execute(
+        seed, 'CREATE TABLE auth_config (key TEXT PRIMARY KEY, value TEXT)'
+    )
+    execute(
+        seed,
+        "INSERT INTO auth_config VALUES ('password_hash', ?)",
+        hash_password(PASSWORD),
+    )
+    execute(seed, "INSERT INTO auth_config VALUES ('require_sign_in', '1')")
+    execute(
+        seed,
+        'CREATE TABLE auth_devices (id TEXT PRIMARY KEY, name TEXT NOT '
+        "NULL, platform TEXT NOT NULL DEFAULT '', token_hash TEXT NOT "
+        'NULL, created_at TEXT NOT NULL, last_seen_at TEXT, last_ip '
+        "TEXT NOT NULL DEFAULT '', revoked_at TEXT)",
+    )
+    execute(
+        seed,
+        "INSERT INTO auth_devices VALUES ('dev', 'Pixel', '', 'x', "
+        "'2026-01-01', NULL, '', NULL)",
+    )
+    execute(
+        seed,
+        'CREATE TABLE auth_sessions (id_hash TEXT PRIMARY KEY, '
+        'created_at TEXT NOT NULL, expires_at TEXT NOT NULL, touched_at '
+        "TEXT NOT NULL, ip TEXT NOT NULL DEFAULT '', user_agent TEXT NOT "
+        "NULL DEFAULT '')",
+    )
+    execute(
+        seed,
+        "INSERT INTO auth_sessions VALUES ('s', '2026-01-01', "
+        "'2099-01-01', '2026-01-01', '', '')",
+    )
 
     store = AuthStore(db, tmp_path / '.secret', existing_install=True)
 

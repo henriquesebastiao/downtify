@@ -161,7 +161,8 @@ async def change_my_password(request: Request) -> dict[str, Any]:
     except UserError as exc:
         raise _bad(exc) from exc
     await api.log_activity(request, 'password_changed', me.username)
-    return {'user': _users().get(me.user_id)}
+    user = await asyncio.to_thread(_users().get, me.user_id)
+    return {'user': user}
 
 
 @router.get('/api/me/preferences')
@@ -250,7 +251,7 @@ async def update_user(user_id: int, request: Request) -> dict[str, Any]:
     _accounts_on()
     me = _me(request)
     payload = await _json(request)
-    before = _users().get(user_id)
+    before = await asyncio.to_thread(_users().get, user_id)
     if before is None:
         raise HTTPException(status_code=404, detail='User not found')
     try:
@@ -282,7 +283,8 @@ async def update_user(user_id: int, request: Request) -> dict[str, Any]:
         await api.log_activity(
             request, 'user_updated', user['username'], changes
         )
-    return _users().get(user_id) or user
+    found = await asyncio.to_thread(_users().get, user_id)
+    return found or user
 
 
 @router.delete('/api/users/{user_id}')

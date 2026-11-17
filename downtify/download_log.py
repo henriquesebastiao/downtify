@@ -16,12 +16,12 @@ before the downloader is asked (see ``api.record_download_outcome``).
 
 from __future__ import annotations
 
-import sqlite3
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Optional
 
-from .sqlite_utils import connect_sqlite
+from .db.config import Dialect
+from .db.core import Database, as_database
 
 #: A new file was downloaded and tagged.
 OUTCOME_COMPLETED = 'completed'
@@ -43,9 +43,18 @@ def _now() -> datetime:
 class DownloadLog:
     """One row per download attempt, oldest dropped after a while."""
 
-    def __init__(self, db_path: Path) -> None:
-        self._path = str(db_path)
-        with self._connect() as conn:
+    def __init__(self, path_or_db: str | Path | Database) -> None:
+        self.db = as_database(path_or_db, 'library')
+        if isinstance(path_or_db, Database):
+            self._path = str(self.db.path) if self.db.path else None
+        else:
+            self._path = str(path_or_db)
+        if self.db.dialect is Dialect.SQLITE:
+            self._init_db()
+
+    def _init_db(self) -> None:
+        # On PostgreSQL the library_a migration already created the table.
+        with self.db.connect() as conn:
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS download_log (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -61,8 +70,8 @@ class DownloadLog:
                 'ON download_log (at)'
             )
 
-    def _connect(self) -> sqlite3.Connection:
-        return connect_sqlite(self._path, row_factory=True)
+    def _connect(self):
+        return self.db.connect()
 
     def record(
         self,
@@ -99,7 +108,15 @@ class DownloadLog:
                 'WHERE at >= ? ORDER BY at',
                 (moment.isoformat(),),
             ).fetchall()
-        return [dict(row) for row in rows]
+        return [
+            {
+                'at': row[0],
+                'outcome': row[1],
+                'provider': row[2],
+                'bytes': int(row[3]),
+            }
+            for row in rows
+        ]
 
     def first_at(self) -> Optional[str]:
         """When the oldest row still kept was written, if any."""
@@ -111,6 +128,8 @@ class DownloadLog:
     def prune(self, days: int = RETENTION_DAYS) -> int:
         cutoff = (_now() - timedelta(days=days)).isoformat()
         with self._connect() as conn:
-            return conn.execute(
+            deleted = conn.execute(
                 'DELETE FROM download_log WHERE at < ?', (cutoff,)
             ).rowcount
+            conn.commit()
+        return deleted

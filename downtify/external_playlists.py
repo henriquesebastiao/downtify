@@ -9,12 +9,13 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from . import m3u
+from .db.config import Dialect
+from .db.core import Database, as_database
 from .library_catalog import AUDIO_EXTENSIONS, LibraryContext
 from .library_paths import library_stored_path
 from .manual_playlists import copy_playlist, existing_playlist_names
 from .playlist_catalog import ManualPlaylistOwners
 from .playlist_shares import PlaylistShares
-from .sqlite_utils import connect_sqlite
 
 MAX_BYTES = 2 * 1024 * 1024
 MAX_LINES = 20_000
@@ -156,23 +157,32 @@ def discover_external_playlists(
 
 
 class ExternalPlaylistImports:
-    def __init__(self, db_path: Path) -> None:
-        self.path = str(db_path)
+    def __init__(self, db_path: str | Path | Database) -> None:
+        self.db = as_database(db_path, 'library')
+        if isinstance(db_path, Database):
+            self.path = str(self.db.path) if self.db.path else None
+        else:
+            self.path = str(db_path)
         self.lock = threading.RLock()
-        with connect_sqlite(self.path) as conn:
+        self._init_db()
+
+    def _init_db(self) -> None:
+        # PostgreSQL gets this table from the migrations.
+        if self.db.dialect is not Dialect.SQLITE:
+            return
+        with self.db.connect() as conn:
             conn.execute("""CREATE TABLE IF NOT EXISTS external_playlist_imports (
                 user_id INTEGER NOT NULL, source_id TEXT NOT NULL,
                 playlist_name TEXT NOT NULL, revision TEXT NOT NULL,
                 PRIMARY KEY(user_id, source_id))""")
 
     def imported(self, user_id: int) -> dict[str, str]:
-        with connect_sqlite(self.path) as conn:
-            return dict(
-                conn.execute(
-                    'SELECT source_id, playlist_name FROM external_playlist_imports WHERE user_id = ?',
-                    (user_id,),
-                )
-            )
+        with self.db.connect() as conn:
+            rows = conn.execute(
+                'SELECT source_id, playlist_name FROM external_playlist_imports WHERE user_id = ?',
+                (user_id,),
+            ).fetchall()
+        return {row[0]: row[1] for row in rows}
 
     def import_snapshot(
         self,
@@ -183,7 +193,7 @@ class ExternalPlaylistImports:
     ) -> dict:
         with self.lock:
             previous = self.imported(user_id).get(source.source_id)
-            owners = ManualPlaylistOwners(Path(self.path))
+            owners = ManualPlaylistOwners(self.db)
             if (
                 previous
                 and owners.owner_map().get(previous.casefold()) == user_id
@@ -212,9 +222,9 @@ class ExternalPlaylistImports:
                 name,
                 owners,
                 user_id,
-                PlaylistShares(Path(self.path)),
+                PlaylistShares(self.db),
             )
-            with connect_sqlite(self.path) as conn:
+            with self.db.connect() as conn:
                 conn.execute(
                     'INSERT INTO external_playlist_imports VALUES (?, ?, ?, ?) '
                     'ON CONFLICT(user_id, source_id) DO UPDATE SET '
@@ -229,14 +239,14 @@ class ExternalPlaylistImports:
             return {'source_id': source.source_id, 'status': 'added', **result}
 
     def rename(self, old: str, new: str) -> None:
-        with connect_sqlite(self.path) as conn:
+        with self.db.connect() as conn:
             conn.execute(
                 'UPDATE external_playlist_imports SET playlist_name = ? WHERE playlist_name = ?',
                 (new, old),
             )
 
     def forget(self, name: str) -> None:
-        with connect_sqlite(self.path) as conn:
+        with self.db.connect() as conn:
             conn.execute(
                 'DELETE FROM external_playlist_imports WHERE playlist_name = ?',
                 (name,),
