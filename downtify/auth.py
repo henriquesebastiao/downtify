@@ -992,7 +992,7 @@ RULES: list[tuple[frozenset[str], re.Pattern[str], str]] = [
         (_READ, r'^/api/monitor/artist-suggestions(/resolve)?$', USER),
         # What the artist watches still miss (own watches; every one for
         # an admin).
-        (_READ, r'^/api/monitor/wanted$', USER),
+        (_READ, r'^/api/monitor/wanted(/job)?$', USER),
         (
             _m('POST'),
             r'^/api/monitor/wanted/(check-all|download-all|stop)$',

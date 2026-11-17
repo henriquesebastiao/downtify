@@ -1,7 +1,8 @@
 <template>
   <!-- The Wanted tab: what every artist you watch is still missing, with
        Check all / Download all jobs that go one artist at a time.
-       GET /api/monitor/wanted and POST /api/monitor/wanted/* -->
+       GET /api/monitor/wanted (and .../job to follow a run) and POST
+       /api/monitor/wanted/* -->
   <div class="flex flex-col gap-4">
     <div v-if="loading && !data" class="flex flex-col gap-2">
       <UiSkeleton v-for="n in 4" :key="n" class="h-12 w-full" />
@@ -12,16 +13,15 @@
     <template v-else-if="data">
       <div class="flex flex-col gap-2">
         <p class="text-sm text-muted">
-          {{
-            t('monitor.wantedSummary', {
-              tracks: totals.tracks,
-              releases: totals.releases,
-            })
-          }}
-          <span v-if="totals.unchecked">
-            ·
-            {{ t('monitor.wantedUnchecked', { count: totals.unchecked }) }}
-          </span>
+          <template v-if="totals.tracks > 0">
+            {{ summaryLine }}
+          </template>
+          <template v-if="totals.uncheckedReleases > 0">
+            <template v-if="totals.tracks > 0"> · </template>
+            {{
+              t('monitor.wantedUnchecked', { count: totals.uncheckedReleases })
+            }}
+          </template>
         </p>
         <div class="flex flex-wrap items-center gap-x-3 gap-y-2">
           <UiButton
@@ -40,7 +40,7 @@
             variant="secondary"
             icon="download"
             :loading="starting === 'download'"
-            :disabled="totals.tracks === 0 || running || Boolean(starting)"
+            :disabled="!hasWork || running || Boolean(starting)"
             @click="downloadAll"
           >
             {{ t('monitor.wantedDownloadAll') }}
@@ -51,6 +51,7 @@
             variant="ghost"
             icon="x"
             :loading="stopping"
+            :disabled="Boolean(job?.stopping)"
             @click="stop"
           >
             {{ t('monitor.wantedStop') }}
@@ -100,7 +101,7 @@
         </div>
 
         <p v-if="notChecked.length" class="text-[13px] text-pretty text-muted">
-          {{ t('monitor.wantedNotChecked', { names: notChecked.join(', ') }) }}
+          {{ t('monitor.wantedNotChecked', { names: notCheckedLine }) }}
         </p>
 
         <section
@@ -115,12 +116,15 @@
               >{{ entry.watch.name }}</RouterLink
             >
             <UiButton
-              v-if="entry.missing.tracks > 0"
               size="sm"
               variant="secondary"
               icon="download"
               :loading="fetching.has(entry.watch.id)"
-              :disabled="entry.checking || running"
+              :disabled="
+                entry.checking ||
+                running ||
+                (entry.missing.tracks === 0 && !entry.unchecked)
+              "
               @click="downloadArtist(entry)"
             >
               {{ t('artistReleases.downloadMissing') }}
@@ -160,7 +164,10 @@
                   }}
                 </span>
                 <span class="mt-0.5 flex">
-                  <UiBadge :tone="stateTone(release.state)">
+                  <UiBadge v-if="release.checked === false" tone="neutral">
+                    {{ t('monitor.wantedUncheckedBadge') }}
+                  </UiBadge>
+                  <UiBadge v-else :tone="stateTone(release.state)">
                     {{ stateLabel(release) }}
                   </UiBadge>
                 </span>
@@ -202,12 +209,15 @@ import {
   TYPES,
   filterWanted,
   jobText,
+  listedReleases,
+  namesText,
   summary,
+  summaryText,
   uncheckedNames,
 } from '/src/lib/wantedReleases'
 import { useI18n } from '/src/i18n'
 
-// The latest totals, for the tab's count badge.
+// The releases listed (read or not), for the tab's count badge.
 const emit = defineEmits(['totals'])
 
 const { t } = useI18n()
@@ -230,13 +240,24 @@ const totals = computed(() => summary(data.value?.totals))
 const job = computed(() => data.value?.job || null)
 const running = computed(() => Boolean(job.value?.running))
 const jobLine = computed(() => jobText(job.value, t))
+const summaryLine = computed(() => summaryText(totals.value, t))
+// Something to download: songs known missing, or releases not read yet.
+const hasWork = computed(
+  () => totals.value.tracks > 0 || totals.value.uncheckedReleases > 0
+)
 const shown = computed(() =>
   filterWanted(data.value?.artists || [], {
     query: query.value,
     type: type.value,
   })
 )
-const notChecked = computed(() => uncheckedNames(shown.value))
+// A type filter hides releases, not the fact that an artist wasn't read.
+const notChecked = computed(() =>
+  uncheckedNames(
+    filterWanted(data.value?.artists || [], { query: query.value })
+  )
+)
+const notCheckedLine = computed(() => namesText(notChecked.value, t))
 const typeOptions = computed(() => [
   { value: '', label: t('monitor.wantedAllTypes') },
   ...TYPES.map((id) => ({
@@ -268,7 +289,7 @@ function errorOf(err) {
   return t('toast.actionFailed')
 }
 
-// A poll is a load the timer starts: it fails quietly and tries again.
+// The whole list. A poll's reload (`polled`) fails quietly and tries again.
 async function load(polled = false) {
   clearTimeout(poll)
   try {
@@ -276,7 +297,7 @@ async function load(polled = false) {
     if (!alive) return
     data.value = body
     error.value = ''
-    emit('totals', body.totals?.releases ?? 0)
+    emit('totals', listedReleases(body.artists || []))
   } catch (err) {
     if (!alive) return
     if (polled) {
@@ -286,10 +307,33 @@ async function load(polled = false) {
   } finally {
     loading.value = false
   }
-  // Follow a running job until it is done (and only while the tab is open).
+  schedulePoll()
+}
+
+// Follow a running job (only while the tab is open) by its light endpoint;
+// the full list is read again when an artist is done and when the job ends.
+function schedulePoll() {
+  clearTimeout(poll)
   if (alive && data.value?.job?.running) {
-    poll = setTimeout(() => load(true), 2000)
+    poll = setTimeout(pollJob, 2000)
   }
+}
+
+async function pollJob() {
+  try {
+    const { data: body } = await monitorAPI.getWantedJob()
+    if (!alive) return
+    const before = data.value?.job
+    const next = body?.job || null
+    data.value = { ...data.value, job: next }
+    if (!next?.running || next.done !== before?.done) {
+      await load(true)
+      return
+    }
+  } catch {
+    // quiet: the next poll tries again
+  }
+  schedulePoll()
 }
 
 async function start(kind, call) {
@@ -311,9 +355,22 @@ function checkAll() {
 }
 
 async function downloadAll() {
+  const { tracks, uncheckedReleases } = totals.value
+  // Releases not read yet are downloaded too, but their size is unknown.
+  const body = [
+    t('monitor.wantedConfirmBody'),
+    uncheckedReleases > 0
+      ? t('monitor.wantedConfirmUnchecked', { count: uncheckedReleases })
+      : '',
+  ]
+    .filter(Boolean)
+    .join(' ')
   const ok = await ui.confirm({
-    title: t('monitor.wantedConfirmTitle', { tracks: totals.value.tracks }),
-    body: t('monitor.wantedConfirmBody'),
+    title:
+      tracks > 0
+        ? t('monitor.wantedConfirmTitle', { count: tracks })
+        : t('artistReleases.missingTitle'),
+    body,
     confirmLabel: t('monitor.wantedDownloadAll'),
   })
   if (!ok) return
@@ -337,7 +394,8 @@ async function stop() {
 }
 
 async function downloadArtist(entry) {
-  const { tracks, releases: count, unread } = entry.missing
+  const { tracks, releases: count } = entry.missing
+  const unread = entry.unchecked
   const ok = await ui.confirm({
     title: t('artistReleases.missingTitle'),
     body: unread

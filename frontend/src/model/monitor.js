@@ -100,6 +100,11 @@ function getWanted() {
   return API.get('/api/monitor/wanted')
 }
 
+// Just the job, light enough to poll while it runs.
+function getWantedJob() {
+  return API.get('/api/monitor/wanted/job')
+}
+
 function wantedCheckAll() {
   return API.post('/api/monitor/wanted/check-all')
 }
@@ -115,6 +120,7 @@ function wantedStop() {
 export default {
   artistSuggestions,
   getWanted,
+  getWantedJob,
   wantedCheckAll,
   wantedDownloadAll,
   wantedStop,

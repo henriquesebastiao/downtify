@@ -302,15 +302,15 @@ The switch next to a release overrides the watch, like Lidarr's per-album monito
 
 ### Wanted
 
-The **Wanted** tab of the Monitor page, next to **Playlists** and **Artists**, is one list of everything your artist watches should download and the library doesn't fully have yet. For each of your artist watches (an admin sees everyone's) it lists every release the watch downloads (switched on, or of a type and kind it watches) that is **Partly** or **To download**, with how many songs the library has of it ("have of total"). Paused watches are left out, and so is a release whose switch you turn off. Releases are grouped by artist, each group with a link to the watch's page and that artist's **Download missing**. At the top, a summary counts the songs missing and the releases they belong to, and how many artists are not checked yet. A search box and a type filter narrow the list.
+The **Wanted** tab of the Monitor page, next to **Playlists** and **Artists**, is one list of everything your artist watches should download and the library doesn't fully have yet. For each of your artist watches (an admin sees everyone's) it lists every release the watch downloads (switched on, or of a type and kind it watches) that is **Partly** or **To download**, with how many songs the library has of it ("have of total"). Paused watches are left out, and so is a release whose switch you turn off. Releases are grouped by artist, each group with a link to the watch's page and that artist's **Download missing**. At the top, a summary counts the songs missing and the releases they belong to, and how many releases are not checked yet. A search box and a type filter narrow the list.
 
-An artist under **Not checked yet** has releases whose track lists haven't been read yet (by **Check what I have**, see [An artist's releases](#an-artists-releases)), so what it misses isn't fully known. Only the gaps already known are listed for it.
+A release with the **Not checked yet** badge is one whose track list hasn't been read yet (by **Check what I have**, see [An artist's releases](#an-artists-releases)), so its size isn't known: even when the catalogue lists a track count, it may well be in your library. It shows the badge instead of a count, is left out of the songs missing, and its artist is named in a **Not checked yet** line above the list (the first few names, then "and 85 more"). An artist's own **Download missing** is available whenever it has songs known missing or releases not checked yet.
 
 **Check all artists** runs **Check what I have** on each of those artists, one artist at a time, in the background. It is slow for big artists, since MusicBrainz allows one request a second. **Stop** ends the reading of the current artist at its next release: what was read is kept, and a later **Check all artists** picks it up from there.
 
-**Download all missing** asks first, with the number of songs, then runs each artist's **Download missing** one artist at a time. The songs download in the **Queue**. **Stop** lets the artist in progress finish, then stops.
+**Download all missing** asks first, with the number of songs (and, when some releases aren't checked yet, that whatever they miss comes on top: **Check all artists** first gives an exact count), then runs each artist's **Download missing** one artist at a time. The songs download in the **Queue**. **Stop** lets the artist in progress finish, then stops.
 
-Only one of the two runs at a time, and another account's run blocks yours too. You see the progress of your own run (an admin sees any), and both are blocked in library-only mode.
+Only one of the two runs at a time, and another account's run blocks yours too. You see the progress of your own run (an admin sees any), and both are blocked in library-only mode. The progress line counts the artist in progress ("Checking 1 of 87: Ace") and reads "Stopping…" after **Stop** until the run has ended.
 
 ## Where a song came from
 

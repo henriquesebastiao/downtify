@@ -4,15 +4,18 @@
 view covers every watch, a user's only their own), the releases the watch
 downloads that the library only partly has or lacks, with the tracks
 missing in total. It reads what the last sweep and "Check what I have"
-kept; nothing is fetched. A release whose tracklist isn't read yet counts
-as unchecked: its size is unknown.
+kept; nothing is fetched. A release whose tracklist was never read counts
+as unchecked (``checked`` false), even when the catalogue lists a track
+count: it may well be in the library. Only checked releases add to the
+missing tracks.
 
 ``POST .../check-all`` reads the tracklists of the artists with unchecked
 releases, ``POST .../download-all`` downloads what the ones with gaps
 miss - one artist at a time, as one background job for everyone; ``POST
 .../stop`` ends it: a download-all after the artist it is on, a check-all
 at the next release it reads (what was read is kept; the next check-all
-picks the artist up again).
+picks the artist up again). ``GET .../job`` is the job alone, light
+enough to poll while it runs.
 """
 
 from __future__ import annotations
@@ -22,7 +25,7 @@ import secrets
 from datetime import datetime, timezone
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from loguru import logger
 
 from . import api, artist_catalogue
@@ -35,7 +38,10 @@ from .monitor import (
     take_inventory,
 )
 
-router = APIRouter(prefix='/api/monitor/wanted')
+router = APIRouter(
+    prefix='/api/monitor/wanted',
+    dependencies=[Depends(api.library_only_guard)],
+)
 
 
 def scoped_artist_watches(
@@ -59,22 +65,40 @@ def wanted_view(
 ) -> dict[str, Any]:
     """The wanted releases of *watches*, grouped by artist (by name).
 
-    The library is read once for all of them. An artist with nothing
-    wanted and nothing unread is left out."""
+    Each release says whether its tracklist was read (``checked``); an
+    artist's ``unchecked`` counts those that weren't, and its ``missing``
+    counts the tracks (and releases) of the checked ones only, plus
+    ``unread`` as the artist page reports it. The library is read once
+    for all of them. An artist with nothing wanted and nothing unread is
+    left out."""
 
     artists: list[dict[str, Any]] = []
     if watches:
         index = api._library_songs()
         for watch in watches:
             view = api._artist_releases(db, watch, songs=index)
-            releases = artist_catalogue.wanted_releases(view['releases'])
-            missing = view['missing']
+            kept = db.catalogue.tracks(watch.id)
+            releases = [
+                {**r, 'checked': any(a in kept for a in r['album_ids'])}
+                for r in artist_catalogue.wanted_releases(view['releases'])
+            ]
+            missing = {
+                **view['missing'],
+                **artist_catalogue.missing([
+                    r
+                    for r in view['releases']
+                    if r.get('wanted')
+                    and any(a in kept for a in r['album_ids'])
+                ]),
+                'unread': view['missing']['unread'],
+            }
             if not releases and not missing['unread']:
                 continue
             artists.append({
                 'watch': view['watch'],
                 'releases': releases,
                 'missing': missing,
+                'unchecked': sum(1 for r in releases if not r['checked']),
                 'checking': bool(view['checking']),
             })
     artists.sort(key=lambda a: str(a['watch']['name']).casefold())
@@ -84,17 +108,19 @@ def wanted_view(
             'tracks': sum(a['missing']['tracks'] for a in artists),
             'releases': sum(a['missing']['releases'] for a in artists),
             'artists': len(artists),
-            'unchecked': sum(1 for a in artists if a['missing']['unread']),
+            'unchecked': sum(1 for a in artists if a['unchecked']),
+            'unchecked_releases': sum(a['unchecked'] for a in artists),
         },
     }
 
 
-#: The one job (``{}`` until the first): ``id, kind, running, done, total,
-#: current, failed, skipped, stopped, started_at, finished_at`` and, kept
-#: private, ``cancel``, ``user_id``, ``is_admin`` and ``watch_ids``.
+#: The one job (``{}`` until the first): ``id, kind, running, stopping,
+#: done, total, current, failed, skipped, stopped, started_at,
+#: finished_at`` and, kept private, ``cancel``, ``user_id`` and
+#: ``watch_ids``.
 _job: dict[str, Any] = {}
 
-_PRIVATE = ('cancel', 'user_id', 'is_admin', 'watch_ids')
+_PRIVATE = ('cancel', 'user_id', 'watch_ids')
 
 
 def _now() -> str:
@@ -189,15 +215,17 @@ async def _work(job: dict[str, Any], db: PlaylistMonitorDB) -> None:
     try:
         for watch_id in job['watch_ids']:
             if job['cancel']:
-                job['stopped'] = True
                 break
-            watch = await asyncio.to_thread(db.get_playlist, watch_id)
-            if watch is None or not watch.enabled:
-                job['skipped'] += 1
-                job['done'] += 1
-                continue
-            job['current'] = watch.name
+            name = f'#{watch_id}'
             try:
+                watch = await asyncio.to_thread(db.get_playlist, watch_id)
+                if job['cancel']:  # Stop landed during the re-read
+                    break
+                if watch is None or not watch.enabled:
+                    job['skipped'] += 1
+                    job['done'] += 1
+                    continue
+                name = job['current'] = watch.name
                 if job['kind'] == 'check':
                     worked = await _check_one(job, watch, db)
                 else:
@@ -206,12 +234,22 @@ async def _work(job: dict[str, Any], db: PlaylistMonitorDB) -> None:
                     job['skipped'] += 1
             except Exception:
                 logger.opt(exception=True).warning(
-                    'Wanted: {} failed for "{}"', job['kind'], watch.name
+                    'Wanted: {} failed for "{}"', job['kind'], name
                 )
                 job['failed'] += 1
             job['done'] += 1
+    except asyncio.CancelledError:
+        # Shutting down: the inventory thread stops at its next release.
+        job['cancel'] = True
+        raise
     finally:
-        job.update(running=False, current='', finished_at=_now())
+        job.update(
+            running=False,
+            stopping=False,
+            stopped=job['stopped'] or bool(job['cancel']),
+            current='',
+            finished_at=_now(),
+        )
 
 
 async def _start(kind: str, request: Request) -> dict[str, Any]:
@@ -223,12 +261,12 @@ async def _start(kind: str, request: Request) -> dict[str, Any]:
     watches = await asyncio.to_thread(scoped_artist_watches, db, request)
     view = await asyncio.to_thread(wanted_view, db, watches)
     if kind == 'check':
-        picked = [a for a in view['artists'] if a['missing']['unread'] > 0]
+        picked = [a for a in view['artists'] if a['unchecked'] > 0]
     else:
         picked = [
             a
             for a in view['artists']
-            if a['missing']['tracks'] > 0 or a['missing']['unread'] > 0
+            if a['missing']['tracks'] > 0 or a['unchecked'] > 0
         ]
     if _job.get('running'):  # another start got in while the view was read
         raise HTTPException(409, detail={'code': 'wanted_busy'})
@@ -236,6 +274,7 @@ async def _start(kind: str, request: Request) -> dict[str, Any]:
         'id': secrets.token_urlsafe(8),
         'kind': kind,
         'running': True,
+        'stopping': False,
         'done': 0,
         'total': len(picked),
         'current': '',
@@ -246,7 +285,6 @@ async def _start(kind: str, request: Request) -> dict[str, Any]:
         'finished_at': '',
         'cancel': False,
         'user_id': api.request_user_id(request),
-        'is_admin': api.request_is_admin(request),
         'watch_ids': [a['watch']['id'] for a in picked],
     }
     # _job is the live record the worker updates; a refused spawn
@@ -281,14 +319,25 @@ async def download_all(request: Request) -> dict[str, Any]:
 @router.post('/stop')
 async def stop(request: Request) -> dict[str, Any] | None:
     """Stop the job: a download-all after the artist it is on, a check-all
-    at the next release it reads. The job as the page sees it."""
+    at the next release it reads. The job as the page sees it (``stopping``
+    while it winds down)."""
 
     job = _visible_job(request)
     if job is None and _job:
         raise HTTPException(404, detail={'code': 'no_job'})
     if job is not None and job['running']:
         job['cancel'] = True
+        job['stopping'] = True
     return public_job(job) if job is not None else None
+
+
+@router.get('/job')
+async def wanted_job(request: Request) -> dict[str, Any]:
+    """Just the job (``{'job': None}`` when there is none, or it is
+    someone else's), for polling while it runs."""
+
+    job = _visible_job(request)
+    return {'job': public_job(job) if job is not None else None}
 
 
 @router.get('')

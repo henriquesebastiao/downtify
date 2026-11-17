@@ -470,6 +470,7 @@ def test_the_signing_key_is_private_and_kept(tmp_path):
         ('GET', '/api/monitor/artist-suggestions', USER),
         ('GET', '/api/monitor/artist-suggestions/resolve', USER),
         ('GET', '/api/monitor/wanted', USER),
+        ('GET', '/api/monitor/wanted/job', USER),
         ('POST', '/api/monitor/wanted/check-all', USER),
         ('POST', '/api/monitor/wanted/download-all', USER),
         ('POST', '/api/monitor/wanted/stop', USER),
