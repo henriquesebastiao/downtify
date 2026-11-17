@@ -28,7 +28,7 @@ Downtify lässt eine Hintergrundaufgabe laufen, die alle 60 Sekunden ausgeführt
 3. Lädt neue Titel mit derselben Pipeline wie ein manueller Download herunter
 4. Aktualisiert die M3U-Datei der Playlist (wenn die M3U-Erzeugung aktiviert ist)
 
-Die erste Prüfung, die startet, sobald du die Beobachtung hinzufügst, lädt alles herunter, was schon in der Playlist ist; spätere Prüfungen laden nur herunter, was seitdem hinzukam. „Schon heruntergeladen“ wird in einer kleinen SQLite-Datenbank (`downtify_monitor.db` unter `/data`) festgehalten, nicht durch Prüfen des Download-Ordners — das Verschieben einer heruntergeladenen Datei an eine andere Stelle auf der Festplatte (in deine eigene Bibliotheksstruktur, auf ein anderes Laufwerk, wohin auch immer) lässt Downtify also **nicht** glauben, sie fehle, und lädt sie bei der nächsten Prüfung nicht erneut herunter.
+Die erste Prüfung, die startet, sobald du die Beobachtung hinzufügst, lädt alles herunter, was schon in der Playlist ist; spätere Prüfungen laden nur herunter, was seitdem hinzukam. „Schon heruntergeladen“ wird in einer kleinen SQLite-Datenbank (`downtify_monitor.db` unter `/data`; mit PostgreSQL in der PostgreSQL-Datenbank) festgehalten, nicht durch Prüfen des Download-Ordners — das Verschieben einer heruntergeladenen Datei an eine andere Stelle auf der Festplatte (in deine eigene Bibliotheksstruktur, auf ein anderes Laufwerk, wohin auch immer) lässt Downtify also **nicht** glauben, sie fehle, und lädt sie bei der nächsten Prüfung nicht erneut herunter.
 
 Ein separater Durchlauf läuft jede Stunde und prüft, ob die Datei jedes heruntergeladenen Titels noch da ist. Wirklich gelöschte Dateien (im Gegensatz zu verschobenen) werden dann vergessen, sodass der Titel wieder zum Download infrage kommt — bei der nächsten Prüfung der Beobachtung nach diesem stündlichen Durchlauf, nicht sofort.
 
@@ -260,7 +260,7 @@ Verschwindet eine Datei tatsächlich — du hast sie aus dem Download-Ordner gen
 
 ## Speicherung
 
-Der Zustand der Überwachung wird in einer SQLite-Datenbank unter `/data/downtify_monitor.db` gespeichert. Die Datenbank hält fest:
+Der Zustand der Überwachung wird in einer SQLite-Datenbank unter `/data/downtify_monitor.db` gespeichert, dem Standard-Backend. Mit PostgreSQL ([Datenbank](../database.md)) werden dieselben Einträge in der PostgreSQL-Datenbank gehalten. Die Datenbank hält fest:
 
 - Jede Beobachtung (Art, Spotify- oder YouTube-Music-Playlist-ID oder YouTube-Music-Kanal-ID, Name, URL, Intervall, aktiviert, Zeitpunkt der letzten Prüfung). Ob eine Beobachtung Spotify oder YouTube Music ist, wird aus ihrer gespeicherten URL gelesen, sodass keine zusätzliche Spalte nötig ist.
 - Jeden erfolgreich heruntergeladenen Titel pro Beobachtung, einschließlich des Dateinamens auf der Festplatte

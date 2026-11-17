@@ -63,6 +63,7 @@ export default {
       'getting-started/docker-compose.md': 'Docker Compose',
       'getting-started/one-click.md': '一键安装',
       'getting-started/environment-variables.md': '环境变量',
+      'database.md': 'Database',
       'features/index.md': '概览',
       'features/charts.md': '排行榜',
       'features/similar.md': '相似歌曲',

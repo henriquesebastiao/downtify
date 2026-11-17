@@ -9,19 +9,22 @@ stream's packets - no decoding - into its ``md5`` muxer, which hashes
 exactly the encoded audio and nothing else. Two files with the same
 digest carry bit-identical audio, whatever their tags say.
 
-Hashing reads the whole file, so digests are kept in a small SQLite
+Hashing reads the whole file, so digests are kept in a small database
 cache keyed by path, size and modification time (:class:`AudioHashCache`).
 """
 
 from __future__ import annotations
 
-import sqlite3
 import subprocess
 import threading
+from contextlib import AbstractContextManager
 from pathlib import Path
 from typing import Optional
 
 from loguru import logger
+
+from downtify.db.config import Dialect
+from downtify.db.core import Connection, Database, as_database
 
 #: Seconds one file may take; a 200 MB FLAC on a slow disk stays well
 #: inside it.
@@ -80,12 +83,23 @@ def audio_md5(path: Path, *, ffmpeg: str = 'ffmpeg') -> Optional[str]:
 
 
 class AudioHashCache:
-    """``audio_md5`` results, reused while a file's size and mtime hold."""
+    """``audio_md5`` results, reused while a file's size and mtime hold.
 
-    def __init__(self, db_path: Path) -> None:
-        self.db_path = Path(db_path)
+    *path_or_db* is a SQLite file path or a shared :class:`Database`.
+    """
+
+    def __init__(self, path_or_db: str | Path | Database) -> None:
+        self.db = as_database(path_or_db, 'doctor_hashes')
+        if isinstance(path_or_db, Database):
+            self.db_path: Path | None = self.db.path
+        else:
+            self.db_path = Path(path_or_db)
         self._lock = threading.Lock()
-        self.db_path.parent.mkdir(parents=True, exist_ok=True)
+        if self.db.dialect is Dialect.SQLITE:
+            self._init_db()
+
+    def _init_db(self) -> None:
+        # PostgreSQL gets its table from the migrations.
         with self._connect() as conn:
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS audio_hashes (
@@ -96,8 +110,8 @@ class AudioHashCache:
                 )
             """)
 
-    def _connect(self) -> sqlite3.Connection:
-        return sqlite3.connect(self.db_path, timeout=30)
+    def _connect(self) -> AbstractContextManager[Connection]:
+        return self.db.connect()
 
     def digest(self, path: Path) -> Optional[str]:
         """The audio digest of *path*, from the cache when still valid."""
@@ -120,8 +134,11 @@ class AudioHashCache:
             return None
         with self._lock, self._connect() as conn:
             conn.execute(
-                'INSERT OR REPLACE INTO audio_hashes '
-                '(path, size, mtime_ns, digest) VALUES (?, ?, ?, ?)',
+                'INSERT INTO audio_hashes '
+                '(path, size, mtime_ns, digest) VALUES (?, ?, ?, ?) '
+                'ON CONFLICT (path) DO UPDATE SET '
+                'size = excluded.size, mtime_ns = excluded.mtime_ns, '
+                'digest = excluded.digest',
                 (key, stat.st_size, stat.st_mtime_ns, digest),
             )
         return digest

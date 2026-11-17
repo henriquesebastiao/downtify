@@ -14,6 +14,7 @@ export const NAV = [
         title: 'Environment Variables',
         page: 'getting-started/environment-variables.md',
       },
+      { title: 'Database', page: 'database.md' },
     ],
   },
   {

@@ -47,6 +47,8 @@ All of it runs inside a single Docker container. See **[How it works](https://he
 
 Optional **OpenID Connect** login works alongside local accounts and can restrict sign-in by group; local password login can also be disabled while keeping OIDC and app pairing. See [Users & sign-in](https://downtify.henriquesebastiao.com/features/users/) for setup.
 
+Data is kept in SQLite by default. PostgreSQL is available too: set `DATABASE_URL`, or use the `postgres` service in the repository's `docker-compose.yml`. See [Database](https://downtify.henriquesebastiao.com/database/).
+
 ## Features
 
 |                                  |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
@@ -143,6 +145,8 @@ environment:
 ```
 
 The remaining deployment options (timezone, monitor sync time, cookies file, IPv4) are listed under **[Environment variables](https://henriquesebastiao.github.io/downtify/getting-started/environment-variables/)**. Everything else is configured from **Settings** in the web interface.
+
+The example above keeps SQLite. The repository's own `docker-compose.yml` also has an opt-in `postgres` service (profile `postgres`); see [Database](https://downtify.henriquesebastiao.com/database/).
 
 ### Home server platforms
 

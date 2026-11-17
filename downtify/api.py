@@ -420,7 +420,7 @@ from fastapi import (
     WebSocket,
     WebSocketDisconnect,
 )
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from loguru import logger
 from starlette.requests import HTTPConnection
 
@@ -461,6 +461,7 @@ from .buy_links import buy_links
 from .cookies import MAX_COOKIES_BYTES, CookiesStore, InvalidCookiesFile
 from .cover_cache import CoverArtCache
 from .cover_thumbs import CoverThumbs
+from .db import runtime as db_runtime
 from .deemix_provider import (
     DEFAULT_SETTINGS as DEEMIX_DEFAULTS,
 )
@@ -2852,15 +2853,29 @@ def get_version() -> str:
 
 
 @router.get('/api/health')
-def get_health() -> dict[str, Any]:
+def get_health() -> Any:
     """Liveness probe: the process is up and FastAPI is serving requests.
 
     Deliberately doesn't check the downloader/monitor DB — those are
     only set up once ``main.py``'s startup hook finishes, so gating
     health on them would report unhealthy during the brief, normal
     window right after boot. Docker's ``HEALTHCHECK`` already has a
-    ``--start-period`` for that; this endpoint just needs to answer.
+    ``--start-period`` for that.
+
+    The one exception is a PostgreSQL server that cannot be reached:
+    then the answer is ``503`` (``database_unavailable``). On SQLite
+    ``healthcheck()`` is ``None`` and nothing changes. Runs as a plain
+    ``def`` handler, so FastAPI keeps the ``select 1`` off the loop.
     """
+    try:
+        db_ok = db_runtime.healthcheck()
+    except Exception:
+        logger.opt(exception=True).debug('Database healthcheck failed')
+        db_ok = False
+    if db_ok is False:
+        return JSONResponse(
+            {'status': 'database_unavailable'}, status_code=503
+        )
     return {'status': 'ok', 'version': state.version}
 
 

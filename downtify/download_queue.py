@@ -7,7 +7,7 @@ downloads already running finish normally. The queue reads as
 ``pausing`` until the last of them ends, then ``paused``. Playlist
 Monitor sweeps wait at the same switch before every track.
 
-:class:`PendingDownloads` is the sqlite copy of the jobs that haven't
+:class:`PendingDownloads` is the database copy of the jobs that haven't
 finished yet, plus the switch itself, so a restart (or an update) picks
 the queue back up where it stopped - still paused when it was.
 """
@@ -17,7 +17,6 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import json
-import sqlite3
 from collections.abc import AsyncIterator, Awaitable, Callable, Collection
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -25,7 +24,8 @@ from typing import Any, Optional
 
 from loguru import logger
 
-from .sqlite_utils import connect_sqlite
+from .db.config import Dialect
+from .db.core import Connection, Database, as_database
 
 STATE_RUNNING = 'running'
 STATE_PAUSING = 'pausing'
@@ -130,16 +130,23 @@ class PendingDownload:
 
 
 class PendingDownloads:
-    """SQLite copy of the unfinished download jobs, in queue order."""
+    """Database copy of the unfinished download jobs, in queue order."""
 
-    def __init__(self, db_path: Path) -> None:
-        self._path = str(db_path)
+    def __init__(self, path_or_db: str | Path | Database) -> None:
+        self.db = as_database(path_or_db, 'library')
+        if isinstance(path_or_db, (str, Path)):
+            self._path: Optional[str] = str(path_or_db)
+        else:
+            self._path = str(self.db.path) if self.db.path else None
         self._init_db()
 
-    def _connect(self) -> sqlite3.Connection:
-        return connect_sqlite(self._path)
+    def _connect(self) -> Any:
+        return self.db.connect()
 
     def _init_db(self) -> None:
+        # PostgreSQL gets its schema from the library migrations.
+        if self.db.dialect is not Dialect.SQLITE:
+            return
         with self._connect() as conn:
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS pending_downloads (
@@ -166,25 +173,29 @@ class PendingDownloads:
 
         if not rows:
             return
-        with self._connect() as conn:
+        with self.db.transaction(lock=True) as conn:
             for row in rows:
                 users = sorted({int(uid) for uid in row.user_ids if uid})
+                inserted = conn.execute(
+                    'INSERT INTO pending_downloads '
+                    '(song_id, song, options, user_ids) '
+                    'VALUES (?, ?, ?, ?) '
+                    'ON CONFLICT (song_id) DO NOTHING',
+                    (
+                        row.song_id,
+                        json.dumps(row.song, default=str),
+                        json.dumps(row.options, default=str),
+                        json.dumps(users),
+                    ),
+                ).rowcount
+                if inserted:
+                    continue
                 saved = conn.execute(
-                    'SELECT user_ids FROM pending_downloads WHERE song_id = ?',
+                    'SELECT user_ids FROM pending_downloads '
+                    'WHERE song_id = ?' + _row_lock(conn),
                     (row.song_id,),
                 ).fetchone()
                 if saved is None:
-                    conn.execute(
-                        'INSERT INTO pending_downloads '
-                        '(song_id, song, options, user_ids) '
-                        'VALUES (?, ?, ?, ?)',
-                        (
-                            row.song_id,
-                            json.dumps(row.song, default=str),
-                            json.dumps(row.options, default=str),
-                            json.dumps(users),
-                        ),
-                    )
                     continue
                 merged = sorted(set(_user_ids(saved[0])) | set(users))
                 conn.execute(
@@ -219,7 +230,8 @@ class PendingDownloads:
                 'FROM pending_downloads ORDER BY seq'
             ).fetchall()
         rows: list[PendingDownload] = []
-        for song_id, song, options, user_ids in found:
+        for raw in found:
+            song_id, song, options, user_ids = tuple(raw)
             try:
                 song_dict = json.loads(song)
                 options_dict = json.loads(options or '{}')
@@ -247,7 +259,7 @@ class PendingDownloads:
             row = conn.execute(
                 "SELECT value FROM download_queue_state WHERE key = 'paused'"
             ).fetchone()
-        return bool(row) and row[0] == '1'
+        return bool(row) and tuple(row)[0] == '1'
 
     def set_paused(self, value: bool) -> None:
         with self._connect() as conn:
@@ -257,6 +269,11 @@ class PendingDownloads:
                 'ON CONFLICT(key) DO UPDATE SET value = excluded.value',
                 ('1' if value else '0',),
             )
+
+
+def _row_lock(conn: Connection) -> str:
+    """Row lock for read-modify-write on PostgreSQL (SQLite has none)."""
+    return ' FOR UPDATE' if conn.dialect is Dialect.POSTGRES else ''
 
 
 def _user_ids(raw: Any) -> list[int]:

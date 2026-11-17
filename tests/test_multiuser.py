@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import asyncio
 import json
-import sqlite3
 import threading
 from pathlib import Path
 from typing import Any
@@ -23,6 +22,7 @@ from starlette.requests import Request
 
 from downtify import account_routes, api
 from downtify.auth import Principal
+from downtify.db.core import Database
 from downtify.discover import DiscoverStore, artist_key
 from downtify.downloader import Downloader
 from downtify.library_cache_keys import file_content_key_from_name_and_size
@@ -45,6 +45,7 @@ from downtify.traffic import (
     TrafficMiddleware,
 )
 from downtify.users import UserStore
+from tests.db.helpers import execute
 
 
 def _principal(
@@ -166,21 +167,25 @@ def test_clearing_is_scoped(tmp_path):
 
 def test_legacy_hearts_read_as_admin_made(tmp_path):
     db = tmp_path / 'lib.db'
-    with sqlite3.connect(str(db)) as conn:
-        conn.execute("""
-            CREATE TABLE liked_tracks (
-                stored_path TEXT PRIMARY KEY,
-                content_key TEXT NOT NULL DEFAULT '',
-                title TEXT NOT NULL DEFAULT '',
-                artist TEXT NOT NULL DEFAULT '',
-                duration REAL NOT NULL DEFAULT 0,
-                liked_at TEXT NOT NULL
-            )
-        """)
-        conn.execute(
-            "INSERT INTO liked_tracks VALUES ('a.mp3', '', 'A', 'X', 200, "
-            "'2024-01-01T00:00:00')"
+    seed = Database.sqlite(str(db))
+    execute(
+        seed,
+        """
+        CREATE TABLE liked_tracks (
+            stored_path TEXT PRIMARY KEY,
+            content_key TEXT NOT NULL DEFAULT '',
+            title TEXT NOT NULL DEFAULT '',
+            artist TEXT NOT NULL DEFAULT '',
+            duration REAL NOT NULL DEFAULT 0,
+            liked_at TEXT NOT NULL
         )
+    """,
+    )
+    execute(
+        seed,
+        "INSERT INTO liked_tracks VALUES ('a.mp3', '', 'A', 'X', 200, "
+        "'2024-01-01T00:00:00')",
+    )
     store = LikedTracks(db)
 
     assert store.paths() == ['a.mp3']
@@ -979,8 +984,10 @@ def test_podcast_endpoints_scope_shows_to_their_owner(monkeypatch, tmp_path):
 
 
 def _legacy_monitor_db(path: Path):
-    conn = sqlite3.connect(str(path))
-    conn.execute("""
+    seed = Database.sqlite(str(path))
+    execute(
+        seed,
+        """
         CREATE TABLE monitored_playlists (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             spotify_id TEXT NOT NULL UNIQUE,
@@ -992,13 +999,13 @@ def _legacy_monitor_db(path: Path):
             last_track_count INTEGER NOT NULL DEFAULT 0,
             created_at TEXT NOT NULL
         )
-    """)
-    conn.execute(
-        'INSERT INTO monitored_playlists (spotify_id, name, url, created_at)'
-        " VALUES ('sid-1', 'Mix', 'https://x/1', '2024-01-01')"
+    """,
     )
-    conn.commit()
-    conn.close()
+    execute(
+        seed,
+        'INSERT INTO monitored_playlists (spotify_id, name, url, created_at)'
+        " VALUES ('sid-1', 'Mix', 'https://x/1', '2024-01-01')",
+    )
     return PlaylistMonitorDB(path)
 
 
@@ -1014,8 +1021,10 @@ def test_legacy_watches_migrate_and_allow_same_url_twice(tmp_path):
 
 def test_legacy_podcasts_migrate_to_per_user(tmp_path):
     db = tmp_path / 'lib.db'
-    conn = sqlite3.connect(str(db))
-    conn.execute("""
+    seed = Database.sqlite(str(db))
+    execute(
+        seed,
+        """
         CREATE TABLE podcast_shows (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             feed_url TEXT NOT NULL UNIQUE,
@@ -1028,13 +1037,17 @@ def test_legacy_podcasts_migrate_to_per_user(tmp_path):
             retention INTEGER NOT NULL DEFAULT 0,
             created_at TEXT NOT NULL
         )
-    """)
-    conn.execute(
+    """,
+    )
+    execute(
+        seed,
         'INSERT INTO podcast_shows (feed_url, name, folder_name, created_at)'
         " VALUES ('https://example.com/feed.xml', 'Show', 'Show',"
-        " '2024-01-01')"
+        " '2024-01-01')",
     )
-    conn.execute("""
+    execute(
+        seed,
+        """
         CREATE TABLE podcast_episodes (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             show_id INTEGER NOT NULL,
@@ -1052,17 +1065,19 @@ def test_legacy_podcasts_migrate_to_per_user(tmp_path):
             dismissed INTEGER NOT NULL DEFAULT 0,
             UNIQUE(show_id, guid)
         )
-    """)
-    conn.execute("""
+    """,
+    )
+    execute(
+        seed,
+        """
         CREATE TABLE podcast_playback (
             episode_id INTEGER PRIMARY KEY,
             position_seconds REAL NOT NULL DEFAULT 0,
             played INTEGER NOT NULL DEFAULT 0,
             updated_at TEXT NOT NULL
         )
-    """)
-    conn.commit()
-    conn.close()
+    """,
+    )
 
     store = PodcastStore(db)
     shows = store.list_shows()
@@ -1075,28 +1090,33 @@ def test_legacy_podcasts_migrate_to_per_user(tmp_path):
 
 def test_legacy_discover_history_migrates_to_per_user(tmp_path):
     db = tmp_path / 'lib.db'
-    conn = sqlite3.connect(str(db))
-    conn.execute("""
+    seed = Database.sqlite(str(db))
+    execute(
+        seed,
+        """
         CREATE TABLE discover_listens (
             artist_key TEXT PRIMARY KEY,
             name TEXT NOT NULL,
             plays INTEGER NOT NULL DEFAULT 0,
             last_played TEXT NOT NULL
         )
-    """)
-    conn.execute(
-        "INSERT INTO discover_listens VALUES ('daft punk', 'Daft Punk', 3,"
-        " '2024-01-01')"
+    """,
     )
-    conn.execute("""
+    execute(
+        seed,
+        "INSERT INTO discover_listens VALUES ('daft punk', 'Daft Punk', 3,"
+        " '2024-01-01')",
+    )
+    execute(
+        seed,
+        """
         CREATE TABLE discover_blocked (
             artist_key TEXT PRIMARY KEY,
             name TEXT NOT NULL,
             blocked_at TEXT NOT NULL
         )
-    """)
-    conn.commit()
-    conn.close()
+    """,
+    )
 
     store = DiscoverStore(db)
     assert [row['plays'] for row in store.listens(0)] == [3]

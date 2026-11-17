@@ -64,6 +64,7 @@ export default {
       'getting-started/docker-compose.md': 'Docker Compose',
       'getting-started/one-click.md': 'Инсталиране с едно кликване',
       'getting-started/environment-variables.md': 'Променливи на средата',
+      'database.md': 'Database',
       'features/index.md': 'Общ преглед',
       'features/charts.md': 'Класации',
       'features/similar.md': 'Подобни',

@@ -24,31 +24,86 @@ back.
 
 from __future__ import annotations
 
-import sqlite3
+import contextlib
 import threading
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Collection
 
-from .sqlite_utils import connect_sqlite
+from .db.config import Dialect
+from .db.core import Connection, Database, as_database
+from .db.dialect import insertion_order_col
 
 
 def _now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+def _repoint_rows(
+    conn: Connection,
+    rows: list[tuple[str, int]],
+    new_key: str,
+    path: str,
+) -> int:
+    """Move ``(old_key, user_id)`` rows onto *new_key*.
+
+    A row whose user already owns *new_key* (or an earlier row of the same
+    user in this batch) is an exact duplicate and is dropped instead, so
+    the primary key never collides. Returns how many rows moved.
+    """
+
+    owned = {
+        int(row['user_id'])
+        for row in conn.execute(
+            'SELECT user_id FROM track_owners WHERE content_key = ?',
+            (new_key,),
+        ).fetchall()
+    }
+    moved = 0
+    for old_key, user_id in rows:
+        if user_id in owned:
+            conn.execute(
+                'DELETE FROM track_owners WHERE content_key = ? '
+                'AND user_id = ?',
+                (old_key, user_id),
+            )
+            continue
+        owned.add(user_id)
+        if path:
+            conn.execute(
+                'UPDATE track_owners SET content_key = ?, stored_path = ? '
+                'WHERE content_key = ? AND user_id = ?',
+                (new_key, path, old_key, user_id),
+            )
+        else:
+            conn.execute(
+                'UPDATE track_owners SET content_key = ? '
+                'WHERE content_key = ? AND user_id = ?',
+                (new_key, old_key, user_id),
+            )
+        moved += 1
+    return moved
+
+
 class TrackOwners:
     """``(content_key, user_id)`` rows in ``downtify_library.db``."""
 
-    def __init__(self, db_path: Path) -> None:
-        self._path = str(db_path)
+    def __init__(self, path_or_db: str | Path | Database) -> None:
+        self.db = as_database(path_or_db, 'library')
+        if isinstance(path_or_db, Database):
+            self._path = str(self.db.path) if self.db.path else None
+        else:
+            self._path = str(path_or_db)
         self._lock = threading.Lock()
         self._init_db()
 
-    def _connect(self) -> sqlite3.Connection:
-        return connect_sqlite(self._path, row_factory=True)
+    def _connect(self) -> contextlib.AbstractContextManager[Connection]:
+        return self.db.connect()
 
     def _init_db(self) -> None:
+        # PostgreSQL gets its schema from the migrations.
+        if self.db.dialect is not Dialect.SQLITE:
+            return
         with self._connect() as conn:
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS track_owners (
@@ -61,7 +116,9 @@ class TrackOwners:
             """)
             columns = {
                 row[1]
-                for row in conn.execute('PRAGMA table_info(track_owners)')
+                for row in conn.execute(
+                    'PRAGMA table_info(track_owners)'
+                ).fetchall()
             }
             if 'stored_path' not in columns:
                 conn.execute(
@@ -80,6 +137,9 @@ class TrackOwners:
     @staticmethod
     def _norm_path(stored_path: str) -> str:
         return str(stored_path or '').strip().replace('\\', '/')
+
+    def _order_col(self) -> str:
+        return insertion_order_col(self.db.dialect)
 
     def add(
         self, content_key: str, user_id: int, stored_path: str = ''
@@ -113,20 +173,21 @@ class TrackOwners:
                 self._heal_path(conn, path, key)
             return new
 
-    @staticmethod
-    def _heal_path(conn: sqlite3.Connection, path: str, key: str) -> None:
+    def _heal_path(self, conn: Connection, path: str, key: str) -> None:
         """Re-point rows at *path* whose key went stale, dropping the
         exact duplicates left behind."""
 
-        conn.execute(
-            'UPDATE OR IGNORE track_owners SET content_key = ?, '
-            'stored_path = ? WHERE stored_path = ? AND content_key != ?',
-            (key, path, path, key),
-        )
-        conn.execute(
-            'DELETE FROM track_owners WHERE stored_path = ? '
-            'AND content_key != ?',
+        rows = conn.execute(
+            'SELECT content_key, user_id FROM track_owners '
+            'WHERE stored_path = ? AND content_key != ? '
+            f'ORDER BY {self._order_col()}',
             (path, key),
+        ).fetchall()
+        _repoint_rows(
+            conn,
+            [(str(r['content_key']), int(r['user_id'])) for r in rows],
+            key,
+            path,
         )
 
     def rekey(self, old_key: str, new_key: str, stored_path: str = '') -> int:
@@ -142,17 +203,17 @@ class TrackOwners:
             return 0
         path = self._norm_path(stored_path)
         with self._lock, self._connect() as conn:
-            cur = conn.execute(
-                'UPDATE OR IGNORE track_owners SET content_key = ?, '
-                'stored_path = COALESCE(NULLIF(?, ?), stored_path) '
-                'WHERE content_key = ?',
-                (new, path, '', old),
+            rows = conn.execute(
+                'SELECT content_key, user_id FROM track_owners '
+                f'WHERE content_key = ? ORDER BY {self._order_col()}',
+                (old,),
+            ).fetchall()
+            return _repoint_rows(
+                conn,
+                [(str(r['content_key']), int(r['user_id'])) for r in rows],
+                new,
+                path,
             )
-            moved = cur.rowcount
-            conn.execute(
-                'DELETE FROM track_owners WHERE content_key = ?', (old,)
-            )
-            return moved
 
     def remove(self, content_key: str, user_id: int) -> int:
         """Drop one owner's row; how many owners remain for the file."""
@@ -204,7 +265,7 @@ class TrackOwners:
         with self._connect() as conn:
             rows = conn.execute(
                 'SELECT user_id FROM track_owners WHERE content_key = ? '
-                'ORDER BY added_at, rowid',
+                f'ORDER BY added_at, {self._order_col()}',
                 (str(content_key or '').strip(),),
             ).fetchall()
         return [int(row['user_id']) for row in rows]

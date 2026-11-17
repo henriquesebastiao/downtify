@@ -28,7 +28,7 @@ Downtify garde une tâche d’arrière-plan qui s’exécute toutes les 60 secon
 3. Télécharge les nouveaux morceaux avec le même pipeline qu’un téléchargement manuel
 4. Met à jour le fichier M3U de la playlist (si la génération de M3U est activée)
 
-La première vérification, qui démarre dès que vous ajoutez la surveillance, télécharge tout ce qui est déjà dans la playlist ; les suivantes ne téléchargent que ce qui a été ajouté depuis. Le « déjà téléchargé » est consigné dans une petite base SQLite (`downtify_monitor.db` sous `/data`), et non en consultant le dossier de téléchargements — si bien que déplacer un fichier téléchargé ailleurs sur le disque (dans votre propre organisation de bibliothèque, un autre disque, n’importe où) ne fait **pas** croire à Downtify qu’il manque, et il n’est pas retéléchargé à la vérification suivante.
+La première vérification, qui démarre dès que vous ajoutez la surveillance, télécharge tout ce qui est déjà dans la playlist ; les suivantes ne téléchargent que ce qui a été ajouté depuis. Le « déjà téléchargé » est consigné dans une petite base SQLite (`downtify_monitor.db` sous `/data` ; avec PostgreSQL, dans la base PostgreSQL), et non en consultant le dossier de téléchargements — si bien que déplacer un fichier téléchargé ailleurs sur le disque (dans votre propre organisation de bibliothèque, un autre disque, n’importe où) ne fait **pas** croire à Downtify qu’il manque, et il n’est pas retéléchargé à la vérification suivante.
 
 Un passage distinct s’exécute toutes les heures et vérifie si le fichier de chaque morceau téléchargé est toujours là. Les fichiers réellement supprimés (par opposition à ceux que vous avez déplacés) sont oubliés à ce moment-là, si bien que le morceau redevient éligible au téléchargement — à la vérification suivante de la surveillance après ce passage horaire, pas instantanément.
 
@@ -260,7 +260,7 @@ Si un fichier disparaît vraiment — vous l’avez sorti du dossier de téléch
 
 ## Stockage
 
-L’état du moniteur est stocké dans une base SQLite à `/data/downtify_monitor.db`. La base consigne :
+L’état du moniteur est stocké dans une base SQLite à `/data/downtify_monitor.db`, le backend par défaut. Avec PostgreSQL ([Base de données](../database.md)), les mêmes données sont conservées dans la base PostgreSQL. La base consigne :
 
 - Chaque surveillance (type, identifiant de playlist Spotify ou YouTube Music ou identifiant de chaîne YouTube Music, nom, URL, intervalle, état activé, heure de la dernière vérification). Le fait qu’une surveillance soit Spotify ou YouTube Music se lit dans son URL enregistrée, donc aucune colonne supplémentaire n’est nécessaire.
 - Chaque morceau téléchargé avec succès par surveillance, y compris le nom de fichier sur disque

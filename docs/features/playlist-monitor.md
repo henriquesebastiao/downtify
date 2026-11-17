@@ -28,7 +28,7 @@ Downtify keeps a background task running every 60 seconds. On each sweep it chec
 3. Downloads any new tracks using the same pipeline as a manual download
 4. Updates the M3U file for the playlist (if M3U generation is enabled)
 
-The first check, which starts as soon as you add the watch, downloads everything already in the playlist; later checks download only what was added since. "Already downloaded" is tracked in a small SQLite database (`downtify_monitor.db` under `/data`), not by checking the downloads folder — so moving a downloaded file elsewhere on disk (into your own library layout, another drive, wherever) does **not** make Downtify think it's missing and re-download it on the next check.
+The first check, which starts as soon as you add the watch, downloads everything already in the playlist; later checks download only what was added since. "Already downloaded" is tracked in a small SQLite database (`downtify_monitor.db` under `/data`; with PostgreSQL, in the PostgreSQL database), not by checking the downloads folder — so moving a downloaded file elsewhere on disk (into your own library layout, another drive, wherever) does **not** make Downtify think it's missing and re-download it on the next check.
 
 A separate sweep runs every hour and checks whether each downloaded track's file is still available in the registered library folders: the downloads folder, the slskd source folder and **Existing music folders**, including read-only mounts. Tracks still present in a configured external folder keep their download records. Files no longer found in any of those locations are forgotten, so the track becomes eligible for download again on the next watch check after that hourly sweep, not instantly.
 
@@ -268,7 +268,7 @@ If a file does disappear — you moved it out of the downloads folder, or delete
 
 ## Storage
 
-Monitor state is stored in a SQLite database at `/data/downtify_monitor.db`. The database records:
+Monitor state is stored in a SQLite database at `/data/downtify_monitor.db`, the default backend. With PostgreSQL ([Database](../database.md)), the same records are kept in the PostgreSQL database. The database records:
 
 - Each watch (kind, Spotify or YouTube Music playlist ID or YouTube Music channel ID, name, URL, interval, enabled state, last check time). Whether a watch is Spotify or YouTube Music is read from its stored URL, so no extra column is needed.
 - Every track successfully downloaded per watch, including the filename on disk

@@ -8,6 +8,8 @@ Downtify keeps a small **catalog** of the files under `/downloads` (the slskd fo
 
 ## What gets stored
 
+The locations below apply to the default SQLite backend. With PostgreSQL ([Database](../database.md)), the same data is kept in the PostgreSQL database.
+
 | Store | Location | Purpose |
 |-------|----------|---------|
 | **Track index** | `/data/downtify_library.db` | Maps Spotify track IDs to library paths, so a track already on disk can be recognized |

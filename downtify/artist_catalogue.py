@@ -39,11 +39,12 @@ not just "out before the watch".
 from __future__ import annotations
 
 import json
-import sqlite3
 from datetime import datetime, timezone
-from typing import Any, Callable, Iterable, Optional
+from typing import Any, Callable, ContextManager, Iterable, Optional
 
 from . import musicbrainz
+from .db.config import Dialect
+from .db.core import Connection
 from .file_naming import file_name_key
 from .library_catalog import song_key
 
@@ -85,41 +86,49 @@ def _source_of(album_id: str, source: Any) -> str:
 class ArtistCatalogue:
     """The ``artist_catalogue`` table of the monitor database."""
 
-    def __init__(self, connect: Callable[[], sqlite3.Connection]) -> None:
+    def __init__(
+        self, connect: Callable[[], ContextManager[Connection]]
+    ) -> None:
         self._connect = connect
         with self._connect() as conn:
-            conn.execute("""CREATE TABLE IF NOT EXISTS artist_catalogue (
-                playlist_id INTEGER NOT NULL,
-                album_id TEXT NOT NULL,
-                name TEXT NOT NULL,
-                release_type TEXT NOT NULL DEFAULT '',
-                kinds TEXT NOT NULL DEFAULT '',
-                year TEXT NOT NULL DEFAULT '',
-                source TEXT NOT NULL DEFAULT '',
-                cover_url TEXT NOT NULL DEFAULT '',
-                url TEXT NOT NULL DEFAULT '',
-                position INTEGER NOT NULL DEFAULT 0,
-                track_total INTEGER NOT NULL DEFAULT 0,
-                not_own INTEGER NOT NULL DEFAULT 0,
-                choice TEXT NOT NULL DEFAULT '',
-                listed_at TEXT NOT NULL,
-                PRIMARY KEY (playlist_id, album_id),
-                FOREIGN KEY (playlist_id) REFERENCES monitored_playlists(id)
-                    ON DELETE CASCADE
-            )""")
-            # Each release's tracklist, once a sweep or "Check what I
-            # have" read it.
-            conn.execute("""CREATE TABLE IF NOT EXISTS artist_catalogue_tracks (
-                playlist_id INTEGER NOT NULL,
-                album_id TEXT NOT NULL,
-                position INTEGER NOT NULL,
-                name TEXT NOT NULL,
-                artists TEXT NOT NULL DEFAULT '[]',
-                duration REAL NOT NULL DEFAULT 0,
-                PRIMARY KEY (playlist_id, album_id, position),
-                FOREIGN KEY (playlist_id) REFERENCES monitored_playlists(id)
-                    ON DELETE CASCADE
-            )""")
+            if getattr(conn, 'dialect', Dialect.SQLITE) is Dialect.SQLITE:
+                self._init_sqlite(conn)
+
+    @staticmethod
+    def _init_sqlite(conn: Connection) -> None:
+        """Create the SQLite-only schema; PostgreSQL migrations own it."""
+        conn.execute("""CREATE TABLE IF NOT EXISTS artist_catalogue (
+            playlist_id INTEGER NOT NULL,
+            album_id TEXT NOT NULL,
+            name TEXT NOT NULL,
+            release_type TEXT NOT NULL DEFAULT '',
+            kinds TEXT NOT NULL DEFAULT '',
+            year TEXT NOT NULL DEFAULT '',
+            source TEXT NOT NULL DEFAULT '',
+            cover_url TEXT NOT NULL DEFAULT '',
+            url TEXT NOT NULL DEFAULT '',
+            position INTEGER NOT NULL DEFAULT 0,
+            track_total INTEGER NOT NULL DEFAULT 0,
+            not_own INTEGER NOT NULL DEFAULT 0,
+            choice TEXT NOT NULL DEFAULT '',
+            listed_at TEXT NOT NULL,
+            PRIMARY KEY (playlist_id, album_id),
+            FOREIGN KEY (playlist_id) REFERENCES monitored_playlists(id)
+                ON DELETE CASCADE
+        )""")
+        # Each release's tracklist, once a sweep or "Check what I
+        # have" read it.
+        conn.execute("""CREATE TABLE IF NOT EXISTS artist_catalogue_tracks (
+            playlist_id INTEGER NOT NULL,
+            album_id TEXT NOT NULL,
+            position INTEGER NOT NULL,
+            name TEXT NOT NULL,
+            artists TEXT NOT NULL DEFAULT '[]',
+            duration REAL NOT NULL DEFAULT 0,
+            PRIMARY KEY (playlist_id, album_id, position),
+            FOREIGN KEY (playlist_id) REFERENCES monitored_playlists(id)
+                ON DELETE CASCADE
+        )""")
 
     def record(
         self, playlist_id: int, albums: Iterable[dict[str, Any]]

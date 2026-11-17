@@ -64,6 +64,7 @@ export default {
       'getting-started/docker-compose.md': 'Docker Compose',
       'getting-started/one-click.md': 'Telepítés egy kattintással',
       'getting-started/environment-variables.md': 'Környezeti változók',
+      'database.md': 'Database',
       'features/index.md': 'Áttekintés',
       'features/charts.md': 'Toplisták',
       'features/similar.md': 'Hasonlók',

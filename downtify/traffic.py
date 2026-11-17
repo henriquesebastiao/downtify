@@ -22,7 +22,6 @@ every response, so a database write there would stall every request
 from __future__ import annotations
 
 import asyncio
-import sqlite3
 import threading
 from datetime import datetime, timezone
 from pathlib import Path
@@ -30,7 +29,8 @@ from typing import Any, Awaitable, Callable, MutableMapping
 
 from loguru import logger
 
-from .sqlite_utils import connect_sqlite
+from .db.config import Dialect
+from .db.core import Connection, Database, as_database
 
 DIRECTION_IN = 'in'
 DIRECTION_OUT = 'out'
@@ -42,7 +42,7 @@ _UPSERT = """INSERT INTO traffic_counters
    (user_id, direction, total_bytes, updated_at)
    VALUES (?, ?, ?, ?)
    ON CONFLICT(user_id, direction) DO UPDATE SET
-   total_bytes = total_bytes + excluded.total_bytes,
+   total_bytes = traffic_counters.total_bytes + excluded.total_bytes,
    updated_at = excluded.updated_at"""
 
 
@@ -53,15 +53,20 @@ def _now_iso() -> str:
 class TrafficCounters:
     """``(user_id, direction)`` byte counters in ``downtify_library.db``."""
 
-    def __init__(self, db_path: Path) -> None:
-        self._path = str(db_path)
+    def __init__(self, path_or_db: str | Path | Database) -> None:
+        self.db = as_database(path_or_db, 'library')
+        if isinstance(path_or_db, Database):
+            self._path = str(self.db.path) if self.db.path else None
+        else:
+            self._path = str(path_or_db)
         self._lock = threading.Lock()
         self._pending: dict[tuple[int, str], int] = {}
         self._pending_lock = threading.Lock()
-        self._init_db()
+        if self.db.dialect is Dialect.SQLITE:
+            self._init_db()
 
-    def _connect(self) -> sqlite3.Connection:
-        return connect_sqlite(self._path, row_factory=True)
+    def _connect(self) -> Connection:
+        return self.db.connect()
 
     def _init_db(self) -> None:
         with self._connect() as conn:
@@ -104,6 +109,8 @@ class TrafficCounters:
             with self._lock, self._connect() as conn:
                 conn.executemany(_UPSERT, rows)
         except Exception:
+            # Covers DatabaseError (the Postgres and SQLite error wrappers
+            # both derive from Exception); the bytes go back either way.
             with self._pending_lock:
                 for key, count in batch.items():
                     self._pending[key] = self._pending.get(key, 0) + count

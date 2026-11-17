@@ -8,23 +8,48 @@ icon: lucide/file-code
 
 ## Ελάχιστη εγκατάσταση
 
-Δημιούργησε ένα αρχείο `docker-compose.yml`:
+Δημιούργησε ένα αρχείο `docker-compose.yml`. Τρέχει το Downtify με PostgreSQL, με τη βάση δεδομένων σε μια υπηρεσία `postgres` δίπλα του (δες [Βάση δεδομένων](../database.md)):
 
 ```yaml
 services:
   downtify:
     container_name: downtify
     image: ghcr.io/henriquesebastiao/downtify:latest
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
     ports:
       - '8000:8000'
     volumes:
       - ./downloads:/downloads
       - downtify_data:/data
+    environment:
+      DATABASE_URL: postgresql://downtify:${POSTGRES_PASSWORD:-downtify}@postgres:5432/downtify
+
+  postgres:
+    container_name: downtify-postgres
+    image: 'postgres:17-alpine'
     restart: unless-stopped
+    environment:
+      POSTGRES_USER: downtify
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-downtify}
+      POSTGRES_DB: downtify
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U downtify -d downtify']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
 
 volumes:
   downtify_data:
+  pgdata:
 ```
+
+Όρισε το `POSTGRES_PASSWORD` σε ένα αρχείο `.env` δίπλα στο αρχείο Compose πριν από την πρώτη εκκίνηση (δες [Μεταβλητές περιβάλλοντος](environment-variables.md#database)). Για να κρατήσεις τα αρχεία SQLite, αφαίρεσε το `DATABASE_URL`, την υπηρεσία `postgres` και το μπλοκ `depends_on`.
 
 Ξεκίνα το:
 
@@ -133,6 +158,7 @@ docker compose up -d
 | Διαδρομή στο αρχείο compose | Σκοπός |
 |------------------------------|---------|
 | `./downloads:/downloads` | Αρχεία ήχου που έχουν κατέβει (τοπικός κατάλογος) |
-| `downtify_data:/data` | Βάση δεδομένων και ρυθμίσεις της εφαρμογής (επώνυμος τόμος) |
+| `downtify_data:/data` | Ρυθμίσεις, cache και τα αρχεία SQLite (επώνυμος τόμος) |
+| `pgdata:/var/lib/postgresql/data` | Η βάση δεδομένων PostgreSQL, στην υπηρεσία `postgres` |
 
 Μπορείς να αντικαταστήσεις τον επώνυμο τόμο με τοπική διαδρομή (`./data:/data`) αν προτιμάς να τον διαχειρίζεσαι μόνος σου.

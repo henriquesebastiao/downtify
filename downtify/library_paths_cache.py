@@ -17,6 +17,7 @@ from typing import TYPE_CHECKING, Any, Optional
 
 from loguru import logger
 
+from .db.core import Database
 from .library_fingerprint import (
     library_tree_fingerprint,
     playlist_listing_fingerprint,
@@ -74,14 +75,14 @@ def listing_lock() -> threading.RLock:
     return _LISTING_LOCK
 
 
-def bind_listing_store(db_path: Optional[Path]) -> None:
-    """Persist listings in the same ``/data`` sqlite file as the catalog.
+def bind_listing_store(target: Optional[Path | Database]) -> None:
+    """Persist listings in the library database (SQLite file or PostgreSQL).
 
     Pass ``None`` to disable persistence (tests).
     """
 
     global _STORE
-    _STORE = LibraryListingStore(db_path) if db_path is not None else None
+    _STORE = LibraryListingStore(target) if target is not None else None
 
 
 def cache_key_for_dirs(

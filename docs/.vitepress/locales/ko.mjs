@@ -63,6 +63,7 @@ export default {
       'getting-started/docker-compose.md': 'Docker Compose',
       'getting-started/one-click.md': '원클릭 설치',
       'getting-started/environment-variables.md': '환경 변수',
+      'database.md': 'Database',
       'features/index.md': '개요',
       'features/charts.md': '차트',
       'features/similar.md': '유사 음악',

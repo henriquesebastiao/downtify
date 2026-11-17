@@ -28,7 +28,7 @@ Downtify mantiene una tarea en segundo plano que se ejecuta cada 60 segundos. En
 3. Descarga las canciones nuevas con el mismo pipeline que una descarga manual
 4. Actualiza el archivo M3U de la playlist (si la generación de M3U está activada)
 
-La primera comprobación, que empieza en cuanto añades la vigilancia, descarga todo lo que ya hay en la playlist; las siguientes descargan solo lo añadido desde entonces. Lo «ya descargado» se registra en una pequeña base de datos SQLite (`downtify_monitor.db` en `/data`), no mirando la carpeta de descargas — así que mover un archivo descargado a otro sitio del disco (a tu propia organización de biblioteca, otra unidad, donde sea) **no** hace que Downtify crea que falta y lo vuelva a descargar en la siguiente comprobación.
+La primera comprobación, que empieza en cuanto añades la vigilancia, descarga todo lo que ya hay en la playlist; las siguientes descargan solo lo añadido desde entonces. Lo «ya descargado» se registra en una pequeña base de datos SQLite (`downtify_monitor.db` en `/data`; con PostgreSQL, en la base de datos PostgreSQL), no mirando la carpeta de descargas — así que mover un archivo descargado a otro sitio del disco (a tu propia organización de biblioteca, otra unidad, donde sea) **no** hace que Downtify crea que falta y lo vuelva a descargar en la siguiente comprobación.
 
 Un barrido aparte se ejecuta cada hora y comprueba si el archivo de cada canción descargada sigue ahí. Los archivos realmente borrados (a diferencia de los movidos) se olvidan en ese momento, así que la canción vuelve a poder descargarse — en la siguiente comprobación de la vigilancia tras ese barrido horario, no al instante.
 
@@ -260,7 +260,7 @@ Si un archivo desaparece de verdad — lo sacaste de la carpeta de descargas, o 
 
 ## Almacenamiento
 
-El estado del monitor se guarda en una base de datos SQLite en `/data/downtify_monitor.db`. La base de datos registra:
+El estado del monitor se guarda en una base de datos SQLite en `/data/downtify_monitor.db`, el backend predeterminado. Con PostgreSQL ([Base de datos](../database.md)), los mismos registros se guardan en la base de datos PostgreSQL. La base de datos registra:
 
 - Cada vigilancia (tipo, id de playlist de Spotify o YouTube Music o id de canal de YouTube Music, nombre, URL, intervalo, estado activo, hora de la última comprobación). Si una vigilancia es de Spotify o de YouTube Music se lee de su URL guardada, así que no hace falta una columna extra.
 - Cada canción descargada con éxito por vigilancia, incluido el nombre del archivo en disco

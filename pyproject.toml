@@ -12,6 +12,7 @@ dependencies = [
     "load-dotenv>=0.1.0",
     "loguru>=0.7.3",
     "mutagen>=1.48.1",
+    "psycopg[binary,pool]>=3.2",
     "requests[socks]>=2.34.2",
     "uvicorn>=0.54.0",
     "websockets>=17.4",

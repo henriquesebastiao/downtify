@@ -30,6 +30,7 @@ import main
 from downtify import (
     account_routes,
     api,
+    auth,
     auth_routes,
     download_policy_routes,
     mobile_routes,

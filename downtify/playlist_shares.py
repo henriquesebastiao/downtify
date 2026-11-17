@@ -13,17 +13,47 @@ casefolded playlist name like those tables.
 
 from __future__ import annotations
 
-import sqlite3
+from collections.abc import Iterable
+from contextlib import AbstractContextManager
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Iterable, Optional
+from typing import Optional
 
-from .sqlite_utils import connect_sqlite
+from .db.config import Dialect
+from .db.core import Connection, Database, as_database
+from .db.dialect import column_names
 
 PRIVATE = 'private'
 SHARED = 'shared'
 PUBLIC = 'public'
 VISIBILITIES = (PRIVATE, SHARED, PUBLIC)
+
+#: The tables keyed by playlist name, in the order they are rewritten.
+_TABLES = (
+    'playlist_shares',
+    'playlist_share_users',
+    'playlist_follows',
+    'playlist_editors',
+    'playlist_favorites',
+)
+
+#: Primary key of each table in ``_TABLES`` (used by ``restore``).
+_PRIMARY_KEYS = {
+    'playlist_shares': ('name_key',),
+    'playlist_share_users': ('name_key', 'user_id'),
+    'playlist_follows': ('user_id', 'name_key'),
+    'playlist_editors': ('name_key', 'user_id'),
+    'playlist_favorites': ('user_id', 'name_key'),
+}
+
+#: The column besides ``name_key`` that makes up each table's key, if any.
+_OTHER_KEY = {
+    'playlist_shares': None,
+    'playlist_share_users': 'user_id',
+    'playlist_follows': 'user_id',
+    'playlist_editors': 'user_id',
+    'playlist_favorites': 'user_id',
+}
 
 
 def share_key(name: str) -> str:
@@ -46,14 +76,21 @@ class PlaylistShares:
     """Visibility, the share list, editors and follows, in the library
     database."""
 
-    def __init__(self, db_path: Path) -> None:
-        self._path = str(db_path)
+    def __init__(self, path_or_db: str | Path | Database) -> None:
+        self.db = as_database(path_or_db, 'library')
+        if isinstance(path_or_db, Database):
+            self._path = str(self.db.path) if self.db.path else None
+        else:
+            self._path = str(path_or_db)
         self._init_db()
 
-    def _connect(self) -> sqlite3.Connection:
-        return connect_sqlite(self._path, row_factory=True)
+    def _connect(self) -> AbstractContextManager[Connection]:
+        return self.db.connect()
 
     def _init_db(self) -> None:
+        # On PostgreSQL the library migrations already created the schema.
+        if self.db.dialect is not Dialect.SQLITE:
+            return
         with self._connect() as conn:
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS playlist_shares (
@@ -115,8 +152,9 @@ class PlaylistShares:
         with self._connect() as conn:
             if favorite:
                 conn.execute(
-                    'INSERT OR IGNORE INTO playlist_favorites '
-                    '(user_id, name_key) VALUES (?, ?)',
+                    'INSERT INTO playlist_favorites '
+                    '(user_id, name_key) VALUES (?, ?) '
+                    'ON CONFLICT DO NOTHING',
                     (int(user_id), key),
                 )
             else:
@@ -324,8 +362,9 @@ class PlaylistShares:
         with self._connect() as conn:
             if followed:
                 conn.execute(
-                    'INSERT OR IGNORE INTO playlist_follows '
-                    '(user_id, name_key) VALUES (?, ?)',
+                    'INSERT INTO playlist_follows '
+                    '(user_id, name_key) VALUES (?, ?) '
+                    'ON CONFLICT DO NOTHING',
                     (int(user_id), key),
                 )
             else:
@@ -350,16 +389,23 @@ class PlaylistShares:
         if not old or not new or old == new:
             return
         with self._connect() as conn:
-            for table in (
-                'playlist_shares',
-                'playlist_share_users',
-                'playlist_follows',
-                'playlist_editors',
-                'playlist_favorites',
-            ):
+            for table in _TABLES:
+                # Same effect as ``UPDATE OR REPLACE``: rows already under
+                # the new name that would collide with a moved row go.
+                other = _OTHER_KEY[table]
+                if other is None:
+                    conn.execute(
+                        f'DELETE FROM {table} WHERE name_key = ?', (new,)
+                    )
+                else:
+                    conn.execute(
+                        f'DELETE FROM {table} WHERE name_key = ? '
+                        f'AND {other} IN (SELECT {other} FROM {table} '
+                        'WHERE name_key = ?)',
+                        (new, old),
+                    )
                 conn.execute(
-                    f'UPDATE OR REPLACE {table} SET name_key = ? '
-                    'WHERE name_key = ?',
+                    f'UPDATE {table} SET name_key = ? WHERE name_key = ?',
                     (new, old),
                 )
 
@@ -369,26 +415,13 @@ class PlaylistShares:
 
         key = share_key(name)
         with self._connect() as conn:
-            for table in (
-                'playlist_shares',
-                'playlist_share_users',
-                'playlist_follows',
-                'playlist_editors',
-                'playlist_favorites',
-            ):
+            for table in _TABLES:
                 conn.execute(f'DELETE FROM {table} WHERE name_key = ?', (key,))
 
     def snapshot(self, name: str) -> dict[str, list[tuple]]:
         """Capture rows removed by :meth:`forget` for a failed create rollback."""
 
         key = share_key(name)
-        tables = (
-            'playlist_shares',
-            'playlist_share_users',
-            'playlist_follows',
-            'playlist_editors',
-            'playlist_favorites',
-        )
         with self._connect() as conn:
             return {
                 table: [
@@ -397,34 +430,32 @@ class PlaylistShares:
                         f'SELECT * FROM {table} WHERE name_key = ?', (key,)
                     ).fetchall()
                 ]
-                for table in tables
+                for table in _TABLES
             }
 
     def restore(self, name: str, snapshot: dict[str, list[tuple]]) -> None:
         """Restore a snapshot captured before a failed creation attempt."""
 
-        tables = (
-            'playlist_shares',
-            'playlist_share_users',
-            'playlist_follows',
-            'playlist_editors',
-            'playlist_favorites',
-        )
         with self._connect() as conn:
-            for table in tables:
+            for table in _TABLES:
                 rows = snapshot.get(table, [])
                 if not rows:
                     continue
-                columns = [
-                    str(row['name'])
-                    for row in conn.execute(
-                        f'PRAGMA table_info({table})'
-                    ).fetchall()
-                ]
+                columns = column_names(conn, table)
                 marks = ', '.join('?' for _ in columns)
+                pk = _PRIMARY_KEYS[table]
+                changed = [col for col in columns if col not in pk]
+                if changed:
+                    sets = ', '.join(
+                        f'{col} = excluded.{col}' for col in changed
+                    )
+                    action = f'DO UPDATE SET {sets}'
+                else:
+                    action = 'DO NOTHING'
                 conn.executemany(
-                    f'INSERT OR REPLACE INTO {table} '
-                    f'({", ".join(columns)}) VALUES ({marks})',
+                    f'INSERT INTO {table} '
+                    f'({", ".join(columns)}) VALUES ({marks}) '
+                    f'ON CONFLICT ({", ".join(pk)}) {action}',
                     rows,
                 )
 

@@ -8,23 +8,48 @@ icon: lucide/file-code
 
 ## 最简配置
 
-创建 `docker-compose.yml` 文件：
+创建 `docker-compose.yml` 文件。它使用 PostgreSQL 运行 Downtify，数据库位于旁边的 `postgres` 服务中（参见 [数据库](../database.md)）：
 
 ```yaml
 services:
   downtify:
     container_name: downtify
     image: ghcr.io/henriquesebastiao/downtify:latest
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
     ports:
       - '8000:8000'
     volumes:
       - ./downloads:/downloads
       - downtify_data:/data
+    environment:
+      DATABASE_URL: postgresql://downtify:${POSTGRES_PASSWORD:-downtify}@postgres:5432/downtify
+
+  postgres:
+    container_name: downtify-postgres
+    image: 'postgres:17-alpine'
     restart: unless-stopped
+    environment:
+      POSTGRES_USER: downtify
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-downtify}
+      POSTGRES_DB: downtify
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U downtify -d downtify']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
 
 volumes:
   downtify_data:
+  pgdata:
 ```
+
+首次启动前，请在 Compose 文件旁的 `.env` 文件中设置 `POSTGRES_PASSWORD`（参见 [环境变量](environment-variables.md#database)）。如果想继续使用 SQLite 文件，请删除 `DATABASE_URL`、`postgres` 服务和 `depends_on` 配置段。
 
 启动服务：
 
@@ -133,6 +158,7 @@ docker compose up -d
 | Compose 文件中的路径 | 用途 |
 |------------------------------|---------|
 | `./downloads:/downloads` | 已下载的音频文件（本地目录） |
-| `downtify_data:/data` | 应用数据库和设置（命名卷） |
+| `downtify_data:/data` | 设置、缓存和 SQLite 文件（命名卷） |
+| `pgdata:/var/lib/postgresql/data` | PostgreSQL 数据库，位于 `postgres` 服务中 |
 
 如果希望自行管理数据目录，也可以将命名卷替换为本地路径（`./data:/data`）。

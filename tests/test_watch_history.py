@@ -4,10 +4,10 @@ sweeps record outcomes, providers, backfills and failures."""
 from __future__ import annotations
 
 import asyncio
-import sqlite3
 from pathlib import Path
 
 from downtify import monitor
+from downtify.db.core import Database
 from downtify.monitor import LibraryStores, PlaylistMonitorDB
 from downtify.track_index import TrackIndex
 from downtify.watch_history import (
@@ -15,6 +15,7 @@ from downtify.watch_history import (
     OUTCOME_LINKED,
     OUTCOME_UNKNOWN,
 )
+from tests.db.helpers import execute
 
 TRACK_A = '4uLU6hMCjMI75M1A2tKUQC'
 TRACK_B = '7ouMYWpwJ422jRcDASZB7P'
@@ -264,23 +265,28 @@ def test_rows_from_before_the_history_become_unknown_events(tmp_path):
     db.mark_track_downloaded(watch.id, TRACK_A, 'Road Trip/Alpha.mp3')
     db.mark_track_downloaded(watch.id, TRACK_B, 'Road Trip/Beta.mp3')
     assert db.history.events() == []
-    with sqlite3.connect(path) as conn:
-        # A track from the watch's first day, and one from much later;
-        # then back to a database from before the history existed.
-        conn.execute(
-            "UPDATE monitored_playlists SET created_at = '2026-01-01T00:00:00+00:00'"
-        )
-        conn.execute(
-            'UPDATE downloaded_tracks SET downloaded_at = ? WHERE '
-            'track_spotify_id = ?',
-            ('2026-01-01T05:00:00.123456+00:00', TRACK_A),
-        )
-        conn.execute(
-            'UPDATE downloaded_tracks SET downloaded_at = ? WHERE '
-            'track_spotify_id = ?',
-            ('2026-03-01T00:00:00+00:00', TRACK_B),
-        )
-        conn.execute('DROP TABLE watch_events')
+    seed = Database.sqlite(path)
+    # A track from the watch's first day, and one from much later;
+    # then back to a database from before the history existed.
+    execute(
+        seed,
+        "UPDATE monitored_playlists SET created_at = '2026-01-01T00:00:00+00:00'",
+    )
+    execute(
+        seed,
+        'UPDATE downloaded_tracks SET downloaded_at = ? WHERE '
+        'track_spotify_id = ?',
+        '2026-01-01T05:00:00.123456+00:00',
+        TRACK_A,
+    )
+    execute(
+        seed,
+        'UPDATE downloaded_tracks SET downloaded_at = ? WHERE '
+        'track_spotify_id = ?',
+        '2026-03-01T00:00:00+00:00',
+        TRACK_B,
+    )
+    execute(seed, 'DROP TABLE watch_events')
 
     db = PlaylistMonitorDB(path)
     events = db.history.events()

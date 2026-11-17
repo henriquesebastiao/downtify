@@ -28,7 +28,7 @@ A Downtify egy háttérfeladatot futtat 60 másodpercenként. Minden átfésül�
 3. Letölti az új számokat ugyanazzal a folyamattal, mint egy kézi letöltést
 4. Frissíti a lejátszási lista M3U-fájlját (ha az M3U-generálás be van kapcsolva)
 
-Az első ellenőrzés, amely a figyelés hozzáadásakor azonnal elindul, letölt mindent, ami már a listán van; a későbbiek csak a közben hozzáadottat töltik le. A „már letöltött” egy kis SQLite-adatbázisban (`downtify_monitor.db` a `/data` alatt) van nyilvántartva, nem a letöltési mappa vizsgálatával — így egy letöltött fájl áthelyezése a lemez máshová (a saját könyvtárszerkezetedbe, másik meghajtóra, bárhová) **nem** készteti a Downtifyt arra, hogy hiányzónak higgye, és a következő ellenőrzéskor újra letöltse.
+Az első ellenőrzés, amely a figyelés hozzáadásakor azonnal elindul, letölt mindent, ami már a listán van; a későbbiek csak a közben hozzáadottat töltik le. A „már letöltött” egy kis SQLite-adatbázisban (`downtify_monitor.db` a `/data` alatt; PostgreSQL-lel a PostgreSQL-adatbázisban) van nyilvántartva, nem a letöltési mappa vizsgálatával — így egy letöltött fájl áthelyezése a lemez máshová (a saját könyvtárszerkezetedbe, másik meghajtóra, bárhová) **nem** készteti a Downtifyt arra, hogy hiányzónak higgye, és a következő ellenőrzéskor újra letöltse.
 
 Egy külön átfésülés óránként fut, és ellenőrzi, hogy minden letöltött szám fájlja még megvan-e. A valóban törölt fájlokat (szemben az áthelyezettekkel) ekkor elfelejti, így a szám újra letölthetővé válik — a figyelés következő ellenőrzésekor az óránkénti átfésülés után, nem azonnal.
 
@@ -260,7 +260,7 @@ Ha egy fájl tényleg eltűnik — kivitted a letöltési mappából, vagy kézz
 
 ## Tárolás
 
-A figyelő állapota egy SQLite-adatbázisban van a `/data/downtify_monitor.db` helyen. Az adatbázis rögzíti:
+A figyelő állapota egy SQLite-adatbázisban van a `/data/downtify_monitor.db` helyen, ez az alapértelmezett backend. PostgreSQL-lel ([Adatbázis](../database.md)) ugyanezek a rekordok a PostgreSQL-adatbázisban vannak. Az adatbázis rögzíti:
 
 - Minden figyelést (fajta, Spotify- vagy YouTube Music-lejátszásilista-azonosító vagy YouTube Music-csatornaazonosító, név, URL, intervallum, engedélyezett állapot, utolsó ellenőrzés ideje). Hogy egy figyelés Spotify vagy YouTube Music, azt a tárolt URL-jéből olvassa ki, így nem kell külön oszlop.
 - Minden sikeresen letöltött számot figyelésenként, a lemezen lévő fájlnévvel együtt

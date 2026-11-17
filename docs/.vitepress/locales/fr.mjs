@@ -64,6 +64,7 @@ export default {
       'getting-started/docker-compose.md': 'Docker Compose',
       'getting-started/one-click.md': 'Installation en un clic',
       'getting-started/environment-variables.md': 'Variables d’environnement',
+      'database.md': 'Database',
       'features/index.md': 'Vue d’ensemble',
       'features/charts.md': 'Classements',
       'features/similar.md': 'Similaires',

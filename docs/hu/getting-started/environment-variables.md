@@ -16,6 +16,25 @@ Minden környezeti változó opcionális. A Downtify egyik nélkül is azonnal m
 | `DOWNTIFY_LOG_LEVEL` | `info` | Az alkalmazás naplószintje (`debug`, `info`, `warning`, …). |
 | `TZ` | `UTC` | Helyi időzóna (IANA-név, pl. `America/Sao_Paulo`), amely alapján a lenti `DOWNTIFY_MONITOR_SYNC_TIME` értelmeződik. |
 
+## Adatbázis
+
+Alapértelmezés szerint a Downtify az adatait a `DATABASE_DIR` alatti SQLite-fájlokban tárolja. A `DATABASE_URL` beállításával PostgreSQL-t használhatsz helyette; az [Adatbázis](../database.md) oldal leírja a beállítást, a migrációkat és azt, hogy mi hol tárolódik.
+
+| Változó | Alapértelmezés | Leírás |
+|----------|---------|-------------|
+| `DATABASE_URL` | _(nincs beállítva)_ | PostgreSQL-kapcsolati URL, `postgresql://felhasználó:jelszó@gazdagép:5432/adatbázisnév` (a `postgres://` is működik). Ha nincs beállítva: SQLite. Ha be van állítva: azok a tárolók, amelyek egyébként SQLite-fájlok lennének (könyvtár, figyelő, fiókok, aktivitás, doctor), PostgreSQL-t használnak. Más sémájú érték elutasításra kerül. Az URL soha nem jelenik meg hibaüzenetekben. |
+| `DB_POOL_MIN` | `2` | A PostgreSQL-készlet által nyitva tartott kapcsolatok száma. `0` vagy több legyen. |
+| `DB_POOL_MAX` | `20` | A PostgreSQL-készlet által nyitható legtöbb kapcsolat. Legalább `1` legyen, és legalább `DB_POOL_MIN`. |
+| `DB_POOL_TIMEOUT` | `10` | Másodpercek, amennyit egy kérés szabad kapcsolatra vár, mielőtt meghiúsul. |
+| `DB_SEARCH_PATH` | _(nincs beállítva)_ | A használandó PostgreSQL-séma, más alkalmazásokkal megosztott adatbázishoz. Csak egyszerű azonosító: betűk, számjegyek és aláhúzásjelek, számjeggyel nem kezdődhet. Ha nincs beállítva: a szerver alapértelmezett sémája (`public`). |
+| `DATABASE_DIR` | `/data` | A beállítások, gyorsítótárak és SQLite-fájlok könyvtára. PostgreSQL mellett is használatban marad mindenre, ami nem adatbázistábla. |
+| `POSTGRES_PASSWORD` | `downtify` | Csak Docker Compose esetén (a tárolóban lévő `docker-compose.yml` olvassa, nem a szerver): a mellékelt `postgres` szolgáltatásban lévő `downtify` felhasználó jelszava, amelyet a `DATABASE_URL` is használ. Az első indítás előtt tedd egy `.env` fájlba a Compose-fájl mellé. A PostgreSQL csak az adatkötet létrehozásakor alkalmazza, így a későbbi módosítás nem változtatja meg egy meglévő adatbázis jelszavát. |
+
+```yaml
+environment:
+  - DATABASE_URL=postgresql://downtify:change-me@postgres:5432/downtify
+```
+
 ## Lejátszási lista figyelő
 
 | Változó | Alapértelmezés | Leírás |
@@ -65,7 +84,7 @@ Lásd: [Zenekuka](../features/music-trash.md). Ki van kapcsolva, hacsak valamely
 
 ## Állapotellenőrzés
 
-A képfájl beépített [Docker `HEALTHCHECK`](https://docs.docker.com/reference/dockerfile/#healthcheck) ellenőrzést tartalmaz — egyéni `--health-cmd` nem szükséges. Ez 30 másodpercenként lekérdezi a `GET /api/health` végpontot a konténer saját portján (5 másodperces időtúllépés, 20 másodperces indulási türelmi idő, 3 újrapróbálkozás, mielőtt a konténert nem egészségesnek jelöli). A `docker ps` és a `docker inspect` mutatja az eredményt, és az olyan eszközök, mint a Compose `condition: service_healthy` feltétele vagy a Watchtower, reagálhatnak rá.
+A képfájl beépített [Docker `HEALTHCHECK`](https://docs.docker.com/reference/dockerfile/#healthcheck) ellenőrzést tartalmaz — egyéni `--health-cmd` nem szükséges. Ez 30 másodpercenként lekérdezi a `GET /api/health` végpontot a konténer saját portján (5 másodperces időtúllépés, 20 másodperces indulási türelmi idő, 3 újrapróbálkozás, mielőtt a konténert nem egészségesnek jelöli). A `docker ps` és a `docker inspect` mutatja az eredményt, és az olyan eszközök, mint a Compose `condition: service_healthy` feltétele vagy a Watchtower, reagálhatnak rá. PostgreSQL mellett az ellenőrzés akkor is hibát jelez, ha az adatbázis nem érhető el (`503`, lásd: [`GET /api/health`](../api-reference.md#get-apihealth)).
 
 | Változó | Alapértelmezés | Leírás |
 |----------|---------|-------------|

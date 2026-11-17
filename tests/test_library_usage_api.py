@@ -7,17 +7,18 @@ from __future__ import annotations
 
 import asyncio
 import os
-import sqlite3
 from datetime import datetime, timedelta, timezone
 
 import pytest
 
 from downtify import api
+from downtify.db.core import Database
 from downtify.download_log import DownloadLog
 from downtify.file_providers import FileProviders
 from downtify.library_catalog import LibraryContext
 from downtify.library_usage import UsageSnapshots
 from downtify.storage_scan import LEFTOVER_MIN_AGE
+from tests.db.helpers import execute
 
 
 @pytest.fixture
@@ -188,16 +189,18 @@ def test_the_folder_scan_is_kept_until_asked_again(usage):
 
 def test_an_older_provider_table_gains_the_source_column(tmp_path):
     db = tmp_path / 'library.db'
-    with sqlite3.connect(db) as conn:
-        conn.execute(
-            'CREATE TABLE file_providers (content_key TEXT PRIMARY KEY, '
-            "path TEXT NOT NULL DEFAULT '', provider TEXT NOT NULL, "
-            'recorded_at TEXT NOT NULL)'
-        )
-        conn.execute(
-            "INSERT INTO file_providers VALUES ('k', 'A.mp3', 'youtube', "
-            "'2026-01-01T00:00:00+00:00')"
-        )
+    legacy = Database.sqlite(db)
+    execute(
+        legacy,
+        'CREATE TABLE file_providers (content_key TEXT PRIMARY KEY, '
+        "path TEXT NOT NULL DEFAULT '', provider TEXT NOT NULL, "
+        'recorded_at TEXT NOT NULL)',
+    )
+    execute(
+        legacy,
+        "INSERT INTO file_providers VALUES ('k', 'A.mp3', 'youtube', "
+        "'2026-01-01T00:00:00+00:00')",
+    )
 
     store = FileProviders(db)
 

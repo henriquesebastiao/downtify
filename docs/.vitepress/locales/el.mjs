@@ -65,6 +65,7 @@ export default {
       'getting-started/docker-compose.md': 'Docker Compose',
       'getting-started/one-click.md': 'Εγκατάσταση με ένα κλικ',
       'getting-started/environment-variables.md': 'Μεταβλητές περιβάλλοντος',
+      'database.md': 'Database',
       'features/index.md': 'Επισκόπηση',
       'features/charts.md': 'Λίστες επιτυχιών',
       'features/similar.md': 'Παρόμοια',

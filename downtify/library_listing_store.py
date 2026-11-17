@@ -1,4 +1,4 @@
-"""SQLite snapshot of ``GET /tracks`` / ``GET /playlists`` / path pairs."""
+"""SQLite/PostgreSQL snapshot of ``GET /tracks`` / ``GET /playlists`` / path pairs."""
 
 from __future__ import annotations
 
@@ -6,8 +6,9 @@ import json
 from pathlib import Path
 from typing import Any, Optional
 
+from .db.config import Dialect
+from .db.core import Database, as_database
 from .library_metadata_cache import META_VERSION
-from .sqlite_utils import connect_sqlite
 
 #: Bump when the JSON shape of a snapshot row changes.
 LISTING_FORMAT = 1
@@ -16,14 +17,21 @@ LISTING_FORMAT = 1
 class LibraryListingStore:
     """Persists a folded library listing so a restart can skip the disk walk."""
 
-    def __init__(self, db_path: Path) -> None:
-        self._path = str(db_path)
+    def __init__(self, path_or_db: str | Path | Database) -> None:
+        self.db = as_database(path_or_db, 'library')
+        if isinstance(path_or_db, Database):
+            self._path = str(self.db.path) if self.db.path else None
+        else:
+            self._path = str(path_or_db)
         self._init_db()
 
     def _connect(self):
-        return connect_sqlite(self._path, row_factory=True)
+        return self.db.connect()
 
     def _init_db(self) -> None:
+        # The Postgres schema is created by migrations; only SQLite needs DDL.
+        if self.db.dialect is not Dialect.SQLITE:
+            return
         with self._connect() as conn:
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS library_listing (
