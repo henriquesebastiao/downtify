@@ -98,6 +98,8 @@ Podcast feeds with multiple attachments use the audio enclosure, not accompanyin
 
 Library cover thumbnails stay separate for files in different folders, even when their names, sizes and timestamps match. See [Cover art](docs/api-reference.md#get-cover).
 
+Library playlist edits stay intact when deleted tracks or unmapped music folders are cleaned up at the same time. See [Collaborative playlists](docs/features/collaborative-playlists.md).
+
 ## Quick start
 
 You only need [Docker](https://docs.docker.com/get-docker/).
