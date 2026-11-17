@@ -39,6 +39,7 @@ from downtify import (
     download_policy_routes,
     mobile_routes,
     trash_routes,
+    wanted_routes,
 )
 from downtify.activity import ActivityLog
 from downtify.auth import AuthMiddleware, AuthStore, auth_disabled_from_env
@@ -869,6 +870,7 @@ def build_app() -> FastAPI:
     app.include_router(trash_routes.router)
     app.include_router(doctor_routes.router)
     app.include_router(download_policy_routes.router)
+    app.include_router(wanted_routes.router)
 
     @app.get('/list')
     def list_downloads(request: Request, refresh: bool = False) -> list[str]:

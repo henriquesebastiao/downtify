@@ -283,6 +283,12 @@ downloads are shared, and files are never stored twice.
   /api/monitor/artist-suggestions/resolve`` (``?name=``: ``{candidates,
   url}`` - the YouTube Music artist to follow, ``url`` only when exactly
   one is named so) - see ``downtify/artist_suggestions.py``
+* ``GET  /api/monitor/wanted`` (the Wanted list: per enabled artist
+  watch - all for an admin, their own for a user - the releases it
+  downloads that the library has partly or not at all, ``{artists:
+  [{watch, releases, missing, checking}], totals: {tracks, releases,
+  artists, unchecked}, job}``; reads what the sweeps kept, fetches
+  nothing) - see ``downtify/wanted_routes.py``
 * ``GET|PUT /api/likes`` and ``POST /api/likes/clear`` (the heart on a
   library track; while any song is liked they are also written out as a
   playlist)
@@ -10717,13 +10723,20 @@ def _library_songs() -> Any:
 _inventories: dict[int, dict[str, Any]] = {}
 
 
+#: ``_artist_releases``'s "read the library yourself" (``None`` is a
+#: library that couldn't be read).
+_UNSET: Any = object()
+
+
 def _artist_releases(
-    db: PlaylistMonitorDB, watch: MonitoredPlaylist
+    db: PlaylistMonitorDB, watch: MonitoredPlaylist, songs: Any = _UNSET
 ) -> dict[str, Any]:
+    if songs is _UNSET:
+        songs = _library_songs()
     kinds = artist_catalogue.watch_kinds(watch, state.settings)
     have = artist_catalogue.library_have(
         db.catalogue.tracks(watch.id),
-        _library_songs(),
+        songs,
         db.releases.counts(watch.id),
     )
     releases = artist_catalogue.catalogue_view(
