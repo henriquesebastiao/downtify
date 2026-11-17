@@ -24,7 +24,15 @@ from starlette.testclient import TestClient
 from starlette.websockets import WebSocketDisconnect
 
 import main
-from downtify import account_routes, api, auth_routes, mobile_routes
+from downtify import (
+    account_routes,
+    api,
+    auth_routes,
+    download_policy_routes,
+    mobile_routes,
+    trash_routes,
+    wanted_routes,
+)
 from downtify.auth import (
     ADMIN,
     CLIENT,
@@ -461,6 +469,7 @@ def test_the_signing_key_is_private_and_kept(tmp_path):
         ('GET', '/api/monitor/playlists/3/tracks', USER),
         ('GET', '/api/monitor/artist-suggestions', USER),
         ('GET', '/api/monitor/artist-suggestions/resolve', USER),
+        ('GET', '/api/monitor/wanted', USER),
         ('GET', '/api/library/summary', CLIENT),
         ('GET', '/api/library/albums', CLIENT),
         ('GET', '/api/library/artists', CLIENT),
@@ -504,6 +513,9 @@ def _all_routes(app: FastAPI):
     yield from auth_routes.router.routes
     yield from account_routes.router.routes
     yield from mobile_routes.router.routes
+    yield from trash_routes.router.routes
+    yield from download_policy_routes.router.routes
+    yield from wanted_routes.router.routes
 
 
 def _templates(app: FastAPI):
@@ -726,6 +738,15 @@ def test_a_normal_user_is_not_an_admin(client):
     assert missing.json()['deleted'] is False
     assert client.get('/api/auth/devices').status_code == 200
     assert client.get('/api/me').json()['user']['role'] == 'user'
+
+
+def test_a_normal_user_can_open_the_wanted_list(client):
+    api.state.auth.users.create('maria', PASSWORD)
+    assert _sign_in(client, 'maria', PASSWORD).status_code == 200
+
+    # Not admin-only: past the auth middleware (the monitor store isn't
+    # open without the lifespan, so the route itself may still refuse).
+    assert client.get('/api/monitor/wanted').status_code not in {401, 403}
 
 
 def test_a_cross_site_request_with_the_session_is_refused(client):

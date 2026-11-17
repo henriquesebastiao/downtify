@@ -40,28 +40,27 @@ def _track(title: str, artist: str = 'Drake') -> dict:
     return {'name': title, 'artists': [artist], 'duration': 200}
 
 
-def _add_release(  # noqa: PLR0913, PLR0917  # a catalogue row's fields
-    db, watch, album_id, name, titles, artist='Drake'
-):
+def _release(album_id: str, name: str, artist: str = 'Drake') -> dict:
+    return {
+        'album_id': album_id,
+        'name': name,
+        'artist': artist,
+        'year': '2016',
+        'source': 'deezer',
+        'release_type': 'Album',
+    }
+
+
+def _add_release(db, watch, row: dict, titles=()):
     """A catalogue row for *watch*, with a tracklist (none when
     *titles* is empty: not read yet)."""
 
-    db.catalogue.record(
-        watch.id,
-        [
-            {
-                'album_id': album_id,
-                'name': name,
-                'artist': artist,
-                'year': '2016',
-                'source': 'deezer',
-                'release_type': 'Album',
-            }
-        ],
-    )
+    db.catalogue.record(watch.id, [row])
     if titles:
         db.catalogue.store_tracks(
-            watch.id, album_id, [_track(t, artist) for t in titles]
+            watch.id,
+            row['album_id'],
+            [_track(t, row['artist']) for t in titles],
         )
 
 
@@ -81,9 +80,13 @@ def _library(monkeypatch, *rows):
 
 def _artist(db, name, user_id=0):
     return db.add_playlist(
-        f'UC{name}', name, f'https://x/{name}', 60, monitor.KIND_ARTIST,
+        f'UC{name}',
+        name,
+        f'https://x/{name}',
+        60,
+        monitor.KIND_ARTIST,
         user_id=user_id,
-    )  # fmt: skip
+    )
 
 
 def _request(user_id: int, role: str) -> Request:
@@ -125,10 +128,14 @@ def test_wanted_view_groups_by_artist_with_totals(db, monkeypatch):
     zed = _artist(db, 'zed')
     adele = _artist(db, 'Adele')
     # Zed: one album with 1 of 3 tracks (2 missing), one with none (2).
-    _add_release(db, zed, 'a1', 'First', ['One', 'Two', 'Three'], 'Drake')
-    _add_release(db, zed, 'a2', 'Second', ['X', 'Y'], 'Drake')
+    _add_release(
+        db, zed, _release('a1', 'First', 'Drake'), ['One', 'Two', 'Three']
+    )
+    _add_release(db, zed, _release('a2', 'Second', 'Drake'), ['X', 'Y'])
     # Adele: 1 of 2 (1 missing).
-    _add_release(db, adele, 'b1', 'Solo LP', ['Solo', 'Other'], 'Adele')
+    _add_release(
+        db, adele, _release('b1', 'Solo LP', 'Adele'), ['Solo', 'Other']
+    )
 
     view = wanted_routes.wanted_view(db, [zed, adele])
 
@@ -148,7 +155,7 @@ def test_wanted_view_groups_by_artist_with_totals(db, monkeypatch):
 def test_unchecked_artist_is_listed_and_counted(db, monkeypatch):
     _library(monkeypatch)
     watch = _artist(db, 'Drake')
-    _add_release(db, watch, 'a1', 'Unread', [])
+    _add_release(db, watch, _release('a1', 'Unread'), [])
 
     view = wanted_routes.wanted_view(db, [watch])
 
@@ -165,7 +172,7 @@ def test_unchecked_artist_is_listed_and_counted(db, monkeypatch):
 def test_complete_artist_is_left_out(db, monkeypatch):
     _library(monkeypatch, *_songs('One', 'Two'))
     watch = _artist(db, 'Drake')
-    _add_release(db, watch, 'a1', 'Done', ['One', 'Two'])
+    _add_release(db, watch, _release('a1', 'Done'), ['One', 'Two'])
 
     view = wanted_routes.wanted_view(db, [watch])
 
@@ -212,7 +219,7 @@ def test_library_index_is_built_once(db, monkeypatch):
     monkeypatch.setattr(api, '_library_songs', songs)
     watches = [_artist(db, n) for n in ('A', 'B', 'C')]
     for watch in watches:
-        _add_release(db, watch, 'r1', 'LP', ['One', 'Two'])
+        _add_release(db, watch, _release('r1', 'LP'), ['One', 'Two'])
 
     view = wanted_routes.wanted_view(db, watches)
 
@@ -223,7 +230,7 @@ def test_library_index_is_built_once(db, monkeypatch):
 def test_the_route_returns_the_view_and_no_job(db, monkeypatch):
     _library(monkeypatch)
     watch = _artist(db, 'Drake')
-    _add_release(db, watch, 'a1', 'LP', ['One'])
+    _add_release(db, watch, _release('a1', 'LP'), ['One'])
 
     body = asyncio.run(wanted_routes.wanted(_request(1, 'admin')))
 
