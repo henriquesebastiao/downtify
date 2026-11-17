@@ -18,4 +18,4 @@ Deemix/slskd transfers, which may be used by another application.
 
 Administrators control exclusions globally for this server. Standard users and
 signed audio URLs cannot change them. Existing exclusions also apply when the
-time budget is disabled. The SQLite journal is in the monitor database.
+time budget is disabled. The SQLite journal is in the monitor database. With PostgreSQL, the same records are in the PostgreSQL database.

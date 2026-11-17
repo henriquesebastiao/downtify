@@ -82,7 +82,7 @@ O painel de progresso mostra as faixas concluídas da fila, um valor aproximado 
 
 **Pausar** para depois da faixa em andamento e mantém a fila. **Parar** descarta o resto; as faixas já melhoradas continuam melhoradas. Você pode sair da página — a execução continua, e qualquer outra aba aberta acompanha.
 
-A fila fica em `/data/downtify_library.db`, então **reiniciar o Downtify (ou o contêiner) no meio da execução a retoma** de onde parou. Uma faixa que estava em andamento quando o processo morreu volta para a fila.
+A fila fica em `/data/downtify_library.db` (ou no banco PostgreSQL, quando [`DATABASE_URL`](../getting-started/environment-variables.md#database) está definida), então **reiniciar o Downtify (ou o contêiner) no meio da execução a retoma** de onde parou. Uma faixa que estava em andamento quando o processo morreu volta para a fila.
 
 ## Nada se perde se uma melhoria falhar
 
@@ -109,7 +109,7 @@ Depois de ativar e testar a [fonte Deemix](deemix.md), **Melhorar biblioteca** o
 
 Essa análise produz uma categoria de **áudio** em vez de tarefas de capa/letra/tags. O Deemix é dono dos arquivos de saída, da capa, do layout de álbuns e das letras nativas. O Downtify os lê no lugar. Letras nativas ou incorporadas existentes são preservadas; só letras ausentes podem ser complementadas numa pasta de letras dedicada e gravável, sem reescrever o áudio. Um original sem perdas de qualidade maior é mantido quando o Deemix está configurado para MP3.
 
-A publicação acontece uma vez por lote. Comentários do M3U, marcadores manuais e a ordem das faixas são preservados; depois, caminhos do catálogo, participações em playlists, curtidas de todos os usuários, posse e regras de faixas ocultas migram em uma única transação SQLite. Os IDs do Navidrome em cache dos arquivos antigos são invalidados para uma nova busca nativa. IDs móveis já emitidos e URLs de reprodução antigas mantêm aliases somente leitura para o substituto registrado; mutações nunca usam esses aliases de URL.
+A publicação acontece uma vez por lote. Comentários do M3U, marcadores manuais e a ordem das faixas são preservados; depois, caminhos do catálogo, participações em playlists, curtidas de todos os usuários, posse e regras de faixas ocultas migram em uma única transação no banco de dados. Os IDs do Navidrome em cache dos arquivos antigos são invalidados para uma nova busca nativa. IDs móveis já emitidos e URLs de reprodução antigas mantêm aliases somente leitura para o substituto registrado; mutações nunca usam esses aliases de URL.
 
 Recibos duráveis no banco da biblioteca registram os valores SHA-256 de origem/destino e o estado da publicação. As fontes permanecem até o substituto e as referências serem verificados. Uma montagem alterada ou ausente, arquivo editado, referência externa somente leitura de playlist, reprodução ativa ou falha na publicação do catálogo interrompe a limpeza com um motivo visível. Pausar/retomar e reiniciar reaproveitam os recibos. Não há varredura geral de duplicatas nem limpeza por idade: só originais verificados na pasta de downloads do Downtify são elegíveis. Downloads manuais do Deemix/slskd, originais externos, diretórios e sidecars nunca são excluídos. Depois que um original é removido, reverter o contêiner não restaura esse arquivo; restaure-o do seu backup de armazenamento, se precisar.
 

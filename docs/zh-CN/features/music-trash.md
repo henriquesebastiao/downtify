@@ -120,6 +120,8 @@ python -m downtify.trash_worker \
 
 每次运行最多处理 `--limit` 指定的操作数（1–20），以 JSON 打印执行结果（`{"processed": 1, "succeeded": 1, "failed": 0}`）后退出。可用 systemd timer、cron 或 Kubernetes CronJob 等每分钟左右调度一次。工作进程会只读访问账户数据库，再次确认发起者仍为管理员，并保证两次运行不会同时执行。请使用与服务器相同的 Downtify 版本运行，并确保期间没有其他进程重写相同文件。
 
+设置 `DATABASE_URL`（参见[数据库](../database.md)）后，工作进程改用 PostgreSQL：`--database` 和 `--auth-database` 变为可选且会被忽略，媒体库和账号数据来自 `DATABASE_URL` 指向的数据库。
+
 ## API
 
 网页应用与 Android 应用使用 `/api/v1/library/trash` 下的相同端点，参见 API 参考中的[音乐回收站](../api-reference.md#music-trash)。

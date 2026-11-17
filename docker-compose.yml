@@ -4,6 +4,9 @@ services:
     image: 'downtify:${TAG-latest}'
     restart: unless-stopped
     build: .
+    depends_on:
+      postgres:
+        condition: service_healthy
     ports:
       - '8000:8000'
     volumes:
@@ -15,6 +18,9 @@ services:
       # - ./docker/slskd:/slskd
       # - settings/server./docker/cookies.txt:/cookies.txt
     environment:
+      # PostgreSQL connection (the `postgres` service below). Remove this
+      # line to keep using the SQLite files under /data instead.
+      DATABASE_URL: postgresql://downtify:${POSTGRES_PASSWORD:-downtify}@postgres:5432/downtify
       DOWNTIFY_TRASH: true
       # slskd polling: active/idle interval, shared snapshot TTL (seconds),
       # and recursive fallback scan cadence (ticks).
@@ -30,3 +36,26 @@ services:
     dns:
       - 1.1.1.1
       - 1.0.0.1
+
+  postgres:
+    container_name: downtify-postgres
+    image: 'postgres:17-alpine'
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: downtify
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-downtify}
+      POSTGRES_DB: downtify
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    # Uncomment to reach the database from the host (psql, backups):
+    # ports:
+    #   - '127.0.0.1:5432:5432'
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U downtify -d downtify']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+volumes:
+  pgdata:

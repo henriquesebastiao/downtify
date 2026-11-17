@@ -82,7 +82,7 @@ Bir tarama, her şey yakın zamanda denetlendiği _için_ yapacak bir şey bulam
 
 **Duraklat**, işlemdeki parçadan sonra durur ve kuyruğu korur. **Durdur** geri kalanını bırakır; zaten iyileştirilen parçalar iyileştirilmiş kalır. Sayfadan ayrılabilirsiniz — çalıştırma sürer ve açık diğer sekmeler onu izler.
 
-Kuyruk `/data/downtify_library.db` içinde yaşar; yani çalıştırma ortasında **Downtify’ı (veya kapsayıcıyı) yeniden başlatmak** onu kaldığı yerden sürdürür. İşlem öldüğünde işlemde olan bir parça kuyruğa geri konur.
+Kuyruk `/data/downtify_library.db` içinde (ya da [`DATABASE_URL`](../getting-started/environment-variables.md#database) ayarlıysa PostgreSQL veritabanında) yaşar; yani çalıştırma ortasında **Downtify’ı (veya kapsayıcıyı) yeniden başlatmak** onu kaldığı yerden sürdürür. İşlem öldüğünde işlemde olan bir parça kuyruğa geri konur.
 
 ## Bir iyileştirme başarısız olursa hiçbir şey kaybolmaz
 
@@ -109,7 +109,7 @@ Sıradan etiket iyileştirmeleri sesi değiştirmez. Aşağıdaki ayrı mod tam 
 
 Bu tarama, kapak/söz/etiket işleri yerine bir **ses** kategorisi üretir. Çıktı dosyalarına, kapağa, albüm düzenine ve yerel sözlere Deemix sahiptir. Downtify bunları yerinde okur. Mevcut yerel veya gömülü sözler korunur; yalnızca eksik sözler, sesi yeniden yazmadan, yazılabilir özel bir söz klasöründe tamamlanabilir. Deemix MP3 için yapılandırıldığında daha yüksek kaliteli kayıpsız bir özgün dosya korunur.
 
-Yayımlama parti başına bir kez olur. M3U yorumları, elle konulan işaretler ve parça sırası korunur; sonra katalog yolları, çalma listesi üyelikleri, her kullanıcının beğenileri, sahiplik ve gizli parça kuralları tek bir SQLite işleminde taşınır. Eski dosyaların önbellekteki Navidrome kimlikleri yeni bir yerel arama için geçersiz kılınır. Daha önce verilmiş mobil kimlikler ve eski oynatma URL’leri kayıtlı değiştirmeye salt okunur takma adlar tutar; değişiklik işlemleri bu URL takma adlarını asla kullanmaz.
+Yayımlama parti başına bir kez olur. M3U yorumları, elle konulan işaretler ve parça sırası korunur; sonra katalog yolları, çalma listesi üyelikleri, her kullanıcının beğenileri, sahiplik ve gizli parça kuralları tek bir veritabanı işleminde taşınır. Eski dosyaların önbellekteki Navidrome kimlikleri yeni bir yerel arama için geçersiz kılınır. Daha önce verilmiş mobil kimlikler ve eski oynatma URL’leri kayıtlı değiştirmeye salt okunur takma adlar tutar; değişiklik işlemleri bu URL takma adlarını asla kullanmaz.
 
 Kitaplık veritabanındaki kalıcı makbuzlar kaynak/hedef SHA-256 değerlerini ve yayımlama durumunu kaydeder. Kaynaklar, değiştirme ve referanslar doğrulanana kadar kalır. Değişmiş ya da eksik bir bağlama, düzenlenmiş bir dosya, harici salt okunur bir çalma listesi referansı, etkin oynatma veya başarısız bir katalog yayımlaması temizliği görünür bir nedenle durdurur. Duraklat/sürdür ve yeniden başlatma makbuzları yeniden kullanır. Genel bir yineleme taraması ya da yaşa dayalı temizlik yoktur: yalnızca Downtify’ın indirme klasöründeki doğrulanmış özgünler uygundur. Elle yapılan Deemix/slskd indirmeleri, harici özgünler, dizinler ve yan dosyalar asla silinmez. Bir özgün kaldırıldıktan sonra kapsayıcıyı geri almak o dosyayı geri getirmez; gerekirse kendi depolama yedeğinizden geri yükleyin.
 

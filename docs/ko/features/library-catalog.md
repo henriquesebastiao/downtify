@@ -8,6 +8,8 @@ Downtify는 `/downloads` 아래 파일(slskd 폴더 — [slskd 파일을 그대�
 
 ## 저장되는 것
 
+아래 위치는 기본 SQLite 백엔드에 해당합니다. PostgreSQL([데이터베이스](../database.md))을 쓰면 같은 데이터가 PostgreSQL 데이터베이스에 저장됩니다.
+
 | 저장소 | 위치 | 용도 |
 |-------|----------|---------|
 | **트랙 인덱스** | `/data/downtify_library.db` | Spotify 트랙 ID를 라이브러리 경로에 매핑해, 이미 디스크에 있는 트랙을 알아볼 수 있게 합니다 |

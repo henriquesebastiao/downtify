@@ -33,7 +33,7 @@ Saved settings that still name them keep working: the names are ignored, and a l
 
 ## Skipping providers that had nothing
 
-After a lookup, Downtify records for each song which providers answered and which came back empty, in `downtify_library.db` under `/data`.
+After a lookup, Downtify records for each song which providers answered and which came back empty, in `downtify_library.db` under `/data` (on the default SQLite backend; with PostgreSQL, in the PostgreSQL database).
 
 A provider that had nothing for a song isn't asked about it again for **30 days**, so re-downloads and large library passes don't repeat the same failed lookups. After that it's tried again, since catalogues grow. A provider that *did* have lyrics is never skipped, so a re-downloaded file gets them back.
 

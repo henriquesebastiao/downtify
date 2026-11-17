@@ -67,6 +67,22 @@ rm:
 	sudo rm -rf docker/data/*
 	sudo rm -rf docker/data/.*
 
+# Copy an existing SQLite install into the compose PostgreSQL. Stop the app
+# first (`make down`). The SQLite files in docker/data are never modified.
+db-migrate:
+	docker compose run --rm --entrypoint python downtify main.py db-migrate --from-sqlite /data
+
+db-shell:
+	docker compose exec postgres psql -U downtify downtify
+
+db-backup:
+	mkdir -p docker
+	docker compose exec -T postgres pg_dump -U downtify downtify > docker/pg-backup-$$(date +%Y%m%d%H%M%S).sql
+
+# DANGER: DELETES the PostgreSQL data volume (pgdata) and all data in it.
+db-reset:
+	docker compose down -v
+
 update:
 	uvx uv-bump
 	npm --prefix frontend update -S
@@ -75,4 +91,4 @@ update:
 %:
 	@:
 
-.PHONY: all build clean up down run format lint export changelog version doc doc-build doc-i18n rm
+.PHONY: all build clean up down run format lint export changelog version doc doc-build doc-i18n rm db-migrate db-shell db-backup db-reset

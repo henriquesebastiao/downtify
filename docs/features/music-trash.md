@@ -120,6 +120,8 @@ python -m downtify.trash_worker \
 
 Each run handles at most `--limit` operations (1–20), prints what it did as JSON (`{"processed": 1, "succeeded": 1, "failed": 0}`) and exits; schedule it every minute or so (a systemd timer, cron, a Kubernetes CronJob). It checks again that whoever asked is still an admin, reading the accounts database read-only, and two runs never work at once. Run it from the same Downtify version as the server, and only while nothing else rewrites the same files.
 
+With `DATABASE_URL` set ([Database](../database.md)), the worker uses PostgreSQL instead: `--database` and `--auth-database` are then optional and ignored, and the library and accounts come from the database `DATABASE_URL` points to.
+
 ## API
 
 The web app and the Android app use the same endpoints under `/api/v1/library/trash` — see [Music trash](../api-reference.md#music-trash) in the API reference.

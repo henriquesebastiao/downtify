@@ -14,6 +14,14 @@ Every endpoint needs a signed-in user except a few public ones — see [Server a
 
 Admin. Checks the configured outbound proxy by requesting the Tor Project's status endpoint. The response includes whether the route was reachable and whether the exit was recognized as Tor; it never includes the observed public IP. It does not make a direct request when no proxy is configured or the test host is bypassed.
 
+### `GET /api/health`
+
+Liveness probe: the Docker `HEALTHCHECK` polls it. No credentials needed.
+
+**Response:** `200` with `{"status": "ok", "version": "3.10.0"}` once the server answers requests.
+
+With PostgreSQL ([`DATABASE_URL`](../getting-started/environment-variables.md#database)), the server also checks that the database answers. When it can't be reached, the response is `503` with `{"status": "database_unavailable"}`. On SQLite nothing changes: the answer is always `200` as above.
+
 ### `GET /api/version`
 
 Returns the current Downtify version as a plain string.

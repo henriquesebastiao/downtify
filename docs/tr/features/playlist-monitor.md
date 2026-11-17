@@ -28,7 +28,7 @@ Downtify, 60 saniyede bir çalışan bir arka plan görevi tutar. Her taramada, 
 3. Yeni parçaları elle indirmeyle aynı işlem hattıyla indirir
 4. Çalma listesinin M3U dosyasını günceller (M3U üretimi etkinse)
 
-İzlemeyi eklediğiniz anda başlayan ilk denetim, çalma listesinde zaten olan her şeyi indirir; sonraki denetimler yalnızca o zamandan beri eklenenleri indirir. “Zaten indirilmiş” olan, indirme klasörüne bakılarak değil, küçük bir SQLite veritabanında (`/data` altındaki `downtify_monitor.db`) izlenir — bu yüzden indirilen bir dosyayı diskte başka bir yere (kendi kitaplık düzeninize, başka bir sürücüye, nereye olursa) taşımak, Downtify’ın onun eksik olduğunu düşünüp sonraki denetimde yeniden indirmesine **neden olmaz**.
+İzlemeyi eklediğiniz anda başlayan ilk denetim, çalma listesinde zaten olan her şeyi indirir; sonraki denetimler yalnızca o zamandan beri eklenenleri indirir. “Zaten indirilmiş” olan, indirme klasörüne bakılarak değil, küçük bir SQLite veritabanında (`/data` altındaki `downtify_monitor.db`; PostgreSQL ile PostgreSQL veritabanında) izlenir — bu yüzden indirilen bir dosyayı diskte başka bir yere (kendi kitaplık düzeninize, başka bir sürücüye, nereye olursa) taşımak, Downtify’ın onun eksik olduğunu düşünüp sonraki denetimde yeniden indirmesine **neden olmaz**.
 
 Ayrı bir tarama her saat çalışır ve indirilmiş her parçanın dosyasının hâlâ orada olup olmadığına bakar. Gerçekten silinen dosyalar (taşınanların aksine) o anda unutulur; böylece parça yeniden indirilmeye uygun hale gelir — anında değil, o saatlik taramadan sonraki izleme denetiminde.
 
@@ -260,7 +260,7 @@ Bir dosya gerçekten kaybolursa — indirme klasöründen çıkardınız ya da e
 
 ## Depolama
 
-İzleyici durumu `/data/downtify_monitor.db` konumundaki bir SQLite veritabanında saklanır. Veritabanı şunları kaydeder:
+İzleyici durumu `/data/downtify_monitor.db` konumundaki bir SQLite veritabanında saklanır; bu varsayılan arka uçtur. PostgreSQL ([Veritabanı](../database.md)) ile aynı kayıtlar PostgreSQL veritabanında tutulur. Veritabanı şunları kaydeder:
 
 - Her izleme (tür, Spotify veya YouTube Music çalma listesi kimliği ya da YouTube Music kanal kimliği, ad, URL, aralık, etkin durumu, son denetim zamanı). Bir izlemenin Spotify mı YouTube Music mi olduğu saklanan URL’sinden okunur, bu yüzden ek bir sütun gerekmez.
 - İzleme başına başarıyla indirilen her parça, diskteki dosya adı dahil

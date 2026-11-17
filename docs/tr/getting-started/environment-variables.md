@@ -16,6 +16,25 @@ Tüm ortam değişkenleri isteğe bağlıdır. Downtify hiçbiri olmadan kutudan
 | `DOWNTIFY_LOG_LEVEL` | `info` | Uygulama günlük düzeyi (`debug`, `info`, `warning`, …). |
 | `TZ` | `UTC` | Aşağıdaki `DOWNTIFY_MONITOR_SYNC_TIME` değerini yorumlamak için kullanılan yerel saat dilimi (IANA adı, örn. `America/Sao_Paulo`). |
 
+## Veritabanı
+
+Varsayılan olarak Downtify verilerini `DATABASE_DIR` altındaki SQLite dosyalarında tutar. PostgreSQL kullanmak için `DATABASE_URL` ayarlayın; [Veritabanı](../database.md) sayfası kurulumu, geçişleri ve neyin nerede saklandığını anlatır.
+
+| Değişken | Varsayılan | Açıklama |
+|----------|---------|-----------|
+| `DATABASE_URL` | _(ayarlı değil)_ | PostgreSQL bağlantı URL’si, `postgresql://kullanıcı:parola@sunucu:5432/veritabani` (`postgres://` de çalışır). Ayarlı değilse: SQLite. Ayarlıysa: normalde SQLite dosyası olan depolar (kitaplık, izleyici, hesaplar, etkinlik, doctor) PostgreSQL kullanır. Başka bir şemaya sahip değer reddedilir. URL hata iletilerinde hiçbir zaman gösterilmez. |
+| `DB_POOL_MIN` | `2` | PostgreSQL havuzunun açık tuttuğu bağlantı sayısı. `0` veya daha fazla olmalı. |
+| `DB_POOL_MAX` | `20` | PostgreSQL havuzunun açabileceği en fazla bağlantı. En az `1` ve en az `DB_POOL_MIN` olmalı. |
+| `DB_POOL_TIMEOUT` | `10` | Bir isteğin boş bir bağlantı için beklediği, sonra başarısız olduğu saniye sayısı. |
+| `DB_SEARCH_PATH` | _(ayarlı değil)_ | Diğer uygulamalarla paylaşılan bir veritabanı için kullanılacak PostgreSQL şeması. Yalnızca düz bir tanımlayıcı: harfler, rakamlar ve alt çizgi; rakamla başlamaz. Ayarlı değilse: sunucunun varsayılanı (`public`). |
+| `DATABASE_DIR` | `/data` | Ayarlar, önbellekler ve SQLite dosyalarının dizini. PostgreSQL ile de kullanılmaya devam eder; veritabanı tablosu olmayan her şey için. |
+| `POSTGRES_PASSWORD` | `downtify` | Yalnızca Docker Compose (depodaki `docker-compose.yml` okur, sunucu okumaz): paketli `postgres` hizmetindeki `downtify` kullanıcısının parolası; `DATABASE_URL` de bunu kullanır. İlk başlatmadan önce Compose dosyasının yanındaki bir `.env` dosyasına koyun. PostgreSQL bunu yalnızca veri birimini oluştururken uygular; bu yüzden sonradan değiştirmek mevcut veritabanının parolasını değiştirmez. |
+
+```yaml
+environment:
+  - DATABASE_URL=postgresql://downtify:change-me@postgres:5432/downtify
+```
+
 ## Çalma Listesi İzleyici
 
 | Değişken | Varsayılan | Açıklama |
@@ -65,7 +84,7 @@ Bkz. [Müzik çöp kutusu](../features/music-trash.md). Bunlardan biri ayarlanma
 
 ## Sağlık denetimi
 
-İmajda yerleşik bir [Docker `HEALTHCHECK`](https://docs.docker.com/reference/dockerfile/#healthcheck) vardır — özel bir `--health-cmd` gerekmez. Kapsayıcının kendi bağlantı noktasında her 30 saniyede bir `GET /api/health`’i sorgular (5 saniye zaman aşımı, 20 saniye başlangıç toleransı, kapsayıcı sağlıksız işaretlenmeden önce 3 deneme). `docker ps` ve `docker inspect` sonucu gösterir; Compose’un `condition: service_healthy` değeri veya Watchtower gibi araçlar buna göre hareket edebilir.
+İmajda yerleşik bir [Docker `HEALTHCHECK`](https://docs.docker.com/reference/dockerfile/#healthcheck) vardır — özel bir `--health-cmd` gerekmez. Kapsayıcının kendi bağlantı noktasında her 30 saniyede bir `GET /api/health`’i sorgular (5 saniye zaman aşımı, 20 saniye başlangıç toleransı, kapsayıcı sağlıksız işaretlenmeden önce 3 deneme). `docker ps` ve `docker inspect` sonucu gösterir; Compose’un `condition: service_healthy` değeri veya Watchtower gibi araçlar buna göre hareket edebilir. PostgreSQL ile, veritabanına ulaşılamadığı sürece denetim de başarısız olur (`503`, bkz. [`GET /api/health`](../api-reference.md#get-apihealth)).
 
 | Değişken | Varsayılan | Açıklama |
 |----------|---------|-------------|

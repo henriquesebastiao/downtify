@@ -82,7 +82,7 @@ The progress panel shows tracks done out of the queue, an approximate data figur
 
 **Pause** stops after the track in flight and keeps the queue. **Stop** drops the rest of it; tracks already upgraded stay upgraded. You can leave the page — the run keeps going, and any other open tab follows along.
 
-The queue lives in `/data/downtify_library.db`, so **restarting Downtify (or the container) mid-run picks it back up** where it stopped. A track that was in flight when the process died is put back in the queue.
+The queue lives in `/data/downtify_library.db` (or in the PostgreSQL database, when [`DATABASE_URL`](../getting-started/environment-variables.md#database) is set), so **restarting Downtify (or the container) mid-run picks it back up** where it stopped. A track that was in flight when the process died is put back in the queue.
 
 ## Nothing is lost if an upgrade fails
 
@@ -109,7 +109,7 @@ After enabling and testing the [Deemix source](deemix.md), **Upgrade library** o
 
 This scan produces an **audio** category instead of artwork/lyrics/tag jobs. Deemix owns the output files, artwork, album layout and native lyrics. Downtify reads them in place. Existing native or embedded lyrics are preserved; only absent lyrics may be supplemented in a writable dedicated lyrics folder, without rewriting audio. A higher-quality lossless original is retained when Deemix is configured for MP3.
 
-Publication happens once per batch. M3U comments, manual markers and track order are preserved, then catalog paths, playlist memberships, every user's likes, ownership and hidden-track rules move in one SQLite transaction. Cached Navidrome IDs for old files are invalidated for a fresh native lookup. Previously issued mobile IDs and old playback URLs keep read-only aliases to the registered replacement; mutations never use those URL aliases.
+Publication happens once per batch. M3U comments, manual markers and track order are preserved, then catalog paths, playlist memberships, every user's likes, ownership and hidden-track rules move in one database transaction. Cached Navidrome IDs for old files are invalidated for a fresh native lookup. Previously issued mobile IDs and old playback URLs keep read-only aliases to the registered replacement; mutations never use those URL aliases.
 
 Durable receipts in the library database record source/target SHA-256 values and publication state. Sources remain until the replacement and references verify. A changed or missing mount, edited file, external read-only playlist reference, active playback or failed catalog publication stops cleanup with a visible reason. Pause/resume and restart reuse receipts. There is no general duplicate sweep or age-based cleanup: only verified originals in Downtify's download folder are eligible. Manual Deemix/slskd downloads, external originals, directories and sidecars are never deleted. Once an original is removed, rolling back the container does not restore that file; restore it from your own storage backup if needed.
 

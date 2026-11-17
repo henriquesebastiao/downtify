@@ -8,6 +8,8 @@ Downtify 会为 `/downloads` 中的文件维护一个小型**目录**（还包�
 
 ## 存储内容
 
+以下位置适用于默认的 SQLite 后端。使用 PostgreSQL（[数据库](../database.md)）时，相同数据保存在 PostgreSQL 数据库中。
+
 | 存储项 | 位置 | 用途 |
 |-------|---------|---------|
 | **曲目索引** | `/data/downtify_library.db` | 将 Spotify 曲目 ID 映射到媒体库路径，以便识别磁盘上已有的歌曲 |

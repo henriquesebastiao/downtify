@@ -82,7 +82,7 @@ Az előrehaladás panel a sorból elkészült számokat, egy hozzávetőleges ad
 
 A **Szünet** a folyamatban lévő szám után megáll, és megtartja a sort. A **Leállítás** eldobja a többit; a már feljavított számok feljavítva maradnak. Elhagyhatod az oldalt — a futás megy tovább, és bármely másik megnyitott lap követi.
 
-A sor a `/data/downtify_library.db` fájlban él, így **a Downtify (vagy a konténer) újraindítása futás közben ott folytatja**, ahol abbahagyta. Az a szám, amely folyamatban volt, amikor a folyamat leállt, visszakerül a sorba.
+A sor a `/data/downtify_library.db` fájlban (vagy a PostgreSQL-adatbázisban, ha a [`DATABASE_URL`](../getting-started/environment-variables.md#database) be van állítva) él, így **a Downtify (vagy a konténer) újraindítása futás közben ott folytatja**, ahol abbahagyta. Az a szám, amely folyamatban volt, amikor a folyamat leállt, visszakerül a sorba.
 
 ## Semmi nem vész el, ha egy feljavítás hibázik
 
@@ -109,7 +109,7 @@ A [Deemix-forrás](deemix.md) engedélyezése és tesztelése után a **Könyvt�
 
 Ez a beolvasás borító-/dalszöveg-/címkefeladatok helyett egy **hang** kategóriát hoz létre. A kimeneti fájlok, a borító, az albumelrendezés és a natív dalszövegek a Deemix tulajdonában vannak. A Downtify helyben olvassa őket. A meglévő natív vagy beágyazott dalszövegek megmaradnak; csak a hiányzó dalszövegek pótolhatók egy írható, dedikált dalszövegmappában, a hang újraírása nélkül. A magasabb minőségű veszteségmentes eredeti megmarad, ha a Deemix MP3-ra van állítva.
 
-A közzététel kötegenként egyszer történik. Az M3U-megjegyzések, a kézi jelölők és a számsorrend megmaradnak, majd a katalógusútvonalak, a lejátszásilista-tagságok, minden felhasználó kedvelései, a tulajdonlás és az elrejtett számok szabályai egyetlen SQLite-tranzakcióban költöznek. A régi fájlok gyorsítótárazott Navidrome-azonosítói érvénytelenné válnak egy friss natív keresésért. A már kiadott mobilazonosítók és a régi lejátszási URL-ek csak olvasható aliasokat tartanak a regisztrált cseréhez; a módosítások soha nem használják ezeket az URL-aliasokat.
+A közzététel kötegenként egyszer történik. Az M3U-megjegyzések, a kézi jelölők és a számsorrend megmaradnak, majd a katalógusútvonalak, a lejátszásilista-tagságok, minden felhasználó kedvelései, a tulajdonlás és az elrejtett számok szabályai egyetlen adatbázis-tranzakcióban költöznek. A régi fájlok gyorsítótárazott Navidrome-azonosítói érvénytelenné válnak egy friss natív keresésért. A már kiadott mobilazonosítók és a régi lejátszási URL-ek csak olvasható aliasokat tartanak a regisztrált cseréhez; a módosítások soha nem használják ezeket az URL-aliasokat.
 
 A könyvtáradatbázisban lévő tartós visszaigazolások rögzítik a forrás/cél SHA-256-értékeit és a közzététel állapotát. A források megmaradnak, amíg a csere és a hivatkozások ellenőrzése meg nem történik. Egy megváltozott vagy hiányzó csatolás, szerkesztett fájl, külső csak olvasható lejátszási lista-hivatkozás, aktív lejátszás vagy sikertelen katalógus-közzététel látható indokkal megállítja a takarítást. A szünet/folytatás és az újraindítás újrahasználja a visszaigazolásokat. Nincs általános duplikátum-átfésülés vagy kor alapú takarítás: csak a Downtify letöltési mappájában lévő ellenőrzött eredetik jöhetnek szóba. A kézi Deemix-/slskd-letöltések, a külső eredetik, a könyvtárak és a kísérőfájlok soha nem törlődnek. Miután egy eredetit eltávolítottak, a konténer visszaállítása nem állítja vissza azt a fájlt; szükség esetén állítsd vissza a saját tároló-biztonsági mentésedből.
 

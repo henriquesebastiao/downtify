@@ -16,6 +16,25 @@ Toutes les variables d’environnement sont facultatives. Downtify fonctionne to
 | `DOWNTIFY_LOG_LEVEL` | `info` | Niveau de journalisation de l’application (`debug`, `info`, `warning`, …). |
 | `TZ` | `UTC` | Fuseau horaire local (nom IANA, par ex. `America/Sao_Paulo`), utilisé pour interpréter `DOWNTIFY_MONITOR_SYNC_TIME` ci-dessous. |
 
+## Base de données
+
+Par défaut, Downtify conserve ses données dans des fichiers SQLite sous `DATABASE_DIR`. Définissez `DATABASE_URL` pour utiliser PostgreSQL à la place ; la page [Base de données](../database.md) explique la mise en place, les migrations et où est stocké quoi.
+
+| Variable | Valeur par défaut | Description |
+|----------|---------|-------------|
+| `DATABASE_URL` | _(non définie)_ | URL de connexion PostgreSQL, `postgresql://utilisateur:mot-de-passe@hôte:5432/nom` (`postgres://` fonctionne aussi). Non définie : SQLite. Définie : les magasins qui seraient sinon des fichiers SQLite (bibliothèque, surveillance, comptes, activité, Doctor) utilisent PostgreSQL. Une valeur avec un autre schéma est rejetée. L’URL n’est jamais affichée dans les messages d’erreur. |
+| `DB_POOL_MIN` | `2` | Connexions que le pool PostgreSQL garde ouvertes. Doit être `0` ou plus. |
+| `DB_POOL_MAX` | `20` | Nombre maximal de connexions ouvertes par le pool PostgreSQL. Doit être au moins `1` et au moins `DB_POOL_MIN`. |
+| `DB_POOL_TIMEOUT` | `10` | Secondes qu’une requête attend une connexion libre avant d’échouer. |
+| `DB_SEARCH_PATH` | _(non définie)_ | Schéma PostgreSQL à utiliser, pour une base partagée avec d’autres applications. Un simple identifiant seulement : lettres, chiffres et tirets bas, sans commencer par un chiffre. Non définie : le schéma par défaut du serveur (`public`). |
+| `DATABASE_DIR` | `/data` | Répertoire des réglages, des caches et des fichiers SQLite. Il reste utilisé avec PostgreSQL, pour tout ce qui n’est pas une table de base de données. |
+| `POSTGRES_PASSWORD` | `downtify` | Docker Compose uniquement (lue par le `docker-compose.yml` du dépôt, pas par le serveur) : le mot de passe de l’utilisateur `downtify` dans le service `postgres` fourni, que `DATABASE_URL` utilise aussi. Mettez-le dans un fichier `.env` à côté du fichier Compose avant le premier démarrage. PostgreSQL ne l’applique qu’à la création de son volume de données : le modifier ensuite ne change pas le mot de passe d’une base existante. |
+
+```yaml
+environment:
+  - DATABASE_URL=postgresql://downtify:change-me@postgres:5432/downtify
+```
+
 ## Surveillance de playlists
 
 | Variable | Valeur par défaut | Description |
@@ -65,7 +84,7 @@ Voir [Corbeille musicale](../features/music-trash.md). Désactivée sauf si l’
 
 ## Contrôle de santé
 
-L’image intègre un [`HEALTHCHECK` Docker](https://docs.docker.com/reference/dockerfile/#healthcheck) — aucun `--health-cmd` personnalisé n’est nécessaire. Il interroge `GET /api/health` sur le port du conteneur lui-même toutes les 30 secondes (délai d’attente de 5 secondes, 20 secondes de grâce au démarrage, 3 essais avant que le conteneur soit marqué comme non sain). `docker ps` et `docker inspect` affichent le résultat, et des outils comme le `condition: service_healthy` de Compose ou Watchtower peuvent s’en servir.
+L’image intègre un [`HEALTHCHECK` Docker](https://docs.docker.com/reference/dockerfile/#healthcheck) — aucun `--health-cmd` personnalisé n’est nécessaire. Il interroge `GET /api/health` sur le port du conteneur lui-même toutes les 30 secondes (délai d’attente de 5 secondes, 20 secondes de grâce au démarrage, 3 essais avant que le conteneur soit marqué comme non sain). `docker ps` et `docker inspect` affichent le résultat, et des outils comme le `condition: service_healthy` de Compose ou Watchtower peuvent s’en servir. Avec PostgreSQL, la vérification échoue aussi tant que la base est injoignable (`503`, voir [`GET /api/health`](../api-reference.md#get-apihealth)).
 
 | Variable | Valeur par défaut | Description |
 |----------|---------|-------------|

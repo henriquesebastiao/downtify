@@ -28,7 +28,7 @@ O Downtify mantém uma tarefa em segundo plano rodando a cada 60 segundos. A cad
 3. Baixa as faixas novas pelo mesmo pipeline de um download manual
 4. Atualiza o arquivo M3U da playlist (se a geração de M3U estiver ativada)
 
-A primeira verificação, que começa assim que você adiciona o monitoramento, baixa tudo o que já está na playlist; as seguintes baixam só o que foi acrescentado desde então. "Já baixado" é registrado em um pequeno banco SQLite (`downtify_monitor.db` em `/data`), e não conferindo a pasta de downloads — então mover um arquivo baixado para outro lugar do disco (para a sua própria organização de biblioteca, outro disco, onde for) **não** faz o Downtify achar que ele sumiu e baixá-lo de novo na próxima verificação.
+A primeira verificação, que começa assim que você adiciona o monitoramento, baixa tudo o que já está na playlist; as seguintes baixam só o que foi acrescentado desde então. "Já baixado" é registrado em um pequeno banco SQLite (`downtify_monitor.db` em `/data`; com PostgreSQL, no banco PostgreSQL), e não conferindo a pasta de downloads — então mover um arquivo baixado para outro lugar do disco (para a sua própria organização de biblioteca, outro disco, onde for) **não** faz o Downtify achar que ele sumiu e baixá-lo de novo na próxima verificação.
 
 Uma varredura separada roda a cada hora e confere se o arquivo de cada faixa baixada ainda está lá. Arquivos realmente excluídos (e não movidos) são esquecidos nesse momento, então a faixa volta a ser elegível para download — na próxima verificação do monitoramento depois dessa varredura horária, não na hora.
 
@@ -260,7 +260,7 @@ Se um arquivo realmente some — você o tirou da pasta de downloads, ou o exclu
 
 ## Armazenamento
 
-O estado do monitor fica em um banco SQLite em `/data/downtify_monitor.db`. O banco registra:
+O estado do monitor fica em um banco SQLite em `/data/downtify_monitor.db`, o backend padrão. Com PostgreSQL ([Banco de dados](../database.md)), os mesmos registros ficam no banco PostgreSQL. O banco registra:
 
 - Cada monitoramento (tipo, ID de playlist do Spotify ou do YouTube Music ou ID de canal do YouTube Music, nome, URL, intervalo, estado ativo, hora da última verificação). Se um monitoramento é do Spotify ou do YouTube Music é lido do URL guardado, então não é preciso uma coluna extra.
 - Cada faixa baixada com sucesso por monitoramento, incluindo o nome do arquivo no disco

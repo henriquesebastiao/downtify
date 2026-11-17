@@ -29,7 +29,7 @@ Downtify rewrites the tags and cover of what it imports, so the two files never 
 
 **Delete identical copies** removes only those. Right before each one goes, it is checked again: same size and modification time as when it was compared, and its library twin still there. Emptied folders are removed, downloads resume, and Navidrome is asked to rescan. **Keep them and resume downloads** gives the queue back without deleting anything; so does doing nothing for an hour.
 
-Audio hashes are cached in `/data/doctor/audio_hashes.db`, so checking again after a few new downloads only reads the new files.
+Audio hashes are cached in `/data/doctor/audio_hashes.db` (SQLite; with PostgreSQL, in the PostgreSQL database), so checking again after a few new downloads only reads the new files.
 
 ## Duplicate playlists
 
