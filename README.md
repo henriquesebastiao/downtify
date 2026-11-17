@@ -89,6 +89,8 @@ Read-only music folders stay protected during **Upgrade library**: their tracks 
 
 Existing Library `.m3u` playlists can use UTF-8 or the Windows-1252 legacy fallback. Unreadable playlists are skipped with a warning; reading keeps existing files intact. See [M3U compatibility](docs/features/m3u-export.md#compatibility).
 
+Library ZIP downloads support individual audio files over 2 GiB with ZIP64, without buffering the archive in memory or writing a temporary ZIP. See [Library catalog](docs/features/library-catalog.md#library-page).
+
 ## Quick start
 
 You only need [Docker](https://docs.docker.com/get-docker/).
