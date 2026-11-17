@@ -35,7 +35,7 @@ The dialog says when a track's audio was replaced by hand. **Let downloads repla
 ## What stays the same
 
 - **The file.** The new audio is written to the same path, in the same format: an `.mp3` stays MP3 (at the bitrate chosen in [Download settings](download-settings.md)), a `.flac` stays FLAC, and so on. So every playlist, M3U file, liked song, Navidrome entry and paired app that points at the file keeps pointing at it.
-- **The tags.** Title, artists, album, track number, year, cover art, embedded lyrics and every other tag are copied from the old file to the new audio as they are. The `.lrc` sidecar is left alone. Synced lyrics were timed to the old audio: if the new version starts at a different point, they may be off.
+- **The tags.** Title, artists, album, track number, year, cover art, embedded lyrics and every other tag are copied from the old file to the new audio as they are. For FLAC, the replacement's embedded pictures are removed first: only the original file's pictures are kept, in their original order, including front and back covers. If the original has no embedded pictures, the replacement stays without them. This applies to both downloaded and uploaded replacements. The `.lrc` sidecar is left alone. Synced lyrics were timed to the old audio: if the new version starts at a different point, they may be off.
 - **The date.** The file keeps its modification date, so it doesn't jump to the top of "Recently added".
 
 Only `.mp3`, `.flac`, `.m4a`, `.ogg` and `.opus` files — the formats Downtify writes — can be replaced.
