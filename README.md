@@ -146,7 +146,7 @@ environment:
 
 The remaining deployment options (timezone, monitor sync time, cookies file, IPv4) are listed under **[Environment variables](https://henriquesebastiao.github.io/downtify/getting-started/environment-variables/)**. Everything else is configured from **Settings** in the web interface.
 
-The example above keeps SQLite. The repository's own `docker-compose.yml` runs Downtify on PostgreSQL with a `postgres` service; see [Database](https://downtify.henriquesebastiao.com/database/).
+The example above keeps SQLite. The repository's own `docker-compose.yml` also has an opt-in `postgres` service (profile `postgres`); see [Database](https://downtify.henriquesebastiao.com/database/).
 
 ### Home server platforms
 

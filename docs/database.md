@@ -54,17 +54,18 @@ Use a database that is empty, or one previously used by Downtify. Downtify does 
 
 ## Docker Compose with PostgreSQL
 
-The shipped `docker-compose.yml` already runs PostgreSQL 17 next to Downtify:
+The shipped `docker-compose.yml` includes a PostgreSQL 17 service, but it is off by default: Downtify keeps using SQLite until you turn it on.
 
-- The `postgres` service uses the `postgres:17-alpine` image and stores its data in the named volume `pgdata`.
-- The `downtify` service sets `DATABASE_URL` to that server and waits for it to be healthy before starting.
+- The `postgres` service uses the `postgres:17-alpine` image, stores its data in the named volume `pgdata` and only starts under the `postgres` Compose profile.
+- To enable it, uncomment the `depends_on` block and the `DATABASE_URL` line of the `downtify` service, then start everything with `docker compose --profile postgres up -d`.
 - The password comes from `POSTGRES_PASSWORD` (set it in `.env`; the default is `downtify`).
+- An existing install should run `make db-migrate` first (see [Migrating an existing SQLite install](#migrating-an-existing-sqlite-install)), or it starts on an empty database.
 
 ::: warning The password is set only once
 PostgreSQL reads `POSTGRES_PASSWORD` when it first creates the `pgdata` volume. Changing it later in `.env` does not change the password of an existing database. Either change it inside PostgreSQL too, or recreate the volume (this deletes the data).
 :::
 
-To go back to SQLite, remove the `DATABASE_URL` line from the `downtify` service's `environment` and restart it:
+To go back to SQLite, comment out the `DATABASE_URL` line (and `depends_on`) again and restart it:
 
 ```bash
 docker compose up -d
@@ -116,7 +117,7 @@ To restore, load the dump into an empty database with `psql`.
 
 ## Rolling back
 
-To return to SQLite, unset `DATABASE_URL` (remove the line in Docker Compose) and restart. Downtify then reads the SQLite files again. Those files hold the data as it was before the migration: changes made while PostgreSQL was active are not in them. If you need those changes, the PostgreSQL dump is the source for them.
+To return to SQLite, unset `DATABASE_URL` (comment out the line in Docker Compose) and restart. Downtify then reads the SQLite files again. Those files hold the data as it was before the migration: changes made while PostgreSQL was active are not in them. If you need those changes, the PostgreSQL dump is the source for them.
 
 ## Trash worker
 

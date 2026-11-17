@@ -4,9 +4,11 @@ services:
     image: 'downtify:${TAG-latest}'
     restart: unless-stopped
     build: .
-    depends_on:
-      postgres:
-        condition: service_healthy
+    # To use PostgreSQL, uncomment this block and DATABASE_URL below, then
+    # start with `docker compose --profile postgres up -d`.
+    # depends_on:
+    #   postgres:
+    #     condition: service_healthy
     ports:
       - '8000:8000'
     volumes:
@@ -18,9 +20,9 @@ services:
       # - ./docker/slskd:/slskd
       # - settings/server./docker/cookies.txt:/cookies.txt
     environment:
-      # PostgreSQL connection (the `postgres` service below). Remove this
-      # line to keep using the SQLite files under /data instead.
-      DATABASE_URL: postgresql://downtify:${POSTGRES_PASSWORD:-downtify}@postgres:5432/downtify
+      # PostgreSQL connection (the opt-in `postgres` service below). Left
+      # unset, Downtify keeps using the SQLite files under /data.
+      # DATABASE_URL: postgresql://downtify:${POSTGRES_PASSWORD:-downtify}@postgres:5432/downtify
       DOWNTIFY_TRASH: true
       # slskd polling: active/idle interval, shared snapshot TTL (seconds),
       # and recursive fallback scan cadence (ticks).
@@ -37,7 +39,9 @@ services:
       - 1.1.1.1
       - 1.0.0.1
 
+  # Opt-in: only started with `--profile postgres`.
   postgres:
+    profiles: ['postgres']
     container_name: downtify-postgres
     image: 'postgres:17-alpine'
     restart: unless-stopped
