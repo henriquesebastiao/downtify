@@ -229,15 +229,24 @@ class ParsedFeed:
 
 
 def _entry_enclosure(entry: Any) -> Optional[tuple[str, str]]:
+    fallback: Optional[tuple[str, str]] = None
     for enc in entry.get('enclosures') or []:
         url = str(enc.get('href') or '').strip()
-        mime = str(enc.get('type') or '').strip().lower()
+        mime = (
+            str(enc.get('type') or '')
+            .split(';', maxsplit=1)[0]
+            .strip()
+            .lower()
+        )
         if not url:
             continue
-        if mime.startswith('video/'):
-            continue
-        return url, mime
-    return None
+        if mime.startswith('audio/'):
+            return url, mime
+        # Sloppy feeds can omit the type or label audio as generic binary.
+        # Keep their first candidate, but prefer explicit audio anywhere.
+        if fallback is None and mime in {'', 'application/octet-stream'}:
+            fallback = url, mime
+    return fallback
 
 
 def parse_feed_bytes(content: bytes, feed_url: str) -> ParsedFeed:
@@ -248,7 +257,8 @@ def parse_feed_bytes(content: bytes, feed_url: str) -> ParsedFeed:
     (unescaped ``&``, mismatched encodings, non-standard date formats),
     and surviving that is feedparser's entire job — it sets a ``bozo``
     flag rather than raising, and still returns whatever it could
-    recover. Episodes with no usable audio enclosure (missing, or video)
+    recover. Explicit audio enclosures take precedence over untyped or
+    generic-binary fallbacks. Episodes with only non-audio attachments
     are dropped rather than listed as unplayable.
     """
 

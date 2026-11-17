@@ -93,6 +93,8 @@ Playlist Monitor's hourly file check includes configured existing music folders,
 
 Library ZIP downloads support individual audio files over 2 GiB with ZIP64, without buffering the archive in memory or writing a temporary ZIP. See [Library catalog](docs/features/library-catalog.md#library-page).
 
+Podcast feeds with multiple attachments use the audio enclosure, not accompanying PDFs, images or videos. Feeds with untyped or generic-binary enclosures retain a compatibility fallback. See [Podcasts](docs/features/podcasts.md#good-to-know).
+
 ## Quick start
 
 You only need [Docker](https://docs.docker.com/get-docker/).
