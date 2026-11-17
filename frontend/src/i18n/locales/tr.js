@@ -1153,6 +1153,25 @@ export default {
     equalizerError: 'Ekolayzır başlatılamadı. Çalma onsuz devam ediyor.',
   },
   monitor: {
+    select: 'Seç',
+    selectDone: 'Bitti',
+    selectAllShown: 'Gösterilenlerin tümünü seç',
+    selectWatch: '{name} öğesini seç',
+    selectedCount: { one: '{count} seçildi', other: '{count} seçildi' },
+    selectRangeHint: 'Aralık seçmek için Shift+tıklayın',
+    bulkInterval: 'Kontrol sıklığını değiştir…',
+    bulkUpdated: {
+      one: '{count} takip güncellendi',
+      other: '{count} takip güncellendi',
+    },
+    bulkChecking: {
+      one: '{count} takip kontrol ediliyor…',
+      other: '{count} takip kontrol ediliyor…',
+    },
+    bulkStopped: {
+      one: '{count} takip durduruldu',
+      other: '{count} takip durduruldu',
+    },
     tableColumns: 'Sütunlar',
     resetTableColumns: 'Sütunları sıfırla',
     releaseTypes: 'İndir',
@@ -2316,6 +2335,10 @@ export default {
     playbackSpeed: 'Oynatma hızı',
   },
   confirm: {
+    stopWatchingManyTitle: {
+      one: '{count} takip durdurulsun mu?',
+      other: '{count} takip durdurulsun mu?',
+    },
     deleteTrackTitle: '“{title}” silinsin mi?',
     deleteTracksTitle: '{count} parça silinsin mi?',
     deleteTracksBody:

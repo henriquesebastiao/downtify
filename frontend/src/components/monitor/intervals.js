@@ -1,6 +1,6 @@
 // Check intervals offered for a watch, with their labels.
 export const WATCH_INTERVALS = [
-  15, 30, 60, 180, 360, 720, 1440, 10080, 20160, 43200,
+  15, 30, 60, 180, 360, 720, 1440, 4320, 10080, 20160, 43200,
 ]
 
 export function intervalLabel(t, minutes) {

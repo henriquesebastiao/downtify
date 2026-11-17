@@ -1170,6 +1170,25 @@ export default {
       'Ο ισοσταθμιστής δεν ξεκίνησε. Η αναπαραγωγή συνεχίζει χωρίς αυτόν.',
   },
   monitor: {
+    select: 'Επιλογή',
+    selectDone: 'Τέλος',
+    selectAllShown: 'Επιλογή όλων των εμφανιζόμενων',
+    selectWatch: 'Επιλογή {name}',
+    selectedCount: { one: '{count} επιλεγμένο', other: '{count} επιλεγμένα' },
+    selectRangeHint: 'Shift+κλικ για επιλογή εύρους',
+    bulkInterval: 'Αλλαγή ελέγχων σε…',
+    bulkUpdated: {
+      one: 'Ενημερώθηκε {count} παρακολούθηση',
+      other: 'Ενημερώθηκαν {count} παρακολουθήσεις',
+    },
+    bulkChecking: {
+      one: 'Έλεγχος {count} παρακολούθησης…',
+      other: 'Έλεγχος {count} παρακολουθήσεων…',
+    },
+    bulkStopped: {
+      one: 'Σταμάτησε {count} παρακολούθηση',
+      other: 'Σταμάτησαν {count} παρακολουθήσεις',
+    },
     tableColumns: 'Στήλες',
     resetTableColumns: 'Επαναφορά στηλών',
     releaseTypes: 'Λήψη',
@@ -2362,6 +2381,10 @@ export default {
     playbackSpeed: 'Ταχύτητα αναπαραγωγής',
   },
   confirm: {
+    stopWatchingManyTitle: {
+      one: 'Διακοπή {count} παρακολούθησης;',
+      other: 'Διακοπή {count} παρακολουθήσεων;',
+    },
     deleteTrackTitle: 'Διαγραφή «{title}»;',
     deleteTracksTitle: 'Διαγραφή {count} κομματιών;',
     deleteTracksBody:

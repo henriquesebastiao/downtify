@@ -1167,6 +1167,28 @@ export default {
       'No se pudo iniciar el ecualizador. La reproducción continúa sin él.',
   },
   monitor: {
+    select: 'Seleccionar',
+    selectDone: 'Listo',
+    selectAllShown: 'Seleccionar todo lo mostrado',
+    selectWatch: 'Seleccionar {name}',
+    selectedCount: {
+      one: '{count} seleccionado',
+      other: '{count} seleccionados',
+    },
+    selectRangeHint: 'Mayús+clic selecciona un rango',
+    bulkInterval: 'Cambiar comprobaciones a…',
+    bulkUpdated: {
+      one: '{count} seguimiento actualizado',
+      other: '{count} seguimientos actualizados',
+    },
+    bulkChecking: {
+      one: 'Comprobando {count} seguimiento…',
+      other: 'Comprobando {count} seguimientos…',
+    },
+    bulkStopped: {
+      one: '{count} seguimiento detenido',
+      other: '{count} seguimientos detenidos',
+    },
     tableColumns: 'Columnas',
     resetTableColumns: 'Restablecer columnas',
     releaseTypes: 'Descargar',
@@ -2350,6 +2372,10 @@ export default {
     playbackSpeed: 'Velocidad de reproducción',
   },
   confirm: {
+    stopWatchingManyTitle: {
+      one: '¿Dejar de seguir {count} elemento?',
+      other: '¿Dejar de seguir {count} elementos?',
+    },
     deleteTrackTitle: '¿Eliminar «{title}»?',
     deleteTracksTitle: '¿Eliminar {count} canciones?',
     deleteTracksBody:

@@ -152,11 +152,12 @@ Once the server has added the watch, the button turns into a **Monitor** link, w
 | Every 6 hours | 360 | |
 | Every 12 hours | 720 | |
 | Every day | 1 440 | Slowly changing playlists |
+| Every 3 days | 4 320 | |
 | Every week | 10 080 | Playlists updated weekly |
 | Every 2 weeks | 20 160 | |
 | Every month | 43 200 | Archive or rarely updated playlists |
 
-You can change the interval of an existing playlist at any time from the monitor card without removing and re-adding it.
+You can change the interval of an existing playlist at any time from the monitor card without removing and re-adding it, or for many watches at once (see [Changing many watches at once](#changing-many-watches-at-once)).
 
 ## Managing monitored playlists
 
@@ -178,6 +179,17 @@ On each row:
 - **⋯** — **Activity and songs** (the watch's own page), pause/resume, copy the link, open the original, or **Stop watching** (the record is deleted; downloaded files are kept)
 
 **Activity** and **Storage** are columns like the others: hide or resize them from **Columns**.
+
+### Changing many watches at once
+
+Click **Select** above the list to put a box on every row. Tick the watches to change — hold **Shift** while clicking to tick every watch between two clicks — or use **Select all shown**, which takes the search and the **All / Paused** filter into account. A bar above the list then applies one change to every ticked watch:
+
+- **Change checks to…** — the same check interval for all of them
+- **Pause** / **Resume**
+- **Check now** — check the active ones straight away
+- **Stop watching** — after a confirmation; downloaded files are kept
+
+It works the same on the **Playlists** and **Artists** tabs. Ticked watches stay ticked while you change the search, so you can gather them from several searches. **Done** (or **Esc**) leaves the selection; switching tabs clears it.
 
 ### Editing a watch
 

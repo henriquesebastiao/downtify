@@ -1157,6 +1157,25 @@ export default {
       'A hangszínszabályzó nem indult el. A lejátszás nélküle folytatódik.',
   },
   monitor: {
+    select: 'Kijelölés',
+    selectDone: 'Kész',
+    selectAllShown: 'Az összes látható kijelölése',
+    selectWatch: '{name} kijelölése',
+    selectedCount: { one: '{count} kijelölve', other: '{count} kijelölve' },
+    selectRangeHint: 'Shift+kattintással tartomány jelölhető ki',
+    bulkInterval: 'Ellenőrzés módosítása erre…',
+    bulkUpdated: {
+      one: '{count} figyelés módosítva',
+      other: '{count} figyelés módosítva',
+    },
+    bulkChecking: {
+      one: '{count} figyelés ellenőrzése…',
+      other: '{count} figyelés ellenőrzése…',
+    },
+    bulkStopped: {
+      one: '{count} figyelés leállítva',
+      other: '{count} figyelés leállítva',
+    },
     tableColumns: 'Oszlopok',
     resetTableColumns: 'Oszlopok visszaállítása',
     releaseTypes: 'Letöltés',
@@ -2337,6 +2356,10 @@ export default {
     playbackSpeed: 'Lejátszási sebesség',
   },
   confirm: {
+    stopWatchingManyTitle: {
+      one: 'Leállítod {count} figyelést?',
+      other: 'Leállítod {count} figyelést?',
+    },
     deleteTrackTitle: 'Törlöd: „{title}”?',
     deleteTracksTitle: 'Törlöd a(z) {count} számot?',
     deleteTracksBody:

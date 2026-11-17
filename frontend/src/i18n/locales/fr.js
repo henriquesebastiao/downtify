@@ -1185,6 +1185,28 @@ export default {
       'Impossible de démarrer l’égaliseur. La lecture continue sans lui.',
   },
   monitor: {
+    select: 'Sélectionner',
+    selectDone: 'Terminé',
+    selectAllShown: 'Tout sélectionner (affichés)',
+    selectWatch: 'Sélectionner {name}',
+    selectedCount: {
+      one: '{count} sélectionné',
+      other: '{count} sélectionnés',
+    },
+    selectRangeHint: 'Maj+clic pour sélectionner une plage',
+    bulkInterval: 'Changer la fréquence en…',
+    bulkUpdated: {
+      one: '{count} surveillance modifiée',
+      other: '{count} surveillances modifiées',
+    },
+    bulkChecking: {
+      one: 'Vérification de {count} surveillance…',
+      other: 'Vérification de {count} surveillances…',
+    },
+    bulkStopped: {
+      one: '{count} surveillance arrêtée',
+      other: '{count} surveillances arrêtées',
+    },
     tableColumns: 'Colonnes',
     resetTableColumns: 'Réinitialiser les colonnes',
     releaseTypes: 'Télécharger',
@@ -2373,6 +2395,10 @@ export default {
     playbackSpeed: 'Vitesse de lecture',
   },
   confirm: {
+    stopWatchingManyTitle: {
+      one: 'Arrêter {count} surveillance ?',
+      other: 'Arrêter {count} surveillances ?',
+    },
     deleteTrackTitle: 'Supprimer « {title} » ?',
     deleteTracksTitle: 'Supprimer {count} titres ?',
     deleteTracksBody:

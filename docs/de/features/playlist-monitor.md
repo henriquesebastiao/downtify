@@ -144,11 +144,12 @@ Sobald der Server die Beobachtung hinzugefügt hat, wird die Schaltfläche zu ei
 | Alle 6 Stunden | 360 | |
 | Alle 12 Stunden | 720 | |
 | Jeden Tag | 1 440 | Sich langsam ändernde Playlists |
+| Alle 3 Tage | 4 320 | |
 | Jede Woche | 10 080 | Wöchentlich aktualisierte Playlists |
 | Alle 2 Wochen | 20 160 | |
 | Jeden Monat | 43 200 | Archiv oder selten aktualisierte Playlists |
 
-Du kannst das Intervall einer bestehenden Playlist jederzeit auf der Überwachungskarte ändern, ohne sie zu entfernen und neu hinzuzufügen.
+Du kannst das Intervall einer bestehenden Playlist jederzeit auf der Überwachungskarte ändern, ohne sie zu entfernen und neu hinzuzufügen. Oder für viele Überwachungen auf einmal: siehe [Viele Überwachungen auf einmal ändern](#changing-many-watches-at-once).
 
 ## Überwachte Playlists verwalten
 
@@ -170,6 +171,17 @@ In jeder Zeile:
 - **⋯** — **Aktivität und Titel** (die eigene Seite der Beobachtung), pausieren/fortsetzen, den Link kopieren, das Original öffnen oder **Überwachung beenden** (der Eintrag wird gelöscht; heruntergeladene Dateien bleiben)
 
 **Aktivität** und **Speicher** sind Spalten wie die anderen: Unter **Spalten** blendest du sie aus oder änderst ihre Breite.
+
+### Viele Überwachungen auf einmal ändern
+
+Klicke über der Liste auf **Auswählen**, dann erhält jede Zeile ein Kästchen. Hake die Überwachungen an (mit **Umschalt**-Klick alle zwischen zwei Klicks) oder nutze **Alle angezeigten auswählen**, das die Suche und den Filter **Alle / Pausiert** berücksichtigt. Die Leiste über der Liste wendet dann eine Änderung auf alle angehakten an:
+
+- **Prüfintervall ändern auf…** — dasselbe Intervall für alle
+- **Pause** / **Fortsetzen**
+- **Jetzt prüfen** — die aktiven sofort prüfen
+- **Nicht mehr überwachen** — nach einer Bestätigung; heruntergeladene Dateien bleiben
+
+Das funktioniert auf den Tabs **Playlists** und **Künstler** gleich. Angehakte bleiben angehakt, wenn du die Suche änderst. **Fertig** (oder **Esc**) beendet die Auswahl; ein Tab-Wechsel leert sie.
 
 ### Eine Beobachtung bearbeiten
 
