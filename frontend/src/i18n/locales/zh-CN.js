@@ -1163,7 +1163,7 @@ export default {
     hint: '截至上次检查，YouTube Music、Deezer 和 MusicBrainz 为该艺人列出的全部作品，以及音乐库中各有多少。打开某个作品，即使未关注其类型也会下载；关闭则不再下载（已有的保留）。',
     empty: '还没有作品',
     emptyHint: '下次检查后显示。',
-    summary: '{complete} 个完整 · {partly} 个部分 · {missing} 个待下载',
+    summary: '{complete} 个完整 · {partly} 个部分 · {missing} 个尚无歌曲',
     kinds: '也从 MusicBrainz 下载',
     kindsHint:
       '只有 MusicBrainz 区分的作品种类。混音带和原声带是艺人自己的音乐；现场专辑、合辑和混音多为重复。仅对该艺人生效。',
@@ -1172,6 +1172,33 @@ export default {
     switchedOn: '已打开 {name}',
     switchedOff: '已关闭 {name}',
     noneHere: '这里没有内容。',
+    check: '检查我已有的',
+    checking: '正在读取曲目列表：{done} / {total}…',
+    checkDone: '完成：已读取 {count} 个曲目列表，{failed} 个失败',
+    checkHint:
+      '读取每个作品的曲目列表，并与整个音乐库比较，因此关注前已有的专辑也会计入。不会下载任何内容。大艺人较慢：MusicBrainz 每秒只允许一次请求。',
+    tracks: '{name} 的曲目',
+    tracksNotRead: '尚未读取曲目列表：请点击“检查我已有的”。',
+    trackHave: '在音乐库中',
+    trackMissing: '缺失',
+    downloadMissing: '下载缺失',
+    downloadMissingCount: '下载缺失的 {count} 首',
+    missingTitle: '下载缺失的歌曲？',
+    missingBody: {
+      one: '缺失歌曲：{tracks} 首，来自关注会下载的 {count} 个作品。音乐库中已有的歌曲只会关联，不会重新下载。',
+      other:
+        '缺失歌曲：{tracks} 首，来自关注会下载的 {count} 个作品。音乐库中已有的歌曲只会关联，不会重新下载。',
+    },
+    missingBodyUnread: {
+      one: '缺失歌曲：{tracks} 首，来自关注会下载的 {count} 个作品，另加尚未读取曲目列表的作品（{unread} 个）中的歌曲。音乐库中已有的歌曲只会关联，不会重新下载。',
+      other:
+        '缺失歌曲：{tracks} 首，来自关注会下载的 {count} 个作品，另加尚未读取曲目列表的作品（{unread} 个）中的歌曲。音乐库中已有的歌曲只会关联，不会重新下载。',
+    },
+    missingConfirm: '下载',
+    missingStarted: '正在下载缺失的歌曲：可在队列中查看',
+    busy: '正在检查该艺人：可在队列中查看。',
+    missingHint:
+      '“下载缺失”会遍历每个已打开的作品并下载你没有的歌曲；要包含某个作品，请先打开它。',
     kind: {
       mixtape: '混音带',
       soundtrack: '原声带',

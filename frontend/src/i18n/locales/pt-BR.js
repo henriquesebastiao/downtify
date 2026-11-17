@@ -1263,7 +1263,8 @@ export default {
     hint: 'Tudo o que YouTube Music, Deezer e MusicBrainz listam deste artista, na última verificação, e o que sua biblioteca tem de cada um. Ative um lançamento para baixá-lo mesmo que o tipo não seja acompanhado, ou desative para parar de baixá-lo (o que já está fica).',
     empty: 'Nenhum lançamento ainda',
     emptyHint: 'Eles aparecem depois da próxima verificação.',
-    summary: '{complete} completos · {partly} em parte · {missing} para baixar',
+    summary:
+      '{complete} completos · {partly} em parte · {missing} ainda sem nada',
     kinds: 'Do MusicBrainz, baixar também',
     kindsHint:
       'Tipos de lançamento que só o MusicBrainz distingue. Mixtapes e trilhas sonoras são música do próprio artista; álbuns ao vivo, coletâneas e remixes costumam repeti-la. Só para este artista.',
@@ -1272,6 +1273,34 @@ export default {
     switchedOn: '{name} ativado',
     switchedOff: '{name} desativado',
     noneHere: 'Nada aqui.',
+    check: 'Verificar o que eu tenho',
+    checking: 'Lendo listas de faixas: {done} de {total}…',
+    checkDone: 'Pronto: {count} listas lidas, {failed} com erro',
+    checkHint:
+      'Lê a lista de faixas de cada lançamento e compara com toda a sua biblioteca, então os álbuns que você já tinha antes do acompanhamento também contam. Nada é baixado. Lento para artistas grandes: o MusicBrainz permite uma requisição por segundo.',
+    tracks: 'Faixas de {name}',
+    tracksNotRead:
+      'Lista de faixas ainda não lida: toque em Verificar o que eu tenho.',
+    trackHave: 'Na sua biblioteca',
+    trackMissing: 'Faltando',
+    downloadMissing: 'Baixar o que falta',
+    downloadMissingCount: 'Baixar {count} que faltam',
+    missingTitle: 'Baixar o que falta?',
+    missingBody: {
+      one: 'Músicas faltando: {tracks}, de 1 lançamento que o acompanhamento baixa. As músicas que já estão na sua biblioteca são vinculadas, não baixadas de novo.',
+      other:
+        'Músicas faltando: {tracks}, de {count} lançamentos que o acompanhamento baixa. As músicas que já estão na sua biblioteca são vinculadas, não baixadas de novo.',
+    },
+    missingBodyUnread: {
+      one: 'Músicas faltando: {tracks}, de 1 lançamento que o acompanhamento baixa, mais as de lançamentos cuja lista ainda não foi lida ({unread}). As músicas que já estão na sua biblioteca são vinculadas, não baixadas de novo.',
+      other:
+        'Músicas faltando: {tracks}, de {count} lançamentos que o acompanhamento baixa, mais as de lançamentos cuja lista ainda não foi lida ({unread}). As músicas que já estão na sua biblioteca são vinculadas, não baixadas de novo.',
+    },
+    missingConfirm: 'Baixar',
+    missingStarted: 'Baixando o que falta: acompanhe na fila',
+    busy: 'Este artista está sendo verificado: acompanhe na fila.',
+    missingHint:
+      'Baixar o que falta percorre cada lançamento ativado e baixa as músicas que você não tem; ative um lançamento antes para incluí-lo.',
     kind: {
       mixtape: 'Mixtapes',
       soundtrack: 'Trilhas sonoras',

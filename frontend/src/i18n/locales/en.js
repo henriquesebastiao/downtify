@@ -1239,7 +1239,7 @@ export default {
     empty: 'No releases listed yet',
     emptyHint: 'They show up after the watch’s next check.',
     summary:
-      '{complete} complete · {partly} partly there · {missing} to download',
+      '{complete} complete · {partly} partly there · {missing} with nothing yet',
     kinds: 'From MusicBrainz, also download',
     kindsHint:
       'Kinds of release only MusicBrainz tells apart. Mixtapes and soundtracks are the artist’s own music; live albums, compilations and remixes mostly repeat it. For this artist only.',
@@ -1248,6 +1248,33 @@ export default {
     switchedOn: '{name} switched on',
     switchedOff: '{name} switched off',
     noneHere: 'Nothing here.',
+    check: 'Check what I have',
+    checking: 'Reading track lists: {done} of {total}…',
+    checkDone: 'Done: {count} track lists read, {failed} failed',
+    checkHint:
+      'Reads each release’s track list and compares it with your whole library, so albums you had before the watch count too. Nothing is downloaded. Slow for a big artist: MusicBrainz allows one request a second.',
+    tracks: 'Tracks of {name}',
+    tracksNotRead: 'Track list not read yet: press Check what I have.',
+    trackHave: 'In your library',
+    trackMissing: 'Missing',
+    downloadMissing: 'Download missing',
+    downloadMissingCount: 'Download {count} missing',
+    missingTitle: 'Download what’s missing?',
+    missingBody: {
+      one: 'Missing songs: {tracks}, from 1 release the watch downloads. Songs already in your library are linked, not downloaded again.',
+      other:
+        'Missing songs: {tracks}, from {count} releases the watch downloads. Songs already in your library are linked, not downloaded again.',
+    },
+    missingBodyUnread: {
+      one: 'Missing songs: {tracks}, from 1 release the watch downloads, plus any in releases whose track list isn’t read yet ({unread}). Songs already in your library are linked, not downloaded again.',
+      other:
+        'Missing songs: {tracks}, from {count} releases the watch downloads, plus any in releases whose track list isn’t read yet ({unread}). Songs already in your library are linked, not downloaded again.',
+    },
+    missingConfirm: 'Download',
+    missingStarted: 'Downloading what’s missing: follow it in the Queue',
+    busy: 'This artist is being checked: follow it in the Queue.',
+    missingHint:
+      'Download missing goes through every release switched on and fetches the songs you don’t have; switch a release on first to include it.',
     kind: {
       mixtape: 'Mixtapes',
       soundtrack: 'Soundtracks',

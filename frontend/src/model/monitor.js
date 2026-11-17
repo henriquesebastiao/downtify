@@ -74,8 +74,31 @@ function switchArtistReleases(id, albumIds, choice) {
   })
 }
 
+// "Check what I have": read every release's tracklist in the background.
+function checkArtistInventory(id) {
+  return API.post(`/api/monitor/playlists/${id}/releases/inventory`)
+}
+
+// One release's tracks and which the library has (`albumIds`: the
+// release's `album_ids`, repeated as `album_id`).
+function getArtistReleaseTracks(id, albumIds) {
+  return API.get(`/api/monitor/playlists/${id}/releases/tracks`, {
+    params: { album_id: albumIds },
+    paramsSerializer: { indexes: null },
+  })
+}
+
+// "Download missing": a check that fetches the songs missing from every
+// release the watch downloads.
+function downloadArtistMissing(id) {
+  return API.post(`/api/monitor/playlists/${id}/releases/download-missing`)
+}
+
 export default {
   artistSuggestions,
+  downloadArtistMissing,
+  checkArtistInventory,
+  getArtistReleaseTracks,
   getArtistReleases,
   switchArtistReleases,
   resolveArtistSuggestion,

@@ -1275,7 +1275,7 @@ export default {
     empty: 'Aún no hay lanzamientos',
     emptyHint: 'Aparecen tras la próxima comprobación.',
     summary:
-      '{complete} completos · {partly} en parte · {missing} por descargar',
+      '{complete} completos · {partly} en parte · {missing} aún sin nada',
     kinds: 'De MusicBrainz, descargar también',
     kindsHint:
       'Tipos de lanzamiento que solo MusicBrainz distingue. Los mixtapes y las bandas sonoras son música propia del artista; los álbumes en vivo, recopilatorios y remixes suelen repetirla. Solo para este artista.',
@@ -1284,6 +1284,34 @@ export default {
     switchedOn: '{name} activado',
     switchedOff: '{name} desactivado',
     noneHere: 'No hay nada aquí.',
+    check: 'Comprobar lo que tengo',
+    checking: 'Leyendo listas de pistas: {done} de {total}…',
+    checkDone: 'Listo: {count} listas leídas, {failed} con error',
+    checkHint:
+      'Lee la lista de pistas de cada lanzamiento y la compara con toda tu biblioteca, así que también cuentan los álbumes que tenías antes del seguimiento. No se descarga nada. Lento con artistas grandes: MusicBrainz permite una petición por segundo.',
+    tracks: 'Pistas de {name}',
+    tracksNotRead:
+      'Lista de pistas aún no leída: pulsa Comprobar lo que tengo.',
+    trackHave: 'En tu biblioteca',
+    trackMissing: 'Falta',
+    downloadMissing: 'Descargar lo que falta',
+    downloadMissingCount: 'Descargar {count} que faltan',
+    missingTitle: '¿Descargar lo que falta?',
+    missingBody: {
+      one: 'Canciones que faltan: {tracks}, de 1 lanzamiento que el seguimiento descarga. Las canciones que ya están en tu biblioteca se enlazan, no se vuelven a descargar.',
+      other:
+        'Canciones que faltan: {tracks}, de {count} lanzamientos que el seguimiento descarga. Las canciones que ya están en tu biblioteca se enlazan, no se vuelven a descargar.',
+    },
+    missingBodyUnread: {
+      one: 'Canciones que faltan: {tracks}, de 1 lanzamiento que el seguimiento descarga, además de las de lanzamientos cuya lista aún no se leyó ({unread}). Las canciones que ya están en tu biblioteca se enlazan, no se vuelven a descargar.',
+      other:
+        'Canciones que faltan: {tracks}, de {count} lanzamientos que el seguimiento descarga, además de las de lanzamientos cuya lista aún no se leyó ({unread}). Las canciones que ya están en tu biblioteca se enlazan, no se vuelven a descargar.',
+    },
+    missingConfirm: 'Descargar',
+    missingStarted: 'Descargando lo que falta: síguelo en la cola',
+    busy: 'Se está comprobando este artista: síguelo en la cola.',
+    missingHint:
+      'Descargar lo que falta recorre cada lanzamiento activado y descarga las canciones que no tienes; activa primero un lanzamiento para incluirlo.',
     kind: {
       mixtape: 'Mixtapes',
       soundtrack: 'Bandas sonoras',

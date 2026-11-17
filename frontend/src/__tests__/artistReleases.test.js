@@ -39,6 +39,9 @@ describe('artist releases', () => {
     expect(isOn(releases[5])).toBe(false)
     expect(canSwitch(releases[4])).toBe(false)
     expect(canSwitch(releases[3])).toBe(true)
+    // Owned, but not downloaded by the watch: the server's word wins.
+    expect(isOn({ state: 'complete', wanted: false })).toBe(false)
+    expect(isOn({ state: 'skipped', wanted: true })).toBe(true)
   })
 
   it('filters, leaving guest spots to their own chip', () => {
