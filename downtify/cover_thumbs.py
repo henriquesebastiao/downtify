@@ -4,7 +4,8 @@ Now Playing.
 The cover is read out of the audio file's tags once (the same reader
 ``/cover`` uses, :func:`downtify.cover_art.extract_cover_art`) and every
 size is kept on disk under ``<data>/cover_thumbs``, keyed by the file's
-content key and modification time - so a re-tagged file gets new
+resolved path, size and modification time - so files in different folders
+never share a cover, and a re-tagged file gets new
 pictures, and nothing is re-extracted or re-scaled on later requests.
 Scaling uses the ffmpeg already in the image; without it (or if it
 fails) the full-size picture is served for every size.
@@ -57,7 +58,7 @@ class CoverThumbs:
     @staticmethod
     def _key(source: Path) -> str:
         st = source.stat()
-        raw = f'{source.name}\n{st.st_size}\n{st.st_mtime_ns}'
+        raw = f'{source.resolve()}\n{st.st_size}\n{st.st_mtime_ns}'
         return hashlib.sha256(raw.encode()).hexdigest()
 
     def get(

@@ -1208,6 +1208,8 @@ Return cover art for a library file: `/data/cover_cache` first (including covers
 
 **Response:** Image bytes (`image/jpeg` or `image/png`). Returns `404` if none of those sources have a cover.
 
+Thumbnail cache entries and their `ETag`s are keyed by the resolved audio-file path, size and nanosecond modification time. Files in different library folders do not share a thumbnail even when their names, sizes and timestamps match; alternate paths resolving to the same file reuse its cached cover. Older basename-only thumbnail entries are ignored and regenerated on demand. Moving a file to another path may regenerate its thumbnails.
+
 ---
 
 ### `GET /playlist-cover`
@@ -3660,6 +3662,8 @@ The track's cover. Also `HEAD`.
 | `size` | integer | no | `150`, `300` or `600` (longest side, px; others round up). Omit for the full-size picture |
 
 **Response:** the image (thumbnails are JPEG), `ETag`, `Cache-Control: private, max-age=604800`; `304` for a matching `If-None-Match`. `404` when the file has no cover. Every size is made once and kept in `/data/cover_thumbs`.
+
+The cache and validators are specific to the resolved audio file, as for [`GET /cover`](#get-cover), so a cover cached for a file in another folder never validates this response.
 
 ---
 

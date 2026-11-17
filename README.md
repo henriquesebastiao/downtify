@@ -96,6 +96,8 @@ Library ZIP downloads support individual audio files over 2 GiB with ZIP64, with
 
 Podcast feeds with multiple attachments use the audio enclosure, not accompanying PDFs, images or videos. Feeds with untyped or generic-binary enclosures retain a compatibility fallback. See [Podcasts](docs/features/podcasts.md#good-to-know).
 
+Library cover thumbnails stay separate for files in different folders, even when their names, sizes and timestamps match. See [Cover art](docs/api-reference.md#get-cover).
+
 ## Quick start
 
 You only need [Docker](https://docs.docker.com/get-docker/).
