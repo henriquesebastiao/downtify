@@ -26,9 +26,7 @@
 
 </div>
 
-<p align="center">
-  <img src="assets/readme-hero.png" alt="Downtify 3.0: paste a Spotify link, get the music. The home screen, the full-screen player and the mobile app." width="100%">
-</p>
+https://github.com/user-attachments/assets/a70b6a0d-fa22-4aa4-b6ca-2491c864c6af
 
 ## Overview
 
