@@ -294,6 +294,18 @@ Die Seite einer Künstlerbeobachtung listet auch den ganzen Katalog des Künstle
 
 Der Schalter neben einer Veröffentlichung hat Vorrang vor der Beobachtung, wie Lidarrs Überwachung pro Album. Ein lädt sie herunter, auch wenn ihr Typ nicht beobachtet wird oder sie vor Beginn der Beobachtung erschien, und eine Prüfung startet sofort. Aus lädt sie nicht mehr herunter. Songs, die schon in der Bibliothek sind, bleiben in beiden Fällen. **Von MusicBrainz auch herunterladen** wählt, nur für diesen Künstler, welche Arten von Veröffentlichungen, die nur MusicBrainz unterscheidet, heruntergeladen werden: standardmäßig Mixtapes und Soundtracks; Live-Alben, Compilations, Remixe, DJ-Mixe und Demos, wenn eingeschaltet.
 
+### Gesucht
+
+Der Tab **Gesucht** der Monitor-Seite, neben **Playlists** und **Künstler**, ist eine einzige Liste von allem, was deine Künstlerbeobachtungen herunterladen sollen und die Bibliothek noch nicht vollständig hat. Für jede deiner Künstlerbeobachtungen (ein Admin sieht die aller) listet er jede Veröffentlichung, die die Beobachtung herunterlädt (eingeschaltet oder von einem beobachteten Typ und einer beobachteten Art) und die **Teilweise** oder **Herunterzuladen** ist, mit der Zahl der Songs, die die Bibliothek davon hat („habe von gesamt“). Pausierte Beobachtungen bleiben außen vor, ebenso eine Veröffentlichung, deren Schalter du ausschaltest. Die Veröffentlichungen sind nach Künstler gruppiert, jede Gruppe mit einem Link zur Seite der Beobachtung und dem **Fehlendes herunterladen** dieses Künstlers. Oben zählt eine Zusammenfassung die fehlenden Songs und ihre Veröffentlichungen sowie die Künstler, die noch nicht geprüft sind. Ein Suchfeld und ein Typfilter schränken die Liste ein.
+
+Ein Künstler unter **Noch nicht geprüft** hat Veröffentlichungen, deren Titellisten noch nicht gelesen wurden (durch **Prüfen, was ich habe**, siehe [Die Veröffentlichungen eines Künstlers](#an-artists-releases)), sodass nicht ganz bekannt ist, was ihm fehlt. Für ihn werden nur die schon bekannten Lücken gelistet.
+
+**Alle Künstler prüfen** führt **Prüfen, was ich habe** für jeden dieser Künstler aus, einen Künstler nach dem anderen, im Hintergrund. Bei großen Künstlern ist es langsam, da MusicBrainz eine Anfrage pro Sekunde erlaubt. **Stopp** beendet das Lesen des aktuellen Künstlers bei seiner nächsten Veröffentlichung: Was gelesen wurde, bleibt erhalten, und ein späteres **Alle Künstler prüfen** macht dort weiter.
+
+**Alle fehlenden herunterladen** fragt zuerst, mit der Zahl der Songs, und führt dann das **Fehlendes herunterladen** jedes Künstlers aus, einen Künstler nach dem anderen. Die Songs werden in der **Warteschlange** heruntergeladen. **Stopp** lässt den Künstler in Arbeit fertig werden und hält dann an.
+
+Nur eines von beiden läuft gleichzeitig, und der Lauf eines anderen Kontos blockiert deinen ebenfalls. Du siehst den Fortschritt deines eigenen Laufs (ein Admin sieht jeden), und im reinen Bibliotheksmodus sind beide gesperrt.
+
 ## Woher ein Titel kommt
 
 **Woher er kommt** im Menü eines Titels (überall in der Bibliothek) sagt, welche Beobachtung ihn zuerst heruntergeladen hat, wann und mit welchem Anbieter — **Erste Prüfung**, wenn er mit der ersten Prüfung kam — und listet jede Beobachtung auf, die ihn jetzt hat, jeweils mit Id, Besitzer (für einen Admin), wann sie den Titel bekam und wie: **Hat ihn geladen**, **Schon in der Bibliothek** oder **Vor der Erfassung**. Es ist eine Datei: Beobachtungen, die einen Titel teilen, zeigen alle auf dieselbe Kopie.

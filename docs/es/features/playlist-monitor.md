@@ -294,6 +294,18 @@ La página de un seguimiento de artista también lista todo su catálogo según 
 
 El interruptor junto a un lanzamiento tiene prioridad sobre el seguimiento, como la supervisión por álbum de Lidarr. Activado, lo descarga aunque su tipo no se siga o haya salido antes de empezar el seguimiento, y una comprobación empieza enseguida. Desactivado, deja de descargarlo. Las canciones que ya están en la biblioteca se quedan en ambos casos. **De MusicBrainz, descargar también** elige, solo para este artista, qué clases de lanzamiento que solo MusicBrainz distingue se descargan: mixtapes y bandas sonoras por defecto; álbumes en vivo, recopilatorios, remixes, sesiones de DJ y demos al activarlos.
 
+### Buscados
+
+La pestaña **Buscados** de la página Monitor, junto a **Playlists** y **Artistas**, es una única lista de todo lo que tus seguimientos de artistas deberían descargar y la biblioteca aún no tiene completo. Para cada uno de tus seguimientos de artista (un administrador ve los de todos) lista cada lanzamiento que el seguimiento descarga (activado, o de un tipo y clase que sigue) y que está **En parte** o **Por descargar**, con cuántas canciones tiene la biblioteca de él («tengo de total»). Los seguimientos en pausa se omiten, y también un lanzamiento cuyo interruptor desactivas. Los lanzamientos se agrupan por artista, cada grupo con un enlace a la página del seguimiento y el **Descargar lo que falta** de ese artista. Arriba, un resumen cuenta las canciones que faltan y los lanzamientos a los que pertenecen, y cuántos artistas están sin comprobar todavía. Un cuadro de búsqueda y un filtro de tipo acotan la lista.
+
+Un artista en **Sin comprobar todavía** tiene lanzamientos cuyas listas de pistas aún no se han leído (con **Comprobar lo que tengo**, ver [Los lanzamientos de un artista](#an-artists-releases)), así que no se sabe del todo qué le falta. De él solo se listan los huecos ya conocidos.
+
+**Comprobar todos los artistas** ejecuta **Comprobar lo que tengo** en cada uno de esos artistas, de uno en uno, en segundo plano. Es lento con artistas grandes, porque MusicBrainz permite una petición por segundo. **Detener** termina la lectura del artista actual en su siguiente lanzamiento: lo leído se conserva y un **Comprobar todos los artistas** posterior continúa desde ahí.
+
+**Descargar todo lo que falta** pregunta primero, con el número de canciones, y luego ejecuta el **Descargar lo que falta** de cada artista, de uno en uno. Las canciones se descargan en la **cola**. **Detener** deja terminar al artista en curso y después se detiene.
+
+Solo se ejecuta uno de los dos a la vez, y la ejecución de otra cuenta también bloquea la tuya. Ves el progreso de tu propia ejecución (un administrador ve cualquiera), y ambos están bloqueados en el modo solo biblioteca.
+
 ## De dónde viene una canción
 
 **De dónde viene** en el menú de una canción (en cualquier lugar de la Biblioteca) dice qué vigilancia la descargó primero, cuándo y con qué proveedor — **Primera comprobación** si llegó con la primera comprobación — y lista todas las vigilancias que la tienen ahora, cada una con su id, dueño (para un admin), cuándo recibió la canción y cómo: **La descargó**, **Ya en la biblioteca** o **Antes del registro**. Es un solo archivo: las vigilancias que comparten una canción apuntan todas a la misma copia.

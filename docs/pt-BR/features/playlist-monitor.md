@@ -294,6 +294,18 @@ A página de um acompanhamento de artista também lista todo o catálogo dele na
 
 O interruptor ao lado de um lançamento tem prioridade sobre o acompanhamento, como o monitoramento por álbum do Lidarr. Ligado, baixa o lançamento mesmo que o tipo não seja acompanhado ou que tenha saído antes do início do acompanhamento, e uma verificação começa na hora. Desligado, deixa de baixá-lo. As músicas que já estão na biblioteca ficam nos dois casos. **Do MusicBrainz, baixar também** escolhe, só para este artista, quais categorias de lançamento que só o MusicBrainz distingue são baixadas: mixtapes e trilhas sonoras por padrão; álbuns ao vivo, coletâneas, remixes, mixes de DJ e demos quando ativados.
 
+### Procurados
+
+A aba **Procurados** da página Monitor, ao lado de **Playlists** e **Artistas**, é uma única lista de tudo o que seus acompanhamentos de artistas deveriam baixar e a biblioteca ainda não tem por inteiro. Para cada acompanhamento de artista seu (um administrador vê os de todos), lista cada lançamento que o acompanhamento baixa (ativado, ou de um tipo e categoria acompanhados) e que está **Em parte** ou **Para baixar**, com quantas músicas a biblioteca tem dele (“tenho de total”). Acompanhamentos pausados ficam de fora, assim como um lançamento cujo interruptor você desliga. Os lançamentos são agrupados por artista, cada grupo com um link para a página do acompanhamento e o **Baixar o que falta** desse artista. No topo, um resumo conta as músicas que faltam e os lançamentos a que pertencem, e quantos artistas ainda não foram verificados. Uma caixa de busca e um filtro de tipo restringem a lista.
+
+Um artista em **Ainda não verificados** tem lançamentos cujas listas de faixas ainda não foram lidas (por **Verificar o que eu tenho**, veja [Os lançamentos de um artista](#an-artists-releases)), então não se sabe por completo o que falta nele. Dele só são listadas as lacunas já conhecidas.
+
+**Verificar todos os artistas** executa **Verificar o que eu tenho** em cada um desses artistas, um por vez, em segundo plano. É lento para artistas grandes, já que o MusicBrainz permite uma requisição por segundo. **Parar** encerra a leitura do artista atual no próximo lançamento dele: o que foi lido fica guardado, e um **Verificar todos os artistas** posterior continua dali.
+
+**Baixar tudo o que falta** pergunta antes, com o número de músicas, e então executa o **Baixar o que falta** de cada artista, um por vez. As músicas são baixadas na **fila**. **Parar** deixa o artista em andamento terminar e então para.
+
+Só um dos dois roda por vez, e a execução de outra conta também bloqueia a sua. Você vê o andamento da sua própria execução (um administrador vê qualquer uma), e ambos ficam bloqueados no modo só biblioteca.
+
 ## De onde veio uma música
 
 **De onde veio** no menu de uma música (em qualquer lugar da Biblioteca) diz qual monitoramento a baixou primeiro, quando e com qual provedor — **Primeira verificação** quando veio com a primeira verificação — e lista todos os monitoramentos que a têm agora, cada um com seu id, dono (para um admin), quando recebeu a música e como: **Baixou**, **Já na biblioteca** ou **Antes do registro**. É um arquivo só: os monitoramentos que compartilham uma música apontam todos para a mesma cópia.

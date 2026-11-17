@@ -2738,6 +2738,55 @@ Switch releases of an artist watch: `{ "album_ids": ["deezer:13082992"], "choice
 
 ---
 
+### `GET /api/monitor/wanted`
+
+What the artist watches still miss, for the Monitor page's Wanted tab: every release an enabled artist watch downloads (`wanted`) that the library only partly has or lacks, grouped by artist and sorted by name. A user gets their own watches, an admin everyone's. Paused watches are left out, and so is an artist with nothing wanted and nothing unread. See [Wanted](features/playlist-monitor.md#wanted).
+
+**Response:**
+
+```json
+{
+  "artists": [
+    {
+      "watch": { "id": 1, "name": "Drake", "kind": "artist", "…": "…" },
+      "releases": [
+        { "id": "deezer:13082992", "name": "Views", "state": "partly", "have": 17, "total": 20, "wanted": true, "…": "…" }
+      ],
+      "missing": { "tracks": 3, "releases": 1, "unread": 0 },
+      "checking": false
+    }
+  ],
+  "totals": { "tracks": 3, "releases": 1, "artists": 1, "unchecked": 0 },
+  "job": null
+}
+```
+
+`releases` are the rows of [`GET .../releases`](#get-apimonitorplaylistsplaylist_idreleases) whose `state` is `partly` or `missing`. `missing` is that artist's own count; `unread` is how many of its releases have no track list read yet, so their size is unknown. `totals.unchecked` is the number of artists with `unread` above zero. `job` is the running or last Check all / Download all started by this account (an admin sees any), `null` otherwise.
+
+---
+
+### `POST /api/monitor/wanted/check-all`
+
+Starts "Check all artists" in the background: the tracklists of every listed artist with `unread` above zero are read, one artist at a time, as [`POST .../releases/inventory`](#post-apimonitorplaylistsplaylist_idreleasesinventory) does for one.
+
+**Response:** the job: `{ "id": "…", "kind": "check", "running": true, "done": 0, "total": 12, "current": "", "failed": 0, "skipped": 0, "stopped": false, "started_at": "…", "finished_at": "" }`. `current` is the artist being worked on; `skipped` counts artists that were paused meanwhile or already being checked; `failed` those that raised an error. `409` with `{ "code": "wanted_busy" }` while a job of either kind is running, whoever started it. Refused in library-only mode.
+
+---
+
+### `POST /api/monitor/wanted/download-all`
+
+Starts "Download all missing" in the background: each listed artist with songs missing (or unread releases) goes through [`POST .../releases/download-missing`](#post-apimonitorplaylistsplaylist_idreleasesdownload-missing)'s check, one artist at a time. Downloads show in the queue.
+
+**Response:** the job, as above with `"kind": "download"`. `409` with `{ "code": "wanted_busy" }` while a job is running, `500` when the downloader isn't ready. Refused in library-only mode.
+
+---
+
+### `POST /api/monitor/wanted/stop`
+
+Stops the job: a download-all finishes the artist in progress, then stops; a check-all ends at the next release it would read, and what was read is kept. **Response:** the job (`null` when there was never one); `stopped` turns `true` once it ended early. `404` with `{ "code": "no_job" }` when the job is someone else's and you aren't an admin.
+
+---
+
 ### `GET /api/monitor/artist-suggestions`
 
 Artists to follow, for the Monitor page's Artists tab: two lists, ranked from what the server already keeps — nothing is searched for. See [Suggested artists](features/playlist-monitor.md#suggested-artists).

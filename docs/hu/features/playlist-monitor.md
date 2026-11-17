@@ -294,6 +294,18 @@ A **Hiányzók letöltése** ezután letölti a hiányzó dalokat minden olyan k
 
 A kiadvány melletti kapcsoló felülírja a figyelést, mint a Lidarr albumonkénti figyelése. Bekapcsolva letölti akkor is, ha a típusát nem figyeled, vagy a figyelés kezdete előtt jelent meg, és azonnal indul egy ellenőrzés. Kikapcsolva többé nem tölti le. A könyvtárban már meglévő dalok mindkét esetben megmaradnak. A **MusicBrainzről töltsd le ezeket is** csak ennél az előadónál választja ki, mely, csak a MusicBrainz által megkülönböztetett kiadványfajták töltődjenek le: alapból a mixtape-ek és a filmzenék; az élő albumok, válogatások, remixek, DJ-mixek és demók bekapcsolva.
 
+### Keresett
+
+A Figyelő oldal **Keresett** lapja, a **Listák** és az **Előadók** mellett, egyetlen lista mindarról, amit az előadó-figyeléseid letöltenének, de a könyvtárban még nincs meg teljesen. Minden előadó-figyelésedhez (az admin mindenkiét látja) felsorolja azokat a kiadványokat, amelyeket a figyelés letölt (bekapcsolt, vagy figyelt típusú és fajtájú), és amelyek **Részben** vannak meg, vagy **Letöltendő** állapotúak, azzal, hány dala van meg belőlük a könyvtárban („meglévő / összes”). A szüneteltetett figyelések kimaradnak, ahogy az a kiadvány is, amelynek kikapcsolod a kapcsolóját. A kiadványok előadók szerint csoportosítva vannak, mindegyik csoportban a figyelés oldalára mutató hivatkozással és az adott előadó **Hiányzók letöltése** gombjával. Felül egy összegzés számolja a hiányzó dalokat és a kiadványokat, amelyekhez tartoznak, valamint hány előadó nincs még ellenőrizve. Egy keresőmező és egy típusszűrő szűkíti a listát.
+
+A **Még nincs ellenőrizve** alatt szereplő előadónak olyan kiadványai vannak, amelyek számlistáját még nem olvasták be (a **Nézd meg, mi van meg** olvassa be, lásd [Egy előadó kiadványai](#an-artists-releases)), így nem tudni pontosan, mi hiányzik neki. Csak a már ismert hiányok szerepelnek nála.
+
+Az **Összes előadó ellenőrzése** a **Nézd meg, mi van meg** műveletet futtatja az ilyen előadókon, egyszerre egyen, a háttérben. Nagy előadóknál lassú, mert a MusicBrainz másodpercenként egy kérést enged. A **Leállítás** az éppen soron lévő előadó beolvasását a következő kiadványánál fejezi be: ami beolvasódott, megmarad, egy későbbi **Összes előadó ellenőrzése** onnan folytatja.
+
+Az **Az összes hiányzó letöltése** először rákérdez a dalok számával, majd minden előadó **Hiányzók letöltése** műveletét futtatja, egyszerre egy előadóét. A dalok a **sorban** töltődnek le. A **Leállítás** hagyja befejezni az éppen soron lévő előadót, aztán megáll.
+
+A kettő közül egyszerre csak egy fut, és egy másik fiók futása a tiédet is blokkolja. A saját futásod előrehaladását látod (az admin bármelyikét), és csak könyvtár módban mindkettő le van tiltva.
+
 ## Honnan jött egy szám
 
 A szám menüjében (bárhol a könyvtárban) a **Honnan jött** megmondja, melyik figyelés töltötte le először, mikor és melyik szolgáltatóval — **Első ellenőrzés**, ha az első ellenőrzéssel jött —, és felsorolja az összes figyelést, amely most tartalmazza, mindegyiket az azonosítójával, a tulajdonosával (adminnak), azzal, hogy mikor kapta meg a számot, és hogyan: **Letöltötte**, **Már a könyvtárban** vagy **A rögzítés előtt**. Ez egyetlen fájl: a számot megosztó figyelések mind ugyanarra a példányra mutatnak.

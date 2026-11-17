@@ -294,6 +294,18 @@ Bir sanatçı takibinin sayfası, son kontroldeki tüm kataloğunu da listeler: 
 
 Bir yayının yanındaki anahtar, Lidarr’ın albüm başına izlemesi gibi takibin önüne geçer. Açık olduğunda, türü izlenmese ya da takip başlamadan önce çıkmış olsa bile yayını indirir ve hemen bir kontrol başlar. Kapalı olduğunda onu indirmeyi bırakır. Kitaplıkta zaten olan şarkılar her iki durumda da kalır. **MusicBrainz’den şunları da indir**, yalnızca bu sanatçı için, yalnızca MusicBrainz’in ayırt ettiği yayın türlerinden hangilerinin indirileceğini seçer: varsayılan olarak mixtape’ler ve film müzikleri; canlı albümler, derlemeler, remiksler, DJ miksleri ve demolar açıldığında.
 
+### Aranan
+
+İzleme sayfasının **Aranan** sekmesi, **Çalma listeleri** ve **Sanatçılar** sekmelerinin yanında, sanatçı takiplerinizin indirmesi gereken ama kitaplığın henüz tam olarak sahip olmadığı her şeyin tek bir listesidir. Her sanatçı takibiniz için (yönetici herkesinkini görür) takibin indirdiği (açık olan veya izlenen bir tür ve çeşitte olan) ve **Kısmen** ya da **İndirilecek** durumundaki her yayını, kitaplıkta ondan kaç şarkı olduğuyla birlikte listeler („sahip olunan / toplam“). Duraklatılmış takipler listeye girmez, anahtarını kapattığınız yayın da girmez. Yayınlar sanatçıya göre gruplanır; her grupta takibin sayfasına bir bağlantı ve o sanatçının **Eksikleri indir** düğmesi bulunur. Üstteki özet, eksik şarkıları ve ait oldukları yayınları, bir de kaç sanatçının henüz kontrol edilmediğini sayar. Bir arama kutusu ve bir tür filtresi listeyi daraltır.
+
+**Henüz kontrol edilmedi** altındaki bir sanatçının parça listeleri henüz okunmamış yayınları vardır (**Elimde ne var, kontrol et** okur, bkz. [Bir sanatçının yayınları](#an-artists-releases)), bu yüzden neyin eksik olduğu tam bilinmez. Onun için yalnızca zaten bilinen eksikler listelenir.
+
+**Tüm sanatçıları kontrol et**, bu sanatçıların her biri için **Elimde ne var, kontrol et** işlemini arka planda, her seferinde bir sanatçı olacak şekilde çalıştırır. MusicBrainz saniyede bir isteğe izin verdiği için büyük sanatçılarda yavaştır. **Durdur**, geçerli sanatçının okunmasını bir sonraki yayınında bitirir: okunanlar saklanır ve sonraki bir **Tüm sanatçıları kontrol et** oradan devam eder.
+
+**Eksiklerin hepsini indir** önce şarkı sayısıyla birlikte sorar, sonra her sanatçının **Eksikleri indir** işlemini her seferinde bir sanatçı olacak şekilde çalıştırır. Şarkılar **kuyrukta** iner. **Durdur**, sürmekte olan sanatçının bitmesine izin verir, sonra durur.
+
+İkisinden yalnızca biri aynı anda çalışır ve başka bir hesabın çalıştırması sizinkini de engeller. Kendi çalıştırmanızın ilerlemesini görürsünüz (yönetici herhangi birini görür); yalnızca kitaplık kipinde ikisi de engellenir.
+
 ## Bir şarkının nereden geldiği
 
 Kitaplığın herhangi bir yerinde bir şarkının menüsündeki **Nereden geldi**, onu ilk hangi izlemenin, ne zaman ve hangi sağlayıcıyla indirdiğini — ilk kontrolle geldiyse **İlk kontrol** — söyler ve şu anda onu tutan her izlemeyi kimliği, sahibi (yönetici için), şarkıyı ne zaman ve nasıl aldığıyla listeler: **İndirdi**, **Zaten kitaplıkta** ya da **Kayıttan önce**. Tek bir dosyadır: bir şarkıyı paylaşan izlemelerin hepsi aynı kopyayı gösterir.

@@ -300,6 +300,18 @@ An artist watch's page also lists the artist's whole catalogue as of its last ch
 
 The switch next to a release overrides the watch, like Lidarr's per-album monitoring. On downloads it even when its type isn't watched or it came out before the watch started, and a check starts right away. Off stops downloading it. Songs already in the library stay either way. **From MusicBrainz, also download** chooses, for this artist only, which kinds of release only MusicBrainz tells apart are downloaded: mixtapes and soundtracks by default; live albums, compilations, remixes, DJ mixes and demos when turned on.
 
+### Wanted
+
+The **Wanted** tab of the Monitor page, next to **Playlists** and **Artists**, is one list of everything your artist watches should download and the library doesn't fully have yet. For each of your artist watches (an admin sees everyone's) it lists every release the watch downloads (switched on, or of a type and kind it watches) that is **Partly** or **To download**, with how many songs the library has of it ("have of total"). Paused watches are left out, and so is a release whose switch you turn off. Releases are grouped by artist, each group with a link to the watch's page and that artist's **Download missing**. At the top, a summary counts the songs missing and the releases they belong to, and how many artists are not checked yet. A search box and a type filter narrow the list.
+
+An artist under **Not checked yet** has releases whose track lists haven't been read yet (by **Check what I have**, see [An artist's releases](#an-artists-releases)), so what it misses isn't fully known. Only the gaps already known are listed for it.
+
+**Check all artists** runs **Check what I have** on each of those artists, one artist at a time, in the background. It is slow for big artists, since MusicBrainz allows one request a second. **Stop** ends the reading of the current artist at its next release: what was read is kept, and a later **Check all artists** picks it up from there.
+
+**Download all missing** asks first, with the number of songs, then runs each artist's **Download missing** one artist at a time. The songs download in the **Queue**. **Stop** lets the artist in progress finish, then stops.
+
+Only one of the two runs at a time, and another account's run blocks yours too. You see the progress of your own run (an admin sees any), and both are blocked in library-only mode.
+
 ## Where a song came from
 
 **Where it came from** in a song's menu (anywhere in the Library) tells which watch first downloaded it, when, and with which provider — **First check** when it came with the watch's backfill — and lists every watch that holds it now, each with its id, owner (for an admin), when it got the song and how: **Downloaded it**, **Already in library** or **Before tracking**. It's one file: watches that share a song all point at the same copy.
