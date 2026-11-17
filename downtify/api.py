@@ -722,6 +722,8 @@ DEFAULT_SETTINGS: dict[str, Any] = {
     # Smallest acceptable cover (px, short side); 0 = off. Below it a
     # larger one is looked for (downloader._download_cover_meeting).
     'cover_min_resolution': 0,
+    # Write each download's ISRC, the recording's own code (downtify.isrc).
+    'write_isrc': True,
     'download_cover_art': True,
     'overwrite_existing_files': True,
     'organize_by_artist': True,
@@ -9046,6 +9048,10 @@ async def update_settings_endpoint(
                 state.downloader.cover_min_resolution = state.settings[
                     'cover_min_resolution'
                 ]
+            if 'write_isrc' in payload:
+                state.downloader.write_isrc = bool(
+                    state.settings['write_isrc']
+                )
             if 'overwrite_existing_files' in payload:
                 state.downloader.overwrite_existing_files = bool(
                     payload['overwrite_existing_files']

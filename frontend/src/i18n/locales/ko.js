@@ -1676,6 +1676,10 @@ export default {
     syncDelay: '동기화 조회 간격',
     syncDelayHint:
       '가져온 트랙 묶음(동시 다운로드 수 단위)마다 가사, 커버, 장르를 조회하기 전 잠시 대기합니다. 대규모 폴더 처리 시 API 요청 제한(Rate Limit)을 방지합니다.',
+    idsGroup: '곡 ID',
+    isrc: 'ISRC 코드 쓰기',
+    isrcHint:
+      '새로 받은 곡마다 녹음 하나를 가리키는 ISRC 코드를 저장해, 같은 곡이 다른 이름이어도 알아봅니다. Deezer에서 찾으며 확실하지 않으면 쓰지 않습니다.',
     artGroup: '커버 아트',
     coverArt: '커버 아트 포함',
     coverArtHint:

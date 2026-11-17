@@ -1566,6 +1566,10 @@ export default {
     syncDelay: '同步查询间隔',
     syncDelayHint:
       '每批导入歌曲（批次大小等于并行下载数）之后等待一段时间，再查询歌词、封面和流派，有助于避免大文件夹触发限流。',
+    idsGroup: '歌曲标识',
+    isrc: '写入 ISRC 代码',
+    isrcHint:
+      '为每个新下载写入 ISRC（标识一条录音的代码），即使名称不同也能认出同一首歌。从 Deezer 查询；不确定时不写入。',
     artGroup: '封面',
     coverArt: '嵌入封面',
     coverArtHint: '关闭可减小文件并加快下载。',

@@ -1729,6 +1729,10 @@ export default {
     syncDelay: 'Pause zwischen Synchronisierungsabfragen',
     syncDelayHint:
       'Warte nach jedem Stapel importierter Titel (Größe = parallele Downloads), bevor Songtexte, Cover und Genre gesucht werden. Das hilft, bei großen Ordnern Ratenbegrenzungen zu vermeiden.',
+    idsGroup: 'Song-IDs',
+    isrc: 'ISRC-Codes schreiben',
+    isrcHint:
+      'Speichert bei jedem neuen Download den ISRC – den Code einer Aufnahme –, damit derselbe Song auch unter anderem Namen erkannt wird. Wird bei Deezer nachgeschlagen und weggelassen, wenn er nicht sicher ist.',
     artGroup: 'Cover',
     coverArt: 'Cover einbetten',
     coverArtHint:

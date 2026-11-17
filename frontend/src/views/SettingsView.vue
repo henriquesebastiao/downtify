@@ -818,6 +818,17 @@
                 />
               </SettingRow>
             </SettingGroup>
+            <SettingGroup :title="t('settings.idsGroup')">
+              <SettingRow
+                :label="t('settings.isrc')"
+                :description="t('settings.isrcHint')"
+              >
+                <UiSwitch
+                  v-model="s.write_isrc"
+                  :aria-label="t('settings.isrc')"
+                />
+              </SettingRow>
+            </SettingGroup>
           </template>
 
           <!-- Navidrome -->

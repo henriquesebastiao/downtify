@@ -1596,6 +1596,10 @@ export default {
     syncDelay: '同步查詢間隔',
     syncDelayHint:
       '每匯入一批歌曲（數量等於同時下載數）後先等待，再查詢歌詞、封面和曲風。有助於避免大型資料夾觸發速率限制。',
+    idsGroup: '歌曲識別碼',
+    isrc: '寫入 ISRC 代碼',
+    isrcHint:
+      '為每個新下載寫入 ISRC（標識一段錄音的代碼），即使名稱不同也能認出同一首歌。從 Deezer 查詢；不確定時不寫入。',
     artGroup: '封面',
     coverArt: '嵌入封面',
     coverArtHint: '關閉後檔案較小、下載較快。',

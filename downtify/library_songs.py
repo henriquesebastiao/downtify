@@ -36,6 +36,7 @@ from collections.abc import Iterable
 from pathlib import Path
 from typing import Any, Optional
 
+from .isrc import normalize as normalize_isrc
 from .library_catalog import song_key
 from .library_metadata import read_audio_metadata
 from .library_paths import SLSKD_LIBRARY_PREFIX
@@ -43,6 +44,11 @@ from .library_paths import SLSKD_LIBRARY_PREFIX
 #: Lengths (seconds) of one song in two sources differ by a second or
 #: two (encoder padding, rounding); a different recording by far more.
 SAME_SONG_SECONDS = 3.0
+
+#: Two files with one ISRC are the same recording; a length further off
+#: than this is a mislabelled one (an extended mix tagged with the
+#: single's code).
+ISRC_SECONDS = 10.0
 
 #: Title tags that name no other recording: the album's (explicit)
 #: version, or the film a song is from, as one catalogue spells it and
@@ -73,18 +79,24 @@ def _key(artists: Any, title: Any) -> str:
 
 
 def same_recording(path: Path, song: dict[str, Any]) -> bool:
-    """Whether the file at *path* holds *song*: the same song key and a
-    length within :data:`SAME_SONG_SECONDS`, from the file's own tags."""
+    """Whether the file at *path* holds *song*: the same ISRC (a length
+    within :data:`ISRC_SECONDS`), else the same song key and a length
+    within :data:`SAME_SONG_SECONDS`, from the file's own tags."""
 
     key = _key(song.get('artists'), song.get('name'))
     length = _length(song.get('duration'))
-    if not key or length <= 0:
+    code = normalize_isrc(song.get('isrc'))
+    if not code and (not key or length <= 0):
         return False
     try:
         tags = read_audio_metadata(path)
     except Exception:
         return False
     found = _length(tags.get('duration'))
+    if code and normalize_isrc(tags.get('isrc')) == code:
+        return not (found and length) or abs(found - length) <= ISRC_SECONDS
+    if not key or length <= 0:
+        return False
     return (
         found > 0
         and abs(found - length) <= SAME_SONG_SECONDS
@@ -103,17 +115,22 @@ class LibrarySongs:
 
     def __init__(self, rows: Iterable[dict[str, Any]] = ()) -> None:
         self._songs: dict[str, list[tuple[str, float]]] = defaultdict(list)
+        self._isrcs: dict[str, list[tuple[str, float]]] = defaultdict(list)
         for row in rows:
             self._put(
                 str(row.get('file') or ''),
                 _key(row.get('artist'), row.get('title')),
                 _length(row.get('duration')),
+                row.get('isrc'),
             )
 
-    def _put(self, name: str, key: str, length: float) -> None:
+    def _put(self, name: str, key: str, length: float, isrc: Any = '') -> None:
         name = name.strip().replace('\\', '/')
         if name and key and length > 0:
             self._songs[key].append((name, length))
+        code = normalize_isrc(isrc)
+        if name and code:
+            self._isrcs[code].append((name, length))
 
     def add(self, filename: str, song: dict[str, Any]) -> None:
         """Remember *filename* as holding *song*."""
@@ -122,6 +139,7 @@ class LibrarySongs:
             filename,
             _key(song.get('artists'), song.get('name')),
             _length(song.get('duration')),
+            song.get('isrc'),
         )
 
     def find(self, song: dict[str, Any]) -> Optional[str]:
@@ -132,6 +150,17 @@ class LibrarySongs:
         """
 
         length = _length(song.get('duration'))
+        # The recording's own code first: the same recording whatever the
+        # titles say (a length far off is another edit sharing a code).
+        by_code = [
+            (name.startswith(SLSKD_LIBRARY_PREFIX), abs(other - length), name)
+            for name, other in self._isrcs.get(
+                normalize_isrc(song.get('isrc')), ()
+            )
+            if not (length and other) or abs(other - length) <= ISRC_SECONDS
+        ]
+        if by_code:
+            return min(by_code)[2]
         key = _key(song.get('artists'), song.get('name'))
         if not key or length <= 0:
             return None

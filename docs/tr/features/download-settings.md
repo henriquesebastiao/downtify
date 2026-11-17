@@ -208,3 +208,6 @@ Downtify, biçimden bağımsız olarak indirilen her dosyaya aşağıdaki etiket
 | Yıl | Spotify embed (parça düzeyinde getirme) |
 | Albüm kapağı | Spotify tarafından çözülen parçalar için Spotify embed (parça düzeyinde kapak); aksi halde YouTube Music küçük resmi veya Deezer kapağı. İsteğe bağlı — bkz. [Kapakları indir](#download-cover-art) ve [Kapak çözünürlüğü](#cover-art-resolution) |
 | Söz | lrclib (etkinse) |
+| ISRC | Deezer, yalnızca kesin olduğunda. İsteğe bağlı — **ISRC kodlarını yaz** (aşağıya bakın) |
+
+**ISRC**, bir plak şirketinin tek bir kayda verdiği koddur; örneğin `USCM51600061`. **Ayarlar → Etiketler ve sözler → ISRC kodlarını yaz** açıkken (varsayılan), her yeni indirme Deezer’da aranır: Deezer’dan bir indirme kendi parçasının kodunu alır; diğer her indirme sanatçı, başlık ve süreye göre aranır ve kod yalnızca tüm eşleşmeler aynı olduğunda yazılır. Deezer’ın kesin olarak bulamadığı bir şarkıya yanlış kod yerine hiç kod yazılmaz. Sanatçı İzleme ve kopya denetimi şarkıları önce bu koda göre karşılaştırır; böylece iki katalog aynı kaydı farklı adlandırsa da tanınır. Kitaplığınızdaki mevcut dosyalar değişmez ve Navidrome şarkıları ISRC ile tanımlamadığı için kodu yazmak orada hiçbir şeyi değiştirmez.

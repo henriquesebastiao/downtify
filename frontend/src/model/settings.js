@@ -87,6 +87,7 @@ const settings = ref({
   cover_resolution: 600,
   download_cover_art: true,
   overwrite_existing_files: true,
+  write_isrc: true,
   search_albums: true,
   mini_player_enabled: true,
 })

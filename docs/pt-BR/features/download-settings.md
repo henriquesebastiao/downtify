@@ -208,3 +208,6 @@ O Downtify incorpora as tags a seguir em todo arquivo baixado, qualquer que seja
 | Ano | Embed do Spotify (busca no nível da faixa) |
 | Capa do álbum | Embed do Spotify (capa no nível da faixa) para faixas resolvidas pelo Spotify; miniatura do YouTube Music ou capa do Deezer nos demais casos. Opcional — veja [Baixar capa](#download-cover-art) e [Resolução da capa](#cover-art-resolution) |
 | Letra | lrclib (se ativado) |
+| ISRC | Deezer, só quando há certeza. Opcional — **Gravar códigos ISRC** (veja abaixo) |
+
+O **ISRC** é o código que uma gravadora dá a uma gravação, como `USCM51600061`. Com **Configurações → Tags e letras → Gravar códigos ISRC** ativado (padrão), cada novo download é buscado no Deezer: um download do Deezer usa o código da própria faixa; qualquer outro é buscado por artista, título e duração, e o código só é gravado quando todos os resultados concordam. Uma música que o Deezer não identifica com certeza fica sem código em vez de receber um errado. O Monitoramento de artistas e a verificação de duplicatas comparam primeiro por esse código, então a mesma gravação é reconhecida mesmo quando dois catálogos a chamam de forma diferente. Os arquivos que já estão na sua biblioteca não mudam, e o Navidrome não identifica músicas pelo ISRC, então gravá-lo não muda nada lá.

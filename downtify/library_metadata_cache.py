@@ -29,7 +29,8 @@ _TAG_READ_THREADS = 8
 #: act split into its members read as its album artist
 #: (``library_metadata.split_artists``), and the compilation flag.
 #: 8: the full release date from audio tags.
-META_VERSION = 8
+#: 9: the ISRC (downtify.isrc), which songs are matched by first.
+META_VERSION = 9
 
 #: Columns added after the table was first created, with their SQL type.
 _ADDED_COLUMNS = {
@@ -49,6 +50,7 @@ _ADDED_COLUMNS = {
     'explicit': 'INTEGER NOT NULL DEFAULT 0',
     'artists': "TEXT NOT NULL DEFAULT '[]'",
     'compilation': 'INTEGER NOT NULL DEFAULT 0',
+    'isrc': "TEXT NOT NULL DEFAULT ''",
 }
 
 _ROW_COLUMNS = (
@@ -56,7 +58,7 @@ _ROW_COLUMNS = (
     'album, has_cover, cover_px, album_artist, track_number, year, '
     'release_date, '
     'duration, meta_version, codec, bitrate, sample_rate, channels, '
-    'genre, explicit, artists, compilation'
+    'genre, explicit, artists, compilation, isrc'
 )
 
 
@@ -105,6 +107,7 @@ def _row_entry(
         if 'explicit' in row.keys()
         else False,
         'compilation': bool(int(row['compilation'] or 0)),
+        'isrc': str(row['isrc'] or '') if 'isrc' in row.keys() else '',
         'has_cover': bool(int(row['has_cover'] or 0)),
         'cover_px': int(row['cover_px'] or 0),
         'added': int(item['mtime_ns']) // 1_000_000_000,
@@ -161,6 +164,7 @@ class LibraryMetadataCache:
                         explicit INTEGER NOT NULL DEFAULT 0,
                         artists TEXT NOT NULL DEFAULT '[]',
                         compilation INTEGER NOT NULL DEFAULT 0,
+                        isrc TEXT NOT NULL DEFAULT '',
                         file_mtime_ns INTEGER NOT NULL,
                         file_size INTEGER NOT NULL,
                         cached_at TEXT NOT NULL
@@ -522,10 +526,10 @@ class LibraryMetadataCache:
                      cover_px, album_artist, track_number, year, release_date,
                      duration,
                 meta_version, codec, bitrate, sample_rate, channels, genre,
-                explicit, artists, compilation, file_mtime_ns, file_size,
-                cached_at)
+                explicit, artists, compilation, isrc, file_mtime_ns,
+                file_size, cached_at)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-                              ?, ?, ?, ?, ?, ?)
+                              ?, ?, ?, ?, ?, ?, ?)
                ON CONFLICT(content_key) DO UPDATE SET
                filename=excluded.filename,
                title=excluded.title,
@@ -547,6 +551,7 @@ class LibraryMetadataCache:
                explicit=excluded.explicit,
                artists=excluded.artists,
                compilation=excluded.compilation,
+               isrc=excluded.isrc,
                file_mtime_ns=excluded.file_mtime_ns,
                file_size=excluded.file_size,
                cached_at=excluded.cached_at""",
@@ -575,6 +580,7 @@ class LibraryMetadataCache:
                     ensure_ascii=False,
                 ),
                 1 if entry.get('compilation') else 0,
+                str(entry.get('isrc') or ''),
                 mtime_ns,
                 file_size,
                 _now_iso(),

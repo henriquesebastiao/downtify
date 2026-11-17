@@ -1677,6 +1677,10 @@ export default {
     syncDelay: 'Eşitleme araması arası bekleme',
     syncDelayHint:
       'İçe aktarılan her parça grubundan sonra (boyut = Eşzamanlı indirmeler) söz, kapak ve tür aramadan önce bekler. Büyük klasörlerde kota sınırını azaltır.',
+    idsGroup: 'Şarkı kimlikleri',
+    isrc: 'ISRC kodlarını yaz',
+    isrcHint:
+      'Her yeni indirmeye, bir kaydı tanımlayan ISRC kodunu yazar; böylece aynı şarkı başka bir adla da tanınır. Deezer’da aranır; emin olunmadığında yazılmaz.',
     artGroup: 'Kapak',
     coverArt: 'Kapağı göm',
     coverArtHint: 'Daha küçük dosyalar ve daha hızlı indirmeler için kapat.',

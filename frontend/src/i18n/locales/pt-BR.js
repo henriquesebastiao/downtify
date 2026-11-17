@@ -1694,6 +1694,10 @@ export default {
     syncDelay: 'Pausa entre a sincronização',
     syncDelayHint:
       'Espera depois de cada lote de faixas importadas (tamanho = Downloads simultâneos) antes de buscar letra, capa e gênero. Evita limite de taxa em pastas grandes.',
+    idsGroup: 'IDs das músicas',
+    isrc: 'Gravar códigos ISRC',
+    isrcHint:
+      'Salva o ISRC de cada novo download, o código que identifica uma gravação, para reconhecer a mesma música mesmo com outro nome. Buscado no Deezer; omitido quando não há certeza.',
     artGroup: 'Capa',
     coverArt: 'Incorporar capa',
     coverArtHint: 'Desative para arquivos menores e downloads mais rápidos.',
