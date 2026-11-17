@@ -4,7 +4,7 @@
   >
     <PageHeader :title="t('monitor.title')" :subtitle="t('monitor.subtitle')">
       <UiButton
-        v-if="enabledInTab.length"
+        v-if="tab !== 'wanted' && enabledInTab.length"
         variant="ghost"
         icon="retry"
         :loading="checkingAll"

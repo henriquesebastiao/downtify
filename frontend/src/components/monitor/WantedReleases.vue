@@ -223,6 +223,8 @@ const stopping = ref(false)
 const busy = ref(new Set())
 const fetching = ref(new Set())
 let poll = null
+// False once the tab is left: a request still in flight must not poll on.
+let alive = true
 
 const totals = computed(() => summary(data.value?.totals))
 const job = computed(() => data.value?.job || null)
@@ -266,20 +268,27 @@ function errorOf(err) {
   return t('toast.actionFailed')
 }
 
-async function load() {
+// A poll is a load the timer starts: it fails quietly and tries again.
+async function load(polled = false) {
   clearTimeout(poll)
   try {
     const { data: body } = await monitorAPI.getWanted()
+    if (!alive) return
     data.value = body
     error.value = ''
     emit('totals', body.totals?.releases ?? 0)
-    // Follow a running job until it is done.
-    if (body.job?.running) poll = setTimeout(load, 2000)
   } catch (err) {
-    if (data.value) ui.toast(errorOf(err), { kind: 'error' })
+    if (!alive) return
+    if (polled) {
+      // keep following the job we last knew about
+    } else if (data.value) ui.toast(errorOf(err), { kind: 'error' })
     else error.value = errorOf(err)
   } finally {
     loading.value = false
+  }
+  // Follow a running job until it is done (and only while the tab is open).
+  if (alive && data.value?.job?.running) {
+    poll = setTimeout(() => load(true), 2000)
   }
 }
 
@@ -375,6 +384,9 @@ async function toggle(entry, release, on) {
   }
 }
 
-onMounted(load)
-onBeforeUnmount(() => clearTimeout(poll))
+onMounted(() => load())
+onBeforeUnmount(() => {
+  alive = false
+  clearTimeout(poll)
+})
 </script>
