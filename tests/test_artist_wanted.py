@@ -248,6 +248,13 @@ def _fresh_job(monkeypatch):
     monkeypatch.setattr(api, '_inventories', {})
     monkeypatch.setattr(api.state, 'settings', {})
 
+    # Never the real network: a test that lets the job run patches its own.
+    def no_network(*_args, **_kwargs):
+        raise AssertionError('the job reached the network')
+
+    monkeypatch.setattr(wanted_routes, 'take_inventory', no_network)
+    monkeypatch.setattr(wanted_routes, 'check_watch', no_network)
+
 
 def _unchecked(db, name, user_id=0):
     """An artist whose catalogue has a release with no tracklist."""
@@ -320,6 +327,7 @@ def test_check_all_runs_unchecked_artists_one_by_one(db, monkeypatch):
     assert calls == ['Ace', 'Bee']
     after = wanted_routes.public_job(wanted_routes._job)
     assert after['running'] is False
+    assert after['failed'] == 0  # the fake's asserts held
     assert (after['done'], after['total'], after['current']) == (2, 2, '')
     assert 'cancel' not in after
     assert 'user_id' not in after
@@ -354,6 +362,7 @@ def test_download_all_runs_artists_with_gaps_one_by_one(db, monkeypatch):
     assert job['kind'] == 'download'
     assert calls == ['Ace', 'Bee']
     assert wanted_routes._job['done'] == 2
+    assert wanted_routes._job['failed'] == 0
 
 
 def test_download_all_needs_a_downloader(db, monkeypatch):
@@ -401,6 +410,7 @@ def test_stop_finishes_the_current_artist_then_stops(db, monkeypatch):
 
     job = wanted_routes._job
     assert calls == ['Ace']
+    assert job['failed'] == 0  # the fake's `stop()` assert held
     assert job['stopped'] is True
     assert job['done'] == 1
     assert job['running'] is False

@@ -291,7 +291,8 @@ downloads are shared, and files are never stored twice.
   nothing) and ``POST /api/monitor/wanted/(check-all|download-all|stop)``
   (read every artist's unchecked tracklists, or download every artist's
   gaps, one artist at a time as one job - ``409 wanted_busy`` while one
-  runs; stop ends it after the artist it is on) - see
+  runs; stop ends download-all after the artist it is on, check-all at
+  the next release it reads) - see
   ``downtify/wanted_routes.py``
 * ``GET|PUT /api/likes`` and ``POST /api/likes/clear`` (the heart on a
   library track; while any song is liked they are also written out as a

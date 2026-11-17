@@ -10,7 +10,9 @@ as unchecked: its size is unknown.
 ``POST .../check-all`` reads the tracklists of the artists with unchecked
 releases, ``POST .../download-all`` downloads what the ones with gaps
 miss - one artist at a time, as one background job for everyone; ``POST
-.../stop`` ends it after the artist it is on.
+.../stop`` ends it: a download-all after the artist it is on, a check-all
+at the next release it reads (what was read is kept; the next check-all
+picks the artist up again).
 """
 
 from __future__ import annotations
@@ -278,7 +280,8 @@ async def download_all(request: Request) -> dict[str, Any]:
 
 @router.post('/stop')
 async def stop(request: Request) -> dict[str, Any] | None:
-    """End the job after the artist it is on; the job as the page sees it."""
+    """Stop the job: a download-all after the artist it is on, a check-all
+    at the next release it reads. The job as the page sees it."""
 
     job = _visible_job(request)
     if job is None and _job:
