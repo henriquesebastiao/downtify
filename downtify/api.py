@@ -288,7 +288,11 @@ downloads are shared, and files are never stored twice.
   downloads that the library has partly or not at all, ``{artists:
   [{watch, releases, missing, checking}], totals: {tracks, releases,
   artists, unchecked}, job}``; reads what the sweeps kept, fetches
-  nothing) - see ``downtify/wanted_routes.py``
+  nothing) and ``POST /api/monitor/wanted/(check-all|download-all|stop)``
+  (read every artist's unchecked tracklists, or download every artist's
+  gaps, one artist at a time as one job - ``409 wanted_busy`` while one
+  runs; stop ends it after the artist it is on) - see
+  ``downtify/wanted_routes.py``
 * ``GET|PUT /api/likes`` and ``POST /api/likes/clear`` (the heart on a
   library track; while any song is liked they are also written out as a
   playlist)
@@ -1359,6 +1363,7 @@ def spawn_task(coro: Any, *, name: Optional[str] = None) -> asyncio.Task[Any]:
         'replace-',
         'monitor-initial-check',
         'monitor-manual-check',
+        'monitor-wanted',
         'queue-restore',
     )):
         lease = contextlib.ExitStack()

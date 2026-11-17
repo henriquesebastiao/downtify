@@ -237,3 +237,311 @@ def test_the_route_returns_the_view_and_no_job(db, monkeypatch):
     assert body['job'] is None
     assert body['totals']['tracks'] == 1
     json.dumps(body)
+
+
+# ── The jobs: check all, download all ───────────────────────────────────
+
+
+@pytest.fixture(autouse=True)
+def _fresh_job(monkeypatch):
+    monkeypatch.setattr(wanted_routes, '_job', {})
+    monkeypatch.setattr(api, '_inventories', {})
+    monkeypatch.setattr(api.state, 'settings', {})
+
+
+def _unchecked(db, name, user_id=0):
+    """An artist whose catalogue has a release with no tracklist."""
+
+    watch = _artist(db, name, user_id)
+    _add_release(db, watch, _release(f'{name}1', 'LP', name))
+    return watch
+
+
+def _gappy(db, name, user_id=0):
+    watch = _artist(db, name, user_id)
+    _add_release(db, watch, _release(f'{name}1', 'LP', name), ['One', 'Two'])
+    return watch
+
+
+class _Spawned:
+    """``spawn_task`` stand-in that keeps the task to await."""
+
+    def __init__(self, monkeypatch):
+        self.tasks: list[asyncio.Task] = []
+        monkeypatch.setattr(wanted_routes.api, 'spawn_task', self.spawn)
+
+    def spawn(self, coro, *, name=None):
+        task = asyncio.get_running_loop().create_task(coro, name=name)
+        self.tasks.append(task)
+        return task
+
+    async def finish(self):
+        await asyncio.gather(*self.tasks)
+
+
+def _admin():
+    return _request(1, 'admin')
+
+
+def _run(spawned, start, request):
+    """Start the job, run its task to the end; the start's result."""
+
+    async def go():
+        result = await start(request)
+        await spawned.finish()
+        return result
+
+    return asyncio.run(go())
+
+
+def test_check_all_runs_unchecked_artists_one_by_one(db, monkeypatch):
+    _library(monkeypatch)
+    _unchecked(db, 'Bee')
+    _unchecked(db, 'Ace')
+    _gappy(db, 'Done')
+    calls: list[str] = []
+    busy = {'now': False}
+
+    def fake(watch, db_, *, progress=None, stop=None):
+        assert not busy['now']
+        busy['now'] = True
+        calls.append(watch.name)
+        assert api._inventories[watch.id]['running'] is True
+        assert wanted_routes._job['current'] == watch.name
+        busy['now'] = False
+        return {'checked': 1, 'failed': 0, 'total': 1}
+
+    monkeypatch.setattr(wanted_routes, 'take_inventory', fake)
+    spawned = _Spawned(monkeypatch)
+
+    job = _run(spawned, wanted_routes.check_all, _admin())
+
+    assert job['kind'] == 'check'
+    assert calls == ['Ace', 'Bee']
+    after = wanted_routes.public_job(wanted_routes._job)
+    assert after['running'] is False
+    assert (after['done'], after['total'], after['current']) == (2, 2, '')
+    assert 'cancel' not in after
+    assert 'user_id' not in after
+    assert all(
+        not s['running'] and s['checked'] == 1
+        for s in api._inventories.values()
+    )
+
+
+def test_download_all_runs_artists_with_gaps_one_by_one(db, monkeypatch):
+    _library(monkeypatch)
+    _gappy(db, 'Bee')
+    _gappy(db, 'Ace')
+    monkeypatch.setattr(api.state, 'downloader', object())
+    monkeypatch.setattr(wanted_routes, 'check_running', lambda _id: False)
+    calls: list[str] = []
+    busy = {'now': False}
+
+    async def fake(watch, *args, fill_missing=False):
+        assert not busy['now']
+        assert fill_missing is True
+        busy['now'] = True
+        await asyncio.sleep(0)
+        calls.append(watch.name)
+        busy['now'] = False
+
+    monkeypatch.setattr(wanted_routes, 'check_watch', fake)
+    spawned = _Spawned(monkeypatch)
+
+    job = _run(spawned, wanted_routes.download_all, _admin())
+
+    assert job['kind'] == 'download'
+    assert calls == ['Ace', 'Bee']
+    assert wanted_routes._job['done'] == 2
+
+
+def test_download_all_needs_a_downloader(db, monkeypatch):
+    _library(monkeypatch)
+    _gappy(db, 'Ace')
+    spawned = _Spawned(monkeypatch)
+
+    with pytest.raises(api.HTTPException) as err:
+        asyncio.run(wanted_routes.download_all(_admin()))
+    assert err.value.status_code == 500
+    assert spawned.tasks == []
+
+
+def test_second_job_is_refused(db, monkeypatch):
+    _library(monkeypatch)
+    _unchecked(db, 'Ace')
+    _Spawned(monkeypatch)
+
+    async def go():
+        await wanted_routes.check_all(_admin())
+        await wanted_routes.check_all(_admin())
+
+    with pytest.raises(api.HTTPException) as err:
+        asyncio.run(go())
+    assert err.value.status_code == 409
+    assert err.value.detail == {'code': 'wanted_busy'}
+
+
+def test_stop_finishes_the_current_artist_then_stops(db, monkeypatch):
+    _library(monkeypatch)
+    _unchecked(db, 'Ace')
+    _unchecked(db, 'Bee')
+    calls: list[str] = []
+
+    def fake(watch, db_, *, progress=None, stop=None):
+        calls.append(watch.name)
+        wanted_routes._job['cancel'] = True  # as POST /stop sets it
+        assert stop() is True
+        return {'checked': 0, 'failed': 0, 'total': 0}
+
+    monkeypatch.setattr(wanted_routes, 'take_inventory', fake)
+    spawned = _Spawned(monkeypatch)
+
+    _run(spawned, wanted_routes.check_all, _admin())
+
+    job = wanted_routes._job
+    assert calls == ['Ace']
+    assert job['stopped'] is True
+    assert job['done'] == 1
+    assert job['running'] is False
+
+
+def test_stop_endpoint_cancels_the_running_job(db, monkeypatch):
+    _library(monkeypatch)
+    _unchecked(db, 'Ace')
+    _Spawned(monkeypatch)
+
+    async def go():
+        await wanted_routes.check_all(_admin())
+        return await wanted_routes.stop(_admin())
+
+    body = asyncio.run(go())
+    assert wanted_routes._job['cancel'] is True
+    assert 'cancel' not in body
+
+
+def test_stop_without_a_job_is_quiet(db):
+    assert asyncio.run(wanted_routes.stop(_admin())) is None
+
+
+def test_one_failing_artist_does_not_stop_the_job(db, monkeypatch):
+    _library(monkeypatch)
+    _unchecked(db, 'Ace')
+    _unchecked(db, 'Bee')
+    calls: list[str] = []
+
+    def fake(watch, db_, *, progress=None, stop=None):
+        calls.append(watch.name)
+        if watch.name == 'Ace':
+            raise RuntimeError('boom')
+        return {'checked': 1, 'failed': 0, 'total': 1}
+
+    monkeypatch.setattr(wanted_routes, 'take_inventory', fake)
+    spawned = _Spawned(monkeypatch)
+
+    _run(spawned, wanted_routes.check_all, _admin())
+
+    job = wanted_routes._job
+    assert calls == ['Ace', 'Bee']
+    assert (job['failed'], job['done']) == (1, 2)
+
+
+def test_download_all_skips_a_watch_being_checked(db, monkeypatch):
+    _library(monkeypatch)
+    ace = _gappy(db, 'Ace')
+    _gappy(db, 'Bee')
+    monkeypatch.setattr(api.state, 'downloader', object())
+    monkeypatch.setattr(
+        wanted_routes, 'check_running', lambda wid: wid == ace.id
+    )
+    calls: list[str] = []
+
+    async def fake(watch, *args, fill_missing=False):
+        calls.append(watch.name)
+
+    monkeypatch.setattr(wanted_routes, 'check_watch', fake)
+    spawned = _Spawned(monkeypatch)
+
+    _run(spawned, wanted_routes.download_all, _admin())
+
+    assert calls == ['Bee']
+    assert wanted_routes._job['skipped'] == 1
+
+
+def test_job_skips_a_watch_removed_mid_run(db, monkeypatch):
+    _library(monkeypatch)
+    ace = _unchecked(db, 'Ace')
+    bee = _unchecked(db, 'Bee')
+    cat = _unchecked(db, 'Cat')
+    calls: list[str] = []
+
+    def fake(watch, db_, *, progress=None, stop=None):
+        calls.append(watch.name)
+        return {'checked': 1, 'failed': 0, 'total': 1}
+
+    monkeypatch.setattr(wanted_routes, 'take_inventory', fake)
+    spawned = _Spawned(monkeypatch)
+
+    async def go():
+        await wanted_routes.check_all(_admin())
+        db.delete_playlist(bee.id)
+        db.update_playlist(cat.id, enabled=False)
+        await spawned.finish()
+
+    asyncio.run(go())
+
+    assert calls == [ace.name]
+    assert wanted_routes._job['skipped'] == 2
+    assert wanted_routes._job['done'] == 3
+
+
+def test_job_hidden_from_other_users(db, monkeypatch):
+    _library(monkeypatch)
+    _unchecked(db, 'Ace', user_id=2)
+    _Spawned(monkeypatch)
+    starter = _request(2, 'user')
+
+    async def go():
+        await wanted_routes.check_all(starter)
+        return (
+            await wanted_routes.wanted(starter),
+            await wanted_routes.wanted(_request(3, 'user')),
+            await wanted_routes.wanted(_admin()),
+        )
+
+    mine, other, admin = asyncio.run(go())
+    assert mine['job']['kind'] == 'check'
+    assert other['job'] is None
+    assert admin['job']['kind'] == 'check'
+    with pytest.raises(api.HTTPException) as err:
+        asyncio.run(wanted_routes.stop(_request(3, 'user')))
+    assert err.value.detail == {'code': 'no_job'}
+
+
+def test_a_user_job_covers_only_their_artists(db, monkeypatch):
+    _library(monkeypatch)
+    _unchecked(db, 'Mine', user_id=2)
+    _unchecked(db, 'Theirs', user_id=3)
+    calls: list[str] = []
+
+    def fake(watch, db_, *, progress=None, stop=None):
+        calls.append(watch.name)
+        return {'checked': 1, 'failed': 0, 'total': 1}
+
+    monkeypatch.setattr(wanted_routes, 'take_inventory', fake)
+    spawned = _Spawned(monkeypatch)
+
+    _run(spawned, wanted_routes.check_all, _request(2, 'user'))
+
+    assert calls == ['Mine']
+
+
+def test_library_only_blocks_the_jobs(db, monkeypatch):
+    _library(monkeypatch)
+    _unchecked(db, 'Ace')
+    monkeypatch.setattr(api.state, 'settings', {'library_only': True})
+
+    with pytest.raises(api.HTTPException) as err:
+        asyncio.run(wanted_routes.check_all(_admin()))
+    assert err.value.status_code == 409
+    assert wanted_routes._job == {}
