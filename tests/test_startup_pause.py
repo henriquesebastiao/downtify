@@ -42,6 +42,7 @@ def test_pause_is_restored_before_the_first_startup_monitor(
     monkeypatch.setattr(api, '_shutdown_done', False)
     monkeypatch.setenv('DOWNTIFY_DISABLE_AUTH', '1')
     observed = []
+    reconcile_settings = []
 
     async def monitor_probe(*args, **kwargs):
         observed.append(queue_pause.paused)
@@ -50,8 +51,13 @@ def test_pause_is_restored_before_the_first_startup_monitor(
     async def idle_update_loop(*args, **kwargs):
         await asyncio.Event().wait()
 
+    async def reconcile_probe(*args, **kwargs):
+        reconcile_settings.append(kwargs.get('settings'))
+        await asyncio.Event().wait()
+
     monkeypatch.setattr(main, 'update_check_loop', idle_update_loop)
     monkeypatch.setattr(main, 'monitor_loop', monitor_probe)
+    monkeypatch.setattr(main, 'reconcile_loop', reconcile_probe)
     try:
         with TestClient(main.build_app()) as client:
             response = client.get('/api/queue/state')
@@ -61,6 +67,8 @@ def test_pause_is_restored_before_the_first_startup_monitor(
             assert response.json()['can_control']
             assert observed
             assert all(observed)
+            assert reconcile_settings == [api.state.settings]
+            assert reconcile_settings[0] is api.state.settings
         release.assert_called_once_with()
     finally:
         queue_pause.resume()

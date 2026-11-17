@@ -2510,9 +2510,12 @@ async def monitor_loop(
 
 
 async def reconcile_downloaded_tracks(
-    db: PlaylistMonitorDB, downloader: Downloader
+    db: PlaylistMonitorDB,
+    downloader: Downloader,
+    *,
+    settings: Optional[dict[str, Any]] = None,
 ) -> int:
-    """Drop ``downloaded_tracks`` rows whose file is gone from disk.
+    """Drop ``downloaded_tracks`` rows absent from the registered library.
 
     ``check_playlist`` trusts a row in ``downloaded_tracks`` as proof a
     track was already downloaded without re-checking the filesystem (see
@@ -2521,10 +2524,17 @@ async def reconcile_downloaded_tracks(
     trade-off: a track whose file has genuinely disappeared (deleted,
     not just moved) is still noticed here and forgotten, so it becomes
     eligible for re-download again on the watch's next check. Returns
-    the number of rows removed.
+    the number of rows removed. Configured external music folders are
+    checked alongside downloads and the slskd source folder.
     """
     rows = await asyncio.to_thread(db.list_all_downloaded_tracks)
     slskd_dir = slskd_dir_from_downloader(downloader)
+    extra_dirs = await asyncio.to_thread(
+        extra_dirs_from_settings,
+        settings or {},
+        Path(downloader.download_dir),
+        slskd_dir,
+    )
     # One stat() per downloaded track — thousands of them on a slow disk
     # or network mount — so off the event loop.
     missing = await asyncio.to_thread(
@@ -2532,7 +2542,10 @@ async def reconcile_downloaded_tracks(
             (row['playlist_id'], row['track_spotify_id'])
             for row in rows
             if locate_library_file(
-                row['filename'], downloader.download_dir, slskd_dir
+                row['filename'],
+                downloader.download_dir,
+                slskd_dir,
+                extra_dirs,
             )
             is None
         ]
@@ -2546,24 +2559,29 @@ async def reconcile_loop(
     db: PlaylistMonitorDB,
     get_downloader: Callable[[], Optional[Downloader]],
     interval_seconds: int = RECONCILE_LOOP_INTERVAL,
+    *,
+    settings: Optional[dict[str, Any]] = None,
 ) -> None:
     """Background task: hourly, prune downloaded-track records for files
-    that are no longer in the downloads directory.
+    that are no longer in any registered library folder.
 
     Runs independently of :func:`monitor_loop` and its per-watch
     schedule — this sweep always checks every known downloaded track
-    across every watch, on its own fixed cadence.
+    across every watch, on its own fixed cadence. External folder settings
+    are resolved again each sweep, so changes need no restart.
     """
     while True:
         try:
             await queue_pause.wait()
             downloader = get_downloader()
             if downloader is not None:
-                removed = await reconcile_downloaded_tracks(db, downloader)
+                removed = await reconcile_downloaded_tracks(
+                    db, downloader, settings=settings
+                )
                 if removed:
                     logger.info(
                         '{} downloaded-track record(s) removed: file no '
-                        'longer found in the downloads directory',
+                        'longer found in the registered library folders',
                         removed,
                     )
         except Exception:

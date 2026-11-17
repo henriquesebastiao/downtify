@@ -53,6 +53,8 @@ Folders that don't exist or aren't readable are reported after Sync; the others 
 
 Extra-folder files use a virtual path `ext/<id>/…` (the id is a hash of the folder path, so the list can be reordered). The player and `GET /media/…` use that path, like `slskd/…` for Soulseek files left in place.
 
+Playlist Monitor's hourly file check resolves these paths against the current folder list too. A tracked file still present in a configured folder keeps its download record, including on a read-only mount. Reordering the list does not change its identity. Removing the folder, deleting the file or making the mount unavailable makes that record eligible for cleanup on the next hourly check; the audio itself is never deleted by the check.
+
 A folder that already sits **inside** `/downloads` (or the slskd source folder) is ignored here — that tree is already the library.
 
 ## API
