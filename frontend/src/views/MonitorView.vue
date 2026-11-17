@@ -4,7 +4,7 @@
   >
     <PageHeader :title="t('monitor.title')" :subtitle="t('monitor.subtitle')">
       <UiButton
-        v-if="enabledInTab.length"
+        v-if="tab !== 'wanted' && enabledInTab.length"
         variant="ghost"
         icon="retry"
         :loading="checkingAll"
@@ -18,6 +18,7 @@
     <UiTabs :items="tabs" :model-value="tab" />
 
     <form
+      v-if="tab !== 'wanted'"
       ref="watchForm"
       class="flex flex-col gap-2 rounded-panel border border-line-2 bg-surface p-2 sm:flex-row sm:items-center"
       @submit.prevent="add"
@@ -83,24 +84,30 @@
       </UiButton>
     </p>
 
-    <p class="flex items-start gap-2 text-[13px] text-pretty text-muted">
+    <p
+      v-if="tab !== 'wanted'"
+      class="flex items-start gap-2 text-[13px] text-pretty text-muted"
+    >
       <AppIcon name="info" :size="16" class="mt-0.5 shrink-0" />{{
         copy.explainer
       }}
     </p>
 
-    <div v-if="loading && !items.length" class="flex flex-col gap-2">
+    <div
+      v-if="tab !== 'wanted' && loading && !items.length"
+      class="flex flex-col gap-2"
+    >
       <UiSkeleton v-for="n in 4" :key="n" class="h-[72px] !rounded-[12px]" />
     </div>
 
     <UiEmpty
-      v-else-if="!inTab.length"
+      v-else-if="tab !== 'wanted' && !inTab.length"
       :icon="tab === 'artist' ? 'user' : 'playlist'"
       :title="copy.emptyTitle"
       :body="copy.emptyBody"
     />
 
-    <template v-else>
+    <template v-else-if="tab !== 'wanted'">
       <div
         class="flex flex-wrap items-center gap-x-6 gap-y-3 rounded-panel border border-line-2 bg-surface px-4 py-3"
       >
@@ -577,6 +584,9 @@
       </template>
     </template>
 
+    <!-- Everything the watched artists are missing. -->
+    <WantedReleases v-if="tab === 'wanted'" @totals="wantedCount = $event" />
+
     <ArtistSuggestions
       v-if="tab === 'artist' && listed"
       :revision="watchesRevision"
@@ -623,6 +633,7 @@ import UiTabs from '/src/components/ui/UiTabs.vue'
 import PageHeader from '/src/components/library/PageHeader.vue'
 import ReleaseFilters from '/src/components/monitor/ReleaseFilters.vue'
 import ArtistSuggestions from '/src/components/monitor/ArtistSuggestions.vue'
+import WantedReleases from '/src/components/monitor/WantedReleases.vue'
 import WatchEditDialog from '/src/components/monitor/WatchEditDialog.vue'
 import WatchSourceBadge from '/src/components/monitor/WatchSourceBadge.vue'
 import { intervalOptions } from '/src/components/monitor/intervals'
@@ -776,9 +787,13 @@ const counts = computed(() => countWatches(items.value))
 
 // /monitor/playlists and /monitor/artists; plain /monitor opens the tab
 // that has something in it.
+// The releases the Wanted tab last listed (it is read only when opened).
+const wantedCount = ref(null)
+
 const tab = computed(() => {
   if (route.params.tab === 'artists') return 'artist'
   if (route.params.tab === 'playlists') return 'playlist'
+  if (route.params.tab === 'wanted') return 'wanted'
   return !counts.value.playlist && counts.value.artist ? 'artist' : 'playlist'
 })
 
@@ -944,6 +959,13 @@ const tabs = computed(() => [
     label: t('monitor.filterArtists'),
     count: counts.value.artist,
     to: { name: 'Monitor', params: { tab: 'artists' } },
+  },
+  {
+    id: 'wanted',
+    label: t('monitor.filterWanted'),
+    // Known once the Wanted tab has been opened in this visit.
+    count: wantedCount.value,
+    to: { name: 'Monitor', params: { tab: 'wanted' } },
   },
 ])
 

@@ -1231,6 +1231,48 @@ export default {
     filterAll: 'Tout',
     filterPlaylists: 'Playlists',
     filterArtists: 'Artistes',
+    filterWanted: 'Recherchés',
+    wantedSummary: 'Manquant : {songs} dans {releases}',
+    wantedSongs: { one: '{count} titre', other: '{count} titres' },
+    wantedReleases: { one: '{count} sortie', other: '{count} sorties' },
+    wantedUnchecked: {
+      one: '{count} sortie pas encore vérifiée',
+      other: '{count} sorties pas encore vérifiées',
+    },
+    wantedCheckAll: 'Vérifier tous les artistes',
+    wantedDownloadAll: 'Télécharger tout ce qui manque',
+    wantedConfirmTitle: {
+      one: 'Télécharger {count} titre manquant ?',
+      other: 'Télécharger {count} titres manquants ?',
+    },
+    wantedConfirmUnchecked: {
+      one: 'Plus ce qui manque dans {count} sortie pas encore vérifiée. Vérifie d’abord tous les artistes pour obtenir un nombre exact.',
+      other:
+        'Plus ce qui manque dans {count} sorties pas encore vérifiées. Vérifie d’abord tous les artistes pour obtenir un nombre exact.',
+    },
+    wantedConfirmBody:
+      'Les titres manquants sont téléchargés un artiste à la fois. Tu peux les suivre dans la File.',
+    wantedStop: 'Arrêter',
+    wantedChecking: 'Vérification {done} sur {total} : {name}',
+    wantedDownloading: 'Téléchargement {done} sur {total} : {name}',
+    wantedFinished: {
+      one: 'Terminé : {count} artiste',
+      other: 'Terminé : {count} artistes',
+    },
+    wantedFailed: { one: '{count} échoué', other: '{count} échoués' },
+    wantedSkipped: { one: '{count} ignoré', other: '{count} ignorés' },
+    wantedStopped: 'Arrêté',
+    wantedStoppingDownload: 'Arrêt après {name}…',
+    wantedStoppingCheck: 'Arrêt…',
+    wantedBusy:
+      'Une vérification ou un téléchargement de tous les artistes est déjà en cours.',
+    wantedNotChecked: 'Pas encore vérifiés : {names}',
+    wantedMore: { one: 'et {count} autre', other: 'et {count} autres' },
+    wantedUncheckedBadge: 'Pas encore vérifiée',
+    wantedEmpty:
+      'Rien ne manque : tous les artistes que tu suis sont complets.',
+    wantedSearch: 'Rechercher des artistes ou des sorties',
+    wantedAllTypes: 'Tous les types',
     filterPaused: 'En pause',
     sortAdded: 'Date d’ajout',
     sortName: 'Nom',

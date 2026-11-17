@@ -572,3 +572,15 @@ def counts(releases: list[dict[str, Any]]) -> dict[str, int]:
     for release in releases:
         found[release['state']] = found.get(release['state'], 0) + 1
     return found
+
+
+def wanted_releases(releases: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """The releases "Download missing" would still fetch from: the ones
+    the watch downloads (``wanted``) that the library has only partly
+    (``partly``) or not at all (``missing``), in the order given."""
+
+    return [
+        release
+        for release in releases
+        if release.get('wanted') and release['state'] in {'partly', 'missing'}
+    ]

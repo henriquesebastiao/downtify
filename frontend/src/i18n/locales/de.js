@@ -1228,6 +1228,56 @@ export default {
     filterAll: 'Alle',
     filterPlaylists: 'Playlists',
     filterArtists: 'Künstler',
+    filterWanted: 'Gesucht',
+    wantedSummary: 'Fehlend: {songs} in {releases}',
+    wantedSongs: { one: '{count} Song', other: '{count} Songs' },
+    wantedReleases: {
+      one: '{count} Veröffentlichung',
+      other: '{count} Veröffentlichungen',
+    },
+    wantedUnchecked: {
+      one: '{count} Veröffentlichung noch nicht geprüft',
+      other: '{count} Veröffentlichungen noch nicht geprüft',
+    },
+    wantedCheckAll: 'Alle Künstler prüfen',
+    wantedDownloadAll: 'Alle fehlenden herunterladen',
+    wantedConfirmTitle: {
+      one: '{count} fehlenden Song herunterladen?',
+      other: '{count} fehlende Songs herunterladen?',
+    },
+    wantedConfirmUnchecked: {
+      one: 'Dazu kommt, was in {count} noch nicht geprüften Veröffentlichung fehlt. Prüfe zuerst alle Künstler für eine genaue Anzahl.',
+      other:
+        'Dazu kommt, was in {count} noch nicht geprüften Veröffentlichungen fehlt. Prüfe zuerst alle Künstler für eine genaue Anzahl.',
+    },
+    wantedConfirmBody:
+      'Die fehlenden Songs werden Künstler für Künstler heruntergeladen. Du kannst sie in der Warteschlange verfolgen.',
+    wantedStop: 'Stopp',
+    wantedChecking: 'Prüfe {done} von {total}: {name}',
+    wantedDownloading: 'Lade herunter {done} von {total}: {name}',
+    wantedFinished: {
+      one: 'Fertig: {count} Künstler',
+      other: 'Fertig: {count} Künstler',
+    },
+    wantedFailed: {
+      one: '{count} fehlgeschlagen',
+      other: '{count} fehlgeschlagen',
+    },
+    wantedSkipped: {
+      one: '{count} übersprungen',
+      other: '{count} übersprungen',
+    },
+    wantedStopped: 'Gestoppt',
+    wantedStoppingDownload: 'Stoppe nach {name} …',
+    wantedStoppingCheck: 'Stoppe …',
+    wantedBusy: '„Alle prüfen“ oder „Alle herunterladen“ läuft bereits.',
+    wantedNotChecked: 'Noch nicht geprüft: {names}',
+    wantedMore: { one: 'und {count} weitere', other: 'und {count} weitere' },
+    wantedUncheckedBadge: 'Noch nicht geprüft',
+    wantedEmpty:
+      'Nichts fehlt: Alle Künstler, die du beobachtest, sind vollständig.',
+    wantedSearch: 'Künstler oder Veröffentlichungen suchen',
+    wantedAllTypes: 'Alle Typen',
     filterPaused: 'Pausiert',
     sortAdded: 'Hinzugefügt am',
     sortName: 'Name',

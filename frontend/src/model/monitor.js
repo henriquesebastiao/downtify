@@ -100,8 +100,36 @@ function downloadArtistMissing(id) {
   return API.post(`/api/monitor/playlists/${id}/releases/download-missing`)
 }
 
+// The Wanted tab: what every watched artist is missing, and the jobs
+// that check or download all of it, one artist at a time.
+function getWanted() {
+  return API.get('/api/monitor/wanted')
+}
+
+// Just the job, light enough to poll while it runs.
+function getWantedJob() {
+  return API.get('/api/monitor/wanted/job')
+}
+
+function wantedCheckAll() {
+  return API.post('/api/monitor/wanted/check-all')
+}
+
+function wantedDownloadAll() {
+  return API.post('/api/monitor/wanted/download-all')
+}
+
+function wantedStop() {
+  return API.post('/api/monitor/wanted/stop')
+}
+
 export default {
   artistSuggestions,
+  getWanted,
+  getWantedJob,
+  wantedCheckAll,
+  wantedDownloadAll,
+  wantedStop,
   downloadArtistMissing,
   checkArtistInventory,
   getArtistReleaseTracks,
