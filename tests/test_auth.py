@@ -589,6 +589,7 @@ def test_the_signing_key_is_private_and_kept(tmp_path):
         ('GET', '/api/settings', ADMIN),
         ('GET', '/api/fs/dirs', ADMIN),
         ('POST', '/api/cookies', ADMIN),
+        ('POST', '/api/cookies/check', ADMIN),
         ('POST', '/api/proxy/test', ADMIN),
         ('DELETE', '/delete', USER),
         ('DELETE', '/delete/batch', USER),

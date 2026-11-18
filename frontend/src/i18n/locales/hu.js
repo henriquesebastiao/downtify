@@ -1711,6 +1711,18 @@ export default {
     cookiesLocked: 'A DOWNTIFY_COOKIES_FILE környezeti változó állítja be.',
     cookiesEnvMissing:
       'Ez a fájl nem létezik a konténerben — ellenőrizd az útvonalat és a kötetet.',
+    cookiesCheck: 'Ellenőrzés most',
+    cookiesChecked: 'ellenőrizve {when}',
+    cookiesStateValid: 'Bejelentkezve',
+    cookiesStateSignedOut: 'Kijelentkezve',
+    cookiesStateNoAccount: 'Nincs fiók',
+    cookiesStateError: 'Az ellenőrzés sikertelen',
+    cookiesStateUnknown: 'Még nincs ellenőrizve',
+    cookiesBotCheck: 'robotellenőrzés {when}',
+    cookiesSignedOutHint:
+      'A YouTube már nem fogadja el ezeket a sütiket. Jelentkezz be a YouTube-ra egy privát ablakban, exportálj új cookies.txt fájlt, zárd be az ablakot, és töltsd fel ide a fájlt.',
+    cookiesKeepAliveHint:
+      'A Downtify néhány percenként frissíti ezeket a sütiket, így bejelentkezve maradnak. Privát ablakból exportáld őket, majd zárd be: egy nyitva hagyott böngészőlap lecseréli őket, és kijelentkezteti ezt a másolatot.',
     audioGroup: 'Hang',
     format: 'Formátum',
     formatHint:

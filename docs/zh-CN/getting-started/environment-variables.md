@@ -105,6 +105,7 @@ YouTube 会定期对自动下载工具发起验证。默认配置失效时，可
 | `DOWNTIFY_YT_PLAYER_CLIENTS` | `ios,android,web_embedded,mweb,web,tv` | 按顺序尝试的 yt-dlp 播放器客户端列表，以逗号分隔。Downtify 默认优先使用无需 JavaScript 运行时的客户端。只有确认特定客户端遭到屏蔽时才建议覆盖此设置。 |
 | `DOWNTIFY_YT_PO_TOKEN` | _(unset)_ | 提供给 yt-dlp 的 Proof-of-Origin token 列表，以逗号分隔，每项格式为 `<client>.<context>+<token>`（例如 `mweb.gvs+ABC123`）。仅当 YouTube 开始要求当前客户端提供 PO Token 时才需要设置。 |
 | `DOWNTIFY_COOKIES_FILE` | _(unset)_ | 容器**内部** Netscape 格式 `cookies.txt` 的路径。让 yt-dlp 使用真实浏览器会话进行身份验证；下载显式内容/年龄限制歌曲或 YouTube 强制登录时需要此项。其优先级高于 Web 界面上传的文件，并会使界面中的 Cookie 区域变为只读。详见 [YouTube Cookie](../features/youtube-cookies.md)。 |
+| `DOWNTIFY_COOKIES_REFRESH_MINUTES` | `15` | Cookie 保活轮换并保存 YouTube 会话 Cookie 的间隔（分钟，`5`–`1440`）。`0` 表示关闭。它会刷新上传的文件，或 `DOWNTIFY_COOKIES_FILE` 指向的文件（可写时）。见[保持 cookies 有效](../features/youtube-cookies.md#keeping-them-working)。 |
 | `DOWNTIFY_COOKIES_FROM_BROWSER` | _(unset)_ | 用于提取 Cookie 的浏览器名称（例如 `chrome`、`firefox`）。容器必须能够访问浏览器 Cookie 存储，因此通常不适用于 Docker。 |
 
 ::: tip 通常无需配置这些变量
@@ -122,7 +123,7 @@ services:
     volumes:
       - ./downloads:/downloads
       - downtify_data:/data
-      - ./cookies.txt:/cookies.txt:ro
+      - ./cookies.txt:/cookies.txt
     environment:
       - DOWNTIFY_FORCE_IPV4=1
       - DOWNTIFY_COOKIES_FILE=/cookies.txt

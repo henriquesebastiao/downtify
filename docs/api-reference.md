@@ -1015,7 +1015,14 @@ Current cookie configuration.
   "locked": false,
   "path": "/data/cookies.txt",
   "size": 2048,
-  "updated_at": "2026-09-12T02:22:02.282849+00:00"
+  "updated_at": "2026-09-12T02:22:02.282849+00:00",
+  "health": {
+    "state": "valid",
+    "checked_at": "2026-09-12T02:30:00.000000+00:00",
+    "message": null,
+    "refreshed_at": "2026-09-12T02:30:00.000000+00:00",
+    "bot_check_at": null
+  }
 }
 ```
 
@@ -1024,7 +1031,11 @@ Current cookie configuration.
 | `configured` | boolean | Whether a usable cookie file is in place. |
 | `source` | string \| null | `"upload"`, `"env"` (`DOWNTIFY_COOKIES_FILE`), or `null` when unconfigured. |
 | `locked` | boolean | `true` when `DOWNTIFY_COOKIES_FILE` is set — uploads and deletions are then refused. |
-| `size` / `updated_at` | integer \| null | Only reported for an uploaded file. |
+| `size` / `updated_at` | integer \| null | Only reported for an uploaded file. `updated_at` also moves when the keep-alive saves rotated cookies. |
+| `health.state` | string | Last keep-alive result: `"valid"` (YouTube sees a signed-in account), `"signed_out"` (the session was refused — upload new cookies), `"no_account"` (no Google session in the file), `"error"` (YouTube couldn't be checked, see `message`) or `"unknown"` (not checked since start or upload). |
+| `health.checked_at` / `health.refreshed_at` | string \| null | When the session was last checked, and when changed cookies were last saved. |
+| `health.bot_check_at` | string \| null | When a download last hit YouTube's "confirm you're not a bot" wall. |
+| `health.message` | string \| null | Why the last check failed or signed out. |
 
 ---
 
@@ -1039,6 +1050,14 @@ Upload a Netscape `cookies.txt`, replacing any previous one. The body is the **r
 | `400` | Not a valid Netscape cookie jar (empty, binary, or no cookie lines). |
 | `409` | `DOWNTIFY_COOKIES_FILE` is set, so the file is managed outside the UI. |
 | `413` | Larger than 2 MB, so it isn't a cookies.txt. |
+
+---
+
+### `POST /api/cookies/check`
+
+Run the cookie keep-alive now: ask Google to rotate the session cookies, load `youtube.com` with them, save what changed into the cookie file and report whether the session is still signed in. It also runs on its own every `DOWNTIFY_COOKIES_REFRESH_MINUTES` and a few seconds after an upload.
+
+**Response:** the `GET /api/cookies` object with the new `health`. Never fails because YouTube is unreachable — that is `health.state: "error"`.
 
 ---
 

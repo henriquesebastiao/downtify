@@ -105,6 +105,7 @@ YouTube периодично предизвиква автоматизирани
 | `DOWNTIFY_YT_PLAYER_CLIENTS` | `ios,android,web_embedded,mweb,web,tv` | Списък, разделен със запетая, на клиентите на плейъра на yt-dlp, които да се пробват, по ред. Списъкът по подразбиране на Downtify вече предпочита клиенти, които работят без JavaScript среда. Сменяйте го само ако знаете, че конкретен клиент е блокиран. |
 | `DOWNTIFY_YT_PO_TOKEN` | _(не е зададена)_ | Токени Proof-of-Origin за yt-dlp, разделени със запетая, всеки във формата `<client>.<context>+<token>` (напр. `mweb.gvs+ABC123`). Нужни са само ако YouTube започне да изисква PO Tokens за клиентите, които ползвате. |
 | `DOWNTIFY_COOKIES_FILE` | _(не е зададена)_ | Път до `cookies.txt` във формат Netscape **вътре в контейнера**. Позволява на yt-dlp да се удостоверява като истинска сесия на браузър — нужно за експлицитни/с възрастово ограничение песни и винаги когато YouTube налага стена за вход. Има предимство пред файл, качен в уеб интерфейса, и прави тази секция на интерфейса само за четене. Вижте [Бисквитки за YouTube](../features/youtube-cookies.md). |
+| `DOWNTIFY_COOKIES_REFRESH_MINUTES` | `15` | През колко минути (`5`–`1440`) поддръжката на бисквитките сменя и записва сесийните бисквитки на YouTube. `0` я изключва. Обновява качения файл или този от `DOWNTIFY_COOKIES_FILE` (когато може да се записва в него). Вижте [Поддържане във валидно състояние](../features/youtube-cookies.md#keeping-them-working). |
 | `DOWNTIFY_COOKIES_FROM_BROWSER` | _(не е зададена)_ | Име на браузъра, от който да се извадят бисквитките (напр. `chrome`, `firefox`). Изисква хранилището на бисквитки на браузъра да е достъпно вътре в контейнера, така че рядко е използваемо в Docker. |
 
 ::: tip Вероятно не ви трябват
@@ -122,7 +123,7 @@ services:
     volumes:
       - ./downloads:/downloads
       - downtify_data:/data
-      - ./cookies.txt:/cookies.txt:ro
+      - ./cookies.txt:/cookies.txt
     environment:
       - DOWNTIFY_FORCE_IPV4=1
       - DOWNTIFY_COOKIES_FILE=/cookies.txt

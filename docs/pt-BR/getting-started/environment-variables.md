@@ -105,6 +105,7 @@ O YouTube desafia periodicamente baixadores automatizados. Estas variáveis dão
 | `DOWNTIFY_YT_PLAYER_CLIENTS` | `ios,android,web_embedded,mweb,web,tv` | Lista, separada por vírgulas, dos clientes de player do yt-dlp a tentar, em ordem. A lista padrão do Downtify já favorece clientes que funcionam sem um runtime de JavaScript. Altere só se você souber que um cliente específico está sendo bloqueado. |
 | `DOWNTIFY_YT_PO_TOKEN` | _(não definida)_ | Tokens Proof-of-Origin para o yt-dlp, separados por vírgulas, cada um no formato `<client>.<context>+<token>` (por exemplo `mweb.gvs+ABC123`). Necessários só se o YouTube passar a exigir PO Tokens para os clientes que você usa. |
 | `DOWNTIFY_COOKIES_FILE` | _(não definida)_ | Caminho de um `cookies.txt` em formato Netscape **dentro do contêiner**. Permite ao yt-dlp se autenticar como uma sessão real de navegador — necessário para faixas explícitas/com restrição de idade e sempre que o YouTube impõe uma barreira de login. Tem precedência sobre um arquivo enviado na interface web e deixa essa seção da interface somente leitura. Veja [Cookies do YouTube](../features/youtube-cookies.md). |
+| `DOWNTIFY_COOKIES_REFRESH_MINUTES` | `15` | De quanto em quanto tempo, em minutos (`5`–`1440`), a manutenção dos cookies renova e salva os cookies de sessão do YouTube. `0` desativa. Renova o arquivo enviado ou o de `DOWNTIFY_COOKIES_FILE` (quando é gravável). Veja [Mantendo-os funcionando](../features/youtube-cookies.md#keeping-them-working). |
 | `DOWNTIFY_COOKIES_FROM_BROWSER` | _(não definida)_ | Nome do navegador de onde extrair os cookies (por exemplo `chrome`, `firefox`). Exige que o armazenamento de cookies do navegador esteja acessível dentro do contêiner, então raramente é utilizável no Docker. |
 
 ::: tip Você provavelmente não precisa delas
@@ -122,7 +123,7 @@ services:
     volumes:
       - ./downloads:/downloads
       - downtify_data:/data
-      - ./cookies.txt:/cookies.txt:ro
+      - ./cookies.txt:/cookies.txt
     environment:
       - DOWNTIFY_FORCE_IPV4=1
       - DOWNTIFY_COOKIES_FILE=/cookies.txt

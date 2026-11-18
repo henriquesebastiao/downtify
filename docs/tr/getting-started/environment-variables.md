@@ -105,6 +105,7 @@ YouTube otomatik indiricileri düzenli olarak zorlar. Bu değişkenler, varsayı
 | `DOWNTIFY_YT_PLAYER_CLIENTS` | `ios,android,web_embedded,mweb,web,tv` | Denenecek yt-dlp oynatıcı istemcilerinin virgülle ayrılmış, sıralı listesi. Downtify’ın varsayılan listesi zaten JavaScript çalışma zamanı olmadan çalışan istemcileri tercih eder. Yalnızca belirli bir istemcinin engellendiğini biliyorsanız değiştirin. |
 | `DOWNTIFY_YT_PO_TOKEN` | _(ayarlı değil)_ | yt-dlp için virgülle ayrılmış Proof-of-Origin belirteçleri; her biri `<client>.<context>+<token>` biçiminde (örn. `mweb.gvs+ABC123`). Yalnızca YouTube kullandığınız istemciler için PO Token talep etmeye başlarsa gerekir. |
 | `DOWNTIFY_COOKIES_FILE` | _(ayarlı değil)_ | **Kapsayıcının içindeki** Netscape biçimli bir `cookies.txt` yolu. yt-dlp’nin gerçek bir tarayıcı oturumu olarak kimlik doğrulamasını sağlar — açık içerikli/yaş sınırlı parçalar ve YouTube’un oturum açma duvarı uyguladığı her durum için gerekli. Web arayüzünde yüklenen bir dosyaya üstündür ve arayüzün o bölümünü salt okunur yapar. [YouTube çerezleri](../features/youtube-cookies.md) sayfasına bakın. |
+| `DOWNTIFY_COOKIES_REFRESH_MINUTES` | `15` | Çerez bakımının YouTube oturum çerezlerini kaç dakikada bir (`5`–`1440`) yenileyip kaydedeceği. `0` kapatır. Yüklenen dosyayı veya `DOWNTIFY_COOKIES_FILE` dosyasını (yazılabilir olduğunda) yeniler. Bkz. [Çalışır tutma](../features/youtube-cookies.md#keeping-them-working). |
 | `DOWNTIFY_COOKIES_FROM_BROWSER` | _(ayarlı değil)_ | Çerezlerin alınacağı tarayıcının adı (örn. `chrome`, `firefox`). Tarayıcının çerez deposunun kapsayıcı içinden erişilebilir olmasını gerektirir; bu yüzden Docker’da nadiren kullanılabilir. |
 
 ::: tip Muhtemelen bunlara ihtiyacınız yok
@@ -122,7 +123,7 @@ services:
     volumes:
       - ./downloads:/downloads
       - downtify_data:/data
-      - ./cookies.txt:/cookies.txt:ro
+      - ./cookies.txt:/cookies.txt
     environment:
       - DOWNTIFY_FORCE_IPV4=1
       - DOWNTIFY_COOKIES_FILE=/cookies.txt

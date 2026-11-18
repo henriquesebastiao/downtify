@@ -105,6 +105,7 @@ YouTube stellt automatisierte Downloader regelmäßig auf die Probe. Diese Varia
 | `DOWNTIFY_YT_PLAYER_CLIENTS` | `ios,android,web_embedded,mweb,web,tv` | Kommagetrennte Liste der zu probierenden yt-dlp-Player-Clients, der Reihe nach. Die Standardliste von Downtify bevorzugt bereits Clients, die ohne JavaScript-Runtime funktionieren. Nur ändern, wenn du weißt, dass ein bestimmter Client blockiert wird. |
 | `DOWNTIFY_YT_PO_TOKEN` | _(nicht gesetzt)_ | Kommagetrennte Proof-of-Origin-Tokens für yt-dlp, jedes in der Form `<client>.<context>+<token>` (z. B. `mweb.gvs+ABC123`). Nur nötig, wenn YouTube für die genutzten Clients PO-Tokens verlangt. |
 | `DOWNTIFY_COOKIES_FILE` | _(nicht gesetzt)_ | Pfad zu einer `cookies.txt` im Netscape-Format **im Container**. Lässt yt-dlp sich wie eine echte Browsersitzung authentifizieren — nötig für explizite/altersbeschränkte Titel und immer dann, wenn YouTube eine Anmeldeschranke erzwingt. Hat Vorrang vor einer in der Weboberfläche hochgeladenen Datei und macht diesen Bereich der Oberfläche schreibgeschützt. Siehe [YouTube-Cookies](../features/youtube-cookies.md). |
+| `DOWNTIFY_COOKIES_REFRESH_MINUTES` | `15` | Wie oft (in Minuten, `5`–`1440`) die Cookie-Erneuerung die YouTube-Sitzungscookies rotiert und speichert. `0` schaltet sie ab. Erneuert die hochgeladene Datei oder die aus `DOWNTIFY_COOKIES_FILE` (wenn sie beschreibbar ist). Siehe [Funktionsfähig halten](../features/youtube-cookies.md#keeping-them-working). |
 | `DOWNTIFY_COOKIES_FROM_BROWSER` | _(nicht gesetzt)_ | Name des Browsers, aus dem Cookies gelesen werden (z. B. `chrome`, `firefox`). Setzt voraus, dass der Cookie-Speicher des Browsers im Container erreichbar ist, daher in Docker selten nutzbar. |
 
 ::: tip Du brauchst sie wahrscheinlich nicht
@@ -122,7 +123,7 @@ services:
     volumes:
       - ./downloads:/downloads
       - downtify_data:/data
-      - ./cookies.txt:/cookies.txt:ro
+      - ./cookies.txt:/cookies.txt
     environment:
       - DOWNTIFY_FORCE_IPV4=1
       - DOWNTIFY_COOKIES_FILE=/cookies.txt

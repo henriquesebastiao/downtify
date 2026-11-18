@@ -32,6 +32,7 @@ import yt_dlp
 from loguru import logger
 from mutagen import File as _mutagen_file
 
+from .cookies import private_cookiefile
 from .downloader import (
     MAX_TRACK_DURATION_SECONDS,
     TrackTooLongError,
@@ -107,7 +108,7 @@ def stream_url_for_video(
         )
     url = f'https://www.youtube.com/watch?v={vid}'
     try:
-        with yt_dlp.YoutubeDL(opts) as ydl:
+        with private_cookiefile(opts), yt_dlp.YoutubeDL(opts) as ydl:
             info = ydl.extract_info(url, download=False)
     except Exception as exc:
         if is_age_restricted_error(str(exc)):
@@ -393,7 +394,7 @@ class StreamCache:
             )
         url = f'https://www.youtube.com/watch?v={video_id}'
         try:
-            with yt_dlp.YoutubeDL(opts) as ydl:
+            with private_cookiefile(opts), yt_dlp.YoutubeDL(opts) as ydl:
                 ydl.download([url])
         except Exception as exc:
             if is_age_restricted_error(str(exc)):

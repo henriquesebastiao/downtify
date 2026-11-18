@@ -1616,6 +1616,18 @@ export default {
     cookiesDeleteTitle: '要刪除已儲存的 cookies.txt 嗎？',
     cookiesLocked: '由 DOWNTIFY_COOKIES_FILE 環境變數設定。',
     cookiesEnvMissing: '容器內沒有這個檔案，請檢查路徑和磁碟區。',
+    cookiesCheck: '立即檢查',
+    cookiesChecked: '{when}檢查',
+    cookiesStateValid: '已登入',
+    cookiesStateSignedOut: '已登出',
+    cookiesStateNoAccount: '無帳號',
+    cookiesStateError: '檢查失敗',
+    cookiesStateUnknown: '尚未檢查',
+    cookiesBotCheck: '{when}遇到機器人驗證',
+    cookiesSignedOutHint:
+      'YouTube 已不再接受這些 Cookie。請在無痕視窗中登入 YouTube，匯出新的 cookies.txt，關閉視窗後在此上傳檔案。',
+    cookiesKeepAliveHint:
+      'Downtify 每隔幾分鐘重新整理這些 Cookie，讓它們保持登入。請從無痕視窗匯出並在之後關閉該視窗：保持開啟的瀏覽器分頁會輪換 Cookie，讓此副本登出。',
     audioGroup: '音訊',
     format: '格式',
     formatHint: '從 YouTube 下載的檔案會轉換成這個格式。',

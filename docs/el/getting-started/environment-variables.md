@@ -105,6 +105,7 @@ environment:
 | `DOWNTIFY_YT_PLAYER_CLIENTS` | `ios,android,web_embedded,mweb,web,tv` | Λίστα, χωρισμένη με κόμμα, των πελατών player του yt-dlp που θα δοκιμαστούν, με τη σειρά. Η προεπιλεγμένη λίστα του Downtify ευνοεί ήδη πελάτες που δουλεύουν χωρίς runtime JavaScript. Άλλαξέ την μόνο αν ξέρεις ότι ένας συγκεκριμένος πελάτης μπλοκάρεται. |
 | `DOWNTIFY_YT_PO_TOKEN` | _(μη ορισμένη)_ | Διακριτικά Proof-of-Origin για το yt-dlp, χωρισμένα με κόμμα, καθένα στη μορφή `<client>.<context>+<token>` (π.χ. `mweb.gvs+ABC123`). Χρειάζονται μόνο αν το YouTube αρχίσει να απαιτεί PO Tokens για τους πελάτες που χρησιμοποιείς. |
 | `DOWNTIFY_COOKIES_FILE` | _(μη ορισμένη)_ | Διαδρομή ενός `cookies.txt` σε μορφή Netscape **μέσα στο κοντέινερ**. Επιτρέπει στο yt-dlp να πιστοποιείται ως πραγματική συνεδρία browser — απαραίτητο για ακατάλληλα/περιορισμένης ηλικίας κομμάτια και όποτε το YouTube επιβάλλει τείχος σύνδεσης. Υπερισχύει ενός αρχείου που ανέβηκε στη web διεπαφή και κάνει εκείνο το τμήμα της διεπαφής μόνο για ανάγνωση. Δες [Cookies του YouTube](../features/youtube-cookies.md). |
+| `DOWNTIFY_COOKIES_REFRESH_MINUTES` | `15` | Κάθε πόσα λεπτά (`5`–`1440`) η συντήρηση των cookies ανανεώνει και αποθηκεύει τα cookies συνεδρίας του YouTube. Το `0` την απενεργοποιεί. Ανανεώνει το αρχείο που ανέβηκε ή αυτό του `DOWNTIFY_COOKIES_FILE` (όταν είναι εγγράψιμο). Δες [Διατήρηση της λειτουργίας τους](../features/youtube-cookies.md#keeping-them-working). |
 | `DOWNTIFY_COOKIES_FROM_BROWSER` | _(μη ορισμένη)_ | Όνομα browser από τον οποίο θα εξαχθούν cookies (π.χ. `chrome`, `firefox`). Απαιτεί το αποθηκευτικό cookies του browser να είναι προσβάσιμο μέσα στο κοντέινερ, οπότε σπάνια χρησιμοποιείται στο Docker. |
 
 ::: tip Μάλλον δεν τις χρειάζεσαι
@@ -122,7 +123,7 @@ services:
     volumes:
       - ./downloads:/downloads
       - downtify_data:/data
-      - ./cookies.txt:/cookies.txt:ro
+      - ./cookies.txt:/cookies.txt
     environment:
       - DOWNTIFY_FORCE_IPV4=1
       - DOWNTIFY_COOKIES_FILE=/cookies.txt

@@ -10,10 +10,13 @@ const status = ref({
   path: null,
   size: null,
   updated_at: null,
+  // Last keep-alive result (downtify/cookie_refresh.py).
+  health: { state: 'unknown' },
 })
 
 const loading = ref(false)
 const busy = ref(false)
+const checking = ref(false)
 const error = ref('')
 const warnings = ref([])
 
@@ -43,6 +46,8 @@ async function upload(file) {
     const { warnings: uploadWarnings, ...rest } = res.data
     status.value = rest
     warnings.value = uploadWarnings || []
+    // The server checks the new file in the background; pick it up.
+    setTimeout(refresh, 5000)
     return true
   } catch (err) {
     error.value = detailOf(err, 'Could not upload the file.')
@@ -69,6 +74,30 @@ async function remove() {
   }
 }
 
+async function check() {
+  checking.value = true
+  error.value = ''
+  try {
+    const res = await API.checkCookies()
+    status.value = res.data
+  } catch (err) {
+    error.value = detailOf(err, 'Could not check the cookies.')
+  } finally {
+    checking.value = false
+  }
+}
+
 export function useCookiesManager() {
-  return { status, loading, busy, error, warnings, refresh, upload, remove }
+  return {
+    status,
+    loading,
+    busy,
+    checking,
+    error,
+    warnings,
+    refresh,
+    upload,
+    remove,
+    check,
+  }
 }

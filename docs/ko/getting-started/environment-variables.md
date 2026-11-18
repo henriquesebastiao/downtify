@@ -105,6 +105,7 @@ YouTube는 주기적으로 자동 다운로더를 확인합니다. 기본값이 
 | `DOWNTIFY_YT_PLAYER_CLIENTS` | `ios,android,web_embedded,mweb,web,tv` | 순서대로 시도할 yt-dlp 플레이어 클라이언트의 쉼표 구분 목록. Downtify의 기본 목록은 이미 JavaScript 런타임 없이 동작하는 클라이언트를 우선합니다. 특정 클라이언트가 차단된다는 것을 알 때만 바꾸세요. |
 | `DOWNTIFY_YT_PO_TOKEN` | _(설정 안 됨)_ | yt-dlp용 Proof-of-Origin 토큰을 쉼표로 구분하며, 각각 `<client>.<context>+<token>` 형식입니다(예: `mweb.gvs+ABC123`). YouTube가 사용 중인 클라이언트에 PO Token을 요구하기 시작할 때만 필요합니다. |
 | `DOWNTIFY_COOKIES_FILE` | _(설정 안 됨)_ | **컨테이너 안의** Netscape 형식 `cookies.txt` 경로. yt-dlp가 실제 브라우저 세션처럼 인증할 수 있게 하며, 선정적/연령 제한 트랙과 YouTube가 로그인 장벽을 둘 때 필요합니다. 웹 UI에서 업로드한 파일보다 우선하고 UI의 해당 섹션을 읽기 전용으로 만듭니다. [YouTube 쿠키](../features/youtube-cookies.md)를 참고하세요. |
+| `DOWNTIFY_COOKIES_REFRESH_MINUTES` | `15` | 쿠키 유지 기능이 YouTube 세션 쿠키를 교체하고 저장하는 간격(분, `5`–`1440`). `0`이면 끕니다. 업로드한 파일이나 `DOWNTIFY_COOKIES_FILE` 파일(쓰기 가능할 때)을 갱신합니다. [계속 동작하게 유지하기](../features/youtube-cookies.md#keeping-them-working)를 참고하세요. |
 | `DOWNTIFY_COOKIES_FROM_BROWSER` | _(설정 안 됨)_ | 쿠키를 추출할 브라우저 이름(예: `chrome`, `firefox`). 브라우저의 쿠키 저장소가 컨테이너 안에서 접근 가능해야 하므로 Docker에서는 거의 쓸 수 없습니다. |
 
 ::: tip 아마 필요 없을 것입니다
@@ -122,7 +123,7 @@ services:
     volumes:
       - ./downloads:/downloads
       - downtify_data:/data
-      - ./cookies.txt:/cookies.txt:ro
+      - ./cookies.txt:/cookies.txt
     environment:
       - DOWNTIFY_FORCE_IPV4=1
       - DOWNTIFY_COOKIES_FILE=/cookies.txt

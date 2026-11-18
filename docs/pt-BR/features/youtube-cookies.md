@@ -37,10 +37,12 @@ A variável [`DOWNTIFY_COOKIES_FILE`](../getting-started/environment-variables.m
 services:
   downtify:
     volumes:
-      - ./cookies.txt:/cookies.txt:ro
+      - ./cookies.txt:/cookies.txt
     environment:
       - DOWNTIFY_COOKIES_FILE=/cookies.txt
 ```
+
+Monte-o com permissão de escrita (sem `:ro`) para que a manutenção possa salvar os cookies renovados nele; um arquivo só de leitura continua sendo usado, mas fica velho como antes.
 
 Quando ela está definida, a tela de configurações mostra a seção de cookies bloqueada e recusa envios e exclusões — a instalação é dona dessa configuração, e o Downtify não deve sobrescrever um arquivo que não gerencia. Remova a variável (e recrie o contêiner) para gerenciar os cookies pela interface web.
 
@@ -48,9 +50,27 @@ Quando ela está definida, a tela de configurações mostra a seção de cookies
 
 ## Mantendo-os funcionando
 
-- Os cookies expiram. Se os downloads com restrição de idade voltarem a falhar, exporte um arquivo novo e envie-o como substituto.
-- Exportar de uma **janela privada/anônima** que você depois fecha produz uma sessão de vida mais longa, porque fechar uma janela normal pode invalidar a sessão exportada.
+Cookies exportados não vencem numa data fixa. A sessão do Google é um conjunto de cookies que muda o tempo todo: a aba de onde eles saíram renova `__Secure-1PSIDTS`, `SIDCC` e companhia a cada poucos minutos, e uma cópia que nunca recebe os valores novos acaba recusada. O yt-dlp então registra "The provided YouTube account cookies are no longer valid". Numa VPN ou num IP de datacenter o YouTube é mais rígido, então isso pode acontecer em poucas horas.
+
+O Downtify mantém o arquivo enviado conectado sozinho:
+
+- **Cada download salva os valores novos.** O yt-dlp recebe uma cópia privada do arquivo a cada download; quando termina, os cookies que o YouTube mudou nesse meio-tempo voltam para o `cookies.txt` guardado, sem desfazer um valor mais novo que outro download salvou.
+- **Uma manutenção os renova num intervalo.** A cada 15 minutos (`DOWNTIFY_COOKIES_REFRESH_MINUTES`, `0` desativa) o Downtify pede ao Google para renovar os cookies de sessão — a mesma requisição que o navegador faz —, abre o `youtube.com` com eles e salva o que mudou. Mesmo um servidor que passa dias sem baixar nada mantém a sessão viva.
+- **A tela de configurações mostra o resultado.** **Configurações → Cookies do YouTube** mostra *Conectado*, *Desconectado*, *Sem conta* (o arquivo não tem sessão do Google, só cookies de visitante) ou *Falha na verificação*, quando foi a última verificação e quando o YouTube pediu verificação de bot pela última vez. *Verificar agora* roda a manutenção na hora. Um envio novo é verificado alguns segundos depois de salvo.
+
+O que ainda fica com você:
+
+- **Exporte de uma janela anônima e feche-a.** Entre no YouTube numa janela anônima, abra `youtube.com/robots.txt` nessa aba, exporte os cookies e feche a janela. Uma aba que você continua usando renova a sessão por conta própria, e a cópia do Downtify é desconectada em minutos. Se puder, não use a mesma conta numa janela normal ao mesmo tempo.
+- **Envie um arquivo novo quando a tela disser *Desconectado*.** O Google ainda pode encerrar a sessão (troca de senha, "sair de todos os dispositivos", uma revisão de segurança). O log também avisa: `YouTube cookies are signed out`.
 - Algumas regiões exigem verificação completa de identidade na conta Google antes de o YouTube entregar qualquer conteúdo com restrição de idade. Estar conectado nem sempre basta.
+
+::: info Por que não há um botão "Entrar com o Google"
+O Downtify não consegue entrar no Google por você. O Google bloqueia logins por script e em navegadores headless ("Este navegador ou app pode não ser seguro"), pede verificação em duas etapas e confirmação no celular, e o YouTube não aceita mais OAuth de clientes de terceiros como o yt-dlp. Um formulário de login no Downtify também significaria entregar a ele a sua senha do Google. Manter viva uma sessão exportada é a parte que dá para automatizar.
+:::
+
+::: tip Verificação de bot sem conta
+"Sign in to confirm you're not a bot" vem do endereço IP, não da falta de cookies. Se aparece o tempo todo numa VPN, trocar o servidor ou o país de saída da VPN costuma ajudar mais que cookies novos. Cookies usados em muitos downloads também aumentam a chance de o YouTube limitar aquela conta, então uma conta descartável é a escolha mais segura.
+:::
 
 ::: warning Trate o arquivo como uma senha
 Um `cookies.txt` contém tokens de sessão ativos da sua conta Google. Qualquer pessoa que consiga lê-lo pode agir como você no YouTube. O Downtify o guarda com permissões só para o dono onde o sistema de arquivos permite e nunca expõe o conteúdo pela API — apenas se há um configurado, seu tamanho e quando mudou. Use uma conta Google descartável se preferir não arriscar a principal.
