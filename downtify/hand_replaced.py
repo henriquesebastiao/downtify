@@ -13,6 +13,9 @@ downloader leaves those files alone: a download that would land on one
 counts as "already downloaded" instead (see
 ``Downloader._hand_replaced_at``). Library upgrade's audio replacement
 skips them too. The admin can lift it from the Replace audio dialog.
+
+A file swapped on disk, outside Downtify, is added here too the first
+time a download would land on it (``Downloader._replaced_on_disk``).
 """
 
 from __future__ import annotations
@@ -24,8 +27,10 @@ from typing import Any, Optional
 from .db.config import Dialect
 from .db.core import Database, as_database
 
-#: Where the new audio came from.
-SOURCES = ('youtube', 'soundcloud', 'file')
+#: Where the new audio came from. ``disk``: the file was swapped outside
+#: Downtify (noticed by ``downtify/download_sources.py``: its audio is no
+#: longer what Downtify wrote).
+SOURCES = ('youtube', 'soundcloud', 'file', 'disk')
 
 
 def _key(file: str) -> str:

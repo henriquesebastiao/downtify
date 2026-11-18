@@ -426,6 +426,9 @@ class UpgradeDeps:
     audio_replacement: Any = None
     # Files whose audio an admin replaced by hand: their audio is kept.
     hand_replaced: Any = None
+    # Each file's upload (downtify/download_sources.py): a file swapped on
+    # disk since Downtify wrote it is kept like one replaced by hand.
+    download_sources: Any = None
 
 
 def resolve_track(stored_path: str, ctx: LibraryContext) -> Optional[Path]:
@@ -992,6 +995,31 @@ class LibraryUpgradeRunner:
             self.db.set_state(run_id, state)
         self._publish()
 
+    def _kept_by_hand(self, stored: str) -> bool:
+        """Whether *stored*'s audio was replaced by hand: through
+        Replace audio, or swapped on disk since Downtify wrote it (which
+        is then remembered as such)."""
+
+        hand = self.deps.hand_replaced
+        if hand is not None and hand.protected(stored):
+            return True
+        sources = self.deps.download_sources
+        if sources is None:
+            return False
+        try:
+            full = resolve_track(stored, self.deps.context())
+            if full is None or not sources.replaced_on_disk(stored, full):
+                return False
+            if hand is not None:
+                hand.mark(stored, 'disk')
+            sources.reject_file_source(stored)
+        except Exception:
+            logger.opt(exception=True).debug(
+                'Hand-replaced check failed for {}', stored
+            )
+            return False
+        return True
+
     def _process(
         self,
         run_id: int,
@@ -1002,8 +1030,7 @@ class LibraryUpgradeRunner:
         def on_stage(stage: str) -> None:
             self.db.set_stage(run_id, stored, stage)
 
-        hand = self.deps.hand_replaced
-        if 'audio' in todo and hand is not None and hand.protected(stored):
+        if 'audio' in todo and self._kept_by_hand(stored):
             # Audio an admin picked by hand isn't swapped for a match.
             todo = [name for name in todo if name != 'audio']
             if not todo:

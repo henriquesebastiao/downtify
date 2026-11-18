@@ -57,6 +57,7 @@ from .download_log import (
     OUTCOME_SKIPPED,
 )
 from .download_policy import DownloadPolicyBlocked
+from .download_sources import track_keys
 from .file_naming import sanitize_file_name
 from .image_size import image_short_side
 from .itunes import fetch_genre as _fetch_itunes_genre
@@ -64,6 +65,8 @@ from .library_paths import library_stored_path, slskd_dir_from_downloader
 from .m3u import sanitize_playlist_name
 from .providers import (
     enrich_from_match,
+    excluded_source,
+    excluding_sources,
     find_match,
     find_match_for_video,
     find_match_soundcloud,
@@ -416,6 +419,15 @@ class Downloader:
     #: the app (``main.py``, see ``compilation.CompilationMarks``). Whatever
     #: it raises is logged and the song keeps its source's values.
     album_override: Optional[Callable[[dict[str, Any]], dict[str, Any]]] = None
+    #: Each new file's source, and the sources rejected per song
+    #: (:class:`downtify.download_sources.DownloadSources`), set by the
+    #: app: a rejected upload is never picked again for its song, and a
+    #: file swapped on disk is kept like one replaced through Replace
+    #: audio.
+    download_sources: Any = None
+    #: Files whose audio an admin replaced by hand
+    #: (:class:`downtify.hand_replaced.HandReplacedFiles`), set by the app.
+    hand_replaced: Any = None
 
     def __init__(
         self,
@@ -574,6 +586,8 @@ class Downloader:
         ):
             known_video_id = song.get('song_id')
         known_soundcloud_url = soundcloud_track_url(song)
+        if excluded_source(known_soundcloud_url):
+            known_soundcloud_url = None
 
         youtube_searched = False
         for provider in self.audio_providers:
@@ -937,18 +951,44 @@ class Downloader:
         existing is ever overwritten."""
 
         store = getattr(self, 'hand_replaced', None)
-        if store is None:
+        sources = getattr(self, 'download_sources', None)
+        if store is None and sources is None:
             return None
         try:
             existing = self.existing_filename_for(song, subdir)
-            return (
-                existing
-                if existing is not None and store.protected(existing)
-                else None
-            )
+            if existing is None:
+                return None
+            if store is not None and store.protected(existing):
+                return existing
+            if self._replaced_on_disk(existing, song):
+                return existing
+            return None
         except Exception:
             logger.opt(exception=True).debug('Hand-replaced check failed')
             return None
+
+    def _replaced_on_disk(self, existing: str, song: dict[str, Any]) -> bool:
+        """Whether *existing* (a file Downtify wrote) was swapped on disk
+        since: its audio isn't what was written. Such a file is then
+        remembered as replaced by hand, and the upload it came from is
+        rejected for the song (issue #582)."""
+
+        sources = getattr(self, 'download_sources', None)
+        if sources is None:
+            return False
+        full = self.download_dir / existing
+        if not sources.replaced_on_disk(existing, full):
+            return False
+        logger.info(
+            '{} was replaced outside Downtify (its audio changed); keeping it',
+            existing,
+        )
+        store = getattr(self, 'hand_replaced', None)
+        if store is not None:
+            store.mark(existing, 'disk')
+        sources.reject_file_source(existing, track_keys(song))
+        sources.record(existing, full, '', track_keys(song))
+        return True
 
     def _skip_hand_replaced(
         self,
@@ -1094,6 +1134,13 @@ class Downloader:
         # Known-long tracks are refused before any search or fetch.
         reject_overlong_song(song, self.max_track_duration_seconds)
 
+        # Uploads found wrong for this song before are never picked again.
+        rejected = self._rejected_sources(song)
+        if song.get('youtube_id') in rejected or (
+            song.get('source') == 'youtube' and song.get('song_id') in rejected
+        ):
+            song = {**song, '_match_by_metadata': True}
+
         known_video_id = (
             None if song.get('_match_by_metadata') else song.get('youtube_id')
         )
@@ -1112,11 +1159,12 @@ class Downloader:
             song = deezer_mod.enrich_track_from_deezer_if_sparse(song)
         # A known video is a candidate for an enabled YouTube provider,
         # not permission to bypass earlier sources or disabled providers.
-        video_id, match, provider, local_source = self._resolve_source(
-            song,
-            progress_cb,
-            **({'cancel_check': cancel_check} if cancel_check else {}),
-        )
+        with excluding_sources(rejected):
+            video_id, match, provider, local_source = self._resolve_source(
+                song,
+                progress_cb,
+                **({'cancel_check': cancel_check} if cancel_check else {}),
+            )
         if cancel_check:
             cancel_check()
         if (
@@ -1179,6 +1227,7 @@ class Downloader:
                     song, video_id, progress_cb, subdir, provider
                 ),
                 provider,
+                source_id=video_id,
             )
 
         # Re-check after enrichment while the target lock is still held,
@@ -1190,6 +1239,7 @@ class Downloader:
             song,
             self._fetch_and_tag(song, video_id, progress_cb, subdir, provider),
             provider,
+            source_id=video_id,
         )
 
     def _with_album_override(self, song: dict[str, Any]) -> dict[str, Any]:
@@ -1213,15 +1263,20 @@ class Downloader:
         filename: str,
         provider: Optional[str] = None,
         source: Optional[Path] = None,
+        source_id: Optional[str] = None,
     ) -> str:
         """Tell :attr:`on_downloaded` that *filename* is new (which
-        *provider* fetched it, and the *source* file it was copied from,
-        if any); returns it. A hook that fails is logged and ignored: the
-        file is already there."""
+        *provider* fetched it, the *source* file it was copied from, if
+        any, and the upload - *source_id*, a YouTube video id or a
+        SoundCloud track URL); returns it. A hook that fails is logged and
+        ignored: the file is already there."""
 
         song = {**song, 'download_provider': provider or ''}
         if source is not None:
             song['download_source'] = str(source)
+        if source_id:
+            song['download_source_id'] = str(source_id)
+        self._record_source(song, filename, source_id)
         hook = self.on_downloaded
         if hook is not None:
             try:
@@ -1232,6 +1287,38 @@ class Downloader:
                 )
         self._report_outcome(song, OUTCOME_COMPLETED, filename)
         return filename
+
+    def _rejected_sources(self, song: dict[str, Any]) -> set[str]:
+        """Uploads rejected for *song* (best effort: none on error)."""
+
+        sources = getattr(self, 'download_sources', None)
+        if sources is None:
+            return set()
+        try:
+            return sources.rejected_for(song)
+        except Exception:
+            logger.opt(exception=True).debug('Rejected-source lookup failed')
+            return set()
+
+    def _record_source(
+        self, song: dict[str, Any], filename: str, source_id: Optional[str]
+    ) -> None:
+        """Remember the upload *filename* was written from, and what its
+        audio is, so a later swap on disk is noticed (best effort)."""
+
+        sources = getattr(self, 'download_sources', None)
+        if sources is None or not filename:
+            return
+        full = self.download_dir / filename
+        if not full.is_file():
+            # Left in place in slskd's folder: not a file Downtify wrote.
+            return
+        try:
+            sources.record(filename, full, source_id or '', track_keys(song))
+        except Exception:
+            logger.opt(exception=True).debug(
+                'Could not record the source of {}', filename
+            )
 
     def _report_outcome(
         self, song: dict[str, Any], outcome: str, filename: str = ''

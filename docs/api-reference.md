@@ -1726,7 +1726,7 @@ A file in the track's own format is used as it is; another is converted to it (`
 
 ### `GET /api/library/replace/protected`
 
-Admin. Whether downloads leave a track alone because its audio was replaced by hand (either way above): `?file=` → `{ "file", "hand_replaced": { "file", "source", "replaced_at" } | null }`. `source` is `youtube`, `soundcloud` or `file`; `replaced_at` is a Unix time.
+Admin. Whether downloads leave a track alone because its audio was replaced by hand (either way above): `?file=` → `{ "file", "hand_replaced": { "file", "source", "replaced_at" } | null }`. `source` is `youtube`, `soundcloud`, `file`, or `disk` (the file was swapped outside Downtify: its audio no longer matches what Downtify downloaded); `replaced_at` is a Unix time. Replacing a track's audio also rejects the YouTube video or SoundCloud track the old audio came from for that song: automatic matches never pick it again (picking it again here takes that back).
 
 With **Download again if the file exists** on, a download that would write over such a file counts it as already downloaded instead, and Library upgrade's audio replacement skips it. **`DELETE`** with the same `?file=` lifts that: `{ "file", "forgotten": true | false }`.
 

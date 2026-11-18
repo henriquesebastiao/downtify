@@ -30,6 +30,7 @@ from downtify.discover import DiscoverStore
 from downtify.doctor_audio import AudioHashCache
 from downtify.download_log import DownloadLog
 from downtify.download_queue import PendingDownloads
+from downtify.download_sources import DownloadSources
 from downtify.duplicate_merge import KeptApart
 from downtify.external_playlists import ExternalPlaylistImports
 from downtify.file_providers import FileProviders
@@ -75,6 +76,7 @@ _LIBRARY_STORES: tuple[Callable[[Path], Any], ...] = (
     PlaylistHiddenSongs,
     FileProviders,
     HandReplacedFiles,
+    DownloadSources,
     DownloadLog,
     UsageSnapshots,
     ExternalPlaylistImports,

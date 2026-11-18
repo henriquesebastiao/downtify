@@ -433,6 +433,7 @@ from . import (
     compilation,
     cover_sources,
     deezer,
+    download_sources,
     integration_check,
     library_import,
     library_only,
@@ -1299,6 +1300,9 @@ class AppState:
     audio_replacements: Any = None
     # Files whose audio an admin replaced by hand (downtify/hand_replaced.py).
     hand_replaced: Any = None
+    # Each file's upload and the uploads rejected per song
+    # (downtify/download_sources.py).
+    download_sources: Any = None
     external_sync: Optional[ExternalSyncJob] = None
     likes: Optional[LikedTracks] = None
     track_owners: Optional[TrackOwners] = None
@@ -6427,6 +6431,46 @@ def _mark_hand_replaced(file: str, source: str) -> None:
         )
 
 
+def _remember_replacement(
+    file: str, full: Path, entry: dict[str, Any], new_source: str
+) -> None:
+    """*file*'s audio was just replaced with *new_source* (a video id, a
+    SoundCloud track URL, ``''`` for an uploaded file): the upload it came
+    from is rejected for its song, so no later download picks it again,
+    and the new one is remembered as the file's source (best effort)."""
+
+    sources = state.download_sources
+    if sources is None:
+        return
+    summary = _track_summary(file, entry)
+    song: dict[str, Any] = {
+        'name': summary['title'],
+        'artists': [
+            a.strip() for a in summary['artist'].split(',') if a.strip()
+        ],
+        'isrc': str(entry.get('isrc') or ''),
+    }
+    if state.track_index is not None:
+        try:
+            song['spotify_id'] = (
+                state.track_index.spotify_id_for_filename(file) or ''
+            )
+        except Exception:
+            logger.opt(exception=True).debug('No Spotify id for {}', file)
+    try:
+        keys = set(download_sources.track_keys(song))
+        earlier = sources.get(file)
+        keys.update((earlier or {}).get('track_keys') or [])
+        sources.reject_file_source(file, keys, keep=new_source)
+        # Picking a rejected upload again by hand takes the rejection back.
+        sources.allow(new_source, keys)
+        sources.record(file, full, new_source, keys)
+    except Exception:
+        logger.opt(exception=True).warning(
+            'Could not remember the replaced source of {}', file
+        )
+
+
 @router.get('/api/library/replace/protected')
 async def hand_replaced_status(file: str = Query(...)) -> dict[str, Any]:
     """Whether downloads leave *file* alone because its audio was replaced
@@ -6502,6 +6546,7 @@ async def replace_track_audio_from_file(
         _replacing.discard(file)
     await asyncio.to_thread(_after_replacement, file, full, old_key)
     await asyncio.to_thread(_mark_hand_replaced, file, 'file')
+    await asyncio.to_thread(_remember_replacement, file, full, entry, '')
     summary = _track_summary(file, entry)
     await log_activity(
         request,
@@ -6570,7 +6615,7 @@ async def replace_track_audio(request: Request) -> dict[str, Any]:
         {'file': file, 'video_id': video_id},
     )
     spawn_task(
-        _run_replacement(job_id, song, file, full, video_id),
+        _run_replacement(job_id, song, file, full, video_id, entry),
         name=f'replace-{video_id}',
     )
     return {'job_id': job_id, 'file': file}
@@ -6582,6 +6627,7 @@ async def _run_replacement(
     file: str,
     full: Path,
     video_id: str,
+    entry: Optional[dict[str, Any]] = None,
 ) -> None:
     loop = state.loop or asyncio.get_running_loop()
     job = state.download_jobs[job_id]
@@ -6644,6 +6690,9 @@ async def _run_replacement(
         return
     _replacing.discard(file)
     await asyncio.to_thread(_after_replacement, file, full, old_key)
+    await asyncio.to_thread(
+        _remember_replacement, file, full, entry or {}, video_id
+    )
     await asyncio.to_thread(
         _mark_hand_replaced,
         file,
