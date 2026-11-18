@@ -146,6 +146,8 @@ So re-downloading `Artist - Song.mp3` when slskd answers with a FLAC gives you *
 Nothing is lost, but you get duplicates. To actually replace a file, see [Replace audio](replace-audio.md), which keeps the path, the format and the tags.
 :::
 
+A file whose audio you replaced — with **Replace audio**, or by saving another version over it yourself under the same name — is never written over by a download, even with this option on. The download counts it as already downloaded, and the upload the old audio came from is never picked again for that song.
+
 ### Cover art comes from Spotify or YouTube Music, not from the file
 
 Whatever artwork the downloaded audio carries — including a high-resolution cover embedded in an slskd file — is **discarded and replaced** during tagging. Downtify always embeds the cover it fetches for the track from Spotify or YouTube Music (or SoundCloud's artwork, for a SoundCloud link), at the [cover art resolution](#cover-art-resolution) you configured (600 px by default). The same applies to the title, artists, album and the rest of the tags: the source's own tags are not kept.

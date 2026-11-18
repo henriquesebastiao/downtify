@@ -66,6 +66,7 @@ from downtify.discover import DiscoverStore
 from downtify.discovery import Announcer, discovery_enabled
 from downtify.download_log import DownloadLog
 from downtify.download_queue import PendingDownloads, queue_pause
+from downtify.download_sources import DownloadSources
 from downtify.downloader import Downloader
 from downtify.external_playlists import ExternalPlaylistImports
 from downtify.external_sync import ExternalSyncJob
@@ -468,6 +469,8 @@ def _open_library_stores(monitor_db_path: Path | Database) -> None:
     api.state.compilation_marks = CompilationMarks(library_db)
     # Files whose audio an admin replaced by hand: downloads leave them be.
     api.state.hand_replaced = HandReplacedFiles(library_db)
+    # Each file's upload, and uploads rejected per song (issue #582).
+    api.state.download_sources = DownloadSources(library_db)
     api.state.podcasts = PodcastStore(library_db)
     # The music trash (downtify/library_trash.py), when the operator
     # turned it on. A configuration that doesn't load stops the server:
@@ -490,6 +493,7 @@ def _open_library_stores(monitor_db_path: Path | Database) -> None:
     if api.state.downloader is not None:
         api.state.downloader.trash_store = api.state.library_trash
         api.state.downloader.hand_replaced = api.state.hand_replaced
+        api.state.downloader.download_sources = api.state.download_sources
     # The mobile API (downtify/mobile_routes.py).
     api.state.library_sync = LibrarySync(library_db)
     api.state.transcoder = transcoder_from_env(DATABASE_DIR)
@@ -529,6 +533,7 @@ def _open_library_stores(monitor_db_path: Path | Database) -> None:
             rekey_owners=api.rekey_file_owners,
             audio_replacement=replacement,
             hand_replaced=api.state.hand_replaced,
+            download_sources=api.state.download_sources,
         ),
     )
     api.state.external_sync = ExternalSyncJob(

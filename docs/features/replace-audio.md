@@ -30,6 +30,10 @@ A file in the track's own format (an `.mp3` for an `.mp3`) is used exactly as it
 
 With **Download again if the file exists** on, a later download of the same song (from another monitored playlist, an artist watch or a playlist download) would write over your replacement with whatever the automatic match finds. So Downtify remembers every file whose audio you replaced, either way, and such a download counts it as already downloaded instead. [Library upgrade](library-upgrade.md) doesn't swap its audio either; its cover, lyrics and tags can still be upgraded.
 
+The same goes for a file you swapped yourself, outside Downtify: saving the right version over a file Downtify downloaded, under the same name (a Soulseek download, a CD rip). Downtify remembers what the audio of each file it downloads is like (its format, sample rate, channels and length; tags don't count, so editing them changes nothing). The first time a download would write over a file whose audio no longer matches, Downtify keeps the file instead and from then on treats it as replaced by hand. Files downloaded before this version have nothing to compare with: replace those with **Replace audio** (or **Using a file from your device**) instead.
+
+The upload a replaced file came from is also **never picked again for that song**. Downtify remembers which YouTube video or SoundCloud track each file was downloaded from; when you replace the audio (either way above, or by swapping the file yourself), that upload is rejected for the song, by its Spotify id, ISRC and artist + title. So when the song turns up again — in another playlist, a daily mix, an artist watch, or after you delete the file — the automatic match picks the next best version instead of the same wrong one. Picking a rejected upload again by hand in **Replace audio** takes the rejection back.
+
 The dialog says when a track's audio was replaced by hand. **Let downloads replace it** lifts this for that file.
 
 ## What stays the same

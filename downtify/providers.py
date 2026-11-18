@@ -7,7 +7,10 @@ import os
 import re
 import time
 import zlib
+from collections.abc import Iterable, Iterator
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import contextmanager
+from contextvars import ContextVar
 from datetime import datetime, timezone
 from difflib import SequenceMatcher
 from threading import Lock
@@ -1376,6 +1379,33 @@ _YOUTUBE_MAX_DURATION_DIFF = 30
 _YOUTUBE_SEARCH_LIMIT = 10
 
 
+#: Sources (YouTube video ids, SoundCloud track URLs) the match being
+#: made must not pick: uploads found wrong for this song before (see
+#: ``downtify/download_sources.py``). Set with :func:`excluding_sources`.
+_EXCLUDED_SOURCES: ContextVar[frozenset[str]] = ContextVar(
+    'downtify_excluded_sources', default=frozenset()
+)
+
+
+@contextmanager
+def excluding_sources(sources: Iterable[str]) -> Iterator[None]:
+    """Within the block, no matcher picks any of *sources*."""
+
+    token = _EXCLUDED_SOURCES.set(
+        frozenset(str(s) for s in sources if s) | _EXCLUDED_SOURCES.get()
+    )
+    try:
+        yield
+    finally:
+        _EXCLUDED_SOURCES.reset(token)
+
+
+def excluded_source(source: Any) -> bool:
+    """Whether *source* was rejected for the song being matched."""
+
+    return bool(source) and str(source) in _EXCLUDED_SOURCES.get()
+
+
 def find_match(
     song: dict[str, Any],
 ) -> tuple[Optional[str], Optional[dict[str, Any]]]:
@@ -1607,6 +1637,7 @@ def _search_youtube_music_match(
         # the artist (title collisions across unrelated artists happen).
         if (
             result.get('videoId')
+            and not excluded_source(result.get('videoId'))
             and (not title or _titles_match(title, result.get('title')))
             and _artists_overlap(artists, result)
         ):
@@ -1991,7 +2022,7 @@ def find_match_soundcloud(song: dict[str, Any]) -> Optional[str]:
     for entry in (info or {}).get('entries') or []:
         if isinstance(entry, dict):
             score = _soundcloud_candidate_score(title, artist, duration, entry)
-            if score is not None:
+            if score is not None and not excluded_source(score[1]):
                 candidates.append(score)
     if not candidates:
         return None
@@ -2817,7 +2848,7 @@ def _find_match_via_album(
         if not isinstance(track, dict):
             continue
         video_id = _row_video_id(track)
-        if not video_id:
+        if not video_id or excluded_source(video_id):
             continue
         if _titles_match(title, track.get('title')):
             logger.info(
@@ -3085,7 +3116,7 @@ def _pick_best(
     best: Optional[dict[str, Any]] = None
     best_score: float = float('inf')
     for result in results:
-        if not result.get('videoId'):
+        if not result.get('videoId') or excluded_source(result.get('videoId')):
             continue
 
         candidate_title = (result.get('title') or '').lower()
