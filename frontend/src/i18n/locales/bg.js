@@ -1692,6 +1692,18 @@ export default {
     cookiesLocked: 'Зададено от променливата на средата DOWNTIFY_COOKIES_FILE.',
     cookiesEnvMissing:
       'Този файл не съществува в контейнера — провери пътя и тома.',
+    cookiesCheck: 'Провери сега',
+    cookiesChecked: 'проверено {when}',
+    cookiesStateValid: 'Влязъл',
+    cookiesStateSignedOut: 'Излязъл',
+    cookiesStateNoAccount: 'Няма акаунт',
+    cookiesStateError: 'Проверката е неуспешна',
+    cookiesStateUnknown: 'Още не е проверено',
+    cookiesBotCheck: 'проверка за бот {when}',
+    cookiesSignedOutHint:
+      'YouTube вече не приема тези бисквитки. Влезте в YouTube в частен прозорец, експортирайте нов cookies.txt, затворете прозореца и качете файла тук.',
+    cookiesKeepAliveHint:
+      'Downtify поддържа тези бисквитки активни, като ги обновява на всеки няколко минути. Експортирайте ги от частен прозорец и после го затворете: оставен отворен раздел ги сменя и изкарва това копие от акаунта.',
     audioGroup: 'Аудио',
     format: 'Формат',
     formatHint: 'Файловете от YouTube се конвертират в този формат.',

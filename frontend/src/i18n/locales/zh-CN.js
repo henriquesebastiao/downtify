@@ -1586,6 +1586,18 @@ export default {
     cookiesDeleteTitle: '删除已保存的 cookies.txt？',
     cookiesLocked: '由 DOWNTIFY_COOKIES_FILE 环境变量指定。',
     cookiesEnvMissing: '容器内不存在指定文件，请检查路径和挂载卷。',
+    cookiesCheck: '立即检查',
+    cookiesChecked: '{when}检查',
+    cookiesStateValid: '已登录',
+    cookiesStateSignedOut: '已退出登录',
+    cookiesStateNoAccount: '无账号',
+    cookiesStateError: '检查失败',
+    cookiesStateUnknown: '尚未检查',
+    cookiesBotCheck: '{when}遇到机器人验证',
+    cookiesSignedOutHint:
+      'YouTube 已不再接受这些 Cookie。请在无痕窗口中登录 YouTube，导出新的 cookies.txt，关闭窗口后在此上传文件。',
+    cookiesKeepAliveHint:
+      'Downtify 每隔几分钟刷新一次这些 Cookie，使其保持登录。请从无痕窗口导出并在之后关闭该窗口：保持打开的浏览器标签页会轮换 Cookie，使此副本退出登录。',
     audioGroup: '音频',
     format: '格式',
     formatHint: '从 YouTube 下载的文件将转换为此格式。',

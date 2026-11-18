@@ -1673,6 +1673,18 @@ export default {
     cookiesLocked: 'Set by the DOWNTIFY_COOKIES_FILE environment variable.',
     cookiesEnvMissing:
       "That file doesn't exist inside the container — check the path and the volume.",
+    cookiesCheck: 'Check now',
+    cookiesChecked: 'checked {when}',
+    cookiesStateValid: 'Signed in',
+    cookiesStateSignedOut: 'Signed out',
+    cookiesStateNoAccount: 'No account',
+    cookiesStateError: 'Check failed',
+    cookiesStateUnknown: 'Not checked yet',
+    cookiesBotCheck: 'bot check {when}',
+    cookiesSignedOutHint:
+      'YouTube no longer accepts these cookies. Sign in to YouTube in a private window, export a new cookies.txt, close the window and upload the file here.',
+    cookiesKeepAliveHint:
+      'Downtify keeps these cookies signed in by refreshing them every few minutes. Export them from a private window and close it afterwards: a browser tab left open rotates them and signs this copy out.',
     audioGroup: 'Audio',
     format: 'Format',
     formatHint: 'Files downloaded from YouTube are converted to this format.',

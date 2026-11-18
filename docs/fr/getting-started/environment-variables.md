@@ -105,6 +105,7 @@ YouTube met périodiquement à l’épreuve les téléchargeurs automatisés. Ce
 | `DOWNTIFY_YT_PLAYER_CLIENTS` | `ios,android,web_embedded,mweb,web,tv` | Liste, séparée par des virgules, des clients de lecteur yt-dlp à essayer, dans l’ordre. La liste par défaut de Downtify privilégie déjà les clients qui fonctionnent sans runtime JavaScript. Ne la modifiez que si vous savez qu’un client précis est bloqué. |
 | `DOWNTIFY_YT_PO_TOKEN` | _(non définie)_ | Jetons Proof-of-Origin pour yt-dlp, séparés par des virgules, chacun sous la forme `<client>.<context>+<token>` (par ex. `mweb.gvs+ABC123`). Nécessaires uniquement si YouTube se met à exiger des PO Tokens pour les clients que vous utilisez. |
 | `DOWNTIFY_COOKIES_FILE` | _(non définie)_ | Chemin d’un `cookies.txt` au format Netscape **dans le conteneur**. Permet à yt-dlp de s’authentifier comme une vraie session de navigateur — nécessaire pour les titres explicites/soumis à une limite d’âge et chaque fois que YouTube impose une barrière de connexion. Prioritaire sur un fichier envoyé dans l’interface web, et rend cette section de l’interface en lecture seule. Voir [Cookies YouTube](../features/youtube-cookies.md). |
+| `DOWNTIFY_COOKIES_REFRESH_MINUTES` | `15` | Fréquence, en minutes (`5`–`1440`), à laquelle l’entretien des cookies fait tourner et enregistre les cookies de session YouTube. `0` le désactive. Il rafraîchit le fichier envoyé ou celui de `DOWNTIFY_COOKIES_FILE` (s’il est accessible en écriture). Voir [Les garder fonctionnels](../features/youtube-cookies.md#keeping-them-working). |
 | `DOWNTIFY_COOKIES_FROM_BROWSER` | _(non définie)_ | Nom du navigateur dont extraire les cookies (par ex. `chrome`, `firefox`). Exige que le magasin de cookies du navigateur soit accessible dans le conteneur ; c’est donc rarement utilisable avec Docker. |
 
 ::: tip Vous n’en avez probablement pas besoin
@@ -122,7 +123,7 @@ services:
     volumes:
       - ./downloads:/downloads
       - downtify_data:/data
-      - ./cookies.txt:/cookies.txt:ro
+      - ./cookies.txt:/cookies.txt
     environment:
       - DOWNTIFY_FORCE_IPV4=1
       - DOWNTIFY_COOKIES_FILE=/cookies.txt

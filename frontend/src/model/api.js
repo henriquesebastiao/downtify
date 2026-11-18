@@ -1050,6 +1050,11 @@ function deleteCookies() {
   return API.delete('/api/cookies')
 }
 
+// Runs the cookie keep-alive now and answers with the status (health).
+function checkCookies() {
+  return API.post('/api/cookies/check')
+}
+
 function getSettings() {
   return API.get('/api/settings', { params: { client_id: sessionID } })
 }
@@ -1292,6 +1297,7 @@ export default {
   getCookiesStatus,
   uploadCookies,
   deleteCookies,
+  checkCookies,
   check_for_update,
   onMessage,
   ws_onmessage,

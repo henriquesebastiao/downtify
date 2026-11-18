@@ -1734,6 +1734,18 @@ export default {
       'Ορίζεται από τη μεταβλητή περιβάλλοντος DOWNTIFY_COOKIES_FILE.',
     cookiesEnvMissing:
       'Το αρχείο δεν υπάρχει μέσα στο container — έλεγξε τη διαδρομή και τον τόμο.',
+    cookiesCheck: 'Έλεγχος τώρα',
+    cookiesChecked: 'ελέγχθηκε {when}',
+    cookiesStateValid: 'Συνδεδεμένο',
+    cookiesStateSignedOut: 'Αποσυνδεδεμένο',
+    cookiesStateNoAccount: 'Χωρίς λογαριασμό',
+    cookiesStateError: 'Ο έλεγχος απέτυχε',
+    cookiesStateUnknown: 'Δεν έχει ελεγχθεί ακόμη',
+    cookiesBotCheck: 'έλεγχος bot {when}',
+    cookiesSignedOutHint:
+      'Το YouTube δεν δέχεται πλέον αυτά τα cookies. Συνδεθείτε στο YouTube σε ιδιωτικό παράθυρο, εξαγάγετε νέο cookies.txt, κλείστε το παράθυρο και ανεβάστε το αρχείο εδώ.',
+    cookiesKeepAliveHint:
+      'Το Downtify κρατά αυτά τα cookies συνδεδεμένα ανανεώνοντάς τα κάθε λίγα λεπτά. Εξαγάγετέ τα από ιδιωτικό παράθυρο και κλείστε το μετά: μια ανοιχτή καρτέλα τα ανανεώνει και αποσυνδέει αυτό το αντίγραφο.',
     audioGroup: 'Ήχος',
     format: 'Μορφή',
     formatHint: 'Τα αρχεία από το YouTube μετατρέπονται σε αυτή τη μορφή.',

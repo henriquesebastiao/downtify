@@ -105,6 +105,7 @@ A YouTube időnként kihívás elé állítja az automatizált letöltőket. Eze
 | `DOWNTIFY_YT_PLAYER_CLIENTS` | `ios,android,web_embedded,mweb,web,tv` | A kipróbálandó yt-dlp lejátszókliensek vesszővel elválasztott, sorrendezett listája. A Downtify alapértelmezett listája már előnyben részesíti a JavaScript-futtatókörnyezet nélkül működő klienseket. Csak akkor módosítsd, ha tudod, hogy egy adott klienst blokkolnak. |
 | `DOWNTIFY_YT_PO_TOKEN` | _(nincs beállítva)_ | A yt-dlp-hez vesszővel elválasztott Proof-of-Origin tokenek, mindegyik `<client>.<context>+<token>` alakban (pl. `mweb.gvs+ABC123`). Csak akkor kellenek, ha a YouTube PO Tokeneket kezd követelni a használt kliensekhez. |
 | `DOWNTIFY_COOKIES_FILE` | _(nincs beállítva)_ | Egy Netscape formátumú `cookies.txt` útvonala **a konténeren belül**. Lehetővé teszi, hogy a yt-dlp valódi böngészőmunkamenetként hitelesítsen — explicit/korhatáros számokhoz és mindig szükséges, amikor a YouTube bejelentkezési falat kényszerít. Elsőbbséget élvez a webes felületen feltöltött fájllal szemben, és a felület ezen részét csak olvashatóvá teszi. Lásd: [YouTube sütik](../features/youtube-cookies.md). |
+| `DOWNTIFY_COOKIES_REFRESH_MINUTES` | `15` | Milyen gyakran (percben, `5`–`1440`) cseréli és menti a sütik életben tartása a YouTube munkamenet-sütiket. `0` kikapcsolja. A feltöltött fájlt vagy a `DOWNTIFY_COOKIES_FILE` fájlját frissíti (ha írható). Lásd: [Működőképesen tartásuk](../features/youtube-cookies.md#keeping-them-working). |
 | `DOWNTIFY_COOKIES_FROM_BROWSER` | _(nincs beállítva)_ | A böngésző neve, amelyből a sütiket kinyeri (pl. `chrome`, `firefox`). Megköveteli, hogy a böngésző sütitára a konténeren belülről elérhető legyen, ezért Dockerben ritkán használható. |
 
 ::: tip Valószínűleg nincs rájuk szükséged
@@ -122,7 +123,7 @@ services:
     volumes:
       - ./downloads:/downloads
       - downtify_data:/data
-      - ./cookies.txt:/cookies.txt:ro
+      - ./cookies.txt:/cookies.txt
     environment:
       - DOWNTIFY_FORCE_IPV4=1
       - DOWNTIFY_COOKIES_FILE=/cookies.txt

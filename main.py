@@ -46,6 +46,8 @@ from downtify.activity import ActivityLog
 from downtify.auth import AuthMiddleware, AuthStore, auth_disabled_from_env
 from downtify.catalog_worker import start_catalog_worker
 from downtify.compilation import CompilationMarks
+from downtify.cookie_refresh import bind_store as bind_cookie_store
+from downtify.cookie_refresh import cookie_refresh_loop
 from downtify.cookies import CookiesStore
 from downtify.cover_art import extract_cover_art
 from downtify.cover_cache import CoverArtCache
@@ -681,6 +683,14 @@ def build_app() -> FastAPI:
             ),
             name='monitor-loop',
         )
+        # Keeps the YouTube cookies.txt signed in: rotates the session
+        # cookies like the browser tab they came from would and saves the
+        # new values (downtify/cookie_refresh.py).
+        if api.state.cookies_store is not None:
+            api.spawn_task(
+                cookie_refresh_loop(api.state.cookies_store),
+                name='cookie-refresh-loop',
+            )
         # Served bytes are counted in memory (an event-loop write per
         # response stalled every request); this saves them.
         api.spawn_task(
@@ -842,6 +852,9 @@ def build_app() -> FastAPI:
     # cookies.txt survives container updates.
     cookies_store = CookiesStore(DATABASE_DIR / 'cookies.txt')
     api.state.cookies_store = cookies_store
+    # yt-dlp's "cookies are no longer valid" / bot-check warnings land in
+    # this store's health, shown on the settings page.
+    bind_cookie_store(cookies_store)
 
     api.state.version = __version__
     api.state.downloader = Downloader(

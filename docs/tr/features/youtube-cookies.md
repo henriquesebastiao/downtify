@@ -37,10 +37,12 @@ Yüklenen dosya, Downtify’ın veri dizininde (varsayılan `/data`) `cookies.tx
 services:
   downtify:
     volumes:
-      - ./cookies.txt:/cookies.txt:ro
+      - ./cookies.txt:/cookies.txt
     environment:
       - DOWNTIFY_COOKIES_FILE=/cookies.txt
 ```
+
+Bakımın yenilenen çerezleri içine kaydedebilmesi için dosyayı yazılabilir bağlayın (`:ro` olmadan); salt okunur bir dosya yine kullanılır ama eskisi gibi bayatlar.
 
 Ayarlandığında ayarlar ekranı çerez bölümünü kilitli gösterir ve yükleme ile silmeleri reddeder — o yapılandırmanın sahibi dağıtımdır ve Downtify yönetmediği bir dosyanın üzerine yazmamalıdır. Çerezleri bunun yerine web arayüzünden yönetmek için değişkeni kaldırın (ve kapsayıcıyı yeniden oluşturun).
 
@@ -48,9 +50,27 @@ Ayarlandığında ayarlar ekranı çerez bölümünü kilitli gösterir ve yükl
 
 ## Çalışır tutma
 
-- Çerezlerin süresi dolar. Yaş sınırlı indirmeler yeniden başarısız olmaya başlarsa yeni bir dosya dışa aktarıp yerine yükleyin.
-- Sonra kapattığınız bir **gizli pencereden** dışa aktarmak daha uzun ömürlü bir oturum üretir, çünkü normal bir pencereyi kapatmak dışa aktarılan oturumu geçersiz kılabilir.
-- Bazı bölgeler, YouTube yaş sınırlı içeriği sunmadan önce Google hesabında tam kimlik doğrulaması ister. Oturum açmış olmak her zaman yetmez.
+Dışa aktarılan çerezler belirli bir tarihte sona ermez. Google oturumu sürekli değişen çerezlerden oluşur: çerezlerin alındığı sekme `__Secure-1PSIDTS`, `SIDCC` ve benzerlerini birkaç dakikada bir yeniler; yeni değerleri hiç öğrenmeyen bir kopya sonunda reddedilir. yt-dlp bu durumda "The provided YouTube account cookies are no longer valid" kaydını düşer. VPN'de veya veri merkezi IP'sinde YouTube daha katıdır, bu yüzden bu birkaç saat içinde olabilir.
+
+Downtify yüklenen dosyanın oturumunu kendisi açık tutar:
+
+- **Her indirme yeni değerleri kaydeder.** yt-dlp her indirme için dosyanın özel bir kopyasını alır; indirme bitince YouTube'un bu sırada değiştirdiği çerezler kayıtlı `cookies.txt` dosyasına geri yazılır ve başka bir indirmenin bu arada kaydettiği daha yeni bir değer geri alınmaz.
+- **Bakım onları düzenli olarak yeniler.** Her 15 dakikada bir (`DOWNTIFY_COOKIES_REFRESH_MINUTES`, `0` kapatır) Downtify, tarayıcının yaptığı isteğin aynısıyla Google'dan oturum çerezlerini yenilemesini ister, onlarla `youtube.com`'u açar ve değişeni kaydeder. Günlerce hiçbir şey indirmeyen bir sunucu bile oturumunu canlı tutar.
+- **Ayarlar ekranı sonucu gösterir.** **Ayarlar → YouTube çerezleri**; *Oturum açık*, *Oturum kapandı*, *Hesap yok* (dosyada Google oturumu yok, yalnızca ziyaretçi çerezleri var) veya *Denetim başarısız* durumunu, son denetimin ne zaman yapıldığını ve YouTube'un en son ne zaman bot denetimi istediğini gösterir. *Şimdi denetle* bakımı hemen çalıştırır. Yeni yüklenen dosya kaydedildikten birkaç saniye sonra denetlenir.
+
+Size kalanlar:
+
+- **Gizli pencereden dışa aktarın ve pencereyi kapatın.** Gizli bir pencerede YouTube'a giriş yapın, aynı sekmede `youtube.com/robots.txt` adresini açın, çerezleri dışa aktarın ve pencereyi kapatın. Kullanmaya devam ettiğiniz bir sekme oturumu kendisi yeniler ve Downtify'ın kopyasının oturumu dakikalar içinde kapanır. Mümkünse aynı hesabı aynı anda normal bir pencerede kullanmayın.
+- **Ekranda *Oturum kapandı* yazınca yeni bir dosya yükleyin.** Google oturumu yine de sonlandırabilir (parola değişikliği, "tüm cihazlardan çıkış", güvenlik incelemesi). Günlük de bunu söyler: `YouTube cookies are signed out`.
+- Bazı bölgeler, YouTube yaş kısıtlamalı herhangi bir içerik sunmadan önce Google hesabında tam kimlik doğrulaması ister. Oturum açık olması her zaman yetmez.
+
+::: info Neden "Google ile oturum aç" düğmesi yok
+Downtify sizin yerinize Google'a giriş yapamaz. Google betikle ve headless tarayıcıyla yapılan girişleri engeller ("Bu tarayıcı veya uygulama güvenli olmayabilir"), iki adımlı doğrulama ve cihaz onayı ister; YouTube da artık yt-dlp gibi üçüncü taraf istemcilerden OAuth kabul etmiyor. Downtify'da bir giriş formu, Google parolanızı ona vermek anlamına da gelirdi. Otomatikleştirilebilen kısım, dışa aktarılmış bir oturumu canlı tutmaktır.
+:::
+
+::: tip Hesapsız bot denetimleri
+"Sign in to confirm you're not a bot" eksik çerezlerden değil, IP adresinden kaynaklanır. VPN'de sürekli çıkıyorsa VPN sunucusunu veya çıkış ülkesini değiştirmek çoğu zaman yeni çerezlerden daha çok işe yarar. Çok sayıda indirmede kullanılan çerezler YouTube'un o hesabı kısıtlama ihtimalini de artırır; bu yüzden kullan-at bir hesap daha güvenli seçimdir.
+:::
 
 ::: warning Dosyaya bir parola gibi davranın
 Bir `cookies.txt`, Google hesabınızın canlı oturum belirteçlerini içerir. Onu okuyabilen herkes YouTube’da sizin adınıza hareket edebilir. Downtify onu dosya sisteminin desteklediği yerde yalnızca sahibine açık izinlerle saklar ve içeriğini API üzerinden asla göstermez — yalnızca yapılandırılmış olup olmadığını, boyutunu ve ne zaman değiştiğini. Ana hesabınızı riske atmak istemiyorsanız tek kullanımlık bir Google hesabı kullanın.

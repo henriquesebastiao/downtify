@@ -190,7 +190,7 @@ Anything that talks to the server can be built against the same API — see the 
 
 ## Troubleshooting
 
-Most download problems share one cause: YouTube wants a signed-in session. Upload a `cookies.txt` in **Settings → YouTube cookies** and they usually go away. If YouTube still rate-limits you, raise _Delay between downloads_, lower _Parallel downloads_, then try `DOWNTIFY_FORCE_IPV4=1`.
+Most download problems share one cause: YouTube wants a signed-in session. Upload a `cookies.txt` in **Settings → YouTube cookies** and they usually go away; Downtify then keeps that session signed in by refreshing the cookies every few minutes and shows on the same screen when YouTube signs it out. If YouTube still rate-limits you, raise _Delay between downloads_, lower _Parallel downloads_, then try `DOWNTIFY_FORCE_IPV4=1`.
 
 See **[Troubleshooting](https://henriquesebastiao.github.io/downtify/troubleshooting/)** for the full list of symptoms and fixes, and **[YouTube cookies](https://henriquesebastiao.github.io/downtify/features/youtube-cookies/)** for how to export the file.
 

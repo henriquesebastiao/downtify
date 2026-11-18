@@ -260,6 +260,8 @@ downloads are shared, and files are never stored twice.
 * ``GET  /api/cookies`` (current YouTube cookie configuration)
 * ``POST /api/cookies`` (upload a Netscape cookies.txt as the raw request
   body - no multipart, so no ``python-multipart`` dependency)
+* ``POST /api/cookies/check`` (keep-alive now: rotate and save the session
+  cookies, then report ``health``)
 * ``DELETE /api/cookies`` (remove the uploaded cookies.txt)
 * ``GET|POST /api/monitor/playlists`` and
   ``PATCH|DELETE /api/monitor/playlists/{playlist_id}`` (playlist and
@@ -431,6 +433,7 @@ from . import (
     audio_replace,
     catalog_worker,
     compilation,
+    cookie_refresh,
     cover_sources,
     deezer,
     download_sources,
@@ -8951,7 +8954,23 @@ async def upload_cookies_endpoint(request: Request) -> dict[str, Any]:
         raise HTTPException(
             status_code=500, detail=f'Could not save the file: {exc}'
         ) from exc
+    # Tell the settings page right away whether the new jar is signed in,
+    # instead of waiting for the next keep-alive run.
+    spawn_task(
+        asyncio.to_thread(cookie_refresh.refresh_cookies, store),
+        name='cookie-check-after-upload',
+    )
     return {**store.status(), 'warnings': warnings}
+
+
+@router.post('/api/cookies/check')
+async def check_cookies_endpoint() -> dict[str, Any]:
+    """Run the cookie keep-alive now: rotate the session cookies, save the
+    new values and report whether YouTube still sees a signed-in account
+    (``health`` in the answer - see ``downtify/cookie_refresh.py``)."""
+    store = _require_cookies_store()
+    await asyncio.to_thread(cookie_refresh.refresh_cookies, store)
+    return store.status()
 
 
 @router.delete('/api/cookies')

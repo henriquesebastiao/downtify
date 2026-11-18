@@ -1693,6 +1693,18 @@ export default {
     cookiesLocked: 'DOWNTIFY_COOKIES_FILE 환경 변수에 의해 지정되었습니다.',
     cookiesEnvMissing:
       '컨테이너 내부에서 해당 파일을 찾을 수 없습니다 — 볼륨 마운트와 경로를 확인하세요.',
+    cookiesCheck: '지금 확인',
+    cookiesChecked: '{when} 확인함',
+    cookiesStateValid: '로그인됨',
+    cookiesStateSignedOut: '로그아웃됨',
+    cookiesStateNoAccount: '계정 없음',
+    cookiesStateError: '확인 실패',
+    cookiesStateUnknown: '아직 확인 안 함',
+    cookiesBotCheck: '{when} 봇 확인',
+    cookiesSignedOutHint:
+      'YouTube가 더 이상 이 쿠키를 받지 않습니다. 시크릿 창에서 YouTube에 로그인해 새 cookies.txt를 내보내고, 창을 닫은 뒤 여기에 파일을 업로드하세요.',
+    cookiesKeepAliveHint:
+      'Downtify는 몇 분마다 이 쿠키를 갱신해 로그인 상태를 유지합니다. 시크릿 창에서 내보낸 뒤 창을 닫으세요. 브라우저 탭을 열어 두면 쿠키가 교체되어 이 사본이 로그아웃됩니다.',
     audioGroup: '오디오',
     format: '포맷',
     formatHint: 'YouTube에서 다운로드한 파일은 이 포맷으로 변환됩니다.',

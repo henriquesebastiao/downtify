@@ -7,7 +7,6 @@ import contextlib
 import os
 import re
 import shutil
-import tempfile
 import threading
 from concurrent.futures import Future, ThreadPoolExecutor
 from pathlib import Path
@@ -49,7 +48,8 @@ from .content_advisory import (
     ADVISORY_TAG,
     MP4_ADVISORY_ATOM,
 )
-from .cookies import CookiesStore
+from .cookie_refresh import note_ytdlp_message
+from .cookies import CookiesStore, private_cookiefile
 from .deemix_provider import download_from_deemix, normalize_settings
 from .download_log import (
     OUTCOME_COMPLETED,
@@ -314,11 +314,13 @@ class _YtdlpLogger:
 
     @staticmethod
     def warning(msg: str) -> None:
+        note_ytdlp_message(msg)
         if not any(frag in msg for frag in _SUPPRESSED_YT_WARNING_FRAGMENTS):
             logger.warning('yt-dlp: {}', msg)
 
     @staticmethod
     def error(msg: str) -> None:
+        note_ytdlp_message(msg)
         logger.error('yt-dlp: {}', msg)
 
 
@@ -1666,31 +1668,13 @@ class Downloader:
         return ydl_opts, bool(cookies_file or cookies_browser)
 
     @staticmethod
-    @contextlib.contextmanager
-    def _private_cookiefile(ydl_opts: dict[str, Any]):
-        """Point ``cookiefile`` at a per-download copy of the cookie jar.
+    def _private_cookiefile(
+        ydl_opts: dict[str, Any],
+    ) -> contextlib.AbstractContextManager[None]:
+        """Per-download copy of the cookie jar, rotated cookies merged
+        back afterwards - see :func:`downtify.cookies.private_cookiefile`."""
 
-        yt-dlp rewrites ``cookiefile`` on exit (truncate then write), so
-        when a playlist runs several downloads in parallel they all
-        clobber the one shared cookies.txt and a concurrent reader hits a
-        half-written file ("does not look like a Netscape format cookies
-        file"). A private copy keeps the save-back off the shared path.
-        """
-
-        shared = ydl_opts.get('cookiefile')
-        if not shared or not os.path.isfile(shared):
-            yield
-            return
-        fd, tmp = tempfile.mkstemp(prefix='cookies-', suffix='.txt')
-        os.close(fd)
-        try:
-            shutil.copyfile(shared, tmp)
-            ydl_opts['cookiefile'] = tmp
-            yield
-        finally:
-            ydl_opts['cookiefile'] = shared
-            with contextlib.suppress(OSError):
-                os.remove(tmp)
+        return private_cookiefile(ydl_opts)
 
     def fetch_audio(
         self,

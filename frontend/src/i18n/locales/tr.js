@@ -1694,6 +1694,18 @@ export default {
     cookiesDeleteTitle: 'Kayıtlı cookies.txt silinsin mi?',
     cookiesLocked: 'DOWNTIFY_COOKIES_FILE ortam değişkeniyle ayarlandı.',
     cookiesEnvMissing: 'Bu dosya kapsayıcıda yok — yolu ve birimi kontrol et.',
+    cookiesCheck: 'Şimdi denetle',
+    cookiesChecked: 'denetlendi {when}',
+    cookiesStateValid: 'Oturum açık',
+    cookiesStateSignedOut: 'Oturum kapandı',
+    cookiesStateNoAccount: 'Hesap yok',
+    cookiesStateError: 'Denetim başarısız',
+    cookiesStateUnknown: 'Henüz denetlenmedi',
+    cookiesBotCheck: 'bot denetimi {when}',
+    cookiesSignedOutHint:
+      "YouTube artık bu çerezleri kabul etmiyor. Gizli bir pencerede YouTube'a giriş yapın, yeni bir cookies.txt dışa aktarın, pencereyi kapatın ve dosyayı buraya yükleyin.",
+    cookiesKeepAliveHint:
+      'Downtify bu çerezleri birkaç dakikada bir yenileyerek oturumu açık tutar. Çerezleri gizli bir pencereden dışa aktarın ve ardından pencereyi kapatın: açık kalan bir sekme onları yeniler ve bu kopyanın oturumunu kapatır.',
     audioGroup: 'Ses',
     format: 'Biçim',
     formatHint: 'YouTube’dan indirilen dosyalar bu biçime dönüştürülür.',
