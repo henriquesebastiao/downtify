@@ -346,12 +346,13 @@
             <li
               v-for="item in visible"
               :key="item.id"
-              class="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-2 rounded-[12px] px-4 py-3 transition-colors hover:bg-surface monitor-table-grid"
+              class="grid cursor-pointer grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-2 rounded-[12px] px-4 py-3 transition-colors hover:bg-surface monitor-table-grid"
               :class="
                 selecting && selected.has(item.id)
                   ? 'bg-surface ring-1 ring-accent/40 ring-inset'
                   : ''
               "
+              @click="openRow(item, $event)"
             >
               <div class="flex min-w-0 items-center gap-3">
                 <input
@@ -376,14 +377,13 @@
                     class="size-11"
                   />
                   <div class="min-w-0">
-                    <button
-                      type="button"
+                    <RouterLink
+                      :to="watchRouteFor(item)"
                       class="block max-w-full whitespace-normal break-words text-left text-sm font-semibold hover:underline"
                       :title="item.name"
-                      @click="editing = item"
                     >
                       {{ item.name }}
-                    </button>
+                    </RouterLink>
                     <a
                       :href="item.url"
                       target="_blank"
@@ -1114,6 +1114,19 @@ function pick(item, event) {
     range: event.shiftKey,
   })
   lastPicked = item.id
+}
+
+// A click on the row's empty space opens the watch's page (in "Select",
+// it picks the row). Its buttons, links and menus keep their own clicks,
+// and dragging to select text opens nothing.
+const ROW_CONTROLS =
+  'a, button, input, select, textarea, label, [role="button"], [role="menu"], [role="menuitem"], [role="listbox"], [role="option"]'
+
+function openRow(item, event) {
+  if (event.target.closest?.(ROW_CONTROLS)) return
+  if (window.getSelection?.()?.toString()) return
+  if (selecting.value) pick(item, event)
+  else router.push(watchRouteFor(item))
 }
 
 // Escape leaves "Select", unless it is closing a dialog (the capture

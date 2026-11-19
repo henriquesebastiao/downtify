@@ -195,7 +195,7 @@ It works the same on the **Playlists** and **Artists** tabs. Ticked watches stay
 
 ### Editing a watch
 
-Click a watch's name or its **Edit** button. The dialog shows the full link being followed, with **Copy link** and **Open original**, plus when the watch was added, when it was last checked and how many tracks or releases it has. You can change:
+Click a watch's **Edit** button (✎). Clicking its name, or anywhere else on its row that isn't a button, opens the watch's own page instead. The dialog shows the full link being followed, with **Copy link** and **Open original**, plus when the watch was added, when it was last checked and how many tracks or releases it has. You can change:
 
 - **Link** — must be the same kind of link (a playlist for a playlist watch, an artist for an artist watch):
     - Another link to the **same** playlist or artist (for example with a different `?si=` share code, or the YouTube Music link instead of the `www.youtube.com` one) only updates the stored address. Nothing else changes.
