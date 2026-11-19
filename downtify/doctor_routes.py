@@ -53,6 +53,7 @@ from .doctor import (
 )
 from .doctor_audio import AudioHashCache
 from .duplicate_merge import (
+    PLAYLIST_PREFIX,
     KeptApart,
     MergeError,
     MergePlan,
@@ -362,7 +363,8 @@ def _health(job: dict[str, Any]) -> dict[str, Any]:
     )
     _step(job, 'duplicates')
     dupes = duplicates(library, inputs['providers'], limit=None)
-    groups = m3u_duplicate_groups(infos)
+    found_groups = m3u_duplicate_groups(infos)
+    groups = _playlist_review(found_groups)
     report: dict[str, Any] = {
         'scanned_at': _now(),
         'slskd': {
@@ -375,6 +377,7 @@ def _health(job: dict[str, Any]) -> dict[str, Any]:
         'playlists': {
             'm3u': len(infos),
             'groups': [g.as_dict() for g in groups],
+            'kept_apart': len(found_groups) - len(groups),
             'list': [i.as_dict() for i in sorted(infos, key=lambda i: i.path)],
         },
     }
@@ -776,8 +779,29 @@ async def playlists_preview(payload: Merge) -> dict[str, Any]:
     return group.as_dict()
 
 
-def _group_for(paths: list[str]) -> PlaylistGroup:
-    infos = {i.path: i for i in _m3u_infos(_ctx())}
+def _playlist_names(paths: list[str]) -> list[str]:
+    return [PLAYLIST_PREFIX + norm(p) for p in paths]
+
+
+def _playlist_review(groups: list[PlaylistGroup]) -> list[PlaylistGroup]:
+    """The playlist groups to decide on: all but those kept apart."""
+
+    kept = _kept_apart()
+    pairs = kept.pairs()
+    return [
+        g
+        for g in groups
+        if not kept.settled(
+            _playlist_names([m.path for m in g.members]), pairs
+        )
+    ]
+
+
+def _group_for(
+    paths: list[str], infos: Optional[dict[str, M3UInfo]] = None
+) -> PlaylistGroup:
+    if infos is None:
+        infos = {i.path: i for i in _m3u_infos(_ctx())}
     members: list[M3UInfo] = []
     for raw in dict.fromkeys(norm(p) for p in paths):
         info = infos.get(raw)
@@ -814,6 +838,172 @@ async def playlists_merge(payload: Merge) -> dict[str, Any]:
         return await asyncio.to_thread(_merge, job, group)
 
     return _start('merge', work)
+
+
+class PlaylistDecisions(BaseModel):
+    """The duplicate-playlist decisions made on the page, applied at once:
+    groups to merge, and groups that are different playlists."""
+
+    merge: list[list[str]] = Field(default_factory=list, max_length=500)
+    apart: list[list[str]] = Field(default_factory=list, max_length=500)
+
+
+@router.post('/playlists/apply')
+async def playlists_apply(payload: PlaylistDecisions) -> dict[str, Any]:
+    """Keep the *apart* groups apart (they stop being listed), and merge
+    every *merge* group in one job: each is merged as by
+    ``/playlists/merge``, then Navidrome is tidied and rescanned once
+    for all of them, not once per playlist."""
+
+    _require_fresh('playlists')
+    infos = {i.path: i for i in await asyncio.to_thread(_m3u_infos, _ctx())}
+    groups: list[PlaylistGroup] = []
+    seen: set[str] = set()
+    for paths in payload.merge:
+        group = _group_for(paths, infos)
+        if not group.safe():
+            raise HTTPException(
+                400,
+                detail={
+                    'code': 'playlists_differ',
+                    'path': group.keeper.path,
+                    'overlap': round(group.min_overlap(), 3),
+                },
+            )
+        names = {m.path for m in group.members}
+        if names & seen:
+            raise HTTPException(
+                400,
+                detail={'code': 'm3u_twice', 'path': sorted(names & seen)[0]},
+            )
+        seen |= names
+        groups.append(group)
+    apart = [
+        _playlist_names([m.path for m in _group_for(paths, infos).members])
+        for paths in payload.apart
+    ]
+    kept = 0
+    for names in apart:
+        kept += await asyncio.to_thread(_kept_apart().keep, names)
+    _settle_playlists([m.path for g in groups for m in g.members], apart)
+    if not groups:
+        return {'job': None, 'apart': len(apart), 'pairs': kept}
+
+    async def work(job: dict[str, Any]) -> dict[str, Any]:
+        result = await asyncio.to_thread(_merge_many, job, groups)
+        result['apart'] = len(apart)
+        return result
+
+    return {'job': _start('playlists', work), 'apart': len(apart)}
+
+
+@router.post('/playlists/apart/reset')
+async def playlists_apart_reset() -> dict[str, Any]:
+    """List every playlist group kept apart again (next health check)."""
+
+    return {
+        'forgotten': await asyncio.to_thread(
+            lambda: _kept_apart().forget(playlists=True)
+        )
+    }
+
+
+def _settle_playlists(merging: list[str], apart: list[list[str]]) -> None:
+    """Take the groups just decided out of the last health check, so the
+    page shows only what is left to decide."""
+
+    last = (_last.get('health') or {}).get('result') or {}
+    review = last.get('playlists')
+    if not review:
+        return
+    gone = set(merging)
+    apart_sets = [set(names) for names in apart]
+    left = []
+    for group in review.get('groups', []):
+        paths = {m['path'] for m in group['members']}
+        names = set(_playlist_names(sorted(paths)))
+        if paths & gone:
+            continue
+        if any(names <= decided for decided in apart_sets):
+            review['kept_apart'] = review.get('kept_apart', 0) + 1
+            continue
+        left.append(group)
+    review['groups'] = left
+
+
+def _merge_many(
+    job: dict[str, Any], groups: list[PlaylistGroup]
+) -> dict[str, Any]:
+    ctx = _ctx()
+    root = Path(ctx.download_dir)
+    stamp = datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')
+    backup = _data_dir() / 'doctor' / 'backups' / stamp
+    merged: list[dict[str, Any]] = []
+    failed: list[dict[str, str]] = []
+    removed: set[str] = set()
+    for done, group in enumerate(groups):
+        if job.get('cancel'):
+            break
+        _step(job, 'merging', done, len(groups))
+        try:
+            outcome = merge_m3u_files(
+                [root / m.path for m in group.members],
+                root / group.keeper.path,
+                download_dir=root,
+                slskd_dir=ctx.slskd_dir,
+                extra_dirs=ctx.extra_dirs,
+                backup_dir=backup,
+            )
+        except Exception as exc:
+            logger.exception('doctor: merging {} failed', group.keeper.path)
+            failed.append({
+                'keeper': group.keeper.path,
+                'error': str(exc)[:200],
+            })
+            continue
+        removed |= {m.path for m in group.members if m is not group.keeper}
+        merged.append({
+            'keeper': group.keeper.path,
+            'name': group.keeper.name,
+            'songs': int(outcome.get('songs') or 0),
+        })
+    _step(job, 'merging', len(groups), len(groups))
+    after = {i.path for i in _m3u_infos(ctx)}
+    return {
+        'merged': merged,
+        'failed': failed,
+        'backup': str(backup),
+        'others_gone': not (removed & after),
+        'navidrome': _navidrome_after_merges(job, removed),
+    }
+
+
+def _navidrome_after_merges(job: dict[str, Any], removed: set[str]) -> dict:
+    """Remove Navidrome's imports of the M3Us a batch of merges removed,
+    then rescan once."""
+
+    found = _navidrome()
+    if found is None:
+        return {'enabled': False}
+    client, cfg = found
+    infos = _m3u_infos(_ctx())
+    playlists, _native = _navidrome_playlists(client)
+    root = navidrome_root(playlists, [i.path for i in infos] + sorted(removed))
+    deleted: list[str] = []
+    for playlist in playlists:
+        path = norm(playlist.get('path'))
+        if root and path.startswith(root) and path[len(root) :] in removed:
+            try:
+                client.delete_playlist(str(playlist['id']), admin=True)
+                deleted.append(str(playlist['id']))
+            except Exception as exc:
+                logger.info('doctor: could not delete {} err={}', path, exc)
+    _step(job, 'navidrome_scan')
+    return {
+        'enabled': True,
+        'deleted': deleted,
+        'scan_complete': _rescan(client, cfg, full=False),
+    }
 
 
 def _merge(job: dict[str, Any], group: PlaylistGroup) -> dict[str, Any]:

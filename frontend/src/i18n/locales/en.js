@@ -2523,6 +2523,21 @@ export default {
     checkAgain: 'Check again',
     coverOf: 'Cover of {name}',
     noCover: 'No cover',
+    decideMerge: 'Merge',
+    decideApart: 'Different playlists',
+    decideHint: 'Choose for each group, then apply them all at once.',
+    kindLabel: 'Show',
+    kindAll: 'All',
+    applyCounts: '{merge} to merge · {apart} kept apart',
+    applyChanges: 'Apply changes',
+    clearChoices: 'Clear choices',
+    applyTitle: 'Apply these changes?',
+    applyBody:
+      'Merge {merge} groups and keep {apart} apart. The original M3U files are backed up first, and Navidrome is rescanned once at the end.',
+    appliedMerged: 'Groups merged: {count}.',
+    appliedApart: 'Kept apart: {count}. They won’t be listed again.',
+    appliedFailed: 'Couldn’t merge: {names}',
+    playlistsKeptApart: 'Marked as different playlists: {count} (not listed)',
     folder: {
       title: 'What’s in slskd’s folder',
       total: '{files} files · {size}',
@@ -2646,6 +2661,8 @@ export default {
       doctor_busy: 'The Doctor is already working.',
       rescan_first:
         'A repair elsewhere changed this section. Check it again first.',
+      m3u_twice:
+        'A playlist is in two of the groups to merge. Run the health check again.',
       doctor_failed: 'The Doctor stopped with an error. See the server log.',
       queue_busy: 'Running downloads didn’t finish in time. Try again later.',
       scan_first: 'Check the leftovers again first.',

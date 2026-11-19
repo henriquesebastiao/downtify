@@ -2602,6 +2602,22 @@ export default {
     checkAgain: 'Comprobar de nuevo',
     coverOf: 'Portada de {name}',
     noCover: 'Sin portada',
+    decideMerge: 'Unir',
+    decideApart: 'Listas distintas',
+    decideHint: 'Elige para cada grupo y luego aplícalo todo de una vez.',
+    kindLabel: 'Mostrar',
+    kindAll: 'Todos',
+    applyCounts: '{merge} para unir · {apart} separados',
+    applyChanges: 'Aplicar cambios',
+    clearChoices: 'Borrar elección',
+    applyTitle: '¿Aplicar estos cambios?',
+    applyBody:
+      'Unir {merge} grupos y mantener {apart} separados. Antes se guarda una copia de los M3U originales, y Navidrome se vuelve a escanear una sola vez al final.',
+    appliedMerged: '{count} grupos unidos.',
+    appliedApart: '{count} grupos quedan separados y no se volverán a mostrar.',
+    appliedFailed: 'No se pudieron unir: {names}',
+    playlistsKeptApart:
+      '{count} grupos que marcaste como listas distintas no se muestran',
     folder: {
       title: 'Qué hay en la carpeta de slskd',
       total: '{files} archivos · {size}',
@@ -2731,6 +2747,8 @@ export default {
       doctor_busy: 'El Doctor ya está trabajando.',
       rescan_first:
         'Una reparación en otra parte cambió esta sección. Compruébala de nuevo primero.',
+      m3u_twice:
+        'Una lista está en dos de los grupos para unir. Vuelve a hacer la comprobación.',
       doctor_failed:
         'El Doctor se detuvo por un error. Mira el registro del servidor.',
       queue_busy:

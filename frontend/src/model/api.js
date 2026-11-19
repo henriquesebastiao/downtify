@@ -977,6 +977,15 @@ function doctorPreview(paths) {
   return API.post('/api/doctor/playlists/preview', { paths })
 }
 
+// Duplicate playlists decided on the page: { merge: [[paths]], apart: [[paths]] }.
+function doctorPlaylistsApply(payload) {
+  return API.post('/api/doctor/playlists/apply', payload)
+}
+
+function doctorPlaylistsApartReset() {
+  return API.post('/api/doctor/playlists/apart/reset')
+}
+
 function doctorMerge(paths) {
   return API.post('/api/doctor/playlists/merge', { paths })
 }
@@ -1275,6 +1284,8 @@ export default {
   doctorSlskdRelease,
   doctorPreview,
   doctorMerge,
+  doctorPlaylistsApply,
+  doctorPlaylistsApartReset,
   doctorDuplicatesMerge,
   doctorDuplicatesKeep,
   doctorDuplicatesKeepReset,

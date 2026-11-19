@@ -2573,6 +2573,23 @@ export default {
     checkAgain: 'Verificar de novo',
     coverOf: 'Capa de {name}',
     noCover: 'Sem capa',
+    decideMerge: 'Juntar',
+    decideApart: 'Playlists diferentes',
+    decideHint: 'Escolha para cada grupo e depois aplique tudo de uma vez.',
+    kindLabel: 'Mostrar',
+    kindAll: 'Todos',
+    applyCounts: '{merge} para juntar · {apart} separados',
+    applyChanges: 'Aplicar mudanças',
+    clearChoices: 'Limpar escolhas',
+    applyTitle: 'Aplicar estas mudanças?',
+    applyBody:
+      'Juntar {merge} grupos e manter {apart} separados. Os M3U originais são copiados antes, e o Navidrome é escaneado uma única vez no final.',
+    appliedMerged: '{count} grupos juntados.',
+    appliedApart:
+      '{count} grupos ficam separados e não serão listados de novo.',
+    appliedFailed: 'Não foi possível juntar: {names}',
+    playlistsKeptApart:
+      '{count} grupos que você marcou como playlists diferentes não são listados',
     folder: {
       title: 'O que há na pasta do slskd',
       total: '{files} arquivos · {size}',
@@ -2702,6 +2719,8 @@ export default {
       doctor_busy: 'O Doutor já está trabalhando.',
       rescan_first:
         'Um reparo em outro lugar mudou esta seção. Verifique-a de novo primeiro.',
+      m3u_twice:
+        'Uma playlist está em dois dos grupos para juntar. Rode a verificação de novo.',
       doctor_failed: 'O Doutor parou com um erro. Veja o log do servidor.',
       queue_busy:
         'Os downloads em andamento não terminaram a tempo. Tente mais tarde.',
