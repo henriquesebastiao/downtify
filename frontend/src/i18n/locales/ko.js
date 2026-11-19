@@ -2553,6 +2553,25 @@ export default {
     checkAgain: '다시 확인',
     coverOf: '{name} 커버',
     noCover: '커버 없음',
+    folder: {
+      title: 'slskd 폴더에 있는 것',
+      total: '파일 {files}개 · {size}',
+      files: '파일 {count}개',
+      library: '라이브러리 노래',
+      libraryHint: '저장 공간 페이지가 slskd 노래로 세는 것입니다.',
+      leftover: '남은 사본',
+      leftoverHint: '위의 slskd 확인이 라이브러리와 비교하는 사본입니다.',
+      unlisted_audio: 'Downtify가 모르는 오디오',
+      unlisted_audioHint:
+        '가져온 적이 없거나 가져오기에 실패한 뒤 남은 파일입니다. 라이브러리에 없고 다른 곳에서도 세지 않습니다.',
+      other: '기타 파일',
+      otherHint: '커버, 가사 등 노래가 아닌 모든 것.',
+      otherKinds: '종류별 기타 파일:',
+      unlisted_audioList: 'Downtify가 모르는 가장 큰 오디오 파일',
+      otherList: '가장 큰 기타 파일',
+      units:
+        '크기는 1GB를 1024³바이트로 셉니다. 일부 파일 탐색기는 1000³으로 세므로 같은 폴더가 더 크게 보일 수 있습니다.',
+    },
     badge: {
       notChecked: '확인 안 함',
       allGood: '문제 없음',

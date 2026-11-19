@@ -66,6 +66,10 @@
             {{ t('doctor.slskdCheck') }}
           </UiButton>
         </SettingRow>
+        <SlskdFolderBreakdown
+          v-if="health?.slskd?.folder"
+          :folder="health.slskd.folder"
+        />
         <div
           v-if="holdingQueue"
           class="flex flex-wrap items-center justify-between gap-3 bg-warn/8 px-5 py-3 text-[13px] text-warn"
@@ -580,6 +584,7 @@ import SettingGroup from '/src/components/settings/SettingGroup.vue'
 import SettingRow from '/src/components/settings/SettingRow.vue'
 import CheckLine from '/src/components/settings/doctor/CheckLine.vue'
 import DoctorSection from '/src/components/settings/doctor/DoctorSection.vue'
+import SlskdFolderBreakdown from '/src/components/settings/doctor/SlskdFolderBreakdown.vue'
 import { playlistCoverOf } from '/src/components/settings/doctor/covers'
 import PlaylistGroupCard from '/src/components/settings/doctor/PlaylistGroupCard.vue'
 import DuplicateGroupCard from '/src/components/settings/doctor/DuplicateGroupCard.vue'

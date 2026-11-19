@@ -2376,6 +2376,25 @@ export default {
     checkAgain: '重新检查',
     coverOf: '{name} 的封面',
     noCover: '无封面',
+    folder: {
+      title: 'slskd 文件夹里有什么',
+      total: '{files} 个文件 · {size}',
+      files: '{count} 个文件',
+      library: '音乐库歌曲',
+      libraryHint: '存储页面计为 slskd 歌曲的部分。',
+      leftover: '遗留文件',
+      leftoverHint: '上方 slskd 检查会与音乐库比较的副本。',
+      unlisted_audio: 'Downtify 不认识的音频',
+      unlisted_audioHint:
+        '从未导入，或导入失败后保留下来的文件。不在音乐库中，其他地方也不计入。',
+      other: '其他文件',
+      otherHint: '封面、歌词以及其他不是歌曲的文件。',
+      otherKinds: '按类型划分的其他文件：',
+      unlisted_audioList: 'Downtify 不认识的最大音频文件',
+      otherList: '最大的其他文件',
+      units:
+        '这里的大小按 1 GB = 1024³ 字节计算；有些文件浏览器按 1000³ 计算，因此同一文件夹在那里可能显示得更大。',
+    },
     badge: {
       notChecked: '未检查',
       allGood: '一切正常',

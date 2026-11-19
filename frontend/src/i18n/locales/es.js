@@ -2602,6 +2602,28 @@ export default {
     checkAgain: 'Comprobar de nuevo',
     coverOf: 'Portada de {name}',
     noCover: 'Sin portada',
+    folder: {
+      title: 'Qué hay en la carpeta de slskd',
+      total: '{files} archivos · {size}',
+      files: '{count} archivos',
+      library: 'Canciones de la biblioteca',
+      libraryHint:
+        'Lo que la página de almacenamiento cuenta como canciones de slskd.',
+      leftover: 'Restos',
+      leftoverHint:
+        'Copias que la comprobación de slskd de arriba compara con la biblioteca.',
+      unlisted_audio: 'Audio que Downtify no conoce',
+      unlisted_audioHint:
+        'Nunca importado, o conservado tras una importación fallida. No está en la biblioteca ni se cuenta en ningún otro lugar.',
+      other: 'Otros archivos',
+      otherHint: 'Portadas, letras y todo lo que no es una canción.',
+      otherKinds: 'Otros archivos por tipo:',
+      unlisted_audioList:
+        'Archivos de audio más grandes que Downtify no conoce',
+      otherList: 'Otros archivos más grandes',
+      units:
+        'Los tamaños cuentan 1 GB como 1024³ bytes; algunos exploradores de archivos cuentan 1000³, así que la misma carpeta puede verse más grande allí.',
+    },
     badge: {
       notChecked: 'Sin comprobar',
       allGood: 'Todo bien',

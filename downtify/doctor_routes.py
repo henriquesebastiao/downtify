@@ -16,9 +16,11 @@ time, its library twin still there - right before it is removed.
 from __future__ import annotations
 
 import asyncio
+import os
 import secrets
 import threading
 import time
+from collections.abc import Iterable
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Optional
@@ -43,6 +45,7 @@ from .doctor import (
     norm,
     prune_empty_dirs,
     relinked_tracks,
+    slskd_folder_breakdown,
     stale_after,
     summarize_copies,
     verify_copies,
@@ -59,9 +62,13 @@ from .duplicate_merge import (
     plan_merge,
     relink_duplicates,
 )
-from .library_catalog import drop_library_listing_files, list_library_entries
+from .library_catalog import (
+    AUDIO_EXTENSIONS,
+    drop_library_listing_files,
+    list_library_entries,
+)
 from .library_delete import delete_library_file
-from .library_paths import locate_library_file
+from .library_paths import SLSKD_LIBRARY_PREFIX, locate_library_file
 from .library_paths_cache import invalidate_library_paths_cache
 from .library_trash import TrashError
 from .library_usage import duplicates
@@ -362,6 +369,7 @@ def _health(job: dict[str, Any]) -> dict[str, Any]:
             'in_place': inputs['slskd_in_place'],
             'leftovers': len(leftovers),
             'bytes': sum(int(r.get('size') or 0) for r in leftovers),
+            'folder': _slskd_folder(ctx, library, leftovers),
         },
         'duplicates': _duplicate_review(dupes.get('examples', []), infos),
         'playlists': {
@@ -380,6 +388,46 @@ def _health(job: dict[str, Any]) -> dict[str, Any]:
         for m in g['members']
     } | {o['id'] for o in report['navidrome'].get('orphans', [])}
     return report
+
+
+def _slskd_files(root: Path) -> Iterable[tuple[str, int]]:
+    """``(stored path, size)`` of every file under slskd's folder,
+    without following links out of it."""
+
+    for folder, dirs, names in os.walk(root):
+        dirs[:] = [d for d in dirs if not (Path(folder) / d).is_symlink()]
+        for name in names:
+            path = Path(folder) / name
+            try:
+                if path.is_symlink() or not path.is_file():
+                    continue
+                size = path.stat().st_size
+            except OSError:
+                continue
+            rel = path.relative_to(root).as_posix()
+            yield f'{SLSKD_LIBRARY_PREFIX}{rel}', size
+
+
+def _slskd_folder(
+    ctx, library: list[dict[str, Any]], leftovers: list[dict[str, Any]]
+) -> Optional[dict[str, Any]]:
+    """What slskd's folder holds next to what Downtify counts (see
+    :func:`downtify.doctor.slskd_folder_breakdown`), or ``None`` without
+    one."""
+
+    root = Path(ctx.slskd_dir) if ctx.slskd_dir else None
+    if root is None or not root.is_dir():
+        return None
+    return slskd_folder_breakdown(
+        _slskd_files(root),
+        library=[
+            norm(r.get('file'))
+            for r in library
+            if norm(r.get('file')).startswith(SLSKD_LIBRARY_PREFIX)
+        ],
+        leftovers=[norm(r.get('file')) for r in leftovers],
+        audio_extensions=AUDIO_EXTENSIONS,
+    )
 
 
 def _duplicate_review(

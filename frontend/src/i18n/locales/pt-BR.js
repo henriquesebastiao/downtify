@@ -2573,6 +2573,28 @@ export default {
     checkAgain: 'Verificar de novo',
     coverOf: 'Capa de {name}',
     noCover: 'Sem capa',
+    folder: {
+      title: 'O que há na pasta do slskd',
+      total: '{files} arquivos · {size}',
+      files: '{count} arquivos',
+      library: 'Músicas da biblioteca',
+      libraryHint:
+        'O que a página de armazenamento conta como músicas do slskd.',
+      leftover: 'Sobras',
+      leftoverHint:
+        'Cópias que a verificação do slskd acima compara com a biblioteca.',
+      unlisted_audio: 'Áudio que o Downtify não conhece',
+      unlisted_audioHint:
+        'Nunca importado, ou mantido após uma importação que falhou. Não está na biblioteca e não é contado em nenhum outro lugar.',
+      other: 'Outros arquivos',
+      otherHint: 'Capas, letras e tudo o que não é música.',
+      otherKinds: 'Outros arquivos por tipo:',
+      unlisted_audioList:
+        'Maiores arquivos de áudio que o Downtify não conhece',
+      otherList: 'Maiores outros arquivos',
+      units:
+        'Os tamanhos contam 1 GB como 1024³ bytes; alguns gerenciadores de arquivos contam 1000³, então a mesma pasta pode parecer maior lá.',
+    },
     badge: {
       notChecked: 'Não verificado',
       allGood: 'Tudo certo',

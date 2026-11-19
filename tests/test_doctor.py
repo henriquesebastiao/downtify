@@ -18,6 +18,7 @@ from downtify.doctor import (
     navidrome_song_duplicates,
     parse_extinf,
     relinked_tracks,
+    slskd_folder_breakdown,
     stale_after,
     summarize_copies,
     verify_copies,
@@ -546,3 +547,47 @@ def test_a_failed_repair_still_marks_what_it_may_have_changed(monkeypatch):
     assert 'duplicates' in doctor_routes._stale
     doctor_routes._mark('health', done=True)
     assert doctor_routes._stale == {'slskd'}
+
+
+def test_slskd_folder_breakdown_explains_what_the_library_leaves_out():
+    files = [
+        ('slskd/Drake/One Dance.mp3', 9_000_000),
+        ('slskd/Drake/Hotline Bling.mp3', 8_000_000),
+        ('slskd/old/Hotline Bling.mp3', 7_000_000),
+        ('slskd/failed/Unknown.flac', 30_000_000),
+        ('slskd/Drake/cover.jpg', 200_000),
+        ('slskd/Drake/One Dance.lrc', 3_000),
+    ]
+    found = slskd_folder_breakdown(
+        files,
+        library=['slskd/Drake/One Dance.mp3', 'slskd/Drake/Hotline Bling.mp3'],
+        leftovers=['slskd/old/Hotline Bling.mp3'],
+        audio_extensions={'.mp3', '.flac'},
+    )
+
+    assert found['total'] == {'files': 6, 'bytes': 54_203_000}
+    assert found['kinds']['library'] == {'files': 2, 'bytes': 17_000_000}
+    assert found['kinds']['leftover'] == {'files': 1, 'bytes': 7_000_000}
+    assert found['kinds']['unlisted_audio'] == {
+        'files': 1,
+        'bytes': 30_000_000,
+    }
+    assert found['kinds']['other'] == {'files': 2, 'bytes': 203_000}
+    assert [r['extension'] for r in found['other_by_extension']] == [
+        'jpg',
+        'lrc',
+    ]
+    assert found['examples']['unlisted_audio'] == [
+        {'file': 'slskd/failed/Unknown.flac', 'bytes': 30_000_000}
+    ]
+
+
+def test_slskd_folder_files_stay_inside_the_folder(tmp_path):
+    root = tmp_path / 'slskd'
+    (root / 'a').mkdir(parents=True)
+    (root / 'a' / 'song.mp3').write_bytes(b'x' * 10)
+    (root / 'a' / 'cover.jpg').write_bytes(b'y' * 3)
+
+    found = sorted(doctor_routes._slskd_files(root))
+
+    assert found == [('slskd/a/cover.jpg', 3), ('slskd/a/song.mp3', 10)]

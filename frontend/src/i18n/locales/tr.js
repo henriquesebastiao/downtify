@@ -2561,6 +2561,26 @@ export default {
     checkAgain: 'Yeniden kontrol et',
     coverOf: '{name} kapağı',
     noCover: 'Kapak yok',
+    folder: {
+      title: 'slskd klasöründe neler var',
+      total: '{files} dosya · {size}',
+      files: '{count} dosya',
+      library: 'Kitaplık şarkıları',
+      libraryHint: 'Depolama sayfasının slskd şarkısı olarak saydığı dosyalar.',
+      leftover: 'Artıklar',
+      leftoverHint:
+        'Yukarıdaki slskd kontrolünün kitaplıkla karşılaştırdığı kopyalar.',
+      unlisted_audio: 'Downtify’ın tanımadığı ses',
+      unlisted_audioHint:
+        'Hiç içe aktarılmamış ya da başarısız bir içe aktarmadan sonra tutulmuş. Kitaplıkta yok ve başka hiçbir yerde sayılmıyor.',
+      other: 'Diğer dosyalar',
+      otherHint: 'Kapaklar, şarkı sözleri ve şarkı olmayan her şey.',
+      otherKinds: 'Türe göre diğer dosyalar:',
+      unlisted_audioList: 'Downtify’ın tanımadığı en büyük ses dosyaları',
+      otherList: 'En büyük diğer dosyalar',
+      units:
+        'Boyutlar 1 GB’ı 1024³ bayt sayar; bazı dosya tarayıcıları 1000³ sayar, bu yüzden aynı klasör orada daha büyük görünebilir.',
+    },
     badge: {
       notChecked: 'Kontrol edilmedi',
       allGood: 'Her şey yolunda',

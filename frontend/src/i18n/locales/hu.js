@@ -2583,6 +2583,27 @@ export default {
     checkAgain: 'Újraellenőrzés',
     coverOf: '{name} borítója',
     noCover: 'Nincs borító',
+    folder: {
+      title: 'Mi van az slskd mappájában',
+      total: '{files} fájl · {size}',
+      files: '{count} fájl',
+      library: 'Könyvtári dalok',
+      libraryHint: 'Amit a tárhelyoldal slskd-dalként számol.',
+      leftover: 'Maradványok',
+      leftoverHint:
+        'Másolatok, amelyeket a fenti slskd-ellenőrzés a könyvtárral vet össze.',
+      unlisted_audio: 'Hang, amit a Downtify nem ismer',
+      unlisted_audioHint:
+        'Soha nem lett importálva, vagy egy sikertelen importálás után megmaradt. Nincs a könyvtárban, és máshol sem számolódik.',
+      other: 'Egyéb fájlok',
+      otherHint: 'Borítók, dalszövegek és minden, ami nem dal.',
+      otherKinds: 'Egyéb fájlok típus szerint:',
+      unlisted_audioList:
+        'A legnagyobb hangfájlok, amelyeket a Downtify nem ismer',
+      otherList: 'A legnagyobb egyéb fájlok',
+      units:
+        'A méretek 1 GB-ot 1024³ bájtnak számolnak; egyes fájlböngészők 1000³-nal számolnak, ezért ott ugyanaz a mappa nagyobbnak tűnhet.',
+    },
     badge: {
       notChecked: 'Nincs ellenőrizve',
       allGood: 'Minden rendben',
