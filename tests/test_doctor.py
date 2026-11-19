@@ -241,6 +241,49 @@ def test_m3u_groups_find_a_renamed_playlist_by_its_songs():
     assert group.min_overlap() == 0.9
 
 
+def test_a_big_playlist_does_not_chain_small_ones_into_one_group():
+    # Each mix is almost all inside the liked-songs backup, but none of
+    # them is the same playlist as it, or as each other.
+    liked = [f'x/{i}.mp3' for i in range(2000)]
+    backup = _m3u('Playlists/Liked Songs Backup.m3u', liked)
+    mix_a = _m3u('Playlists/2010s Mix.m3u', liked[:50])
+    mix_b = _m3u('Playlists/Pregame.m3u', liked[100:200])
+    mix_c = _m3u('TikTok Songs/TikTok Songs.m3u', liked[300:467])
+
+    assert m3u_duplicate_groups([backup, mix_a, mix_b, mix_c]) == []
+
+
+def test_a_songs_group_needs_every_member_alike():
+    songs = [f'x/{i}.mp3' for i in range(10)]
+    a = _m3u('A/A.m3u', songs)
+    b = _m3u('B/B.m3u', [*songs[:9], 'x/b.mp3'])
+    # Alike with B but not with A: A and C never share a group.
+    c = _m3u('C/C.m3u', [*songs[1:9], 'x/b.mp3', 'x/c.mp3', 'x/d.mp3'])
+
+    (group,) = m3u_duplicate_groups([a, b, c])
+
+    paths = {m.path for m in group.members}
+    assert len(paths) == 2
+    assert {'A/A.m3u', 'C/C.m3u'} - paths
+
+
+def test_names_differing_only_in_dropped_punctuation_are_the_same_name():
+    songs = [f'x/{i}.mp3' for i in range(10)]
+    pairs = [
+        (
+            'Playlists/DAMNN...its already 3am🥵💃🔥.m3u',
+            'DAMNNits already 3am/DAMNNits already 3am.m3u',
+        ),
+        (
+            "Playlists/Rajju patel's playlist.m3u",
+            'Rajju patels playlist/Rajju patels playlist.m3u',
+        ),
+    ]
+    for old, new in pairs:
+        (group,) = m3u_duplicate_groups([_m3u(old, songs), _m3u(new, songs)])
+        assert group.reason == 'name'
+
+
 def test_m3u_groups_leave_unrelated_and_manual_playlists_alone():
     a = _m3u('A/A.m3u', [f'a/{i}.mp3' for i in range(8)])
     b = _m3u('B/B.m3u', [f'b/{i}.mp3' for i in range(8)])
@@ -591,3 +634,113 @@ def test_slskd_folder_files_stay_inside_the_folder(tmp_path):
     found = sorted(doctor_routes._slskd_files(root))
 
     assert found == [('slskd/a/cover.jpg', 3), ('slskd/a/song.mp3', 10)]
+
+
+def _two_copies(root, name, songs):
+    """A playlist's M3U in its folder and an old copy under Playlists/."""
+
+    folder = root / name
+    folder.mkdir(parents=True, exist_ok=True)
+    for song in songs:
+        (folder / f'{song}.mp3').write_bytes(b'x')
+    new = folder / f'{name}.m3u'
+    new.write_text(
+        '#EXTM3U\n' + ''.join(f'{s}.mp3\n' for s in songs[:-1]),
+        encoding='utf-8',
+    )
+    old = root / 'Playlists' / f'{name}.m3u'
+    old.parent.mkdir(exist_ok=True)
+    old.write_text(
+        '#EXTM3U\n' + ''.join(f'../{name}/{s}.mp3\n' for s in songs),
+        encoding='utf-8',
+    )
+    return new, old
+
+
+def test_merging_many_playlists_rescans_navidrome_once(monkeypatch, tmp_path):
+    root = tmp_path / 'downloads'
+    pairs = [
+        _two_copies(root, name, [f'{name} {i}' for i in range(6)])
+        for name in ('Road Trip', 'Gym')
+    ]
+    ctx = type(
+        'Ctx', (), {'download_dir': root, 'slskd_dir': None, 'extra_dirs': ()}
+    )()
+    monkeypatch.setattr(doctor_routes, '_ctx', lambda: ctx)
+    monkeypatch.setattr(doctor_routes, '_data_dir', lambda: tmp_path / 'data')
+    monkeypatch.setattr(doctor_routes, '_m3u_infos', lambda _ctx: [])
+    rescans = []
+    monkeypatch.setattr(
+        doctor_routes,
+        '_navidrome_after_merges',
+        lambda job, removed: rescans.append(set(removed)) or {'enabled': True},
+    )
+    groups = [
+        doctor_routes.PlaylistGroup(
+            f'm3u:{new}',
+            [
+                _m3u(new.relative_to(root).as_posix(), [], expected=True),
+                _m3u(old.relative_to(root).as_posix(), []),
+            ],
+            'name',
+        )
+        for new, old in pairs
+    ]
+
+    result = doctor_routes._merge_many({'progress': {}}, groups)
+
+    assert [m['songs'] for m in result['merged']] == [6, 6]
+    assert result['failed'] == []
+    assert rescans == [{'Playlists/Road Trip.m3u', 'Playlists/Gym.m3u'}]
+    assert not (root / 'Playlists' / 'Gym.m3u').exists()
+    assert (tmp_path / 'data' / 'doctor' / 'backups').is_dir()
+
+
+def test_playlists_kept_apart_stop_being_listed_and_can_come_back(
+    monkeypatch, tmp_path
+):
+    kept = doctor_routes.KeptApart(tmp_path / 'kept.db')
+    monkeypatch.setattr(doctor_routes, '_kept', kept)
+    songs = [f'x/{i}.mp3' for i in range(10)]
+    group = m3u_duplicate_groups([
+        _m3u('Playlists/Top 50 - USA.m3u', songs),
+        _m3u('Playlists/Top Songs - USA.m3u', [*songs[:9], 'x/new.mp3']),
+    ])
+    kept.keep(['a.mp3', 'b.mp3'])  # a song decision, kept separately
+
+    kept.keep(
+        doctor_routes._playlist_names([m.path for m in group[0].members])
+    )
+
+    assert doctor_routes._playlist_review(group) == []
+    assert kept.forget(playlists=True) == 1
+    assert doctor_routes._playlist_review(group) == group
+    assert kept.forget() == 1
+
+
+def test_settling_playlists_drops_decided_groups_from_the_last_check(
+    monkeypatch,
+):
+    def group(*paths):
+        return {'members': [{'path': p} for p in paths]}
+
+    review = {
+        'groups': [
+            group('A/A.m3u', 'Playlists/A.m3u'),
+            group('B.m3u', 'C.m3u'),
+        ],
+        'kept_apart': 0,
+    }
+    monkeypatch.setattr(
+        doctor_routes,
+        '_last',
+        {'health': {'result': {'playlists': review}}},
+    )
+
+    doctor_routes._settle_playlists(
+        ['A/A.m3u', 'Playlists/A.m3u'],
+        [doctor_routes._playlist_names(['B.m3u', 'C.m3u'])],
+    )
+
+    assert review['groups'] == []
+    assert review['kept_apart'] == 1

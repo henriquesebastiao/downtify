@@ -41,6 +41,10 @@ Audio hashes are cached in `/data/doctor/audio_hashes.db` (SQLite; with PostgreS
 
 Two M3U files that hold one playlist: the same name in two places — typically `Playlists/<name>.m3u` from before the M3U moved into the playlist's own folder (or after **Organize by artist/album** was switched) — or nearly the same songs under two names, a playlist renamed on Spotify.
 
+Names count as the same once case, accents, punctuation and emoji are set aside, so `DAMNN...its already 3am🥵` and the `DAMNNits already 3am` folder written for it are one name. Two differently named playlists count as the same songs only when at least 80% of *each* one is in the other, and a playlist joins such a group only when it matches every playlist already in it — a 50-song mix that is almost all inside a 7,000-song liked-songs backup is not a copy of it. **Same name** and **Same songs** filter the list by why a group was found.
+
+Decide as you look through the groups: **Merge** or **Different playlists** on each, then **Apply changes** once. All the merges run as one job, with a single Navidrome rescan at the end. Groups marked as different playlists stop being listed; **List them again** brings them back.
+
 **Merge** keeps the file Downtify writes today, puts every song of both in it once (the larger playlist's order first), copies the cover next to it if it had none, and removes the other file and its cover. Both files are copied to `/data/doctor/backups/<date>/` first. Playlists are only merged when at least 80% of the smaller one's songs are in the larger one; otherwise they may be different playlists and the button stays off. Playlists you created in the Library are never merged.
 
 **Choose playlists yourself** lists every M3U, so two that the check didn't pair can be compared and merged under the same rule.

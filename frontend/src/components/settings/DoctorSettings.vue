@@ -181,14 +181,105 @@
           >
             <CheckLine :ok="true" :text="t('doctor.playlistsOk')" />
           </div>
+          <div
+            v-if="health.playlists.groups.length"
+            class="flex flex-wrap items-center justify-between gap-3 px-5 py-3"
+          >
+            <UiSegmented
+              v-model="playlistKind"
+              :options="playlistKindOptions"
+              show-labels
+              :aria-label="t('doctor.kindLabel')"
+            />
+            <p class="text-[13px] text-muted">{{ t('doctor.decideHint') }}</p>
+          </div>
           <PlaylistGroupCard
-            v-for="group in health.playlists.groups"
+            v-for="group in visiblePlaylistGroups"
             :key="group.id"
             :group="group"
             :busy="busy || isStale('playlists')"
             :cover-version="health.scanned_at"
-            @merge="mergePlaylists"
+            decidable
+            :decision="decisions[group.id] || ''"
+            @decide="(value) => setDecision(group.id, value)"
           />
+          <div
+            v-if="decidedCount"
+            class="sticky bottom-0 z-10 flex flex-wrap items-center justify-between gap-3 border-t border-line-2 bg-surface/95 px-5 py-3 backdrop-blur"
+          >
+            <p class="text-[13px] text-fg">
+              {{
+                t('doctor.applyCounts', {
+                  merge: decidedMerge.length,
+                  apart: decidedApart.length,
+                })
+              }}
+            </p>
+            <div class="flex gap-2">
+              <UiButton variant="ghost" size="sm" @click="clearDecisions">
+                {{ t('doctor.clearChoices') }}
+              </UiButton>
+              <UiButton
+                variant="primary"
+                size="sm"
+                icon="check"
+                :disabled="busy || isStale('playlists')"
+                @click="applyDecisions"
+              >
+                {{ t('doctor.applyChanges') }}
+              </UiButton>
+            </div>
+          </div>
+          <div v-if="applied" class="flex flex-col gap-1 px-5 py-4 text-[13px]">
+            <CheckLine
+              :ok="!applied.failed?.length"
+              :text="
+                t('doctor.appliedMerged', {
+                  count: applied.merged?.length || 0,
+                })
+              "
+            />
+            <p v-if="applied.apart" class="text-muted">
+              {{ t('doctor.appliedApart', { count: applied.apart }) }}
+            </p>
+            <p v-if="applied.failed?.length" class="text-warn">
+              {{
+                t('doctor.appliedFailed', {
+                  names: applied.failed.map((f) => f.keeper).join(', '),
+                })
+              }}
+            </p>
+            <CheckLine
+              v-if="applied.others_gone !== undefined"
+              :ok="applied.others_gone"
+              :text="t('doctor.checkOthersGone')"
+            />
+            <CheckLine
+              v-if="applied.navidrome?.enabled"
+              :ok="applied.navidrome.scan_complete"
+              :text="t('doctor.checkNavidromeScan')"
+            />
+            <p v-if="applied.backup" class="text-muted">
+              {{ t('doctor.backupAt', { path: applied.backup }) }}
+            </p>
+          </div>
+          <SettingRow
+            v-if="health.playlists.kept_apart"
+            :label="
+              t('doctor.playlistsKeptApart', {
+                count: health.playlists.kept_apart,
+              })
+            "
+          >
+            <UiButton
+              size="sm"
+              variant="ghost"
+              :disabled="busy"
+              @click="listPlaylistsAgain"
+            >
+              {{ t('doctor.dupeListAgain') }}
+            </UiButton>
+          </SettingRow>
           <div class="flex flex-col gap-3 px-5 py-4">
             <p class="text-sm font-semibold text-fg">
               {{ t('doctor.manualTitle') }}
@@ -570,7 +661,7 @@
 </template>
 
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 
 import API from '/src/model/api'
 import { useI18n } from '/src/i18n'
@@ -580,6 +671,7 @@ import UiBadge from '/src/components/ui/UiBadge.vue'
 import UiButton from '/src/components/ui/UiButton.vue'
 import UiInput from '/src/components/ui/UiInput.vue'
 import UiProgress from '/src/components/ui/UiProgress.vue'
+import UiSegmented from '/src/components/ui/UiSegmented.vue'
 import SettingGroup from '/src/components/settings/SettingGroup.vue'
 import SettingRow from '/src/components/settings/SettingRow.vue'
 import CheckLine from '/src/components/settings/doctor/CheckLine.vue'
@@ -611,6 +703,11 @@ const dupesShown = ref(10)
 // stay locked until the section is checked again (the server enforces
 // it too, see doctor_routes._require_fresh).
 const stale = ref([])
+// Duplicate playlists: what to do with each group, chosen while looking
+// through them and applied together ({ [group id]: 'merge' | 'apart' }).
+const decisions = reactive({})
+const playlistKind = ref('all')
+const applied = ref(null)
 let timer = null
 
 const busy = computed(() => job.value?.state === 'running')
@@ -669,6 +766,88 @@ const navidromeBadge = computed(() => {
 // The slskd findings only matter while a check's results are on screen
 // to act on; the next check finds everything again anyway.
 const slskdStale = computed(() => isStale('slskd') && Boolean(slskd.value))
+
+const playlistGroups = computed(() => health.value?.playlists?.groups || [])
+const playlistKindOptions = computed(() => {
+  const count = (reason) =>
+    playlistGroups.value.filter((g) => g.reason === reason).length
+  return [
+    {
+      value: 'all',
+      label: `${t('doctor.kindAll')} (${playlistGroups.value.length})`,
+    },
+    {
+      value: 'name',
+      label: `${t('doctor.groupReason.name')} (${count('name')})`,
+    },
+    {
+      value: 'songs',
+      label: `${t('doctor.groupReason.songs')} (${count('songs')})`,
+    },
+  ]
+})
+const visiblePlaylistGroups = computed(() =>
+  playlistKind.value === 'all'
+    ? playlistGroups.value
+    : playlistGroups.value.filter((g) => g.reason === playlistKind.value)
+)
+const decidedGroups = (value) =>
+  playlistGroups.value.filter((g) => decisions[g.id] === value)
+const decidedMerge = computed(() => decidedGroups('merge'))
+const decidedApart = computed(() => decidedGroups('apart'))
+const decidedCount = computed(
+  () => decidedMerge.value.length + decidedApart.value.length
+)
+
+function setDecision(id, value) {
+  if (value) decisions[id] = value
+  else delete decisions[id]
+}
+
+function clearDecisions() {
+  for (const id of Object.keys(decisions)) delete decisions[id]
+}
+
+const memberPaths = (group) => group.members.map((m) => m.path)
+
+async function applyDecisions() {
+  const merge = decidedMerge.value
+  const apart = decidedApart.value
+  const ok = await ui.confirm({
+    title: t('doctor.applyTitle'),
+    body: t('doctor.applyBody', { merge: merge.length, apart: apart.length }),
+    confirmLabel: t('doctor.applyChanges'),
+  })
+  if (!ok) return
+  jobError.value = ''
+  try {
+    const { data } = await API.doctorPlaylistsApply({
+      merge: merge.map(memberPaths),
+      apart: apart.map(memberPaths),
+    })
+    clearDecisions()
+    if (data.job) {
+      applied.value = null
+      applyJob(data.job)
+      schedule()
+    } else {
+      applied.value = { apart: data.apart }
+      reloadHealth()
+    }
+  } catch (err) {
+    ui.toast(errorOf(err), { kind: 'error' })
+  }
+}
+
+async function listPlaylistsAgain() {
+  try {
+    await API.doctorPlaylistsApartReset()
+  } catch (err) {
+    ui.toast(errorOf(err), { kind: 'error' })
+    return
+  }
+  runHealth()
+}
 
 function isStale(section) {
   return stale.value.includes(section)
@@ -792,6 +971,7 @@ function applyJob(current) {
     }
   }
   if (current.kind === 'merge') merged.value = result
+  if (current.kind === 'playlists') applied.value = result
   if (current.kind === 'navidrome') ndResult.value = result
   if (current.kind === 'dedupe') {
     // The server took the merged copies out of its last health check.
@@ -800,7 +980,7 @@ function applyJob(current) {
   }
   // A repair changes what the health check found: look again, once the
   // repair's own result is on screen.
-  if (fresh && (current.kind === 'merge' || current.kind === 'navidrome')) {
+  if (fresh && ['merge', 'playlists', 'navidrome'].includes(current.kind)) {
     setTimeout(runHealth, 0)
   }
 }

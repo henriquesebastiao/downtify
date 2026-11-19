@@ -2568,6 +2568,22 @@ export default {
     checkAgain: 'Újraellenőrzés',
     coverOf: '{name} borítója',
     noCover: 'Nincs borító',
+    decideMerge: 'Egyesítés',
+    decideApart: 'Különböző listák',
+    decideHint: 'Válassz minden csoportnál, aztán alkalmazd egyszerre.',
+    kindLabel: 'Mutasd',
+    kindAll: 'Mind',
+    applyCounts: '{merge} egyesítendő · {apart} külön marad',
+    applyChanges: 'Változások alkalmazása',
+    clearChoices: 'Választás törlése',
+    applyTitle: 'Alkalmazod a változásokat?',
+    applyBody:
+      '{merge} csoport egyesítése, {apart} külön marad. Az eredeti M3U fájlokról előbb mentés készül, a Navidrome pedig a végén egyszer újraolvas.',
+    appliedMerged: '{count} csoport egyesítve.',
+    appliedApart: '{count} csoport külön marad, és többé nem jelenik meg.',
+    appliedFailed: 'Nem sikerült egyesíteni: {names}',
+    playlistsKeptApart:
+      '{count} csoport, amit különböző listának jelöltél, nem jelenik meg',
     folder: {
       title: 'Mi van az slskd mappájában',
       total: '{files} fájl · {size}',
@@ -2695,6 +2711,8 @@ export default {
       doctor_busy: 'A Doktor már dolgozik.',
       rescan_first:
         'Egy máshol végzett javítás megváltoztatta ezt a szakaszt. Előbb ellenőrizd újra.',
+      m3u_twice:
+        'Egy lista két egyesítendő csoportban is szerepel. Futtasd újra az ellenőrzést.',
       doctor_failed: 'A Doktor hibával leállt. Lásd a szervernaplót.',
       queue_busy: 'A futó letöltések nem fejeződtek be időben. Próbáld később.',
       scan_first: 'Előbb ellenőrizd újra a maradványokat.',

@@ -72,6 +72,10 @@ def _now() -> str:
 # ---------------------------------------------------------------------------
 
 
+#: How a playlist (its M3U) is named among the pairs kept apart.
+PLAYLIST_PREFIX = 'm3u:'
+
+
 class KeptApart:
     """Library files an admin said are different songs, by pairs.
 
@@ -136,11 +140,17 @@ class KeptApart:
         wanted = self._pairs(files)
         return bool(wanted) and all(pair in known for pair in wanted)
 
-    def forget(self) -> int:
-        """Forget every decision: all groups are listed again."""
+    def forget(self, *, playlists: bool = False) -> int:
+        """Forget every decision about songs (or, with *playlists*, about
+        playlists - their M3Us are kept as ``m3u:<path>``): all those
+        groups are listed again."""
 
+        op = 'LIKE' if playlists else 'NOT LIKE'
         with self._connect() as conn:
-            return conn.execute('DELETE FROM kept_apart').rowcount
+            return conn.execute(
+                f'DELETE FROM kept_apart WHERE a {op} ?',
+                (f'{PLAYLIST_PREFIX}%',),
+            ).rowcount
 
     def forget_files(self, files: list[str]) -> None:
         """Drop the decisions about files that are gone (merged)."""

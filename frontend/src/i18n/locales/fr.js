@@ -2603,6 +2603,22 @@ export default {
     checkAgain: 'Vérifier à nouveau',
     coverOf: 'Pochette de {name}',
     noCover: 'Pas de pochette',
+    decideMerge: 'Fusionner',
+    decideApart: 'Playlists différentes',
+    decideHint: 'Choisissez pour chaque groupe, puis appliquez tout d’un coup.',
+    kindLabel: 'Afficher',
+    kindAll: 'Tous',
+    applyCounts: '{merge} à fusionner · {apart} gardés à part',
+    applyChanges: 'Appliquer les changements',
+    clearChoices: 'Effacer les choix',
+    applyTitle: 'Appliquer ces changements ?',
+    applyBody:
+      'Fusionner {merge} groupes et garder {apart} à part. Les M3U d’origine sont sauvegardés d’abord, et Navidrome est réanalysé une seule fois à la fin.',
+    appliedMerged: '{count} groupes fusionnés.',
+    appliedApart: '{count} groupes restent à part et ne seront plus listés.',
+    appliedFailed: 'Fusion impossible : {names}',
+    playlistsKeptApart:
+      '{count} groupes marqués comme playlists différentes ne sont pas listés',
     folder: {
       title: 'Ce que contient le dossier de slskd',
       total: '{files} fichiers · {size}',
@@ -2732,6 +2748,8 @@ export default {
       doctor_busy: 'Le Docteur est déjà au travail.',
       rescan_first:
         'Une réparation ailleurs a modifié cette section. Vérifiez-la d’abord à nouveau.',
+      m3u_twice:
+        'Une playlist figure dans deux des groupes à fusionner. Relancez le bilan.',
       doctor_failed:
         'Le Docteur s’est arrêté sur une erreur. Voir le journal du serveur.',
       queue_busy:

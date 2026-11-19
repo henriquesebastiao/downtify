@@ -2621,6 +2621,23 @@ export default {
     checkAgain: 'Erneut prüfen',
     coverOf: 'Cover von {name}',
     noCover: 'Kein Cover',
+    decideMerge: 'Zusammenführen',
+    decideApart: 'Verschiedene Playlists',
+    decideHint: 'Für jede Gruppe wählen, dann alles auf einmal anwenden.',
+    kindLabel: 'Anzeigen',
+    kindAll: 'Alle',
+    applyCounts: '{merge} zusammenführen · {apart} getrennt lassen',
+    applyChanges: 'Änderungen anwenden',
+    clearChoices: 'Auswahl löschen',
+    applyTitle: 'Diese Änderungen anwenden?',
+    applyBody:
+      '{merge} Gruppen zusammenführen und {apart} getrennt lassen. Die ursprünglichen M3U-Dateien werden vorher gesichert, Navidrome wird am Ende einmal neu gescannt.',
+    appliedMerged: '{count} Gruppen zusammengeführt.',
+    appliedApart:
+      '{count} Gruppen bleiben getrennt und werden nicht mehr aufgeführt.',
+    appliedFailed: 'Nicht zusammengeführt: {names}',
+    playlistsKeptApart:
+      '{count} Gruppen, die du als verschiedene Playlists markiert hast, werden nicht aufgeführt',
     folder: {
       title: 'Was in slskds Ordner liegt',
       total: '{files} Dateien · {size}',
@@ -2746,6 +2763,8 @@ export default {
       doctor_busy: 'Der Doktor arbeitet bereits.',
       rescan_first:
         'Eine Reparatur an anderer Stelle hat diesen Bereich verändert. Prüfe ihn zuerst erneut.',
+      m3u_twice:
+        'Eine Playlist steckt in zwei der Gruppen. Führe den Gesundheitscheck erneut aus.',
       doctor_failed: 'Der Doktor brach mit einem Fehler ab. Siehe Server-Log.',
       queue_busy:
         'Laufende Downloads wurden nicht rechtzeitig fertig. Später erneut versuchen.',

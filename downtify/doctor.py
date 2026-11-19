@@ -71,6 +71,7 @@ CHECKS = {'health': HEALTH_SECTIONS, 'slskd': frozenset({'slskd'})}
 REPAIR_IMPACT = {
     'slskd_clean': frozenset({'slskd', 'duplicates', 'navidrome', 'relinked'}),
     'merge': frozenset({'slskd', 'playlists', 'navidrome', 'duplicates'}),
+    'playlists': frozenset({'slskd', 'playlists', 'navidrome', 'duplicates'}),
     'navidrome': frozenset({'navidrome'}),
     'dedupe': frozenset({'slskd', 'playlists', 'navidrome', 'relinked'}),
 }
@@ -513,64 +514,78 @@ class PlaylistGroup:
         }
 
 
-class _Union:
-    def __init__(self) -> None:
-        self.parent: dict[str, str] = {}
+def name_key(name: str) -> str:
+    """:func:`playlist_key` without spaces: a name and the file name
+    written for it compare equal however their punctuation was dropped
+    (``DAMNN...its already 3am🥵`` and ``DAMNNits already 3am``,
+    ``Rajju patel's playlist`` and ``Rajju patels playlist``)."""
 
-    def find(self, item: str) -> str:
-        self.parent.setdefault(item, item)
-        while self.parent[item] != item:
-            self.parent[item] = self.parent[self.parent[item]]
-            item = self.parent[item]
-        return item
+    return playlist_key(name).replace(' ', '')
 
-    def join(self, a: str, b: str) -> None:
-        self.parent[self.find(a)] = self.find(b)
+
+def same_songs(a: Collection[str], b: Collection[str]) -> bool:
+    """Whether two playlists hold nearly the same songs: at least
+    :data:`MIN_OVERLAP` of *each* one is in the other, and at least 5.
+
+    Both ways, not just the smaller one: a 50-song mix is almost all
+    inside a 7,000-song liked-songs backup, but they aren't one
+    playlist.
+    """
+
+    first, second = set(a), set(b)
+    if min(len(first), len(second)) < 5:
+        return False
+    shared = len(first & second)
+    return shared >= MIN_OVERLAP * len(first) and shared >= MIN_OVERLAP * len(
+        second
+    )
 
 
 def m3u_duplicate_groups(infos: Sequence[M3UInfo]) -> list[PlaylistGroup]:
     """M3U files that look like one playlist.
 
-    Same name (:func:`playlist_key`) groups them; so does holding nearly
-    the same songs (at least :data:`MIN_OVERLAP` of the smaller one, and
-    at least 5 songs) under different names - a playlist renamed on
-    Spotify. Playlists you created in the Library are left out: they
-    are yours, not a sync's.
+    Same name (:func:`name_key`) groups them; so does holding nearly
+    the same songs under different names (:func:`same_songs`) - a
+    playlist renamed on Spotify. A playlist joins a songs group only
+    when it holds nearly the same songs as *every* playlist already in
+    it, so one huge playlist can't chain unrelated ones together.
+    Playlists you created in the Library are left out: they are yours,
+    not a sync's.
     """
 
     auto = [m for m in infos if not m.manual and m.entries]
-    union = _Union()
     by_name: dict[str, list[M3UInfo]] = defaultdict(list)
     for info in auto:
-        union.find(info.path)
-        by_name[playlist_key(info.name)].append(info)
-    for members in by_name.values():
-        for other in members[1:]:
-            union.join(members[0].path, other.path)
-    named = {m.path for ms in by_name.values() if len(ms) > 1 for m in ms}
-    for i, first in enumerate(auto):
-        for second in auto[i + 1 :]:
-            small, large = sorted(
-                (first, second), key=lambda m: len(m.entries)
-            )
-            if (
-                len(small.entries) >= 5
-                and overlap(small.entries, large.entries) >= MIN_OVERLAP
-            ):
-                union.join(first.path, second.path)
-    grouped: dict[str, list[M3UInfo]] = defaultdict(list)
-    for info in auto:
-        grouped[union.find(info.path)].append(info)
+        by_name[name_key(info.name)].append(info)
     groups: list[PlaylistGroup] = []
-    for members in grouped.values():
-        if len(members) < 2:
+    placed: set[str] = set()
+    for members in by_name.values():
+        if len(members) > 1:
+            groups.append(_group(members, 'name'))
+            placed.update(m.path for m in members)
+    rest = sorted(
+        (m for m in auto if m.path not in placed),
+        key=lambda m: (-len(m.entries), m.path),
+    )
+    for i, first in enumerate(rest):
+        if first.path in placed:
             continue
-        members.sort(key=lambda m: m.path)
-        reason = 'name' if all(m.path in named for m in members) else 'songs'
-        key = 'm3u:' + members[0].path
-        groups.append(PlaylistGroup(key, members, reason))
+        members = [first]
+        for second in rest[i + 1 :]:
+            if second.path in placed:
+                continue
+            if all(same_songs(m.entries, second.entries) for m in members):
+                members.append(second)
+        if len(members) > 1:
+            groups.append(_group(members, 'songs'))
+            placed.update(m.path for m in members)
     groups.sort(key=lambda g: g.key)
     return groups
+
+
+def _group(members: list[M3UInfo], reason: str) -> PlaylistGroup:
+    members = sorted(members, key=lambda m: m.path)
+    return PlaylistGroup('m3u:' + members[0].path, members, reason)
 
 
 def parse_extinf(extinf: str) -> dict[str, Any]:

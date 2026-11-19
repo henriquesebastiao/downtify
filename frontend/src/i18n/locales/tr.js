@@ -2544,6 +2544,22 @@ export default {
     checkAgain: 'Yeniden kontrol et',
     coverOf: '{name} kapağı',
     noCover: 'Kapak yok',
+    decideMerge: 'Birleştir',
+    decideApart: 'Farklı listeler',
+    decideHint: 'Her grup için seçin, sonra hepsini birden uygulayın.',
+    kindLabel: 'Göster',
+    kindAll: 'Tümü',
+    applyCounts: '{merge} birleştirilecek · {apart} ayrı kalacak',
+    applyChanges: 'Değişiklikleri uygula',
+    clearChoices: 'Seçimleri temizle',
+    applyTitle: 'Bu değişiklikler uygulansın mı?',
+    applyBody:
+      '{merge} grup birleştirilir ve {apart} grup ayrı kalır. Özgün M3U dosyaları önce yedeklenir ve Navidrome sonda bir kez yeniden taranır.',
+    appliedMerged: '{count} grup birleştirildi.',
+    appliedApart: '{count} grup ayrı kalıyor ve bir daha listelenmeyecek.',
+    appliedFailed: 'Birleştirilemedi: {names}',
+    playlistsKeptApart:
+      'Farklı liste olarak işaretlediğiniz {count} grup listelenmiyor',
     folder: {
       title: 'slskd klasöründe neler var',
       total: '{files} dosya · {size}',
@@ -2671,6 +2687,8 @@ export default {
       doctor_busy: 'Doktor zaten çalışıyor.',
       rescan_first:
         'Başka yerdeki bir onarım bu bölümü değiştirdi. Önce yeniden kontrol edin.',
+      m3u_twice:
+        'Bir liste birleştirilecek iki grupta birden var. Kontrolü yeniden çalıştırın.',
       doctor_failed: 'Doktor bir hatayla durdu. Sunucu günlüğüne bakın.',
       queue_busy:
         'Süren indirmeler zamanında bitmedi. Daha sonra yeniden deneyin.',

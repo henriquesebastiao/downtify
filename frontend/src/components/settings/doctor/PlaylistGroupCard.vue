@@ -1,5 +1,11 @@
 <template>
-  <div class="flex flex-col gap-2 px-5 py-4 text-[13px]">
+  <div
+    class="flex flex-col gap-2 px-5 py-4 text-[13px] transition-colors"
+    :class="{
+      'bg-accent/6': decision === 'merge',
+      'bg-surface-2/60': decision === 'apart',
+    }"
+  >
     <div class="flex flex-wrap items-center gap-2">
       <p class="font-semibold text-fg">{{ title }}</p>
       <UiBadge :tone="group.safe ? 'accent' : 'warn'">
@@ -64,7 +70,29 @@
             })
       }}
     </p>
-    <div>
+    <div v-if="decidable" class="flex flex-wrap gap-2">
+      <UiButton
+        size="sm"
+        icon="check"
+        :variant="decision === 'merge' ? 'primary' : 'secondary'"
+        :aria-pressed="decision === 'merge'"
+        :disabled="busy || !group.safe"
+        @click="decide('merge')"
+      >
+        {{ t('doctor.decideMerge') }}
+      </UiButton>
+      <UiButton
+        size="sm"
+        icon="x"
+        :variant="decision === 'apart' ? 'primary' : 'ghost'"
+        :aria-pressed="decision === 'apart'"
+        :disabled="busy"
+        @click="decide('apart')"
+      >
+        {{ t('doctor.decideApart') }}
+      </UiButton>
+    </div>
+    <div v-else>
       <UiButton
         size="sm"
         icon="check"
@@ -91,8 +119,16 @@ const props = defineProps({
   busy: { type: Boolean, default: false },
   /** Changes when the covers may have changed (the last check's time). */
   coverVersion: { type: String, default: '' },
+  // Choose now, apply later (the health check's groups): the card
+  // shows Merge / Different playlists toggles instead of merging.
+  decidable: { type: Boolean, default: false },
+  decision: { type: String, default: '' },
 })
-defineEmits(['merge'])
+const emit = defineEmits(['merge', 'decide'])
+
+function decide(value) {
+  emit('decide', props.decision === value ? '' : value)
+}
 
 const { t } = useI18n()
 const zoomed = ref('')

@@ -2539,6 +2539,22 @@ export default {
     checkAgain: '다시 확인',
     coverOf: '{name} 커버',
     noCover: '커버 없음',
+    decideMerge: '합치기',
+    decideApart: '다른 플레이리스트',
+    decideHint: '그룹마다 선택한 뒤 한 번에 적용하세요.',
+    kindLabel: '보기',
+    kindAll: '전체',
+    applyCounts: '합칠 그룹 {merge}개 · 그대로 둘 그룹 {apart}개',
+    applyChanges: '변경 사항 적용',
+    clearChoices: '선택 지우기',
+    applyTitle: '이 변경 사항을 적용할까요?',
+    applyBody:
+      '{merge}개 그룹을 합치고 {apart}개 그룹은 그대로 둡니다. 원본 M3U 파일은 먼저 백업되고, Navidrome은 마지막에 한 번만 다시 스캔합니다.',
+    appliedMerged: '{count}개 그룹을 합쳤습니다.',
+    appliedApart: '{count}개 그룹은 따로 두며 다시 표시하지 않습니다.',
+    appliedFailed: '합치지 못함: {names}',
+    playlistsKeptApart:
+      '다른 플레이리스트로 표시한 {count}개 그룹은 표시하지 않습니다',
     folder: {
       title: 'slskd 폴더에 있는 것',
       total: '파일 {files}개 · {size}',
@@ -2662,6 +2678,8 @@ export default {
       doctor_busy: '닥터가 이미 작업 중입니다.',
       rescan_first:
         '다른 곳의 복구로 이 섹션이 바뀌었습니다. 먼저 다시 확인하세요.',
+      m3u_twice:
+        '한 플레이리스트가 합칠 그룹 두 곳에 있습니다. 상태 확인을 다시 실행하세요.',
       doctor_failed: '닥터가 오류로 멈췄습니다. 서버 로그를 확인하세요.',
       queue_busy:
         '진행 중인 다운로드가 제때 끝나지 않았습니다. 나중에 다시 시도하세요.',
