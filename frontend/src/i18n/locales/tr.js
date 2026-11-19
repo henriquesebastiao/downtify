@@ -500,6 +500,58 @@ export default {
     playCountSpotify: 'Spotify’daki dinlenme sayısı',
     playCountYoutubeMusic: 'YouTube Music’teki dinlenme sayısı (yaklaşık)',
   },
+  slskdMisses: {
+    title: 'slskd neden kullanılmadı',
+    hint: 'slskd’de bulunmadığı için başka bir kaynağın indirdiği veya hiç bulunamayan şarkılar. Örnekler ve neyi değiştireceğin için bir nedene tıkla.',
+    reset: 'Sıfırla',
+    resetTitle: 'Sayım baştan başlasın mı?',
+    resetBody:
+      'Şimdiye kadar kaydedilen tüm nedenleri unutur; böylece sonraki indirmeler bir ayar değişikliğinin işe yarayıp yaramadığını gösterir. Şarkılara ve dosyalara dokunulmaz.',
+    empty:
+      'Henüz yok: son sıfırlamadan beri slskd istenen her indirmeyi karşıladı.',
+    since: '{when} beri {count} şarkı',
+    usedInstead: 'Yerine kullanılan:',
+    nothingFound: 'bulunamadı',
+    reason: {
+      not_configured: 'slskd ayarlanmamış',
+      unreachable: 'slskd’ye ulaşılamadı',
+      search_failed: 'Arama başlamadı',
+      search_timeout: 'Arama zaman aşımına uğradı',
+      no_results: 'Kimse paylaşmıyordu',
+      no_match: 'Hiçbir dosya eşleşmedi',
+      low_confidence: 'Eşleşme en düşük puanın altında',
+      quality_filtered: 'Kalite kurallarına takıldı',
+      timeout: 'İndirme zaman aşımına uğradı',
+      transfer_failed: 'Aktarımlar başarısız',
+      tag_mismatch: 'Dosyada yanlış şarkı',
+      unknown: 'Bilinmiyor',
+    },
+    fix: {
+      not_configured:
+        'Ayarlar → Ses kaynakları’nda sunucu adresini ve API anahtarını gir.',
+      unreachable:
+        'slskd o sırada kapalıydı veya ulaşılamadı. Çalıştığını ve adresin doğru olduğunu kontrol et.',
+      search_failed:
+        'slskd aramayı reddetti; genellikle hâlâ Soulseek ağına bağlanırken olur.',
+      search_timeout:
+        'Aramalar süre sınırını aştı. Ayarlar → Ses kaynakları’nda toplam süre sınırını artır.',
+      no_results:
+        'Şarkıya boş yükleme yeri olan kimse sahip değildi. Nadir şarkılar çoğu zaman Soulseek’te yoktur; sonra tekrar denemek bulabilir.',
+      no_match:
+        'Dosyalar geldi ama hiçbiri başlık, sanatçı ve süreyle yeterince eşleşmedi.',
+      low_confidence:
+        'Yakın bir dosya çıktı ama yanlış şarkılara (remix, canlı) karşı koruyan eşiğin altında kaldı.',
+      quality_filtered:
+        'Eşleşen dosyalar bulundu ama hiçbiri biçim ve bit hızı kurallarını geçmedi. Daha fazla biçime, daha düşük en düşük bit hızına veya bit hızı belirtilmemiş dosyalara izin vermek onları geçirir.',
+      timeout:
+        'Bir dosya seçildi ama zamanında gelmedi. Toplam veya kuyruk süre sınırını artır.',
+      transfer_failed:
+        'Seçilen her dosya reddedildi ya da hiç tamamlanmadı (çevrimdışı kullanıcılar, uzun kuyruklar). Daha fazla aday denemesi daha çok dosya dener.',
+      tag_mismatch:
+        'İndirilen dosyanın etiketleri başka bir şarkıyı gösterdi; bu yüzden kenara ayrılıp slskd klasöründe tutuldu.',
+      unknown: 'Nedensiz kaydedildi.',
+    },
+  },
   queue: {
     globalPause: 'İndirmeleri ve izlemeyi duraklat',
     globalResume: 'İndirmeleri ve izlemeyi sürdür',
@@ -1483,6 +1535,9 @@ export default {
       one: '{count} şarkı başarısız olmaya devam ediyor',
       other: '{count} şarkı başarısız olmaya devam ediyor',
     },
+    failuresClear: 'Temizle',
+    failuresClearHint:
+      'Bir ayarı değiştirdikten sonra Temizle listeyi baştan başlatır; hâlâ başarısız olan şarkılar bir sonraki kontrolde geri gelir.',
     attempts: { one: '{count} deneme', other: '{count} deneme' },
     lastTried: 'son deneme {when}',
     songsTitle: 'Bu izlemeden gelen şarkılar',

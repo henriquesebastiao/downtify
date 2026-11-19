@@ -497,6 +497,57 @@ export default {
     playCountSpotify: 'Spotify 재생 횟수',
     playCountYoutubeMusic: 'YouTube Music 재생 횟수 (근사치)',
   },
+  slskdMisses: {
+    title: 'slskd를 쓰지 못한 이유',
+    hint: 'slskd에 없어서 다른 소스가 받았거나 아무 데서도 찾지 못한 곡입니다. 이유를 누르면 예시와 바꿀 설정이 나옵니다.',
+    reset: '초기화',
+    resetTitle: '집계를 처음부터 다시 할까요?',
+    resetBody:
+      '지금까지 기록된 이유를 모두 지워, 다음 다운로드로 설정 변경이 도움이 됐는지 볼 수 있게 합니다. 곡과 파일은 건드리지 않습니다.',
+    empty:
+      '아직 없음: 마지막 초기화 이후 slskd가 요청받은 모든 다운로드를 처리했습니다.',
+    since: '{when}부터 {count}곡',
+    usedInstead: '대신 사용:',
+    nothingFound: '찾지 못함',
+    reason: {
+      not_configured: 'slskd 미설정',
+      unreachable: 'slskd에 연결 못 함',
+      search_failed: '검색이 시작되지 않음',
+      search_timeout: '검색 시간 초과',
+      no_results: '공유한 사람이 없음',
+      no_match: '맞는 파일 없음',
+      low_confidence: '최소 점수 미달',
+      quality_filtered: '품질 규칙에 막힘',
+      timeout: '다운로드 시간 초과',
+      transfer_failed: '전송 실패',
+      tag_mismatch: '파일 속 곡이 다름',
+      unknown: '알 수 없음',
+    },
+    fix: {
+      not_configured: '설정 → 오디오 소스에서 서버 URL과 API 키를 입력하세요.',
+      unreachable:
+        '그때 slskd가 꺼져 있거나 연결되지 않았습니다. 실행 중인지, URL이 맞는지 확인하세요.',
+      search_failed:
+        'slskd가 검색을 거부했습니다. Soulseek 네트워크에 아직 연결하는 중일 때가 많습니다.',
+      search_timeout:
+        '검색이 제한 시간을 넘었습니다. 설정 → 오디오 소스에서 전체 제한 시간을 늘리세요.',
+      no_results:
+        '업로드 슬롯이 빈 사용자 중 이 곡을 가진 사람이 없었습니다. 드문 곡은 Soulseek에 없을 때가 많고, 나중에 다시 시도하면 찾을 수 있습니다.',
+      no_match:
+        '파일은 왔지만 제목, 아티스트, 길이가 충분히 맞는 파일이 없었습니다.',
+      low_confidence:
+        '비슷한 파일이 있었지만 잘못된 곡(리믹스, 라이브)을 막는 기준 점수에 못 미쳤습니다.',
+      quality_filtered:
+        '맞는 파일은 있었지만 형식과 비트레이트 규칙을 통과한 파일이 없었습니다. 형식을 더 허용하거나, 최소 비트레이트를 낮추거나, 비트레이트 표시가 없는 파일을 허용하면 통과합니다.',
+      timeout:
+        '파일을 골랐지만 제때 도착하지 않았습니다. 전체 또는 대기열 제한 시간을 늘리세요.',
+      transfer_failed:
+        '고른 파일이 모두 거부되었거나 끝까지 받지 못했습니다(상대가 오프라인, 긴 대기열). 후보 시도 횟수를 늘리면 더 많은 파일을 시도합니다.',
+      tag_mismatch:
+        '받은 파일의 태그가 다른 곡을 가리켜 slskd 폴더에 따로 두었습니다.',
+      unknown: '이유 없이 기록됨.',
+    },
+  },
   queue: {
     globalPause: '다운로드 및 모니터링 일시 중지',
     globalResume: '다운로드 및 모니터링 재개',
@@ -1475,6 +1526,9 @@ export default {
       one: '{count}곡이 계속 실패함',
       other: '{count}곡이 계속 실패함',
     },
+    failuresClear: '지우기',
+    failuresClearHint:
+      '설정을 바꾼 뒤 지우기로 목록을 새로 시작하세요. 계속 실패하는 곡은 다음 확인 때 다시 나타납니다.',
     attempts: { one: '{count}회 시도', other: '{count}회 시도' },
     lastTried: '마지막 시도 {when}',
     songsTitle: '이 모니터링의 곡',

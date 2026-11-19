@@ -247,6 +247,15 @@ class WatchHistoryStore:
                 ),
             )
 
+    def forget_failures(self, playlist_id: int) -> int:
+        """Drop every failure of a watch (the user starts the count over)."""
+
+        with self._connect() as conn:
+            return conn.execute(
+                'DELETE FROM watch_failures WHERE playlist_id = ?',
+                (playlist_id,),
+            ).rowcount
+
     def forget_failures_except(
         self, playlist_id: int, track_ids: set[str]
     ) -> int:

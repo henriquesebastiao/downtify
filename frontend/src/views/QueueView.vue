@@ -163,6 +163,11 @@
           </ul>
         </UiPanel>
 
+        <SlskdMisses
+          v-if="auth.isAdmin.value"
+          :finished="counts.done + counts.failed"
+        />
+
         <UiPanel v-if="queue.length" :title="t('queue.sources')">
           <ul class="flex flex-col gap-2.5">
             <li
@@ -205,6 +210,7 @@ import PageHeader from '/src/components/library/PageHeader.vue'
 import QueueItem from '/src/components/queue/QueueItem.vue'
 import DownloadExclusions from '/src/components/queue/DownloadExclusions.vue'
 import CsvImport from '/src/components/queue/CsvImport.vue'
+import SlskdMisses from '/src/components/queue/SlskdMisses.vue'
 import {
   useDownloadManager,
   useProgressTracker,

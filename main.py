@@ -136,6 +136,7 @@ from downtify.server_port import (
     set_restart_handler,
     write_runtime_port,
 )
+from downtify.slskd_misses import SlskdMisses
 from downtify.stream import stream_cache_from_env
 from downtify.telemetry import redact_url_secrets
 from downtify.track_index import TrackIndex
@@ -449,6 +450,7 @@ def _open_library_stores(monitor_db_path: Path | Database) -> None:
     api.state.playlist_hidden = PlaylistHiddenSongs(library_db)
     api.state.file_providers = FileProviders(library_db)
     api.state.download_log = DownloadLog(library_db)
+    api.state.slskd_misses = SlskdMisses(library_db)
     api.state.usage_snapshots = UsageSnapshots(library_db)
     api.state.external_playlist_imports = ExternalPlaylistImports(library_db)
     api.state.loudness_analyzer = LoudnessAnalyzer(

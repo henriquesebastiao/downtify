@@ -104,6 +104,15 @@ function ws_onerror(fn) {
   return () => errorListeners.delete(fn)
 }
 
+// Why downloads didn't come from slskd (admins), and starting it over.
+function getSlskdMisses() {
+  return API.get('/api/slskd/misses')
+}
+
+function resetSlskdMisses() {
+  return API.delete('/api/slskd/misses')
+}
+
 function getVersion() {
   return API.get('/api/version')
     .then((res) => {
@@ -1107,6 +1116,8 @@ function editMetadata(trackIds, changes, revisions) {
 }
 
 export default {
+  getSlskdMisses,
+  resetSlskdMisses,
   metadataLibrary,
   editMetadata,
   trashCapabilities,

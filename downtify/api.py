@@ -658,6 +658,7 @@ from .podcasts import (
     search_shows,
 )
 from .server_identity import ServerIdentity
+from .slskd_misses import SlskdMisses
 from .slskd_provider import (
     normalize_slskd_quality,
     reset_slskd_parallelism,
@@ -1320,6 +1321,8 @@ class AppState:
     # How each download ended and the library's size day by day, for the
     # library usage page (downtify/download_log.py, library_usage.py).
     download_log: Optional[DownloadLog] = None
+    # Why slskd wasn't used (downtify/slskd_misses.py).
+    slskd_misses: Optional[SlskdMisses] = None
     usage_snapshots: Optional[UsageSnapshots] = None
     external_playlist_imports: Optional[ExternalPlaylistImports] = None
     loudness_analyzer: Optional[LoudnessAnalyzer] = None
@@ -3555,6 +3558,7 @@ def record_download_outcome(
     file's size and provider (see :mod:`downtify.download_log`). Runs on
     the download's own thread; never raises."""
 
+    _record_slskd_miss(song, outcome)
     log = state.download_log
     if log is None:
         return
@@ -3576,6 +3580,62 @@ def record_download_outcome(
         logger.opt(exception=True).debug(
             'Could not log the download of {}', song.get('name')
         )
+
+
+def _record_slskd_miss(song: dict[str, Any], outcome: str) -> None:
+    """Keep why slskd had nothing for a download another source fetched,
+    or that failed everywhere (see :mod:`downtify.slskd_misses`)."""
+
+    miss = song.get('slskd_miss')
+    store = state.slskd_misses
+    if not isinstance(miss, dict) or store is None:
+        return
+    provider = str(song.get('download_provider') or '')
+    if outcome == OUTCOME_COMPLETED and provider == 'slskd':
+        return
+    if outcome not in {OUTCOME_COMPLETED, 'failed'}:
+        return
+    try:
+        store.record(
+            str(miss.get('reason') or 'unknown'),
+            detail=str(miss.get('detail') or ''),
+            fallback=provider if outcome == OUTCOME_COMPLETED else '',
+            title=str(song.get('name') or ''),
+            artist=', '.join(str(a) for a in song.get('artists') or []),
+        )
+    except Exception:
+        logger.opt(exception=True).debug(
+            'Could not record why slskd missed {}', song.get('name')
+        )
+
+
+@router.get('/api/slskd/misses')
+def slskd_misses_summary(request: Request) -> dict[str, Any]:
+    """Why downloads didn't come from slskd: counts per reason, what was
+    used instead, and the latest songs (admins only)."""
+
+    if not request_is_admin(request):
+        raise HTTPException(status_code=403, detail='Admins only')
+    store = state.slskd_misses
+    if store is None:
+        return {
+            'total': 0,
+            'since': None,
+            'reasons': [],
+            'fallbacks': {},
+            'recent': [],
+        }
+    return store.summary()
+
+
+@router.delete('/api/slskd/misses')
+def slskd_misses_reset(request: Request) -> dict[str, Any]:
+    """Start the count over (after changing a setting, say)."""
+
+    if not request_is_admin(request):
+        raise HTTPException(status_code=403, detail='Admins only')
+    store = state.slskd_misses
+    return {'removed': store.reset() if store is not None else 0}
 
 
 @router.post('/api/artists/profile/bio')
@@ -11344,6 +11404,8 @@ def take_usage_snapshot() -> None:
         )
     if state.download_log is not None:
         state.download_log.prune()
+    if state.slskd_misses is not None:
+        state.slskd_misses.prune()
 
 
 async def usage_snapshot_loop(
@@ -11532,6 +11594,26 @@ def _monitor_provenance(
         'watches': watches,
         'others': len(found['holders']) - len(watches),
     }
+
+
+@router.delete('/api/monitor/playlists/{playlist_id}/failures')
+async def monitor_playlist_clear_failures(
+    playlist_id: int, request: Request
+) -> dict[str, Any]:
+    """Forget a watch's failing songs, so its next checks show only what
+    still fails (after a settings change, say). They are tried again on
+    the next check either way."""
+
+    db = _require_monitor_db()
+    watch = await asyncio.to_thread(
+        _monitor_watch_for_request, playlist_id, request
+    )
+    if watch is None:
+        raise HTTPException(
+            status_code=404, detail='Monitored playlist not found'
+        )
+    removed = await asyncio.to_thread(db.history.forget_failures, watch.id)
+    return {'removed': removed}
 
 
 @router.get('/api/monitor/playlists/{playlist_id}/tracks')

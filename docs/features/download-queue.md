@@ -22,6 +22,23 @@ Everyone sees whether the queue is paused; only an admin can pause or resume it,
 
 The same global control is available at the top of Settings → Downloads & files (`/settings/files`) and in Playlist Monitor (`/monitor`), next to Check all. Both read the confirmed server state. They require an administrator's web session; a paired phone token does not grant server administration. On a lost confirmation, use Check status before sending another change.
 
+## Why slskd wasn't used
+
+With [slskd](slskd-navidrome.md) first in the source order, a song it can't serve is downloaded by the next source (YouTube Music, YouTube…) or not at all. For an admin, the **Why slskd wasn't used** panel next to the queue counts why that happened, as bars, most frequent first:
+
+| Reason                                                                    | What it means                                                                        |
+| ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| **Nobody shared it**                                                      | No user had the song with a free upload slot                                         |
+| **No file matched the song**                                              | Files came back, but none matched the title, artist and length                       |
+| **Match below the minimum score**                                         | A close file scored below the threshold that keeps remixes and live versions out     |
+| **Blocked by quality rules**                                              | Matching files failed the format or bitrate rules (Settings → Audio sources → slskd) |
+| **Search / Download ran out of time**                                     | The search or the transfer took longer than the slskd timeouts                       |
+| **Transfers failed**                                                      | Every file picked was refused or never arrived complete                              |
+| **Wrong song in the file**                                                | The downloaded file's tags named another song; it was kept in slskd's folder         |
+| **Couldn't reach slskd** / **Search didn't start** / **slskd not set up** | slskd itself wasn't available                                                        |
+
+Click a reason to see what to change and the latest songs it happened to, with details such as the best match's score or how many files the quality rules turned down. The line below says what was used instead. Songs slskd served, and songs already in the library, aren't counted. **Reset** starts the count over, so after changing a setting the next downloads show whether it helped. Songs and files are not touched.
+
 ## Restarting or updating
 
 The queue outlives a restart, a crash or a container update. The songs that were waiting — and the ones that were mid-download when Downtify stopped, which start over — are queued again on the next start, and a paused queue comes back paused. So with a long queue:
