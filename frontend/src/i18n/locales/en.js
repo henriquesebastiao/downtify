@@ -1248,7 +1248,20 @@ export default {
     urlLabelArtist: 'Artist link',
     urlPlaceholderPlaylist:
       'Paste a Spotify, Deezer or YouTube Music playlist link',
-    urlPlaceholderArtist: 'Paste a Spotify or YouTube Music artist link',
+    urlPlaceholderArtist: 'Paste an artist link, or type a name',
+    searchArtists: 'Search',
+    searchArtistsFor: 'Artists named “{name}”',
+    searchArtistsHelp:
+      'Check the photo and open the profile if you’re unsure, then follow the right one.',
+    userLinkTitle: 'That’s a Spotify user link, not an artist link',
+    userLinkBody:
+      'open.spotify.com/user/… is a listener’s account: the playlists someone made, not an artist’s music. Downtify can’t watch it. An artist’s releases are on their artist page, open.spotify.com/artist/…, which every artist with music on Spotify has.',
+    userLinkYours: 'Your link',
+    userLinkArtist: 'Artist link',
+    userLinkHint:
+      'Search the artist’s name instead and pick them by their photo.',
+    userLinkBack: 'No, go back',
+    userLinkSearch: 'Find the artist instead',
     watchPlaylist: 'Watch playlist',
     watchArtist: 'Watch artist',
     explainerPlaylists:

@@ -1173,7 +1173,18 @@ export default {
     urlLabelArtist: '艺人链接',
     urlPlaceholderPlaylist:
       '粘贴 Spotify、Deezer 或 YouTube Music 播放列表链接',
-    urlPlaceholderArtist: '粘贴 Spotify 或 YouTube Music 艺人链接',
+    urlPlaceholderArtist: '粘贴艺人链接，或输入名字',
+    searchArtists: '搜索',
+    searchArtistsFor: '名为“{name}”的艺人',
+    searchArtistsHelp: '看看照片，不确定时打开主页确认，再关注正确的那位。',
+    userLinkTitle: '这是 Spotify 用户链接，不是艺人链接',
+    userLinkBody:
+      'open.spotify.com/user/… 是听众的账号：某人创建的播放列表，而不是艺人的音乐。Downtify 无法关注它。艺人的作品在其艺人页面 open.spotify.com/artist/…，在 Spotify 上发行过音乐的每位艺人都有。',
+    userLinkYours: '你的链接',
+    userLinkArtist: '艺人链接',
+    userLinkHint: '改为搜索艺人名字，并根据照片选择。',
+    userLinkBack: '不，返回',
+    userLinkSearch: '改为查找艺人',
     watchPlaylist: '监控播放列表',
     watchArtist: '监控艺人',
     explainerPlaylists:

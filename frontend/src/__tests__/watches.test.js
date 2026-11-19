@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
   RELEASE_TYPES,
+  artistNameQuery,
+  nameFromSpotifyUser,
+  spotifyUserOf,
   countWatches,
   filterWatches,
   releaseFilterSummary,
@@ -172,5 +175,35 @@ describe('artist release filters', () => {
       types: [],
       newOnly: false,
     })
+  })
+})
+
+describe('Spotify user links and typed artist names', () => {
+  it('spots a Spotify user link, not an artist link', () => {
+    expect(spotifyUserOf('https://open.spotify.com/user/drake')).toBe('drake')
+    expect(
+      spotifyUserOf('https://open.spotify.com/intl-de/user/drake?si=x')
+    ).toBe('drake')
+    expect(spotifyUserOf('spotify:user:drake')).toBe('drake')
+    expect(
+      spotifyUserOf('https://open.spotify.com/artist/3TVXtAsR1Inumwj472S9r4')
+    ).toBe('')
+    expect(watchKindOfUrl('https://open.spotify.com/user/drake')).toBe(null)
+  })
+
+  it('searches a typed name, never a link', () => {
+    expect(artistNameQuery('Drake')).toBe('Drake')
+    expect(artistNameQuery('  A.R. Rahman ')).toBe('A.R. Rahman')
+    expect(artistNameQuery('D')).toBe('')
+    expect(artistNameQuery('https://open.spotify.com/artist/abc')).toBe('')
+    expect(artistNameQuery('open.spotify.com/user/drake')).toBe('')
+    expect(artistNameQuery('music.youtube.com/channel/UCabc')).toBe('')
+    expect(artistNameQuery('spotify:artist:abc')).toBe('')
+  })
+
+  it('turns a readable user handle into a name to search', () => {
+    expect(nameFromSpotifyUser('drake')).toBe('drake')
+    expect(nameFromSpotifyUser('the_weeknd')).toBe('the weeknd')
+    expect(nameFromSpotifyUser('31l3kq7xqz2ab4c5d6e7f8g9h0')).toBe('')
   })
 })

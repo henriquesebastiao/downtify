@@ -1288,8 +1288,20 @@ export default {
     urlLabelArtist: 'Σύνδεσμος καλλιτέχνη',
     urlPlaceholderPlaylist:
       'Επικόλλησε σύνδεσμο λίστας Spotify, Deezer ή YouTube Music',
-    urlPlaceholderArtist:
-      'Επικόλλησε σύνδεσμο καλλιτέχνη Spotify ή YouTube Music',
+    urlPlaceholderArtist: 'Επικόλλησε σύνδεσμο καλλιτέχνη ή γράψε όνομα',
+    searchArtists: 'Αναζήτηση',
+    searchArtistsFor: 'Καλλιτέχνες με όνομα «{name}»',
+    searchArtistsHelp:
+      'Δες τη φωτογραφία και άνοιξε το προφίλ αν δεν είσαι σίγουρος, μετά ακολούθησε τον σωστό.',
+    userLinkTitle: 'Αυτός είναι σύνδεσμος χρήστη Spotify, όχι καλλιτέχνη',
+    userLinkBody:
+      'Το open.spotify.com/user/… είναι λογαριασμός ακροατή: οι λίστες που έφτιαξε κάποιος, όχι η μουσική ενός καλλιτέχνη. Το Downtify δεν μπορεί να το παρακολουθεί. Οι κυκλοφορίες ενός καλλιτέχνη είναι στη σελίδα καλλιτέχνη, open.spotify.com/artist/…, που έχει κάθε καλλιτέχνης με μουσική στο Spotify.',
+    userLinkYours: 'Ο σύνδεσμός σου',
+    userLinkArtist: 'Σύνδεσμος καλλιτέχνη',
+    userLinkHint:
+      'Αναζήτησε το όνομα του καλλιτέχνη και διάλεξέ τον από τη φωτογραφία.',
+    userLinkBack: 'Όχι, πίσω',
+    userLinkSearch: 'Βρες τον καλλιτέχνη',
     watchPlaylist: 'Παρακολούθηση λίστας',
     watchArtist: 'Παρακολούθηση καλλιτέχνη',
     explainerPlaylists:

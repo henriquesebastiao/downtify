@@ -1273,8 +1273,19 @@ export default {
     urlLabelArtist: 'Link do artista',
     urlPlaceholderPlaylist:
       'Cole o link de uma playlist do Spotify, Deezer ou YouTube Music',
-    urlPlaceholderArtist:
-      'Cole o link de um artista do Spotify ou YouTube Music',
+    urlPlaceholderArtist: 'Cole o link de um artista ou digite um nome',
+    searchArtists: 'Buscar',
+    searchArtistsFor: 'Artistas chamados “{name}”',
+    searchArtistsHelp:
+      'Confira a foto e abra o perfil se tiver dúvida; depois siga o certo.',
+    userLinkTitle: 'Esse é um link de usuário do Spotify, não de artista',
+    userLinkBody:
+      'open.spotify.com/user/… é a conta de um ouvinte: as playlists que alguém criou, não a música de um artista. O Downtify não pode monitorá-la. Os lançamentos de um artista ficam na página de artista, open.spotify.com/artist/…, que todo artista com músicas no Spotify tem.',
+    userLinkYours: 'Seu link',
+    userLinkArtist: 'Link de artista',
+    userLinkHint: 'Busque o nome do artista e escolha pela foto.',
+    userLinkBack: 'Não, voltar',
+    userLinkSearch: 'Encontrar o artista',
     watchPlaylist: 'Monitorar playlist',
     watchArtist: 'Monitorar artista',
     explainerPlaylists:

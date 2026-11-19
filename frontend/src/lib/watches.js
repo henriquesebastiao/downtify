@@ -16,10 +16,53 @@ export function watchKind(item) {
  * null when it's neither (left to the server to reject).
  */
 export function watchKindOfUrl(raw) {
+  if (spotifyUserOf(raw)) return null
   const result = classifyInput(raw)
   if (result.kind === 'playlist') return 'playlist'
   if (result.kind === 'artist') return 'artist'
   return null
+}
+
+// open.spotify.com/user/<id> (any locale prefix) or spotify:user:<id>.
+const SPOTIFY_USER =
+  /(?:open\.spotify\.com\/(?:intl-[a-z]{2}(?:-[a-z]{2})?\/)?user\/|^spotify:user:)([^/?#\s:]+)/i
+
+/**
+ * The user id of a Spotify *user* link - a listener's account, which
+ * can't be watched - or '' for anything else.
+ */
+export function spotifyUserOf(raw) {
+  const match = SPOTIFY_USER.exec(String(raw || '').trim())
+  if (!match) return ''
+  try {
+    return decodeURIComponent(match[1])
+  } catch {
+    return match[1]
+  }
+}
+
+/**
+ * What a typed artist name to search for would be: the text when it
+ * isn't a link (or a Spotify/YouTube id), '' otherwise.
+ */
+export function artistNameQuery(raw) {
+  const text = String(raw || '').trim()
+  if (text.length < 2) return ''
+  if (/^[a-z][a-z0-9+.-]*:/i.test(text)) return ''
+  if (/[\w-]+\.[a-z]{2,}\//i.test(text) || /^www\./i.test(text)) return ''
+  return classifyInput(text).type === 'search' ? text : ''
+}
+
+/**
+ * A name worth searching for from a Spotify user id: a readable handle
+ * ('drake'), not a generated one ('31l3kq7x...').
+ */
+export function nameFromSpotifyUser(id) {
+  const text = String(id || '').trim()
+  if (!text || text.length > 30 || /\d{4,}/.test(text)) return ''
+  // Generated ids are ~25 letters and digits mixed.
+  if (text.length >= 20 && /\d/.test(text)) return ''
+  return text.replace(/[._]+/g, ' ')
 }
 
 /** `{ playlist: n, artist: n }` */

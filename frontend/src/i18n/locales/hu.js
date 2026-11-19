@@ -1273,8 +1273,20 @@ export default {
     urlLabelArtist: 'Előadó linkje',
     urlPlaceholderPlaylist:
       'Illessz be egy Spotify, Deezer vagy YouTube Music lista linket',
-    urlPlaceholderArtist:
-      'Illessz be egy Spotify vagy YouTube Music előadó linket',
+    urlPlaceholderArtist: 'Illessz be előadó linket, vagy írj be egy nevet',
+    searchArtists: 'Keresés',
+    searchArtistsFor: '„{name}” nevű előadók',
+    searchArtistsHelp:
+      'Nézd meg a fotót, és ha bizonytalan vagy, nyisd meg a profilt, aztán kövesd a megfelelőt.',
+    userLinkTitle: 'Ez egy Spotify felhasználói link, nem előadói',
+    userLinkBody:
+      'Az open.spotify.com/user/… egy hallgató fiókja: valaki által készített lejátszási listák, nem egy előadó zenéje. A Downtify nem tudja figyelni. Az előadó kiadásai az előadói oldalán vannak (open.spotify.com/artist/…), ami minden Spotify-on zenét kiadó előadónak van.',
+    userLinkYours: 'A linked',
+    userLinkArtist: 'Előadói link',
+    userLinkHint:
+      'Keress inkább az előadó nevére, és válaszd ki a fotója alapján.',
+    userLinkBack: 'Nem, vissza',
+    userLinkSearch: 'Előadó keresése',
     watchPlaylist: 'Lista figyelése',
     watchArtist: 'Előadó figyelése',
     explainerPlaylists:

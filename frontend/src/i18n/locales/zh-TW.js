@@ -1201,7 +1201,18 @@ export default {
     urlLabelArtist: '藝人連結',
     urlPlaceholderPlaylist:
       '貼上 Spotify、Deezer 或 YouTube Music 播放清單連結',
-    urlPlaceholderArtist: '貼上 Spotify 或 YouTube Music 藝人連結',
+    urlPlaceholderArtist: '貼上藝人連結，或輸入名字',
+    searchArtists: '搜尋',
+    searchArtistsFor: '名為「{name}」的藝人',
+    searchArtistsHelp: '看看照片，不確定時打開主頁確認，再追蹤正確的那位。',
+    userLinkTitle: '這是 Spotify 使用者連結，不是藝人連結',
+    userLinkBody:
+      'open.spotify.com/user/… 是聽眾的帳號：某人建立的播放清單，而不是藝人的音樂。Downtify 無法追蹤它。藝人的作品在其藝人頁面 open.spotify.com/artist/…，在 Spotify 上發行過音樂的每位藝人都有。',
+    userLinkYours: '你的連結',
+    userLinkArtist: '藝人連結',
+    userLinkHint: '改為搜尋藝人名字，並依照片選擇。',
+    userLinkBack: '不，返回',
+    userLinkSearch: '改為尋找藝人',
     watchPlaylist: '監看播放清單',
     watchArtist: '監看藝人',
     explainerPlaylists:

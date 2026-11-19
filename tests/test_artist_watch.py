@@ -339,6 +339,21 @@ def _resolve(url):
     return asyncio.run(api._resolve_watch_target(url))
 
 
+@pytest.mark.parametrize(
+    'url',
+    [
+        'https://open.spotify.com/user/drake',
+        'https://open.spotify.com/intl-de/user/drake?si=1',
+        'spotify:user:drake',
+    ],
+)
+def test_resolve_explains_a_spotify_user_link(url):
+    with pytest.raises(api.HTTPException) as err:
+        _resolve(url)
+    assert err.value.status_code == 400
+    assert 'user link' in err.value.detail
+
+
 def test_resolve_spotify_artist_url_maps_to_youtube_channel(monkeypatch):
     monkeypatch.setattr(
         api.spotify, 'artist_name_from_id', lambda artist_id: 'Test Artist'
