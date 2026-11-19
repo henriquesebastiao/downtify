@@ -50,6 +50,7 @@ const settings = ref({
   },
   lyrics_providers: [''],
   download_lyrics: true,
+  lyrics_synced_only: false,
   lyrics_lrc_beside: true,
   lyrics_lrc_dir: '/data/lyrics',
   format: '',

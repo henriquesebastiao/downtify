@@ -791,6 +791,16 @@
               </SettingRow>
               <SettingRow
                 v-if="s.download_lyrics"
+                :label="t('settings.lyricsSyncedOnly')"
+                :description="t('settings.lyricsSyncedOnlyHint')"
+              >
+                <UiSwitch
+                  v-model="s.lyrics_synced_only"
+                  :aria-label="t('settings.lyricsSyncedOnly')"
+                />
+              </SettingRow>
+              <SettingRow
+                v-if="s.download_lyrics"
                 :label="t('settings.lyricsLrcBeside')"
                 :description="t('settings.lyricsLrcBesideHint')"
               >

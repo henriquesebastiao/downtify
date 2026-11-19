@@ -29,7 +29,7 @@ Varsayılan mod **kapakları, sözleri ve etiketleri** yeniden yazar. İsteğe b
 Bir parça şu durumlarda geride sayılır:
 
 - gömülü kapağının kısa kenarı **hedef boyuttan küçükse** (hiç kapağı olmayan parça da sayılır);
-- **ne** gömülü sözü **ne de** bir `.lrc` yan dosyası varsa (dosyanın yanında ya da Ayarlar’daki söz klasöründe);
+- **ne** gömülü sözü **ne de** bir `.lrc` yan dosyası varsa (dosyanın yanında ya da Ayarlar’daki söz klasöründe) — [Yalnızca zaman eşlemeli sözler](lyrics.md#time-synced-lyrics-only) açıkken **zaman eşlemeli** sözü olmadığında, ve yalnızca eşlemeli sözler yazılır;
 - etiketlerinde **albüm**, **albüm sanatçısı**, **yıl** veya **parça numarası**ndan biri eksikse.
 
 **Etiketleri yenile** yalnızca Downtify’ın hâlâ Spotify parça kimliğine sahip olduğu parçalar için çalışır — Spotify bağlantısından indirdikleri, [parça dizininde](library-catalog.md#what-gets-stored) tutulanlar. Diğer parçalar kuyruğa alınır ama _Yapacak bir şey yok_ olarak döner.
@@ -76,9 +76,13 @@ Downtify her parça ve kategori için şunları hatırlar: ne zaman denetlendiğ
 
 Bir tarama, her şey yakın zamanda denetlendiği _için_ yapacak bir şey bulamazsa bunu söyler ve açıklamasız bir “iyileştirilecek bir şey yok” bırakmak yerine belleksiz yeniden çalıştırmayı önerir.
 
+### Tara ve söz bul
+
+**Tara ve söz bul** kitaplığı tarar ve tarama biter bitmez, arada seçim yapmadan sözü olmayan parçalar için söz aramaya başlar. Bu çalıştırmada yalnızca söz aranır; kapaklar ve etiketler başka bir çalıştırmaya kalır.
+
 ## Çalışırken
 
-İlerleme paneli kuyruktan biten parçaları, yaklaşık bir veri miktarını (`8.4 GB of 51.3 GB`) ve kaç tanesinin iyileştirildiğini, yapacak bir şeyi olmadığını ya da başarısız olduğunu gösterir. Her parça ne yaptığını gösterir — _Eşleştiriliyor_, _Kapak aranıyor_, _Şarkı sözü aranıyor_, _Dosya yazılıyor_ — ve neyin değiştiğiyle biter, örn. `artwork 1200px (itunes)`.
+İlerleme paneli kuyruktan biten parçaları, yaklaşık bir veri miktarını (`8.4 GB of 51.3 GB`) ve kaç tanesinin iyileştirildiğini, yapacak bir şeyi olmadığını ya da başarısız olduğunu gösterir. Her parça ne yaptığını gösterir — _Eşleştiriliyor_, _Kapak aranıyor_, _Şarkı sözü aranıyor_, _Dosya yazılıyor_ — ve neyin değiştiğiyle biter, örn. `artwork 1200px (itunes)`. Çalıştırma söz aradığında, altındaki bir satır söz eklenen parçaları, hiçbir sağlayıcının sözü olmayanları ve başarısız olanları sayar.
 
 **Duraklat**, işlemdeki parçadan sonra durur ve kuyruğu korur. **Durdur** geri kalanını bırakır; zaten iyileştirilen parçalar iyileştirilmiş kalır. Sayfadan ayrılabilirsiniz — çalıştırma sürer ve açık diğer sekmeler onu izler.
 

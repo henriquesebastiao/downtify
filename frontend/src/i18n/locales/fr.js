@@ -755,6 +755,12 @@ export default {
     ofBytes: '{done} sur {total}',
     longJob:
       'Une grande bibliothèque prend du temps. Vous pouvez quitter cette page, et un redémarrage reprend la file.',
+    lyricsQuickTitle: 'Paroles manquantes',
+    lyricsQuickHint:
+      'Analyse la bibliothèque à la recherche de titres sans paroles et les cherche aussitôt, sans étape de choix. Les autres améliorations attendent un autre passage.',
+    lyricsQuickButton: 'Analyser et trouver les paroles',
+    lyricsOutcome:
+      'Paroles ajoutées : {added} · Introuvables : {notFound} · Échecs : {failed}',
     completed: 'Améliorés',
     skipped: 'Rien à faire',
     failed: 'Échecs',
@@ -1857,6 +1863,11 @@ export default {
     lyricsLrclibHint: 'Base communautaire — paroles simples et synchronisées',
     lyricsNetease: 'NetEase Cloud Music',
     lyricsNeteaseHint: 'Vaste catalogue, généralement synchronisé',
+    lyricsKugou: 'Kugou Music',
+    lyricsKugouHint: 'Grand catalogue, synchronisées',
+    lyricsSyncedOnly: 'Paroles synchronisées uniquement',
+    lyricsSyncedOnlyHint:
+      'Ignore les paroles sans horodatage et interroge le fournisseur suivant. Améliorer la bibliothèque compte alors les titres n’ayant que des paroles simples comme sans paroles.',
     ratingsGroup: 'Notes depuis Deezer',
     ratingsHint:
       'Attribue à tes morceaux dans Navidrome de 0 à 5 étoiles selon leur popularité sur Deezer, comme dztnr. Les étoiles appartiennent au compte Navidrome ci-dessus.',

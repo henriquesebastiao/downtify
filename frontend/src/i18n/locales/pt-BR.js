@@ -736,6 +736,12 @@ export default {
     ofBytes: '{done} de {total}',
     longJob:
       'Uma biblioteca grande demora. Você pode sair desta página, e um reinício continua a fila.',
+    lyricsQuickTitle: 'Letras que faltam',
+    lyricsQuickHint:
+      'Procura na biblioteca faixas sem letra e já busca as letras, sem escolher nada no meio. As outras melhorias ficam para outra vez.',
+    lyricsQuickButton: 'Escanear e buscar letras',
+    lyricsOutcome:
+      'Letras adicionadas: {added} · Não encontradas: {notFound} · Falhas: {failed}',
     completed: 'Melhoradas',
     skipped: 'Nada a fazer',
     failed: 'Falharam',
@@ -1820,6 +1826,11 @@ export default {
     lyricsLrclibHint: 'Banco comunitário — letras simples e sincronizadas',
     lyricsNetease: 'NetEase Cloud Music',
     lyricsNeteaseHint: 'Catálogo grande, normalmente sincronizado',
+    lyricsKugou: 'Kugou Music',
+    lyricsKugouHint: 'Catálogo grande, sincronizadas',
+    lyricsSyncedOnly: 'Só letras sincronizadas',
+    lyricsSyncedOnlyHint:
+      'Ignora letras sem marcação de tempo e pergunta ao próximo provedor. Melhorar biblioteca passa a contar faixas só com letra simples como sem letra.',
     ratingsGroup: 'Avaliações do Deezer',
     ratingsHint:
       'Dá às suas músicas no Navidrome de 0 a 5 estrelas conforme a popularidade no Deezer, como o dztnr. As estrelas pertencem à conta do Navidrome acima.',

@@ -1,9 +1,11 @@
 """Lyrics providers used to enrich downloaded audio files.
 
-Two sources are implemented, both free and keyless: ``lrclib``
-(https://lrclib.net) and ``netease`` (NetEase Cloud Music). Users put
-them in the order they prefer; :func:`fetch` walks that order and stops
-at the first provider that has something.
+Three sources are implemented, all free and keyless: ``lrclib``
+(https://lrclib.net), ``netease`` (NetEase Cloud Music) and ``kugou``
+(Kugou Music's lyrics service). Users put them in the order they prefer;
+:func:`fetch` walks that order and stops at the first provider that has
+something - with ``synced_only``, at the first that has time-synced
+lyrics.
 
 The legacy ``genius``/``musixmatch``/``azlyrics`` identifiers from the
 spotdl-era UI are accepted as no-ops so existing settings keep
@@ -15,6 +17,8 @@ search endpoint needed to find a song's page.
 
 from __future__ import annotations
 
+import base64
+import binascii
 import os
 import re
 import unicodedata
@@ -27,7 +31,7 @@ import httpx
 from loguru import logger
 from mutagen import File as MutagenFile
 from mutagen.flac import FLAC
-from mutagen.id3 import ID3, USLT
+from mutagen.id3 import ID3, SYLT, USLT
 from mutagen.mp3 import MP3
 from mutagen.mp4 import MP4, MP4Tags
 from mutagen.oggopus import OggOpus
@@ -38,11 +42,12 @@ from .lyrics_cache import song_key
 
 LRCLIB_BASE = 'https://lrclib.net/api'
 NETEASE_BASE = 'https://music.163.com/api'
+KUGOU_BASE = 'https://lyrics.kugou.com'
 _USER_AGENT = 'Downtify (https://github.com/henriquesebastiao/downtify)'
 _TIMEOUT = 10
 
 #: Implemented providers, in the order they are offered by default.
-PROVIDER_ORDER = ['lrclib', 'netease']
+PROVIDER_ORDER = ['lrclib', 'netease', 'kugou']
 SUPPORTED_PROVIDERS = set(PROVIDER_ORDER)
 #: Accepted in saved settings, but nothing is fetched from them.
 LEGACY_PROVIDERS = {'genius', 'musixmatch', 'azlyrics'}
@@ -282,6 +287,12 @@ class Lyrics:
     def has_any(self) -> bool:
         return bool(self.plain) or bool(self.synced)
 
+    def usable(self, synced_only: bool = False) -> bool:
+        """Whether this is worth keeping: anything at all, or only
+        time-synced lyrics when *synced_only*."""
+
+        return bool(self.synced) if synced_only else self.has_any()
+
 
 def providers_from_settings(settings: dict[str, Any]) -> list[str]:
     """Providers a download (and library sync) will try, in order.
@@ -312,12 +323,15 @@ def fetch(
     song: dict[str, Any],
     providers: list[str],
     cache: Optional[Any] = None,
+    *,
+    synced_only: bool = False,
 ) -> Optional[Lyrics]:
     """Try each provider in order; return the first successful match.
 
     ``cache`` is an optional :class:`~downtify.lyrics_cache.LyricsLookupCache`:
     providers that recently came back empty for this song are skipped, and
-    every answer is recorded.
+    every answer is recorded. With *synced_only*, lyrics without
+    timestamps count as nothing: the next provider is asked.
     """
 
     key = song_key(song) if cache is not None else ''
@@ -332,7 +346,7 @@ def fetch(
         except Exception:
             logger.exception('Lyrics provider {!r} failed', name)
             continue
-        found = bool(result and result.has_any())
+        found = bool(result and result.usable(synced_only))
         if cache is not None:
             cache.record(key, name, found)
         if found:
@@ -385,11 +399,65 @@ def _fetch_lrclib(song: dict[str, Any]) -> Optional[Lyrics]:
     except ValueError:
         return None
 
+    found = _lrclib_lyrics(data)
+    if found is not None and found.synced:
+        return found
+    # No exact match, or one without timestamps: LRCLIB's search finds
+    # the same song filed under a slightly different album or length.
+    searched = _search_lrclib(song)
+    return searched or found
+
+
+def _lrclib_lyrics(data: Any) -> Optional[Lyrics]:
+    if not isinstance(data, dict):
+        return None
     plain = (data.get('plainLyrics') or '').strip() or None
     synced = (data.get('syncedLyrics') or '').strip() or None
     if not plain and not synced:
         return None
     return Lyrics(plain=plain, synced=synced)
+
+
+def _search_lrclib(song: dict[str, Any]) -> Optional[Lyrics]:
+    """The best time-synced hit of LRCLIB's search for the song, matched
+    on title, artist and length the way NetEase hits are."""
+
+    artists = song.get('artists') or []
+    title = (song.get('name') or '').strip()
+    artist = str(artists[0] if artists else '').strip()
+    if not title or not artist:
+        return None
+    try:
+        response = httpx.get(
+            f'{LRCLIB_BASE}/search',
+            params={'track_name': title, 'artist_name': artist},
+            headers={'User-Agent': _USER_AGENT},
+            timeout=_TIMEOUT,
+        )
+    except httpx.RequestError:
+        logger.opt(exception=True).warning('lrclib search failed')
+        return None
+    if response.status_code != 200:
+        return None
+    try:
+        hits = response.json()
+    except ValueError:
+        return None
+    duration = float(song.get('duration') or 0)
+    best = None
+    best_score = 0.0
+    for hit in hits if isinstance(hits, list) else []:
+        if not isinstance(hit, dict) or not hit.get('syncedLyrics'):
+            continue
+        candidate = {
+            'name': hit.get('trackName') or hit.get('name'),
+            'artists': [{'name': hit.get('artistName')}],
+            'duration': float(hit.get('duration') or 0) * 1000,
+        }
+        score = _netease_score(candidate, title, artist, duration)
+        if score > best_score:
+            best, best_score = hit, score
+    return _lrclib_lyrics(best) if best is not None else None
 
 
 # ── NetEase Cloud Music ──────────────────────────────────────────────
@@ -399,8 +467,9 @@ def _fetch_lrclib(song: dict[str, Any]) -> Optional[Lyrics]:
 #: Credits NetEase puts inside the lyric body ("作词 : ..."), dropped so
 #: they don't end up in the tag or the .lrc file.
 _NETEASE_CREDIT = re.compile(
-    r'^(作词|作曲|编曲|制作人|录音|混音|母带|监制|出品|发行|'
-    r'lyricist|composer|arranger|producer|mixing|mastering)\s*[:：]',
+    r'^(作词|作曲|编曲|制作人|录音|混音|母带|监制|出品|发行|词|曲|'
+    r'lyricist|composer|arranger|producer|mixing|mastering|'
+    r'written by|lyrics by|music by|composed by|produced by)\s*[:：]',
     re.IGNORECASE,
 )
 #: NetEase marks instrumentals with this instead of leaving lyrics empty.
@@ -556,9 +625,107 @@ def _fetch_netease(song: dict[str, Any]) -> Optional[Lyrics]:
     return result if result.has_any() else None
 
 
+# ── Kugou ────────────────────────────────────────────────────────────
+# Kugou Music's lyrics service: a keyless search that lists candidate
+# lyrics with their song's length, then the chosen one as base64 LRC.
+
+#: LRC header tags (``[ar:Artist]``, ``[offset:0]``): not lyrics.
+_LRC_TAG = re.compile(r'^\[[a-z#]+:[^\]]*\]$', re.IGNORECASE)
+
+
+def _kugou_get(path: str, params: dict[str, Any]) -> Optional[dict]:
+    try:
+        response = httpx.get(
+            f'{KUGOU_BASE}{path}',
+            params=params,
+            headers={'User-Agent': _USER_AGENT},
+            timeout=_TIMEOUT,
+        )
+    except httpx.RequestError:
+        logger.opt(exception=True).warning('Kugou request failed')
+        return None
+    if response.status_code != 200:
+        logger.warning('Kugou returned HTTP {}', response.status_code)
+        return None
+    try:
+        data = response.json()
+    except ValueError:
+        return None
+    return data if isinstance(data, dict) else None
+
+
+def _fetch_kugou(song: dict[str, Any]) -> Optional[Lyrics]:
+    artists = song.get('artists') or []
+    title = (song.get('name') or '').strip()
+    artist = str(artists[0] if artists else '').strip()
+    if not title:
+        return None
+    duration = float(song.get('duration') or 0)
+    data = _kugou_get(
+        '/search',
+        {
+            'ver': 1,
+            'man': 'yes',
+            'client': 'pc',
+            'keyword': f'{artist} - {title}' if artist else title,
+            'duration': int(duration * 1000) if duration else '',
+            'hash': '',
+        },
+    )
+    best = None
+    best_score = 0.0
+    for hit in (data or {}).get('candidates') or []:
+        if not isinstance(hit, dict) or not hit.get('id'):
+            continue
+        candidate = {
+            'name': hit.get('song'),
+            'artists': [
+                {'name': part}
+                for part in re.split(r'[、,&/]', str(hit.get('singer') or ''))
+                if part.strip()
+            ],
+            'duration': hit.get('duration'),
+        }
+        score = _netease_score(candidate, title, artist, duration)
+        if score > best_score:
+            best, best_score = hit, score
+    if best is None:
+        return None
+    payload = _kugou_get(
+        '/download',
+        {
+            'ver': 1,
+            'client': 'pc',
+            'id': best['id'],
+            'accesskey': best.get('accesskey') or '',
+            'fmt': 'lrc',
+            'charset': 'utf8',
+        },
+    )
+    try:
+        text = base64.b64decode(str((payload or {}).get('content') or ''))
+        lrc = text.decode('utf-8', errors='replace')
+    except (binascii.Error, ValueError):
+        return None
+    # Kugou opens with the song's own "Title - Artist" line.
+    heading = {
+        _normalize(f'{best.get("song")} - {best.get("singer")}'),
+        _normalize(f'{best.get("singer")} - {best.get("song")}'),
+    }
+    lines = [
+        line
+        for line in lrc.splitlines()
+        if not _LRC_TAG.match(line.strip())
+        and _normalize(_LRC_LINE.sub(r'\2', line.strip())) not in heading
+    ]
+    result = _parse_lrc('\n'.join(lines))
+    return result if result.has_any() else None
+
+
 _PROVIDER_FNS: dict[str, Callable[[dict[str, Any]], Optional[Lyrics]]] = {
     'lrclib': _fetch_lrclib,
     'netease': _fetch_netease,
+    'kugou': _fetch_kugou,
 }
 
 
@@ -610,6 +777,33 @@ def _embedded_lyrics(path: Path) -> str:
             'Could not read embedded lyrics from {}', path
         )
     return ''
+
+
+def _embedded_synced(path: Path) -> bool:
+    """Whether the file's tags carry time-synced lyrics: an ID3 ``SYLT``
+    frame, or lyrics text with LRC timestamps (as some downloads from
+    other apps embed them)."""
+
+    try:
+        tags = _file_tags(path)
+        if tags and hasattr(tags, 'getall'):
+            for frame in tags.getall('SYLT'):
+                if isinstance(frame, SYLT) and frame.text:
+                    return True
+    except Exception:
+        logger.opt(exception=True).debug(
+            'Could not read synced lyrics from {}', path
+        )
+    return looks_like_lrc(_embedded_lyrics(path))
+
+
+def has_synced_lyrics(path: Path) -> bool:
+    """Whether a track already has time-synced lyrics: a ``.lrc`` sidecar
+    (beside it or in the lyrics folder) or synced lyrics in its tags."""
+
+    if any(_read_lrc_text(sidecar) for sidecar in lrc_candidates(path)):
+        return True
+    return _embedded_synced(path)
 
 
 def read_track_lyrics(path: Path) -> dict[str, str]:

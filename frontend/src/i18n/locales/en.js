@@ -721,6 +721,12 @@ export default {
     ofBytes: '{done} of {total}',
     longJob:
       'A large library takes a while. You can leave this page, and a restart picks the queue back up.',
+    lyricsQuickTitle: 'Missing lyrics',
+    lyricsQuickHint:
+      'Scan the library for tracks without lyrics and look them up right away, without choosing anything in between. Other upgrades are left for another run.',
+    lyricsQuickButton: 'Scan and find lyrics',
+    lyricsOutcome:
+      'Lyrics added: {added} · Not found: {notFound} · Failed: {failed}',
     completed: 'Upgraded',
     skipped: 'Nothing to do',
     failed: 'Failed',
@@ -1778,6 +1784,11 @@ export default {
     lyricsLrclibHint: 'Community database — plain and time-synced lyrics',
     lyricsNetease: 'NetEase Cloud Music',
     lyricsNeteaseHint: 'Large catalogue, usually time-synced',
+    lyricsKugou: 'Kugou Music',
+    lyricsKugouHint: 'Large catalogue, time-synced',
+    lyricsSyncedOnly: 'Time-synced lyrics only',
+    lyricsSyncedOnlyHint:
+      'Skip lyrics without timestamps and ask the next provider instead. Upgrade library then counts tracks with only plain lyrics as missing.',
     ratingsGroup: 'Ratings from Deezer',
     ratingsHint:
       'Gives your songs in Navidrome 0–5 stars from how popular they are on Deezer, like dztnr. The stars belong to the Navidrome account above.',

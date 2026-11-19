@@ -70,6 +70,13 @@ export function normalizeStatus(payload) {
       libraryBytes: Number(data.summary?.library_bytes) || 0,
     },
     options: run?.options || {},
+    // How the lyrics part of the run went.
+    lyrics: {
+      added: Number(data.lyrics?.added) || 0,
+      notFound: Number(data.lyrics?.not_found) || 0,
+      failed: Number(data.lyrics?.failed) || 0,
+      pending: Number(data.lyrics?.pending) || 0,
+    },
   }
 }
 

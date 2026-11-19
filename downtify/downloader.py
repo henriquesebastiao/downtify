@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import base64
 import contextlib
+import functools
 import os
 import re
 import shutil
@@ -471,6 +472,9 @@ class Downloader:
         self.audio_bitrate = audio_bitrate
         self.output_template = output_template
         self.lyrics_providers = list(lyrics_providers or [])
+        #: Keep only time-synced lyrics (the ``lyrics_synced_only``
+        #: setting): plain lyrics count as none found.
+        self.lyrics_synced_only = False
         # Optional LyricsLookupCache: skips providers that already came
         # back empty for a song.
         self.lyrics_cache = lyrics_cache
@@ -1824,7 +1828,10 @@ class _MetadataLookups:
         )
         self._lyrics = (
             self._pool.submit(
-                lyrics_mod.fetch,
+                # The keyword only when it's on: the call stays as it was.
+                functools.partial(lyrics_mod.fetch, synced_only=True)
+                if getattr(downloader, 'lyrics_synced_only', False)
+                else lyrics_mod.fetch,
                 song,
                 downloader.lyrics_providers,
                 downloader.lyrics_cache,

@@ -729,6 +729,12 @@ export default {
     ofBytes: '{done} / {total}',
     longJob:
       '라이브러리 용량이 큰 경우 시간이 걸릴 수 있습니다. 이 페이지를 벗어나도 무방하며, 서버를 재시작해도 대기열을 이어서 작업합니다.',
+    lyricsQuickTitle: '없는 가사',
+    lyricsQuickHint:
+      '가사가 없는 곡을 찾아 바로 가사를 검색합니다. 중간에 고를 필요가 없으며, 다른 업그레이드는 다음 실행으로 남깁니다.',
+    lyricsQuickButton: '스캔하고 가사 찾기',
+    lyricsOutcome:
+      '가사 추가: {added} · 찾지 못함: {notFound} · 실패: {failed}',
     completed: '업그레이드 완료',
     skipped: '작업 불필요',
     failed: '실패',
@@ -1800,6 +1806,11 @@ export default {
       '커뮤니티 기반 데이터베이스 — 일반 가사 및 싱크 가사 제공',
     lyricsNetease: 'NetEase Cloud Music (왕이윈)',
     lyricsNeteaseHint: '방대한 데이터베이스 보유, 대부분 싱크 가사 지원',
+    lyricsKugou: 'Kugou Music',
+    lyricsKugouHint: '큰 카탈로그, 싱크 가사',
+    lyricsSyncedOnly: '싱크 가사만',
+    lyricsSyncedOnlyHint:
+      '타임스탬프가 없는 가사는 건너뛰고 다음 제공자에게 묻습니다. 라이브러리 업그레이드도 일반 가사만 있는 곡을 가사 없음으로 셉니다.',
     ratingsGroup: 'Deezer 기반 별점',
     ratingsHint:
       'Deezer에서의 인기도에 따라 Navidrome의 곡에 0~5개의 별을 매깁니다. dztnr과 같은 방식입니다. 별점은 위의 Navidrome 계정에 저장됩니다.',

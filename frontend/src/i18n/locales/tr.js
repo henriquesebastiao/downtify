@@ -730,6 +730,12 @@ export default {
     ofBytes: '{total} içinden {done}',
     longJob:
       'Büyük bir kitaplık zaman alır. Bu sayfadan çıkabilirsiniz; yeniden başlatma kuyruğu kaldığı yerden sürdürür.',
+    lyricsQuickTitle: 'Eksik şarkı sözleri',
+    lyricsQuickHint:
+      'Kitaplıkta sözü olmayan parçaları tarar ve arada seçim yapmadan hemen söz arar. Diğer yükseltmeler başka bir çalıştırmaya kalır.',
+    lyricsQuickButton: 'Tara ve söz bul',
+    lyricsOutcome:
+      'Eklenen sözler: {added} · Bulunamayan: {notFound} · Başarısız: {failed}',
     completed: 'İyileştirildi',
     skipped: 'Yapacak bir şey yok',
     failed: 'Başarısız',
@@ -1802,6 +1808,11 @@ export default {
     lyricsLrclibHint: 'Topluluk veritabanı — düz ve zamanlı sözler',
     lyricsNetease: 'NetEase Cloud Music',
     lyricsNeteaseHint: 'Geniş katalog, genellikle zamanlı',
+    lyricsKugou: 'Kugou Music',
+    lyricsKugouHint: 'Geniş katalog, zaman eşlemeli',
+    lyricsSyncedOnly: 'Yalnızca zaman eşlemeli şarkı sözleri',
+    lyricsSyncedOnlyHint:
+      'Zaman damgası olmayan sözleri atlar ve sonraki sağlayıcıya sorar. Kitaplığı yükselt de yalnızca düz sözü olan parçaları sözsüz sayar.',
     ratingsGroup: "Deezer'dan puanlar",
     ratingsHint:
       'Navidrome’daki şarkılarına Deezer’daki popülerliğine göre 0–5 yıldız verir, tıpkı dztnr gibi. Yıldızlar yukarıdaki Navidrome hesabına aittir.',

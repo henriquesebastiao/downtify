@@ -29,7 +29,7 @@ The default mode rewrites **artwork, lyrics and tags**. Optional [Deemix replace
 A track counts as behind when:
 
 - its embedded cover's short side is **smaller than the target size** (a track with no cover at all counts too);
-- it has **neither** embedded lyrics **nor** an `.lrc` sidecar (next to the file or in the lyrics folder from Settings);
+- it has **neither** embedded lyrics **nor** an `.lrc` sidecar (next to the file or in the lyrics folder from Settings) — with [Time-synced lyrics only](lyrics.md#time-synced-lyrics-only) on, when it has no **time-synced** lyrics, and only synced lyrics are written;
 - any of **album**, **album artist**, **year** or **track number** is missing from its tags.
 
 **Refresh tags** only works for tracks Downtify still has a Spotify track ID for — the ones it downloaded from a Spotify link, kept in the [track index](library-catalog.md#what-gets-stored). Other tracks are queued but come back as _Nothing to do_.
@@ -76,9 +76,13 @@ Two things always override it:
 
 When a scan finds nothing left to do _because_ everything was checked recently, it says so and offers to run again without the memory, rather than leaving you with an unexplained "nothing to upgrade".
 
+### Scan and find lyrics
+
+**Scan and find lyrics** scans the library and, as soon as the scan ends, starts looking lyrics up for the tracks without them, with nothing to choose in between. Only lyrics are looked for in that run; artwork and tags are left for another one.
+
 ## While it runs
 
-The progress panel shows tracks done out of the queue, an approximate data figure (`8.4 GB of 51.3 GB`) and how many were upgraded, had nothing to do, or failed. Each track shows what it is doing — _Matching_, _Looking for artwork_, _Looking for lyrics_, _Writing the file_ — and ends with what changed, e.g. `artwork 1200px (itunes)`.
+The progress panel shows tracks done out of the queue, an approximate data figure (`8.4 GB of 51.3 GB`) and how many were upgraded, had nothing to do, or failed. When the run looks for lyrics, a line below counts the tracks that got lyrics, the ones no provider had lyrics for, and the ones that failed. Each track shows what it is doing — _Matching_, _Looking for artwork_, _Looking for lyrics_, _Writing the file_ — and ends with what changed, e.g. `artwork 1200px (itunes)`.
 
 **Pause** stops after the track in flight and keeps the queue. **Stop** drops the rest of it; tracks already upgraded stay upgraded. You can leave the page — the run keeps going, and any other open tab follows along.
 

@@ -29,7 +29,7 @@ Le mode par défaut réécrit les **pochettes, paroles et tags**. Le [remplaceme
 Un morceau compte comme en retard quand :
 
 - le petit côté de sa pochette intégrée est **plus petit que la taille cible** (un morceau sans aucune pochette compte aussi) ;
-- il n’a **ni** paroles intégrées **ni** fichier `.lrc` (à côté du fichier ou dans le dossier des paroles des Paramètres) ;
+- il n’a **ni** paroles intégrées **ni** fichier `.lrc` (à côté du fichier ou dans le dossier des paroles des Paramètres)  — avec [Paroles synchronisées uniquement](lyrics.md#time-synced-lyrics-only) activé, quand il n’a pas de paroles **synchronisées**, et seules des paroles synchronisées sont écrites;
 - l’un des champs **album**, **artiste de l’album**, **année** ou **numéro de piste** manque dans ses tags.
 
 **Actualiser les étiquettes** ne fonctionne que pour les morceaux dont Downtify a encore l’identifiant Spotify — ceux qu’il a téléchargés depuis un lien Spotify, conservés dans l’[index des morceaux](library-catalog.md#what-gets-stored). Les autres morceaux sont mis en file mais reviennent en _Rien à faire_.
@@ -76,9 +76,13 @@ Deux choses la passent toujours outre :
 
 Quand une analyse ne trouve plus rien à faire _parce que_ tout a été vérifié récemment, elle le dit et propose de relancer sans la mémoire, plutôt que de vous laisser avec un « rien à améliorer » inexpliqué.
 
+### Analyser et trouver les paroles
+
+**Analyser et trouver les paroles** analyse la bibliothèque et, dès la fin de l’analyse, commence à chercher des paroles pour les titres qui n’en ont pas, sans rien à choisir entre-temps. Ce passage ne cherche que des paroles ; pochettes et tags attendent un autre passage.
+
 ## Pendant l’exécution
 
-Le panneau de progression montre les morceaux traités sur la file, un chiffre approximatif de données (`8.4 GB of 51.3 GB`) et combien ont été améliorés, n’avaient rien à faire ou ont échoué. Chaque morceau indique ce qu’il fait — _Identification_, _Recherche de la pochette_, _Recherche des paroles_, _Écriture du fichier_ — et se termine par ce qui a changé, par ex. `artwork 1200px (itunes)`.
+Le panneau de progression montre les morceaux traités sur la file, un chiffre approximatif de données (`8.4 GB of 51.3 GB`) et combien ont été améliorés, n’avaient rien à faire ou ont échoué. Chaque morceau indique ce qu’il fait — _Identification_, _Recherche de la pochette_, _Recherche des paroles_, _Écriture du fichier_ — et se termine par ce qui a changé, par ex. `artwork 1200px (itunes)`. Quand le passage cherche des paroles, une ligne en dessous compte les titres qui ont reçu des paroles, ceux pour lesquels aucun fournisseur n’en avait et ceux qui ont échoué.
 
 **Mettre en pause** s’arrête après le morceau en cours et garde la file. **Arrêter** abandonne le reste ; les morceaux déjà améliorés le restent. Vous pouvez quitter la page — l’exécution continue, et tout autre onglet ouvert la suit.
 

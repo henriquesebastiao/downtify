@@ -13,7 +13,9 @@ Three categories are handled, all of them writes to tags:
     iTunes or YouTube Music has for the track.
 ``lyrics``
     Fill in lyrics for tracks that have none, through the ordered
-    provider list (see :mod:`downtify.lyrics`).
+    provider list (see :mod:`downtify.lyrics`). With the
+    ``lyrics_synced_only`` setting, a track counts as having lyrics only
+    when they are time-synced, and only synced lyrics are written.
 ``metadata``
     Re-read the track from Spotify and write back album, album artist,
     release date and track number.
@@ -67,6 +69,7 @@ from .library_upgrade_db import (
     STATE_SCANNING,
     LibraryUpgradeDB,
     check_is_fresh,
+    lyrics_outcome,
 )
 from .lyrics import read_track_lyrics
 
@@ -112,6 +115,8 @@ class UpgradeOptions:
     delete_replaced_audio: bool = False
     files: tuple[str, ...] = ()
     deemix_recordings: dict[str, str] = field(default_factory=dict)
+    #: Start upgrading the chosen categories as soon as the scan ends.
+    start_after_scan: bool = False
 
     def as_dict(self) -> dict[str, Any]:
         result = {
@@ -127,6 +132,8 @@ class UpgradeOptions:
                 result['deemix_recordings'] = dict(self.deemix_recordings)
         if self.files:
             result['files'] = list(self.files)
+        if self.start_after_scan:
+            result['start_after_scan'] = True
         return result
 
 
@@ -177,6 +184,7 @@ def options_from(payload: dict[str, Any]) -> UpgradeOptions:
         files=tuple(str(f) for f in payload.get('files', [])[:1000])
         if isinstance(payload.get('files'), list)
         else (),
+        start_after_scan=payload.get('start_after_scan') is True,
     )
 
 
@@ -226,18 +234,28 @@ def track_findings(
     full_path: Path,
     *,
     artwork_min_px: int,
+    synced_only: bool = False,
 ) -> list[str]:
     """Which categories this track is behind on."""
 
     found: list[str] = []
     if int(entry.get('cover_px') or 0) < artwork_min_px:
         found.append(CATEGORY_ARTWORK)
-    existing = read_track_lyrics(full_path)
-    if not (existing.get('synced') or existing.get('plain')):
+    if not has_lyrics(full_path, synced_only=synced_only):
         found.append(CATEGORY_LYRICS)
     if _metadata_gaps(entry):
         found.append(CATEGORY_METADATA)
     return found
+
+
+def has_lyrics(full_path: Path, *, synced_only: bool = False) -> bool:
+    """Whether a track has lyrics: any, or with *synced_only* time-synced
+    ones (a ``.lrc`` sidecar or synced lyrics in its tags)."""
+
+    if synced_only:
+        return lyrics_mod.has_synced_lyrics(full_path)
+    existing = read_track_lyrics(full_path)
+    return bool(existing.get('synced') or existing.get('plain'))
 
 
 # ── The song a track describes ────────────────────────────────────────
@@ -491,14 +509,19 @@ def _pick_lyrics(
 
     if CATEGORY_LYRICS not in options.categories:
         return None
-    existing = read_track_lyrics(full)
-    if existing.get('synced') or existing.get('plain'):
+    settings = deps.settings()
+    synced_only = bool(settings.get('lyrics_synced_only'))
+    if has_lyrics(full, synced_only=synced_only):
         return None
-    providers = list(deps.settings().get('lyrics_providers') or [])
+    providers = list(settings.get('lyrics_providers') or [])
     if not providers:
         return None
-    found = lyrics_mod.fetch(song, providers, deps.lyrics_cache)
-    return found if found is not None and found.has_any() else None
+    found = lyrics_mod.fetch(
+        song, providers, deps.lyrics_cache, synced_only=synced_only
+    )
+    if found is None or not found.usable(synced_only):
+        return None
+    return found
 
 
 def _publish_staged_lrc(source: Path, destination: Path) -> None:
@@ -741,6 +764,8 @@ class LibraryUpgradeRunner:
             'state': run['state'],
             'run': run,
             'counts': counts,
+            # How the lyrics part went: added, none found, failed.
+            'lyrics': lyrics_outcome(self.db, int(run['id'])),
             # Carried by every progress message, not only the initial
             # GET, so a client that only ever sees WebSocket updates
             # still knows what the scan found.
@@ -806,6 +831,7 @@ class LibraryUpgradeRunner:
                 wanted_files = set(options.files)
                 entries = [e for e in entries if e['file'] in wanted_files]
             self._scan_total = len(entries)
+            synced_only = bool(self.deps.settings().get('lyrics_synced_only'))
             checks = self.db.checks_for([str(e['file']) for e in entries])
             jobs: list[dict[str, Any]] = []
             checked: list[tuple[str, list[str]]] = []
@@ -842,7 +868,10 @@ class LibraryUpgradeRunner:
                     continue
                 behind = set(
                     track_findings(
-                        entry, full, artwork_min_px=options.artwork_min_px
+                        entry,
+                        full,
+                        artwork_min_px=options.artwork_min_px,
+                        synced_only=synced_only,
                     )
                 )
                 found = [name for name in CATEGORIES if name in due & behind]
@@ -864,6 +893,11 @@ class LibraryUpgradeRunner:
             self.db.set_totals(run_id, len(entries), total_bytes)
             self.db.set_summary(run_id, _summarize(jobs, skipped))
             self.db.set_state(run_id, STATE_READY)
+            if options.start_after_scan and jobs and not queue_pause.paused:
+                # "Scan, then upgrade": the chosen categories, at once.
+                self.db.set_categories(run_id, list(options.categories))
+                self._begin(run_id, options)
+                return
         except Exception:
             logger.opt(exception=True).error('Library upgrade scan failed')
             self.db.set_state(run_id, STATE_CANCELLED)

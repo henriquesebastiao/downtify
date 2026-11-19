@@ -755,6 +755,12 @@ export default {
     ofBytes: '{done} von {total}',
     longJob:
       'Bei einer großen Bibliothek dauert es eine Weile. Du kannst diese Seite verlassen; nach einem Neustart wird die Warteschlange fortgesetzt.',
+    lyricsQuickTitle: 'Fehlende Songtexte',
+    lyricsQuickHint:
+      'Durchsucht die Bibliothek nach Titeln ohne Songtext und sucht sie sofort, ohne Zwischenschritt. Andere Verbesserungen bleiben für einen späteren Lauf.',
+    lyricsQuickButton: 'Scannen und Songtexte suchen',
+    lyricsOutcome:
+      'Songtexte hinzugefügt: {added} · Nicht gefunden: {notFound} · Fehlgeschlagen: {failed}',
     completed: 'Verbessert',
     skipped: 'Keine Änderung nötig',
     failed: 'Fehlgeschlagen',
@@ -1865,6 +1871,11 @@ export default {
       'Community-Datenbank - einfache und zeitsynchronisierte Songtexte',
     lyricsNetease: 'NetEase Cloud Music',
     lyricsNeteaseHint: 'Großer Katalog, meist zeitsynchronisierte Songtexte',
+    lyricsKugou: 'Kugou Music',
+    lyricsKugouHint: 'Großer Katalog, zeitsynchron',
+    lyricsSyncedOnly: 'Nur zeitsynchrone Songtexte',
+    lyricsSyncedOnlyHint:
+      'Songtexte ohne Zeitstempel werden übersprungen, stattdessen wird der nächste Anbieter gefragt. „Bibliothek verbessern“ zählt dann Titel mit nur einfachem Text als fehlend.',
     ratingsGroup: 'Bewertungen von Deezer',
     ratingsHint:
       'Vergibt an deine Songs in Navidrome 0–5 Sterne danach, wie beliebt sie auf Deezer sind – wie dztnr. Die Sterne gehören zum oben eingetragenen Navidrome-Konto.',
