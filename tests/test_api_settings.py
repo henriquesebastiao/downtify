@@ -706,6 +706,14 @@ def test_update_settings_applies_cover_resolution_to_providers(monkeypatch):
     assert captured == [900]
 
 
+def test_update_settings_applies_cover_minimum_to_providers(monkeypatch):
+    monkeypatch.setitem(api.state.settings, 'cover_min_resolution', 0)
+    captured = []
+    monkeypatch.setattr(api.providers, 'set_cover_minimum', captured.append)
+    _call_update_settings(monkeypatch, {'cover_min_resolution': 1000})
+    assert captured == [1000]
+
+
 def test_update_settings_leaves_providers_untouched_when_key_absent(
     monkeypatch,
 ):

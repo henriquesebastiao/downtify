@@ -240,6 +240,13 @@ DEFAULT_COVER_RESOLUTION = 600
 # (not just upscaling) up to roughly 1200-1400px depending on the
 # source image.
 _cover_resolution = DEFAULT_COVER_RESOLUTION
+# The "Minimum cover size" setting (0 = off). A first request smaller
+# than it would only be thrown away for a larger cover from another
+# source (downloader._download_cover_meeting), so the first request asks
+# for at least this much - up to _MAX_FIRST_REQUEST, past which YouTube
+# Music only upscales.
+_cover_minimum = 0
+_MAX_FIRST_REQUEST = 1200
 
 
 def set_cover_resolution(pixels: int) -> None:
@@ -255,13 +262,23 @@ def set_cover_resolution(pixels: int) -> None:
     _cover_resolution = pixels
 
 
+def set_cover_minimum(pixels: int) -> None:
+    """Set the "Minimum cover size" (0 = off) the cover size is raised
+    to (see :func:`cover_resolution`)."""
+
+    global _cover_minimum
+    _cover_minimum = max(0, int(pixels or 0))
+
+
 def cover_resolution() -> int:
-    """The currently configured cover-size target (see
-    set_cover_resolution). downtify.deezer reads this too, picking the
-    smallest of Deezer's four fixed image sizes that still meets it,
-    since a Deezer image can't be resized by editing its URL the way a
-    YouTube Music thumbnail can (see deezer._cover_from_images)."""
-    return _cover_resolution
+    """The cover size to ask YouTube Music and Deezer for: the "Cover
+    size" setting (see set_cover_resolution), raised to the minimum
+    cover size when that is larger (capped at _MAX_FIRST_REQUEST).
+    downtify.deezer reads this too, picking the smallest of Deezer's four
+    fixed image sizes that still meets it, since a Deezer image can't be
+    resized by editing its URL the way a YouTube Music thumbnail can (see
+    deezer._cover_from_images)."""
+    return max(_cover_resolution, min(_cover_minimum, _MAX_FIRST_REQUEST))
 
 
 def _resize_thumbnail(url: str, size: int) -> str:
@@ -275,7 +292,7 @@ def _resize_thumbnail(url: str, size: int) -> str:
 def _upgrade_thumbnail(url: str) -> str:
     """Replace the size suffix on a YT thumbnail with a larger one."""
 
-    return _resize_thumbnail(url, _cover_resolution)
+    return _resize_thumbnail(url, cover_resolution())
 
 
 # Playlist (not per-track) cover art always targets this size, independent

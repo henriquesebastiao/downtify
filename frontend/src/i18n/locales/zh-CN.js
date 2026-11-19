@@ -1650,6 +1650,9 @@ export default {
     coverSize: '封面尺寸',
     coverSizeHint:
       '适用于 YouTube Music 和 Deezer 的封面，Spotify 始终使用最大可用尺寸。',
+    coverSizeRaised:
+      '下方的最小封面尺寸会把它提高到 {px} px，因此较小的尺寸显示为灰色。',
+    coverSizeRaisedShort: '已被最小封面尺寸提高到 {px} px',
     artistCover: '自动获取艺人照片',
     artistCoverHint:
       '将艺人照片下载到 .metadata/ArtistImage，也可供 Navidrome 等服务使用。',

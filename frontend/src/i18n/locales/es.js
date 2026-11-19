@@ -1800,6 +1800,9 @@ export default {
     coverSize: 'Tamaño de portada',
     coverSizeHint:
       'Para portadas de YouTube Music y Deezer. Las de Spotify siempre usan el mayor tamaño disponible.',
+    coverSizeRaised:
+      'El tamaño mínimo de portada de abajo lo eleva a {px} px, por eso los tamaños menores aparecen atenuados.',
+    coverSizeRaisedShort: 'Elevado a {px} px por el tamaño mínimo de portada',
     artistCover: 'Obtener fotos de artista automáticamente',
     artistCoverHint:
       'Descarga la foto del artista a .metadata/ArtistImage; también puede usarse en servicios como Navidrome.',

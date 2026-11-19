@@ -1762,6 +1762,10 @@ export default {
     coverSize: 'Kapak boyutu',
     coverSizeHint:
       'YouTube Music ve Deezer kapakları için. Spotify kapakları her zaman en büyük boyuttadır.',
+    coverSizeRaised:
+      'Aşağıdaki en küçük kapak boyutu bunu {px} px’e yükseltir, bu yüzden daha küçük boyutlar soluk gösterilir.',
+    coverSizeRaisedShort:
+      'En küçük kapak boyutu nedeniyle {px} px’e yükseltildi',
     artistCover: 'Sanatçı fotoğraflarını otomatik al',
     artistCoverHint:
       'Sanatçı fotoğrafını .metadata/ArtistImage klasörüne indirir; Navidrome gibi servislerde de kullanılabilir.',

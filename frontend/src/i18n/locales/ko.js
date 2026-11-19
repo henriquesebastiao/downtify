@@ -1762,6 +1762,9 @@ export default {
     coverSize: '커버 해상도',
     coverSizeHint:
       'YouTube Music 및 Deezer에서 가져오는 커버에 적용됩니다. Spotify 커버는 항상 사용 가능한 최대 해상도로 저장됩니다.',
+    coverSizeRaised:
+      '아래의 최소 커버 크기 때문에 {px}px로 올라가므로 더 작은 크기는 흐리게 표시됩니다.',
+    coverSizeRaisedShort: '최소 커버 크기 때문에 {px}px로 올라감',
     artistCover: '아티스트 사진 자동 다운로드',
     artistCoverHint:
       '아티스트 사진을 .metadata/ArtistImage 경로에 다운로드하며, Navidrome 같은 서비스에서도 활용할 수 있습니다.',

@@ -1780,6 +1780,9 @@ export default {
     coverSize: 'Borító mérete',
     coverSizeHint:
       'YouTube Music és Deezer borítókhoz. A Spotify borítók mindig a legnagyobb méretűek.',
+    coverSizeRaised:
+      'Az alábbi minimális borítóméret ezt {px} px-re emeli, ezért a kisebb méretek szürkék.',
+    coverSizeRaisedShort: 'A minimális borítóméret {px} px-re emeli',
     artistCover: 'Előadófotók automatikus beszerzése',
     artistCoverHint:
       'Letölti az előadó fotóját a .metadata/ArtistImage mappába; olyan szolgáltatásokban is használható, mint a Navidrome.',

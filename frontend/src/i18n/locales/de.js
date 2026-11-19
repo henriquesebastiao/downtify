@@ -1825,6 +1825,9 @@ export default {
     coverSize: 'Covergröße',
     coverSizeHint:
       'Für Cover von YouTube Music und Deezer. Spotify-Cover werden immer in der größten verfügbaren Auflösung geladen.',
+    coverSizeRaised:
+      'Die Mindest-Covergröße unten hebt dies auf {px} px an, kleinere Größen sind daher ausgegraut.',
+    coverSizeRaisedShort: 'Durch die Mindest-Covergröße auf {px} px angehoben',
     artistCover: 'Künstlerfotos automatisch laden',
     artistCoverHint:
       'Lädt das Künstlerfoto nach .metadata/ArtistImage herunter; auch von Diensten wie Navidrome verwendbar.',

@@ -9178,6 +9178,8 @@ async def update_settings_endpoint(
             reset_slskd_parallelism(_effective_slskd_settings(state.settings))
         if 'cover_resolution' in payload:
             providers.set_cover_resolution(state.settings['cover_resolution'])
+        if 'cover_min_resolution' in payload:
+            providers.set_cover_minimum(state.settings['cover_min_resolution'])
         if 'external_library' in payload:
             invalidate_library_paths_cache()
             _unmap_removed_extra_folders(previous, state.settings)
