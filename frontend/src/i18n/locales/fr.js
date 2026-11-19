@@ -1235,6 +1235,7 @@ export default {
     wantedSummary: 'Manquant : {songs} dans {releases}',
     wantedSongs: { one: '{count} titre', other: '{count} titres' },
     wantedReleases: { one: '{count} sortie', other: '{count} sorties' },
+    wantedUpcoming: '{count} annoncés',
     wantedUnchecked: {
       one: '{count} sortie pas encore vérifiée',
       other: '{count} sorties pas encore vérifiées',
@@ -1425,6 +1426,7 @@ export default {
     filter: {
       all: 'Toutes',
       missing: 'À télécharger',
+      upcoming: 'À venir',
       partly: 'En partie',
       complete: 'Complètes',
       not_watched: 'Non suivies',
@@ -1435,6 +1437,8 @@ export default {
       complete: 'Complète · {have}/{total}',
       partly: 'En partie · {have}/{total}',
       missing: 'À télécharger',
+      upcoming: 'Sortie le {date}',
+      upcomingNoDate: 'Bientôt',
       skipped: 'Sortie avant le suivi',
       not_watched: 'Non suivie',
       off: 'Désactivée',

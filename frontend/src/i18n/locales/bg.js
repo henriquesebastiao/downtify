@@ -1192,6 +1192,7 @@ export default {
     wantedSummary: 'Липсват: {songs} в {releases}',
     wantedSongs: { one: '{count} песен', other: '{count} песни' },
     wantedReleases: { one: '{count} издание', other: '{count} издания' },
+    wantedUpcoming: '{count} обявени',
     wantedUnchecked: {
       one: '{count} издание още не е проверено',
       other: '{count} издания още не са проверени',
@@ -1378,6 +1379,7 @@ export default {
     filter: {
       all: 'Всички',
       missing: 'За изтегляне',
+      upcoming: 'Предстоящи',
       partly: 'Частично',
       complete: 'Пълни',
       not_watched: 'Неследени',
@@ -1388,6 +1390,8 @@ export default {
       complete: 'Пълно · {have}/{total}',
       partly: 'Частично · {have}/{total}',
       missing: 'За изтегляне',
+      upcoming: 'Излиза {date}',
+      upcomingNoDate: 'Предстои',
       skipped: 'Излязло преди следенето',
       not_watched: 'Не се следи',
       off: 'Изключено',

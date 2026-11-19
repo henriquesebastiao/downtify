@@ -7,7 +7,9 @@ missing in total. It reads what the last sweep and "Check what I have"
 kept; nothing is fetched. A release whose tracklist was never read counts
 as unchecked (``checked`` false), even when the catalogue lists a track
 count: it may well be in the library. Only checked releases add to the
-missing tracks.
+missing tracks. Announced releases the watches download on their release
+day are listed too (state ``upcoming``, soonest first, after the rest);
+they add nothing to the missing tracks.
 
 ``POST .../check-all`` reads the tracklists of the artists with unchecked
 releases, ``POST .../download-all`` downloads what the ones with gaps
@@ -82,6 +84,10 @@ def wanted_view(
                 {**r, 'checked': any(a in kept for a in r['album_ids'])}
                 for r in artist_catalogue.wanted_releases(view['releases'])
             ]
+            coming = [
+                {**r, 'checked': True}
+                for r in artist_catalogue.upcoming_releases(view['releases'])
+            ]
             missing = {
                 **view['missing'],
                 **artist_catalogue.missing([
@@ -92,11 +98,12 @@ def wanted_view(
                 ]),
                 'unread': view['missing']['unread'],
             }
-            if not releases and not missing['unread']:
+            if not releases and not coming and not missing['unread']:
                 continue
             artists.append({
                 'watch': view['watch'],
-                'releases': releases,
+                'releases': releases + coming,
+                'upcoming': len(coming),
                 'missing': missing,
                 'unchecked': sum(1 for r in releases if not r['checked']),
                 'checking': bool(view['checking']),
@@ -110,6 +117,7 @@ def wanted_view(
             'artists': len(artists),
             'unchecked': sum(1 for a in artists if a['unchecked']),
             'unchecked_releases': sum(a['unchecked'] for a in artists),
+            'upcoming': sum(a['upcoming'] for a in artists),
         },
     }
 

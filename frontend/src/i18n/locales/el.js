@@ -1218,6 +1218,7 @@ export default {
     wantedSummary: 'Λείπουν: {songs} σε {releases}',
     wantedSongs: { one: '{count} τραγούδι', other: '{count} τραγούδια' },
     wantedReleases: { one: '{count} κυκλοφορία', other: '{count} κυκλοφορίες' },
+    wantedUpcoming: '{count} ανακοινωμένα',
     wantedUnchecked: {
       one: '{count} κυκλοφορία δεν έχει ελεγχθεί ακόμη',
       other: '{count} κυκλοφορίες δεν έχουν ελεγχθεί ακόμη',
@@ -1410,6 +1411,7 @@ export default {
     filter: {
       all: 'Όλες',
       missing: 'Για λήψη',
+      upcoming: 'Έρχονται',
       partly: 'Εν μέρει',
       complete: 'Πλήρεις',
       not_watched: 'Χωρίς παρακολούθηση',
@@ -1420,6 +1422,8 @@ export default {
       complete: 'Πλήρες · {have}/{total}',
       partly: 'Εν μέρει · {have}/{total}',
       missing: 'Για λήψη',
+      upcoming: 'Κυκλοφορεί {date}',
+      upcomingNoDate: 'Έρχεται σύντομα',
       skipped: 'Πριν την παρακολούθηση',
       not_watched: 'Χωρίς παρακολούθηση',
       off: 'Ανενεργό',

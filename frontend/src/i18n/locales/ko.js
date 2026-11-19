@@ -1197,6 +1197,7 @@ export default {
     wantedSummary: '{releases}에서 {songs} 없음',
     wantedSongs: { one: '{count}곡', other: '{count}곡' },
     wantedReleases: { one: '발매작 {count}개', other: '발매작 {count}개' },
+    wantedUpcoming: '발매 예정 {count}개',
     wantedUnchecked: {
       one: '아직 확인 안 된 발매작 {count}개',
       other: '아직 확인 안 된 발매작 {count}개',
@@ -1382,6 +1383,7 @@ export default {
     filter: {
       all: '전체',
       missing: '받을 예정',
+      upcoming: '발매 예정',
       partly: '일부',
       complete: '완료',
       not_watched: '지켜보지 않음',
@@ -1392,6 +1394,8 @@ export default {
       complete: '완료 · {have}/{total}',
       partly: '일부 · {have}/{total}',
       missing: '받을 예정',
+      upcoming: '{date} 발매 예정',
+      upcomingNoDate: '곧 발매',
       skipped: '감시 전에 발매',
       not_watched: '지켜보지 않음',
       off: '꺼짐',

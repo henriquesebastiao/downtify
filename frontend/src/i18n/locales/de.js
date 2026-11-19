@@ -1235,6 +1235,7 @@ export default {
       one: '{count} Veröffentlichung',
       other: '{count} Veröffentlichungen',
     },
+    wantedUpcoming: '{count} angekündigt',
     wantedUnchecked: {
       one: '{count} Veröffentlichung noch nicht geprüft',
       other: '{count} Veröffentlichungen noch nicht geprüft',
@@ -1434,6 +1435,7 @@ export default {
     filter: {
       all: 'Alle',
       missing: 'Herunterzuladen',
+      upcoming: 'Demnächst',
       partly: 'Teilweise da',
       complete: 'Vollständig',
       not_watched: 'Nicht beobachtet',
@@ -1444,6 +1446,8 @@ export default {
       complete: 'Vollständig · {have}/{total}',
       partly: 'Teilweise · {have}/{total}',
       missing: 'Herunterzuladen',
+      upcoming: 'Erscheint {date}',
+      upcomingNoDate: 'Erscheint bald',
       skipped: 'Vor der Beobachtung erschienen',
       not_watched: 'Nicht beobachtet',
       off: 'Aus',
