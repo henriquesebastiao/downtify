@@ -1746,6 +1746,9 @@ export default {
     slskdInPlace: 'Laisser les fichiers dans le dossier slskd',
     slskdInPlaceHint:
       'Activé : tague les fichiers sur place et conserve-les. Désactivé : copie et tague dans Téléchargements ; la source est supprimée uniquement après un import réussi. En cas d’échec, la source est conservée.',
+    slskdKeepCover: 'Garder la pochette du fichier si elle est plus grande',
+    slskdKeepCoverHint:
+      'Les fichiers partagés contiennent souvent la pochette de l’album en pleine taille. Activé : un fichier slskd garde sa pochette si elle est plus grande que celle que Downtify récupère (Spotify, YouTube Music). Désactivé : la pochette récupérée la remplace toujours.',
     youtubeTitle: 'YouTube',
     cookies: 'Cookies YouTube',
     cookiesHint:

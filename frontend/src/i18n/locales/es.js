@@ -1728,6 +1728,9 @@ export default {
     slskdInPlace: 'Dejar los archivos en la carpeta de slskd',
     slskdInPlaceHint:
       'Activado: etiqueta los archivos en su ubicación y consérvalos. Desactivado: cópialos y etiquétalos en Descargas; elimina el origen solo tras una importación correcta. Si falla, conserva el origen.',
+    slskdKeepCover: 'Conservar la portada del archivo si es más grande',
+    slskdKeepCoverHint:
+      'Los archivos compartidos suelen traer la portada del álbum a tamaño completo. Activado: un archivo de slskd conserva su portada si es más grande que la que obtiene Downtify (Spotify, YouTube Music). Desactivado: la portada obtenida siempre la reemplaza.',
     youtubeTitle: 'YouTube',
     cookies: 'Cookies de YouTube',
     cookiesHint:

@@ -1710,6 +1710,9 @@ export default {
     slskdInPlace: 'Fájlok hagyása az slskd mappában',
     slskdInPlaceHint:
       'Bekapcsolva: címkézés a helyükön, a fájlok megtartásával. Kikapcsolva: másolás és címkézés a Letöltések mappába; a forrás csak sikeres import után törlődik. Hiba esetén megmarad.',
+    slskdKeepCover: 'A fájl saját borítója marad, ha nagyobb',
+    slskdKeepCoverHint:
+      'A megosztott fájlokban gyakran benne van az album teljes méretű borítója. Be: az slskd-fájl megtartja a saját borítóját, ha nagyobb annál, amit a Downtify letölt (Spotify, YouTube Music). Ki: a letöltött borító mindig lecseréli.',
     youtubeTitle: 'YouTube',
     cookies: 'YouTube sütik',
     cookiesHint:

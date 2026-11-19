@@ -1711,6 +1711,9 @@ export default {
     slskdInPlace: 'Manter arquivos na pasta do slskd',
     slskdInPlaceHint:
       'Ativado: marca os arquivos no local e os mantém. Desativado: copia e marca em Downloads; remove a origem somente após a importação bem-sucedida. Falhas mantêm a origem.',
+    slskdKeepCover: 'Manter a capa do arquivo quando for maior',
+    slskdKeepCoverHint:
+      'Arquivos compartilhados costumam trazer a capa do álbum em tamanho cheio. Ligado: um arquivo do slskd mantém a própria capa quando ela é maior que a que o Downtify busca (Spotify, YouTube Music). Desligado: a capa buscada sempre a substitui.',
     youtubeTitle: 'YouTube',
     cookies: 'Cookies do YouTube',
     cookiesHint:

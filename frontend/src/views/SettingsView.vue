@@ -387,6 +387,15 @@
                     :aria-label="t('settings.slskdInPlace')"
                   />
                 </SettingRow>
+                <SettingRow
+                  :label="t('settings.slskdKeepCover')"
+                  :description="t('settings.slskdKeepCoverHint')"
+                >
+                  <UiSwitch
+                    v-model="s.slskd.keep_file_cover"
+                    :aria-label="t('settings.slskdKeepCover')"
+                  />
+                </SettingRow>
               </template>
             </SettingGroup>
 
