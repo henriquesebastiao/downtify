@@ -1761,6 +1761,9 @@ export default {
     coverSize: 'Размер на обложката',
     coverSizeHint:
       'За обложки от YouTube Music и Deezer. Тези от Spotify винаги са в най-голям размер.',
+    coverSizeRaised:
+      'Минималният размер на обложката по-долу го повишава до {px} px, затова по-малките размери са засивени.',
+    coverSizeRaisedShort: 'Повишено до {px} px от минималния размер',
     artistCover: 'Автоматично получаване на снимки на изпълнители',
     artistCoverHint:
       'Изтегля снимката на изпълнителя в .metadata/ArtistImage; може да се използва и в услуги като Navidrome.',

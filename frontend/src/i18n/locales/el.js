@@ -1804,6 +1804,9 @@ export default {
     coverSize: 'Μέγεθος εξωφύλλου',
     coverSizeHint:
       'Για εξώφυλλα YouTube Music και Deezer. Του Spotify είναι πάντα στο μεγαλύτερο μέγεθος.',
+    coverSizeRaised:
+      'Το ελάχιστο μέγεθος εξωφύλλου παρακάτω το ανεβάζει στα {px} px, γι’ αυτό τα μικρότερα μεγέθη είναι γκριζαρισμένα.',
+    coverSizeRaisedShort: 'Αυξάνεται στα {px} px από το ελάχιστο μέγεθος',
     artistCover: 'Αυτόματη λήψη φωτογραφιών καλλιτεχνών',
     artistCoverHint:
       'Κατεβάζει τη φωτογραφία του καλλιτέχνη στο .metadata/ArtistImage· μπορεί επίσης να χρησιμοποιηθεί σε υπηρεσίες όπως το Navidrome.',

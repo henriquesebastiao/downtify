@@ -1739,6 +1739,9 @@ export default {
     coverSize: 'Cover size',
     coverSizeHint:
       'For art from YouTube Music and Deezer. Spotify art is always the largest available.',
+    coverSizeRaised:
+      'The minimum cover size below raises this to {px} px, so smaller sizes are greyed out.',
+    coverSizeRaisedShort: 'Raised to {px} px by the minimum cover size',
     artistCover: 'Automatically get artist photos',
     artistCoverHint:
       'Downloads the artist photo to .metadata/ArtistImage; also usable by services like Navidrome.',

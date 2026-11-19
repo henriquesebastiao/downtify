@@ -742,11 +742,15 @@
               <SettingRow
                 v-if="s.download_cover_art"
                 :label="t('settings.coverSize')"
-                :description="t('settings.coverSizeHint')"
+                :description="coverSizeHint"
                 stacked
               >
                 <PresetPicker
                   :model-value="s.cover_resolution"
+                  :floor="coverFloor"
+                  :floor-title="
+                    t('settings.coverSizeRaisedShort', { px: coverFloor })
+                  "
                   :presets="sm.settingsOptions.cover_resolution_presets"
                   :min="sm.settingsOptions.cover_resolution_min"
                   :max="sm.settingsOptions.cover_resolution_max"
@@ -1215,6 +1219,19 @@ const update = useUpdateCheck().status
 
 const hasTrack = computed(() => !!player.currentTrack.value)
 const s = sm.settings
+// The minimum cover size raises the first cover request too (capped at
+// the largest cover size), so cover sizes below it make no difference.
+const coverFloor = computed(() =>
+  Math.min(
+    s.value.cover_min_resolution || 0,
+    sm.settingsOptions.cover_resolution_max || 1200
+  )
+)
+const coverSizeHint = computed(() =>
+  coverFloor.value > (s.value.cover_resolution || 0)
+    ? `${t('settings.coverSizeHint')} ${t('settings.coverSizeRaised', { px: coverFloor.value })}`
+    : t('settings.coverSizeHint')
+)
 const ratingsRepeatOptions = computed(() =>
   ['off', 'daily', 'weekly', 'monthly'].map((value) => ({
     value,
