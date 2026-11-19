@@ -2,6 +2,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from downtify import navidrome
 from downtify.library_catalog import LibraryContext
 from downtify.library_delete import TagMismatchDeleteContext
 from downtify.navidrome import (
@@ -826,3 +827,110 @@ def test_single_entries_and_empty_library():
     assert album['songs'] == [
         {'id': 's1', 'title': 'T', 'starred': False, 'rating': 0}
     ]
+
+
+# ── Hold scans while someone is listening ─────────────────────────────────
+
+
+class _ListeningClient:
+    """A client whose now-playing list the test controls."""
+
+    def __init__(self, playing):
+        self.playing = playing
+        self.scans = []
+
+    def now_playing(self):
+        if isinstance(self.playing, Exception):
+            raise self.playing
+        return self.playing
+
+    def start_scan(self, *, full=False):
+        self.scans.append(full)
+
+    @staticmethod
+    def wait_scan_complete(_seconds):
+        return True
+
+
+class _NoThread:
+    """Stands in for the background thread: the test runs the checks."""
+
+    def __init__(self, *_args, **_kwargs):
+        pass
+
+    def start(self):
+        pass
+
+    @staticmethod
+    def is_alive():
+        return False
+
+
+@pytest.fixture
+def held(monkeypatch):
+    idle = navidrome.IdleScan()
+    monkeypatch.setattr(navidrome, 'idle_scan', idle)
+    monkeypatch.setattr(navidrome.threading, 'Thread', _NoThread)
+    return idle
+
+
+def test_scan_is_held_while_someone_listens(held):
+    client = _ListeningClient([{'username': 'me', 'title': 'Song'}])
+    cfg = {'scan_when_idle': True, 'scan_full': False}
+
+    assert navidrome._trigger_library_scan(client, cfg, 10) is False
+    assert client.scans == []
+    assert held.pending
+
+    # Still playing: still held.
+    assert held.run_once() is True
+    client.playing = []
+    assert held.run_once() is False
+    assert client.scans == [False]
+
+
+@pytest.mark.parametrize(
+    ('cfg', 'playing'),
+    [
+        ({'scan_when_idle': False}, [{'title': 'Song'}]),
+        ({'scan_when_idle': True}, []),
+        # A failed check never holds a scan.
+        ({'scan_when_idle': True}, RuntimeError('down')),
+    ],
+)
+def test_scan_runs_at_once_when_off_or_nobody_listens(held, cfg, playing):
+    client = _ListeningClient(playing)
+    cfg = {**navidrome._effective_navidrome_settings({}), **cfg}
+
+    assert navidrome._trigger_library_scan(client, cfg, 10) is True
+    assert client.scans == [False]
+    assert not held.pending
+
+
+def test_held_scans_merge_into_one_full_if_any_asked(held):
+    client = _ListeningClient([{'title': 'Song'}])
+    held.request(client, full=False)
+    held.request(client, full=True)
+    client.playing = []
+
+    held.run_once()
+
+    assert client.scans == [True]
+
+
+def test_now_playing_reads_one_or_many_entries(monkeypatch):
+    client = navidrome.NavidromeClient({
+        'url': 'http://nd',
+        'username': 'u',
+        'password': 'p',
+    })
+    replies = iter([
+        {'nowPlaying': {'entry': {'title': 'One'}}},
+        {'nowPlaying': {'entry': [{'title': 'A'}, {'title': 'B'}]}},
+        {'nowPlaying': {}},
+    ])
+    monkeypatch.setattr(client, '_request', lambda *_a, **_k: next(replies))
+
+    assert [e['title'] for e in client.now_playing()] == ['One']
+    assert len(client.now_playing()) == 2
+    assert client.now_playing() == []

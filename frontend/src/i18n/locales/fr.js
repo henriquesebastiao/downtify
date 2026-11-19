@@ -1947,6 +1947,9 @@ export default {
     navidromeM3uImport: 'Laisser Navidrome importer les playlists M3U',
     navidromeM3uImportHint:
       'Navidrome transforme chaque M3U écrit par Downtify en playlist avec sa pochette. Activé, Downtify n’en crée pas une deuxième via l’API.',
+    navidromeScanWhenIdle: 'Attendre que personne n’écoute pour analyser',
+    navidromeScanWhenIdleHint:
+      'Tant qu’une app Navidrome joue, l’analyse que Downtify lance après les téléchargements attend (vérifié chaque minute), pour ne pas couper la lecture. Les nouvelles chansons apparaissent dans Navidrome dès la fin de la lecture.',
     navidromePublic: 'Rendre publiques les playlists Navidrome',
     primaryLibrary: 'Dossier principal',
     primaryLibraryHint:

@@ -911,6 +911,15 @@
                     :aria-label="t('settings.navidromeM3uImport')"
                   />
                 </SettingRow>
+                <SettingRow
+                  :label="t('settings.navidromeScanWhenIdle')"
+                  :description="t('settings.navidromeScanWhenIdleHint')"
+                >
+                  <UiSwitch
+                    v-model="s.navidrome.scan_when_idle"
+                    :aria-label="t('settings.navidromeScanWhenIdle')"
+                  />
+                </SettingRow>
               </template>
             </SettingGroup>
             <SettingGroup

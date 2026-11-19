@@ -807,6 +807,8 @@ DEFAULT_SETTINGS: dict[str, Any] = {
         'm3u_import': False,
         'scan_after_download': True,
         'scan_full': False,
+        # Hold Downtify's scans while a Navidrome client is playing.
+        'scan_when_idle': False,
         'scan_wait_seconds': 120,
         'scan_poll_seconds': 5,
         'scan_retry_seconds': 15,

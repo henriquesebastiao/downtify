@@ -1890,6 +1890,9 @@ export default {
     navidromeM3uImport: 'Navidrome이 M3U 재생목록을 가져오게 하기',
     navidromeM3uImportHint:
       'Navidrome은 Downtify가 쓰는 각 M3U를 커버가 있는 재생목록으로 만듭니다. 켜면 Downtify가 API로 두 번째 재생목록을 만들지 않습니다.',
+    navidromeScanWhenIdle: '아무도 듣지 않을 때까지 스캔 대기',
+    navidromeScanWhenIdleHint:
+      'Navidrome 앱에서 재생 중이면 Downtify가 다운로드 뒤에 시작하는 스캔이 기다립니다(1분마다 확인). 재생이 끊기지 않으며, 새 노래는 재생이 멈추면 Navidrome에 나타납니다.',
     navidromePublic: 'Navidrome 재생목록 공개 설정',
     primaryLibrary: 'Primary library folder',
     primaryLibraryHint:

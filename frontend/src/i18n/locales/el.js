@@ -1932,6 +1932,9 @@ export default {
     navidromeM3uImport: 'Να εισάγει το Navidrome τις λίστες M3U',
     navidromeM3uImportHint:
       'Το Navidrome κάνει κάθε M3U που γράφει το Downtify λίστα με εξώφυλλο. Όταν είναι ενεργό, το Downtify δεν δημιουργεί δεύτερη μέσω API.',
+    navidromeScanWhenIdle: 'Σάρωση μόνο όταν δεν ακούει κανείς',
+    navidromeScanWhenIdleHint:
+      'Όσο κάποια εφαρμογή Navidrome παίζει, η σάρωση που ξεκινά το Downtify μετά τις λήψεις περιμένει (έλεγχος κάθε λεπτό), ώστε να μη διακόπτεται η αναπαραγωγή. Τα νέα τραγούδια εμφανίζονται στο Navidrome μόλις σταματήσει η αναπαραγωγή.',
     navidromePublic: 'Δημόσιες λίστες Navidrome',
     primaryLibrary: 'Primary library folder',
     primaryLibraryHint:

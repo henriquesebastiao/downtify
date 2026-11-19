@@ -1862,6 +1862,9 @@ export default {
     navidromeM3uImport: 'Let Navidrome import the M3U playlists',
     navidromeM3uImportHint:
       'Navidrome turns each M3U Downtify writes into a playlist with its cover. With this on, Downtify doesn’t create a second one through the API.',
+    navidromeScanWhenIdle: 'Wait for scans until nobody is listening',
+    navidromeScanWhenIdleHint:
+      'While any Navidrome app is playing, the scan Downtify starts after downloads waits, checked every minute, so playback isn’t interrupted. New songs show up in Navidrome once playback stops.',
     navidromePublic: 'Make Navidrome playlists public',
     primaryLibrary: 'Primary library folder',
     primaryLibraryHint:
