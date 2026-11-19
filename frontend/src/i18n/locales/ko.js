@@ -1263,8 +1263,19 @@ export default {
     urlLabelArtist: '아티스트 링크',
     urlPlaceholderPlaylist:
       'Spotify, Deezer 또는 YouTube Music 재생목록 링크를 붙여넣으세요',
-    urlPlaceholderArtist:
-      'Spotify 또는 YouTube Music 아티스트 링크를 붙여넣으세요',
+    urlPlaceholderArtist: '아티스트 링크를 붙여넣거나 이름을 입력하세요',
+    searchArtists: '검색',
+    searchArtistsFor: '“{name}” 이름의 아티스트',
+    searchArtistsHelp:
+      '사진을 확인하고 확실하지 않으면 프로필을 열어 본 뒤 맞는 아티스트를 팔로우하세요.',
+    userLinkTitle: 'Spotify 사용자 링크이며 아티스트 링크가 아닙니다',
+    userLinkBody:
+      'open.spotify.com/user/…는 청취자 계정으로, 누군가 만든 플레이리스트이지 아티스트의 음악이 아닙니다. Downtify는 이를 감시할 수 없습니다. 아티스트의 발매작은 Spotify에 음악이 있는 모든 아티스트가 가진 아티스트 페이지(open.spotify.com/artist/…)에 있습니다.',
+    userLinkYours: '입력한 링크',
+    userLinkArtist: '아티스트 링크',
+    userLinkHint: '대신 아티스트 이름을 검색해 사진으로 골라 보세요.',
+    userLinkBack: '아니요, 돌아가기',
+    userLinkSearch: '아티스트 찾기',
     watchPlaylist: '재생목록 모니터링',
     watchArtist: '아티스트 모니터링',
     explainerPlaylists:

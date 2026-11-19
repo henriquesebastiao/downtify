@@ -1266,8 +1266,21 @@ export default {
     urlLabelArtist: 'Sanatçı bağlantısı',
     urlPlaceholderPlaylist:
       'Spotify, Deezer veya YouTube Music çalma listesi bağlantısı yapıştır',
-    urlPlaceholderArtist:
-      'Spotify veya YouTube Music sanatçı bağlantısı yapıştır',
+    urlPlaceholderArtist: 'Sanatçı bağlantısı yapıştır ya da bir ad yaz',
+    searchArtists: 'Ara',
+    searchArtistsFor: '“{name}” adlı sanatçılar',
+    searchArtistsHelp:
+      'Fotoğrafa bakın, emin değilseniz profili açın, sonra doğru olanı takip edin.',
+    userLinkTitle:
+      'Bu bir Spotify kullanıcı bağlantısı, sanatçı bağlantısı değil',
+    userLinkBody:
+      'open.spotify.com/user/… bir dinleyicinin hesabıdır: birinin oluşturduğu çalma listeleri, bir sanatçının müziği değil. Downtify bunu izleyemez. Bir sanatçının yayınları, Spotify’da müziği olan her sanatçının sahip olduğu sanatçı sayfasındadır: open.spotify.com/artist/…',
+    userLinkYours: 'Bağlantınız',
+    userLinkArtist: 'Sanatçı bağlantısı',
+    userLinkHint:
+      'Bunun yerine sanatçının adını arayın ve fotoğrafından seçin.',
+    userLinkBack: 'Hayır, geri dön',
+    userLinkSearch: 'Sanatçıyı bul',
     watchPlaylist: 'Çalma listesini izle',
     watchArtist: 'Sanatçıyı izle',
     explainerPlaylists:

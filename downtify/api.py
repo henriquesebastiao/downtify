@@ -10406,6 +10406,14 @@ def _youtube_artist_for_name(name: str) -> tuple[str, str]:
     return channel_id, str(best.get('name') or name)
 
 
+#: A Spotify user (listener) link: an account, never an artist's music.
+_SPOTIFY_USER_LINK = re.compile(
+    r'(?:spotify\.com/(?:intl-[a-z]{2}(?:-[a-z]{2})?/)?user/'
+    r'|^\s*spotify:user:)',
+    re.IGNORECASE,
+)
+
+
 async def _resolve_watch_target(url: str) -> tuple[str, str, str]:
     """Resolve a pasted URL into ``(kind, watch_key, display_name)``.
 
@@ -10426,6 +10434,16 @@ async def _resolve_watch_target(url: str) -> tuple[str, str, str]:
             logger.exception('Failed to resolve playlist {}', playlist_id)
             raise HTTPException(status_code=502, detail=str(exc)) from exc
         return KIND_PLAYLIST, playlist_watch_key(source, playlist_id), name
+
+    if _SPOTIFY_USER_LINK.search(url or ''):
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "That is a Spotify user link (a listener's account), not an "
+                'artist link. Use the artist page, open.spotify.com/artist/…, '
+                'or search the artist by name.'
+            ),
+        )
 
     spotify_parsed = spotify.parse_spotify_url(url)
     if spotify_parsed is not None and spotify_parsed[0] == 'artist':

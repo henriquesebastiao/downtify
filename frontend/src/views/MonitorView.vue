@@ -30,7 +30,7 @@
         <span class="sr-only">{{ copy.urlLabel }}</span>
         <input
           v-model="newUrl[tab]"
-          type="url"
+          :type="tab === 'artist' ? 'text' : 'url'"
           :placeholder="copy.urlPlaceholder"
           class="h-full min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-faint"
         />
@@ -46,14 +46,27 @@
         <UiButton
           type="submit"
           variant="primary"
-          :icon="tab === 'artist' ? 'user' : 'radar'"
+          :icon="artistQuery ? 'search' : tab === 'artist' ? 'user' : 'radar'"
           :loading="adding"
           :disabled="!newUrl[tab].trim()"
         >
-          {{ copy.add }}
+          {{ artistQuery ? t('monitor.searchArtists') : copy.add }}
         </UiButton>
       </div>
     </form>
+    <ArtistNameSearch
+      v-if="tab === 'artist'"
+      ref="nameSearch"
+      :query="artistQuery"
+      :busy="adding"
+      @choose="followSearched"
+    />
+    <SpotifyUserLinkDialog
+      :user-id="userLink.id"
+      :link="userLink.url"
+      @back="userLink = { id: '', url: '' }"
+      @search="searchUserLinkName"
+    />
     <div
       v-if="tab === 'artist'"
       class="-mt-3 rounded-panel border border-line-2 bg-surface px-4 py-3"
@@ -633,6 +646,8 @@ import UiTabs from '/src/components/ui/UiTabs.vue'
 import PageHeader from '/src/components/library/PageHeader.vue'
 import ReleaseFilters from '/src/components/monitor/ReleaseFilters.vue'
 import ArtistSuggestions from '/src/components/monitor/ArtistSuggestions.vue'
+import ArtistNameSearch from '/src/components/monitor/ArtistNameSearch.vue'
+import SpotifyUserLinkDialog from '/src/components/monitor/SpotifyUserLinkDialog.vue'
 import WantedReleases from '/src/components/monitor/WantedReleases.vue'
 import WatchEditDialog from '/src/components/monitor/WatchEditDialog.vue'
 import WatchSourceBadge from '/src/components/monitor/WatchSourceBadge.vue'
@@ -659,6 +674,9 @@ import {
   releaseFilterSummary,
   watchKind,
   watchKindOfUrl,
+  artistNameQuery,
+  nameFromSpotifyUser,
+  spotifyUserOf,
 } from '/src/lib/watches'
 import {
   keepExisting,
@@ -690,6 +708,13 @@ const adding = ref(false)
 const newUrl = reactive({ playlist: '', artist: '' })
 const addError = reactive({ playlist: '', artist: '' })
 const wrongKind = ref(null)
+// A name typed in the Artists box (not a link): its matches show under it.
+const artistQuery = computed(() =>
+  tab.value === 'artist' ? artistNameQuery(newUrl.artist) : ''
+)
+const nameSearch = ref(null)
+// A pasted Spotify user link waiting on the warning dialog.
+const userLink = ref({ id: '', url: '' })
 const newInterval = ref(360)
 // A new artist watch's filters (the artists tab's form).
 const newReleaseTypes = ref([...RELEASE_TYPES])
@@ -1216,6 +1241,15 @@ async function add() {
   const url = newUrl[kind].trim()
   addError[kind] = ''
   wrongKind.value = null
+  const userId = spotifyUserOf(url)
+  if (userId) {
+    userLink.value = { id: userId, url }
+    return
+  }
+  if (kind === 'artist' && artistQuery.value) {
+    nameSearch.value?.now()
+    return
+  }
   const detected = watchKindOfUrl(url)
   if (detected && detected !== kind) {
     addError[kind] =
@@ -1259,6 +1293,25 @@ async function chooseSuggestedArtist(artist) {
   }
   await nextTick()
   watchForm.value?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  watchForm.value?.querySelector('input')?.focus({ preventScroll: true })
+}
+
+// An artist picked from the name search: followed by its link.
+async function followSearched(candidate) {
+  newUrl.artist = candidate.url
+  await add()
+}
+
+// "Find the artist instead" in the Spotify user link dialog: the Artists
+// tab, searching the account's handle when it reads like a name.
+async function searchUserLinkName() {
+  const name = nameFromSpotifyUser(userLink.value.id)
+  const from = tab.value
+  userLink.value = { id: '', url: '' }
+  newUrl[from] = ''
+  newUrl.artist = name
+  if (from !== 'artist') await router.push(tabRoute('artist'))
+  await nextTick()
   watchForm.value?.querySelector('input')?.focus({ preventScroll: true })
 }
 

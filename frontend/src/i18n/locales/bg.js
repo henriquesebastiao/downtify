@@ -1258,8 +1258,19 @@ export default {
     urlLabelArtist: 'Линк към изпълнителя',
     urlPlaceholderPlaylist:
       'Постави линк към плейлист от Spotify, Deezer или YouTube Music',
-    urlPlaceholderArtist:
-      'Постави линк към изпълнител от Spotify или YouTube Music',
+    urlPlaceholderArtist: 'Постави линк към изпълнител или въведи име',
+    searchArtists: 'Търси',
+    searchArtistsFor: 'Изпълнители с име „{name}“',
+    searchArtistsHelp:
+      'Проверете снимката и отворете профила, ако не сте сигурни, после следвайте правилния.',
+    userLinkTitle: 'Това е линк към потребител в Spotify, не към изпълнител',
+    userLinkBody:
+      'open.spotify.com/user/… е акаунт на слушател: плейлистите, които някой е създал, а не музиката на изпълнител. Downtify не може да го следи. Издания на изпълнителя са на страницата му, open.spotify.com/artist/…, която има всеки изпълнител с музика в Spotify.',
+    userLinkYours: 'Вашият линк',
+    userLinkArtist: 'Линк към изпълнител',
+    userLinkHint: 'Потърсете името на изпълнителя и го изберете по снимката.',
+    userLinkBack: 'Не, назад',
+    userLinkSearch: 'Намери изпълнителя',
     watchPlaylist: 'Следи плейлиста',
     watchArtist: 'Следи изпълнителя',
     explainerPlaylists:
