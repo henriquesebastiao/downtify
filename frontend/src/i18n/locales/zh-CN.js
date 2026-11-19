@@ -1522,6 +1522,17 @@ export default {
     sourceSoundcloud: 'SoundCloud',
     sourceSoundcloudHint:
       '其他平台缺失的上传内容，以及 SoundCloud 链接对应的歌曲',
+    sourceNeedsTitle: '各来源需要什么',
+    sourceNeedsSlskd:
+      'slskd：你自己的 slskd 服务器，连接免费的 Soulseek 网络。无需订阅；音质取决于他人分享的文件，常见 FLAC 或 MP3 320。',
+    sourceNeedsDeemix:
+      'Deemix：你自己的 Deemix 服务器和你自己的 Deezer 账号。免费账号只能获得 MP3 128 kbps；MP3 320 和 FLAC 需要 Deezer 付费套餐。Downtify 不提供也不绕过订阅。',
+    sourceNeedsYoutube:
+      'YouTube Music 和 YouTube：无需设置。音频为有损（约 128–160 kbps）。',
+    sourceNeedsSoundcloud:
+      'SoundCloud：无需设置，也无需账号。音频流通常为 128–160 kbps。',
+    sourceNeedsCover:
+      '无论来源如何，嵌入的封面都是 Downtify 为这首歌获取的封面（设置 → 下载 → 封面尺寸）。',
     deemixTitle: 'Deemix',
     deemixHint:
       '从你自己的 Deemix 服务器下载。所选音质需要对应的 Deezer 账户权限。',

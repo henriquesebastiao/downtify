@@ -1624,6 +1624,17 @@ export default {
     sourceSoundcloud: 'SoundCloud',
     sourceSoundcloudHint:
       '다른 곳에 없는 업로드, 그리고 SoundCloud 링크의 원래 트랙',
+    sourceNeedsTitle: '소스별로 필요한 것',
+    sourceNeedsSlskd:
+      'slskd: 무료 Soulseek 네트워크에 연결된 자신의 slskd 서버. 구독 없음. 음질은 사람들이 공유한 그대로이며 FLAC나 MP3 320인 경우가 많습니다.',
+    sourceNeedsDeemix:
+      'Deemix: 자신의 Deemix 서버와 자신의 Deezer 계정. 무료 계정은 MP3 128kbps만 받습니다. MP3 320과 FLAC는 유료 Deezer 요금제가 필요합니다. Downtify는 요금제를 제공하거나 우회하지 않습니다.',
+    sourceNeedsYoutube:
+      'YouTube Music과 YouTube: 설정할 것 없음. 오디오는 손실 압축입니다(약 128–160kbps).',
+    sourceNeedsSoundcloud:
+      'SoundCloud: 설정할 것도, 계정도 필요 없습니다. 스트림은 보통 128–160kbps입니다.',
+    sourceNeedsCover:
+      '어느 소스든 파일에 넣는 커버는 Downtify가 곡을 위해 가져온 것입니다(설정 → 다운로드 → 커버 크기).',
     deemixTitle: 'Deemix',
     deemixHint:
       'Download from your own Deemix server. Requested quality requires the matching Deezer entitlement.',
