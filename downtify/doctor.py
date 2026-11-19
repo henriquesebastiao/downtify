@@ -56,6 +56,35 @@ MAX_CANDIDATES = 8
 #: two playlists are merged.
 MIN_OVERLAP = 0.8
 
+#: The Doctor's sections. The health check looks at all of them but
+#: ``slskd``, which has its own (slower) check.
+SECTIONS = ('slskd', 'playlists', 'navidrome', 'duplicates', 'relinked')
+HEALTH_SECTIONS = frozenset(SECTIONS) - {'slskd'}
+#: The sections each check finds again.
+CHECKS = {'health': HEALTH_SECTIONS, 'slskd': frozenset({'slskd'})}
+#: The sections whose findings each repair can change. Merging duplicate
+#: songs rewrites M3Us and removes library files a verified slskd
+#: leftover may match; deleting slskd leftovers changes the songs the
+#: duplicate and Navidrome checks counted; merging playlists changes the
+#: M3Us the slskd check counts as references. Merging duplicates leaves
+#: its own list usable - the server takes the merged copies out of it.
+REPAIR_IMPACT = {
+    'slskd_clean': frozenset({'slskd', 'duplicates', 'navidrome', 'relinked'}),
+    'merge': frozenset({'slskd', 'playlists', 'navidrome', 'duplicates'}),
+    'navidrome': frozenset({'navidrome'}),
+    'dedupe': frozenset({'slskd', 'playlists', 'navidrome', 'relinked'}),
+}
+
+
+def stale_after(stale: Collection[str], kind: str) -> set[str]:
+    """The sections out of date once a *kind* job has finished: a check
+    brings its own sections up to date, a repair puts the ones it can
+    change out of date until they are checked again."""
+
+    now = set(stale) - CHECKS.get(kind, frozenset())
+    return now | REPAIR_IMPACT.get(kind, frozenset())
+
+
 STATUS_VERIFIED = 'verified'
 STATUS_DIFFERENT = 'different'
 STATUS_UNMATCHED = 'unmatched'

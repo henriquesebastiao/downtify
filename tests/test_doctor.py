@@ -3,7 +3,7 @@ from typing import Any, Optional
 
 import pytest
 
-from downtify import navidrome
+from downtify import doctor_routes, navidrome
 from downtify.doctor import (
     STATUS_DIFFERENT,
     STATUS_MISSING,
@@ -18,6 +18,7 @@ from downtify.doctor import (
     navidrome_song_duplicates,
     parse_extinf,
     relinked_tracks,
+    stale_after,
     summarize_copies,
     verify_copies,
     working_copy_rows,
@@ -507,3 +508,41 @@ def test_sync_with_m3u_import_creates_nothing_and_removes_its_own_copy(
 def test_m3u_import_is_off_by_default():
     cfg = navidrome._effective_navidrome_settings(_settings())
     assert cfg['m3u_import'] is False
+
+
+def test_a_repair_puts_the_sections_it_changes_out_of_date():
+    stale = stale_after(set(), 'dedupe')
+    # Merged copies may be what a verified slskd leftover matched.
+    assert 'slskd' in stale
+    assert {'playlists', 'navidrome', 'relinked'} <= stale
+    # Its own list stays usable: the server trims it.
+    assert 'duplicates' not in stale
+    assert stale_after(set(), 'navidrome') == {'navidrome'}
+    assert stale_after(set(), 'duplicates_keep') == set()
+
+
+def test_a_check_brings_only_its_own_sections_up_to_date():
+    stale = stale_after(set(), 'merge')
+    after_health = stale_after(stale, 'health')
+    # The health check doesn't look at slskd leftovers.
+    assert after_health == {'slskd'}
+    assert stale_after(after_health, 'slskd') == set()
+
+
+def test_repairs_wait_for_a_new_check_of_a_stale_section(monkeypatch):
+    monkeypatch.setattr(doctor_routes, '_stale', {'slskd'})
+    with pytest.raises(doctor_routes.HTTPException) as err:
+        doctor_routes._require_fresh('slskd')
+    assert err.value.status_code == 409
+    assert err.value.detail == {'code': 'rescan_first', 'section': 'slskd'}
+    doctor_routes._require_fresh('playlists')
+
+
+def test_a_failed_repair_still_marks_what_it_may_have_changed(monkeypatch):
+    monkeypatch.setattr(doctor_routes, '_stale', set())
+    doctor_routes._mark('slskd_clean', done=False)
+    assert 'duplicates' in doctor_routes._stale
+    doctor_routes._mark('health', done=False)
+    assert 'duplicates' in doctor_routes._stale
+    doctor_routes._mark('health', done=True)
+    assert doctor_routes._stale == {'slskd'}

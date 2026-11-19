@@ -2538,6 +2538,24 @@ export default {
     songsCount: 'Şarkılar: {count}',
     hasCover: 'Kapağı var',
     keeps: 'Korunur',
+    outOfDate: 'Güncel değil',
+    staleHint:
+      'Başka bir bölümdeki onarım burada bulunanları değiştirmiş olabilir. Burada bir şey değiştirmeden önce yeniden kontrol edin.',
+    checkAgain: 'Yeniden kontrol et',
+    coverOf: '{name} kapağı',
+    noCover: 'Kapak yok',
+    badge: {
+      notChecked: 'Kontrol edilmedi',
+      allGood: 'Her şey yolunda',
+      toDelete: '{count} silinecek',
+      leftovers: '{size} artık',
+      off: 'Kapalı',
+      unreachable: 'Ulaşılamıyor',
+      toFix: '{count} düzeltilecek',
+      toMerge: '{count} birleştirilecek',
+      toReview: '{count} incelenecek',
+      songsFound: '{count} şarkı',
+    },
     mergePlan: 'Sonuç: {songs} şarkı. Şarkılarının %{overlap} kadarı ortak.',
     mergeUnsafe:
       'Şarkıların yalnızca %{overlap} kadarı eşleşiyor; farklı listeler olabilir. Birleştirilmez.',
@@ -2631,6 +2649,8 @@ export default {
     relinkedCounts: 'Şarkılar: {songs} · fazla dosyalar: {extra}',
     error: {
       doctor_busy: 'Doktor zaten çalışıyor.',
+      rescan_first:
+        'Başka yerdeki bir onarım bu bölümü değiştirdi. Önce yeniden kontrol edin.',
       doctor_failed: 'Doktor bir hatayla durdu. Sunucu günlüğüne bakın.',
       queue_busy:
         'Süren indirmeler zamanında bitmedi. Daha sonra yeniden deneyin.',

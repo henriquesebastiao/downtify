@@ -12,6 +12,10 @@ Only admins see it.
 
 **Run health check** looks at everything below and changes nothing. It runs in the background; leaving the page doesn't stop it, and the last result is shown again when you come back.
 
+Each section below folds open on its own; its header says what it found (**All good**, **3 to merge**, …) so you can see at a glance where there is work. The page remembers which sections you left open.
+
+A repair can change what another section found: merging duplicate songs rewrites playlists and may remove the library file a slskd leftover was matched to, deleting slskd leftovers changes the song counts, merging playlists changes Navidrome's. After a repair, every section it may have changed is marked **Out of date** and its repairs are locked until you **Check again**, so nothing acts on findings that are no longer true. The server refuses those repairs too, not only the page.
+
 ## slskd leftovers
 
 Older versions copied each finished Soulseek download into the library and left the original in slskd's folder, so every song took twice the space. **Pause downloads and check**:
@@ -38,6 +42,8 @@ Two M3U files that hold one playlist: the same name in two places — typically 
 **Merge** keeps the file Downtify writes today, puts every song of both in it once (the larger playlist's order first), copies the cover next to it if it had none, and removes the other file and its cover. Both files are copied to `/data/doctor/backups/<date>/` first. Playlists are only merged when at least 80% of the smaller one's songs are in the larger one; otherwise they may be different playlists and the button stays off. Playlists you created in the Library are never merged.
 
 **Choose playlists yourself** lists every M3U, so two that the check didn't pair can be compared and merged under the same rule.
+
+Each M3U that has a cover shows it; click it to see it larger.
 
 ## Navidrome
 
@@ -66,4 +72,4 @@ Spotify sometimes replaces a playlist's track with the same song under a new ID 
 
 ## API
 
-All admin-only, under `/api/doctor`: `GET /api/doctor` (the running or last job and the last result of each kind), `POST /scan`, `POST /cancel`, `POST /slskd/scan`, `GET /slskd/files`, `POST /slskd/clean`, `POST /slskd/release`, `POST /playlists/preview`, `POST /playlists/merge`, `POST /navidrome/repair`, `POST /duplicates/merge` (`keep`, `remove`), `POST /duplicates/keep` (`files`) and `POST /duplicates/keep/reset`. One Doctor job runs at a time.
+All admin-only, under `/api/doctor`: `GET /api/doctor` (the running or last job and the last result of each kind), `POST /scan`, `POST /cancel`, `POST /slskd/scan`, `GET /slskd/files`, `POST /slskd/clean`, `POST /slskd/release`, `POST /playlists/preview`, `POST /playlists/merge`, `POST /navidrome/repair`, `POST /duplicates/merge` (`keep`, `remove`), `POST /duplicates/keep` (`files`) and `POST /duplicates/keep/reset`. One Doctor job runs at a time. `GET /api/doctor` also lists the sections that are out of date (`stale`); their repairs answer `409` with `rescan_first` until they are checked again.

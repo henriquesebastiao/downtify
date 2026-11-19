@@ -2533,6 +2533,24 @@ export default {
     songsCount: '노래: {count}',
     hasCover: '커버 있음',
     keeps: '유지',
+    outOfDate: '오래됨',
+    staleHint:
+      '다른 섹션의 복구로 여기서 찾은 내용이 바뀌었을 수 있습니다. 여기서 변경하기 전에 다시 확인하세요.',
+    checkAgain: '다시 확인',
+    coverOf: '{name} 커버',
+    noCover: '커버 없음',
+    badge: {
+      notChecked: '확인 안 함',
+      allGood: '문제 없음',
+      toDelete: '삭제할 항목 {count}개',
+      leftovers: '남은 파일 {size}',
+      off: '꺼짐',
+      unreachable: '연결 안 됨',
+      toFix: '고칠 항목 {count}개',
+      toMerge: '합칠 항목 {count}개',
+      toReview: '검토할 항목 {count}개',
+      songsFound: '노래 {count}곡',
+    },
     mergePlan: '결과: 노래 {songs}곡. 노래의 {overlap}%가 겹칩니다.',
     mergeUnsafe:
       '노래의 {overlap}%만 겹쳐서 서로 다른 재생목록일 수 있습니다. 합치지 않습니다.',
@@ -2623,6 +2641,8 @@ export default {
     relinkedCounts: '노래: {songs} · 여분 파일: {extra}',
     error: {
       doctor_busy: '닥터가 이미 작업 중입니다.',
+      rescan_first:
+        '다른 곳의 복구로 이 섹션이 바뀌었습니다. 먼저 다시 확인하세요.',
       doctor_failed: '닥터가 오류로 멈췄습니다. 서버 로그를 확인하세요.',
       queue_busy:
         '진행 중인 다운로드가 제때 끝나지 않았습니다. 나중에 다시 시도하세요.',
