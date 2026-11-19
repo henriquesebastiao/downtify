@@ -2539,6 +2539,24 @@ export default {
     songsCount: 'Песни: {count}',
     hasCover: 'Има обложка',
     keeps: 'Запазва се',
+    outOfDate: 'Остаряло',
+    staleHint:
+      'Поправка в друг раздел може да е променила намереното тук. Проверете отново, преди да променяте нещо тук.',
+    checkAgain: 'Провери отново',
+    coverOf: 'Обложка на {name}',
+    noCover: 'Няма обложка',
+    badge: {
+      notChecked: 'Непроверено',
+      allGood: 'Всичко е наред',
+      toDelete: '{count} за изтриване',
+      leftovers: 'Остатъци: {size}',
+      off: 'Изключено',
+      unreachable: 'Недостъпно',
+      toFix: '{count} за поправка',
+      toMerge: '{count} за сливане',
+      toReview: '{count} за преглед',
+      songsFound: 'Песни: {count}',
+    },
     mergePlan: 'Резултат: {songs} песни. Споделят {overlap}% от песните си.',
     mergeUnsafe:
       'Съвпадат само {overlap}% от песните; може да са различни плейлисти. Няма обединяване.',
@@ -2630,6 +2648,8 @@ export default {
     relinkedCounts: 'Песни: {songs} · излишни файлове: {extra}',
     error: {
       doctor_busy: 'Доктор вече работи.',
+      rescan_first:
+        'Поправка другаде промени този раздел. Първо го проверете отново.',
       doctor_failed: 'Доктор спря с грешка. Вижте журнала на сървъра.',
       queue_busy:
         'Текущите изтегляния не приключиха навреме. Опитайте по-късно.',

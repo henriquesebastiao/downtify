@@ -2588,6 +2588,24 @@ export default {
     songsCount: 'Τραγούδια: {count}',
     hasCover: 'Έχει εξώφυλλο',
     keeps: 'Μένει',
+    outOfDate: 'Παρωχημένο',
+    staleHint:
+      'Μια επιδιόρθωση σε άλλη ενότητα μπορεί να άλλαξε όσα βρέθηκαν εδώ. Ελέγξτε ξανά πριν αλλάξετε κάτι εδώ.',
+    checkAgain: 'Έλεγχος ξανά',
+    coverOf: 'Εξώφυλλο του {name}',
+    noCover: 'Χωρίς εξώφυλλο',
+    badge: {
+      notChecked: 'Δεν ελέγχθηκε',
+      allGood: 'Όλα καλά',
+      toDelete: '{count} για διαγραφή',
+      leftovers: '{size} περισσεύουν',
+      off: 'Ανενεργό',
+      unreachable: 'Μη προσβάσιμο',
+      toFix: '{count} για διόρθωση',
+      toMerge: '{count} για συγχώνευση',
+      toReview: '{count} για έλεγχο',
+      songsFound: '{count} τραγούδια',
+    },
     mergePlan:
       'Αποτέλεσμα: {songs} τραγούδια. Μοιράζονται το {overlap}% των τραγουδιών.',
     mergeUnsafe:
@@ -2681,6 +2699,8 @@ export default {
     relinkedCounts: 'Τραγούδια: {songs} · επιπλέον αρχεία: {extra}',
     error: {
       doctor_busy: 'Ο Γιατρός ήδη δουλεύει.',
+      rescan_first:
+        'Μια επιδιόρθωση αλλού άλλαξε αυτή την ενότητα. Ελέγξτε την ξανά πρώτα.',
       doctor_failed:
         'Ο Γιατρός σταμάτησε με σφάλμα. Δείτε το αρχείο καταγραφής του διακομιστή.',
       queue_busy:

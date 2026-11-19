@@ -2553,6 +2553,24 @@ export default {
     songsCount: 'Músicas: {count}',
     hasCover: 'Tem capa',
     keeps: 'Mantido',
+    outOfDate: 'Desatualizado',
+    staleHint:
+      'Um reparo em outra seção pode ter mudado o que foi encontrado aqui. Verifique de novo antes de mudar algo aqui.',
+    checkAgain: 'Verificar de novo',
+    coverOf: 'Capa de {name}',
+    noCover: 'Sem capa',
+    badge: {
+      notChecked: 'Não verificado',
+      allGood: 'Tudo certo',
+      toDelete: '{count} para apagar',
+      leftovers: 'Sobram {size}',
+      off: 'Desligado',
+      unreachable: 'Inacessível',
+      toFix: '{count} para corrigir',
+      toMerge: '{count} para juntar',
+      toReview: '{count} para revisar',
+      songsFound: '{count} músicas',
+    },
     mergePlan:
       'Resultado: {songs} músicas. Elas têm {overlap}% das músicas em comum.',
     mergeUnsafe:
@@ -2646,6 +2664,8 @@ export default {
     relinkedCounts: 'Músicas: {songs} · arquivos extras: {extra}',
     error: {
       doctor_busy: 'O Doutor já está trabalhando.',
+      rescan_first:
+        'Um reparo em outro lugar mudou esta seção. Verifique-a de novo primeiro.',
       doctor_failed: 'O Doutor parou com um erro. Veja o log do servidor.',
       queue_busy:
         'Os downloads em andamento não terminaram a tempo. Tente mais tarde.',

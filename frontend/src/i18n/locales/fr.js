@@ -2597,6 +2597,24 @@ export default {
     songsCount: 'Chansons : {count}',
     hasCover: 'A une pochette',
     keeps: 'Gardé',
+    outOfDate: 'Périmé',
+    staleHint:
+      'Une réparation dans une autre section a pu changer ce qui a été trouvé ici. Vérifiez à nouveau avant de modifier quoi que ce soit ici.',
+    checkAgain: 'Vérifier à nouveau',
+    coverOf: 'Pochette de {name}',
+    noCover: 'Pas de pochette',
+    badge: {
+      notChecked: 'Non vérifié',
+      allGood: 'Tout va bien',
+      toDelete: '{count} à supprimer',
+      leftovers: '{size} en trop',
+      off: 'Désactivé',
+      unreachable: 'Injoignable',
+      toFix: '{count} à corriger',
+      toMerge: '{count} à fusionner',
+      toReview: '{count} à examiner',
+      songsFound: '{count} chansons',
+    },
     mergePlan:
       'Résultat : {songs} chansons. Elles ont {overlap} % de chansons en commun.',
     mergeUnsafe:
@@ -2691,6 +2709,8 @@ export default {
     relinkedCounts: 'Chansons : {songs} · fichiers en trop : {extra}',
     error: {
       doctor_busy: 'Le Docteur est déjà au travail.',
+      rescan_first:
+        'Une réparation ailleurs a modifié cette section. Vérifiez-la d’abord à nouveau.',
       doctor_failed:
         'Le Docteur s’est arrêté sur une erreur. Voir le journal du serveur.',
       queue_busy:

@@ -2562,6 +2562,24 @@ export default {
     songsCount: 'Dalok: {count}',
     hasCover: 'Van borítója',
     keeps: 'Megmarad',
+    outOfDate: 'Elavult',
+    staleHint:
+      'Egy másik szakaszban végzett javítás megváltoztathatta az itt találtakat. Ellenőrizd újra, mielőtt itt bármit módosítasz.',
+    checkAgain: 'Újraellenőrzés',
+    coverOf: '{name} borítója',
+    noCover: 'Nincs borító',
+    badge: {
+      notChecked: 'Nincs ellenőrizve',
+      allGood: 'Minden rendben',
+      toDelete: '{count} törlendő',
+      leftovers: '{size} maradvány',
+      off: 'Kikapcsolva',
+      unreachable: 'Nem elérhető',
+      toFix: '{count} javítandó',
+      toMerge: '{count} egyesítendő',
+      toReview: '{count} átnézendő',
+      songsFound: '{count} dal',
+    },
     mergePlan: 'Eredmény: {songs} dal. A dalaik {overlap}%-a közös.',
     mergeUnsafe:
       'A dalok csak {overlap}%-a egyezik; lehet, hogy különböző listák. Nincs egyesítés.',
@@ -2654,6 +2672,8 @@ export default {
     relinkedCounts: 'Dalok: {songs} · felesleges fájlok: {extra}',
     error: {
       doctor_busy: 'A Doktor már dolgozik.',
+      rescan_first:
+        'Egy máshol végzett javítás megváltoztatta ezt a szakaszt. Előbb ellenőrizd újra.',
       doctor_failed: 'A Doktor hibával leállt. Lásd a szervernaplót.',
       queue_busy: 'A futó letöltések nem fejeződtek be időben. Próbáld később.',
       scan_first: 'Előbb ellenőrizd újra a maradványokat.',

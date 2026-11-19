@@ -2582,6 +2582,24 @@ export default {
     songsCount: 'Canciones: {count}',
     hasCover: 'Tiene portada',
     keeps: 'Se conserva',
+    outOfDate: 'Desactualizado',
+    staleHint:
+      'Una reparación en otra sección puede haber cambiado lo encontrado aquí. Vuelve a comprobar antes de cambiar algo aquí.',
+    checkAgain: 'Comprobar de nuevo',
+    coverOf: 'Portada de {name}',
+    noCover: 'Sin portada',
+    badge: {
+      notChecked: 'Sin comprobar',
+      allGood: 'Todo bien',
+      toDelete: '{count} para borrar',
+      leftovers: 'Sobran {size}',
+      off: 'Desactivado',
+      unreachable: 'Sin conexión',
+      toFix: '{count} para arreglar',
+      toMerge: '{count} para unir',
+      toReview: '{count} para revisar',
+      songsFound: '{count} canciones',
+    },
     mergePlan:
       'Resultado: {songs} canciones. Comparten el {overlap}% de las canciones.',
     mergeUnsafe:
@@ -2675,6 +2693,8 @@ export default {
     relinkedCounts: 'Canciones: {songs} · archivos de más: {extra}',
     error: {
       doctor_busy: 'El Doctor ya está trabajando.',
+      rescan_first:
+        'Una reparación en otra parte cambió esta sección. Compruébala de nuevo primero.',
       doctor_failed:
         'El Doctor se detuvo por un error. Mira el registro del servidor.',
       queue_busy:

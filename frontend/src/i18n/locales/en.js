@@ -2501,6 +2501,24 @@ export default {
     songsCount: 'Songs: {count}',
     hasCover: 'Has a cover',
     keeps: 'Kept',
+    outOfDate: 'Out of date',
+    staleHint:
+      'A repair in another section may have changed what was found here. Check again before changing anything here.',
+    checkAgain: 'Check again',
+    coverOf: 'Cover of {name}',
+    noCover: 'No cover',
+    badge: {
+      notChecked: 'Not checked',
+      allGood: 'All good',
+      toDelete: '{count} to delete',
+      leftovers: '{size} left over',
+      off: 'Off',
+      unreachable: 'Can’t reach',
+      toFix: '{count} to fix',
+      toMerge: '{count} to merge',
+      toReview: '{count} to review',
+      songsFound: '{count} songs',
+    },
     mergePlan: 'Merged: {songs} songs. They share {overlap}% of their songs.',
     mergeUnsafe:
       'Only {overlap}% of the songs match, so these may be different playlists. Not merged.',
@@ -2591,6 +2609,8 @@ export default {
     relinkedCounts: 'Songs: {songs} · extra files: {extra}',
     error: {
       doctor_busy: 'The Doctor is already working.',
+      rescan_first:
+        'A repair elsewhere changed this section. Check it again first.',
       doctor_failed: 'The Doctor stopped with an error. See the server log.',
       queue_busy: 'Running downloads didn’t finish in time. Try again later.',
       scan_first: 'Check the leftovers again first.',

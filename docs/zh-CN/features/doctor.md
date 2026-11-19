@@ -12,6 +12,10 @@ icon: lucide/stethoscope
 
 **立即检查**会检查下列所有内容，不做任何修改。检查在后台运行，离开页面不会停止；返回时仍会显示上次结果。
 
+下面每个部分都可以单独展开；标题会显示检查结果（**一切正常**、**3 个待合并**……），一眼就能看出哪里需要处理。页面会记住你展开了哪些部分。
+
+一次修复可能改变其他部分的结果：合并重复歌曲会改写播放列表，还可能移除 slskd 遗留文件所匹配的音乐库文件；删除 slskd 遗留文件会改变歌曲数量；合并播放列表会改变 Navidrome 的结果。修复之后，可能受影响的每个部分都会标为**已过期**，在你点击**重新检查**之前无法在其中修复，这样就不会根据已不成立的结果进行操作。服务器同样会拒绝这些修复，而不只是页面。
+
 ## slskd 遗留文件
 
 旧版本将每个已完成的 Soulseek 下载复制到音乐库后，会将原文件留在 slskd 文件夹中，导致每首歌曲占用双倍空间。**暂停下载并检查**会：
@@ -38,6 +42,8 @@ Downtify 会重写导入文件的标签和封面，因此两份文件的整体�
 **合并**会保留 Downtify 当前使用的文件，将两个列表的每首歌曲各保留一次，先沿用较大列表的顺序；若保留文件旁没有封面，则复制封面，再移除另一个文件及其封面。两个文件都会先备份到 `/data/doctor/backups/<date>/`。只有较小列表中至少 80% 的歌曲也存在于较大列表时才允许合并，否则可能是不同播放列表，按钮会禁用。你在音乐库中创建的播放列表不会合并。
 
 **自行选择播放列表**会列出所有 M3U，让你比较检查未自动配对的两个列表，并按相同规则合并。
+
+有封面的 M3U 会显示其封面；点击即可放大查看。
 
 ## Navidrome
 
@@ -66,4 +72,4 @@ Spotify 有时会将播放列表中的曲目替换为同一首歌的新 ID，例
 
 ## API
 
-接口均仅限管理员，位于 `/api/doctor` 下：`GET /api/doctor`（运行中或最近一次任务，以及每类检查的最近结果）、`POST /scan`、`POST /cancel`、`POST /slskd/scan`、`GET /slskd/files`、`POST /slskd/clean`、`POST /slskd/release`、`POST /playlists/preview`、`POST /playlists/merge` 和 `POST /navidrome/repair`。同一时间只运行一个医生任务。
+接口均仅限管理员，位于 `/api/doctor` 下：`GET /api/doctor`（运行中或最近一次任务，以及每类检查的最近结果）、`POST /scan`、`POST /cancel`、`POST /slskd/scan`、`GET /slskd/files`、`POST /slskd/clean`、`POST /slskd/release`、`POST /playlists/preview`、`POST /playlists/merge` 和 `POST /navidrome/repair`。同一时间只运行一个医生任务。`GET /api/doctor` 还会列出已过期的部分（`stale`）；在重新检查之前，这些部分的修复会返回 `409` 和 `rescan_first`。

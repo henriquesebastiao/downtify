@@ -43,6 +43,7 @@ from .doctor import (
     norm,
     prune_empty_dirs,
     relinked_tracks,
+    stale_after,
     summarize_copies,
     verify_copies,
     working_copy_rows,
@@ -88,6 +89,10 @@ _last: dict[str, Any] = {}
 #: (``hold``), the last slskd check (``copies``), the Navidrome playlists
 #: the last health check flagged (``flagged``).
 _state: dict[str, Any] = {}
+#: Sections whose findings a repair has changed since they were last
+#: checked (:func:`downtify.doctor.stale_after`). Their repairs wait for
+#: a new check, so nothing acts on what the page showed before.
+_stale: set[str] = set()
 _hashes: Optional[AudioHashCache] = None
 _kept: Optional[KeptApart] = None
 
@@ -146,8 +151,10 @@ def _start(kind: str, work: Callable[[dict[str, Any]], Any]) -> dict[str, Any]:
             result = await work(_job)
             _job.update(state='done', result=result, finished_at=_now())
             _last[kind] = {'at': _now(), 'result': result}
+            _mark(kind, done=True)
         except HTTPException as exc:
             _job.update(state='failed', error=exc.detail, finished_at=_now())
+            _mark(kind, done=False)
         except Exception as exc:
             logger.exception('doctor: {} failed', kind)
             _job.update(
@@ -155,9 +162,22 @@ def _start(kind: str, work: Callable[[dict[str, Any]], Any]) -> dict[str, Any]:
                 error={'code': 'doctor_failed', 'message': str(exc)},
                 finished_at=_now(),
             )
+            _mark(kind, done=False)
 
     asyncio.get_running_loop().create_task(run())
     return _public_job()
+
+
+def _mark(kind: str, *, done: bool) -> None:
+    """Update :data:`_stale` after a *kind* job. A failed check proves
+    nothing; a failed repair may still have changed something."""
+
+    if done:
+        fresh = stale_after(_stale, kind)
+    else:
+        fresh = _stale | stale_after(set(), kind)
+    _stale.clear()
+    _stale.update(fresh)
 
 
 def _step(job: dict[str, Any], step: str, done: int = 0, total: int = 0):
@@ -178,7 +198,17 @@ async def doctor_status() -> dict[str, Any]:
         'last': _last,
         'queue': api._global_queue_status(),
         'holding_queue': bool(_state.get('hold')),
+        'stale': sorted(_stale),
     }
+
+
+def _require_fresh(section: str) -> None:
+    """Refuse a repair while *section*'s findings are out of date."""
+
+    if section in _stale:
+        raise HTTPException(
+            409, detail={'code': 'rescan_first', 'section': section}
+        )
 
 
 @router.post('/cancel')
@@ -565,6 +595,7 @@ async def slskd_clean(payload: Cleanup) -> dict[str, Any]:
     results: dict[str, CopyResult] = _state.get('copies') or {}
     if not results:
         raise HTTPException(409, detail={'code': 'scan_first'})
+    _require_fresh('slskd')
     wanted = set(payload.files) or set(results)
     chosen = [
         r
@@ -720,6 +751,7 @@ def _group_for(paths: list[str]) -> PlaylistGroup:
 async def playlists_merge(payload: Merge) -> dict[str, Any]:
     """Merge M3U files of one playlist, then tidy Navidrome to match."""
 
+    _require_fresh('playlists')
     group = await asyncio.to_thread(_group_for, payload.paths)
     if not group.safe():
         raise HTTPException(
@@ -823,6 +855,7 @@ async def navidrome_repair(payload: NavidromeRepair) -> dict[str, Any]:
     """Delete playlists the last health check flagged (duplicates and
     orphans only), optionally switch on M3U import, rescan, re-check."""
 
+    _require_fresh('navidrome')
     flagged = _state.get('flagged') or set()
     unknown = [pid for pid in payload.delete if pid not in flagged]
     if unknown:
@@ -940,6 +973,7 @@ async def duplicates_keep(payload: DuplicateFiles) -> dict[str, Any]:
     """Keep both (or all): the files are different songs. The Doctor
     stops listing them until another look-alike turns up."""
 
+    _require_fresh('duplicates')
     _same_group(payload.files)
     added = await asyncio.to_thread(_kept_apart().keep, payload.files)
     _settle_review([], payload.files)
@@ -961,6 +995,7 @@ async def duplicates_merge(
     it, then remove them - to the music trash when it is on."""
 
     user_id = admin_user(request)
+    _require_fresh('duplicates')
     _same_group([payload.keep, *payload.remove])
 
     async def work(job: dict[str, Any]) -> dict[str, Any]:
