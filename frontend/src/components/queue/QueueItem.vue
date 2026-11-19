@@ -35,6 +35,25 @@
           {{ artists
           }}<span v-if="song.album_name"> · {{ song.album_name }}</span>
         </p>
+        <RouterLink
+          v-if="item.watch"
+          :to="watchRouteFor(item.watch)"
+          class="mt-1 flex w-fit max-w-full items-center gap-1.5 text-xs text-muted hover:text-fg"
+          :title="t('queue.fromWatchTitle', { name: item.watch.name })"
+        >
+          <CoverArt
+            :src="watchCover(item.watch)"
+            :name="item.watch.name"
+            :round="item.watch.kind === 'artist'"
+            :icon="item.watch.kind === 'artist' ? 'user' : 'playlist'"
+            rounded="rounded-[4px]"
+            :letter-size="8"
+            class="size-4 shrink-0"
+          />
+          <span class="truncate hover:underline">{{
+            t('queue.fromWatch', { name: item.watch.name })
+          }}</span>
+        </RouterLink>
         <template v-if="item.state === 'active'">
           <div class="mt-2 flex items-center gap-3">
             <UiProgress
@@ -175,6 +194,8 @@ import { useTrackActions } from '/src/model/trackActions'
 import { deezerImage } from '/src/lib/deezerImage'
 import { normalizeTrack } from '/src/lib/library'
 import { saveName } from '/src/lib/paths'
+import { watchCover } from '/src/lib/queueWatches'
+import { watchRouteFor } from '/src/lib/watchStats'
 import { classifyInput } from '/src/lib/input'
 import { useI18n } from '/src/i18n'
 

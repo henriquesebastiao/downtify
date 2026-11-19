@@ -67,6 +67,8 @@ class DownloadItem {
     this.filename = null
     // 1-based place among the waiting jobs (`GET /api/queue`), or null.
     this.position = null
+    // The Monitor watch downloading this song (see lib/queueWatches.js).
+    this.watch = null
     this.updatedAt = Date.now()
   }
   get key() {
@@ -144,6 +146,7 @@ class DownloadItem {
     if (message.message !== undefined) values.message = message.message
     if (message.provider) values.provider = message.provider
     if (message.reused) values.provider = ''
+    if (message.watch) values.watch = message.watch
     this.patch(values)
   }
 }

@@ -557,6 +557,13 @@ export default {
       "That doesn't look like a YouTube video or SoundCloud track link.",
     playlistDownloads: 'Playlist downloads',
     sources: 'Downloaded from',
+    fromWatch: 'From {name}',
+    fromWatchTitle: 'Monitor is downloading this for {name}. Open the watch.',
+    watches: 'Downloading for watches',
+    watchesHint:
+      'The Monitor watches the songs in this queue come from. Open one to pause it or stop watching.',
+    watchWaiting: '{count} still to go',
+    openWatchOriginal: 'Open the original',
     noSourcesYet: 'Finished downloads show their source here.',
     importTitle: 'Import a library',
     importHint:

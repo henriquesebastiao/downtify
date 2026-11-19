@@ -569,6 +569,14 @@ export default {
       'Ez nem tűnik YouTube videó- vagy SoundCloud számlinknek.',
     playlistDownloads: 'Lejátszásilista-letöltések',
     sources: 'Letöltési forrás',
+    fromWatch: 'Innen: {name}',
+    fromWatchTitle:
+      'A Figyelő ezt a(z) {name} miatt tölti le. Megnyitja a figyelést.',
+    watches: 'Letöltések figyelésekhez',
+    watchesHint:
+      'A Figyelő figyelései, amelyekből a sorban lévő dalok jönnek. Nyiss meg egyet a szüneteltetéshez vagy leállításhoz.',
+    watchWaiting: 'még {count}',
+    openWatchOriginal: 'Eredeti megnyitása',
     noSourcesYet: 'A kész letöltések forrása itt jelenik meg.',
     importTitle: 'Könyvtár importálása',
     importHint:

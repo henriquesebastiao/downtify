@@ -579,6 +579,14 @@ export default {
       'Αυτό δεν μοιάζει με σύνδεσμο βίντεο YouTube ή κομματιού SoundCloud.',
     playlistDownloads: 'Λήψεις λιστών',
     sources: 'Πηγή λήψης',
+    fromWatch: 'Από {name}',
+    fromWatchTitle:
+      'Η Παρακολούθηση το κατεβάζει για {name}. Άνοιγμα της παρακολούθησης.',
+    watches: 'Λήψεις για παρακολουθήσεις',
+    watchesHint:
+      'Οι παρακολουθήσεις από τις οποίες προέρχονται τα τραγούδια της ουράς. Ανοίξτε μία για παύση ή διακοπή.',
+    watchWaiting: 'απομένουν {count}',
+    openWatchOriginal: 'Άνοιγμα πρωτοτύπου',
     noSourcesYet: 'Οι ολοκληρωμένες λήψεις δείχνουν εδώ την πηγή τους.',
     importTitle: 'Εισαγωγή βιβλιοθήκης',
     importHint:

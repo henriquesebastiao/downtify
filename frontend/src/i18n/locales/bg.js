@@ -559,6 +559,13 @@ export default {
       'Това не прилича на линк към видео в YouTube или песен в SoundCloud.',
     playlistDownloads: 'Изтегляния на плейлисти',
     sources: 'Изтеглено от',
+    fromWatch: 'От {name}',
+    fromWatchTitle: 'Мониторът изтегля това за {name}. Отваря наблюдението.',
+    watches: 'Изтегляне за наблюдения',
+    watchesHint:
+      'Наблюденията в Монитор, от които идват песните в опашката. Отворете някое, за да го спрете на пауза или да спрете наблюдението.',
+    watchWaiting: 'Още {count}',
+    openWatchOriginal: 'Отваряне на оригинала',
     noSourcesYet: 'Завършените изтегляния показват източника си тук.',
     importTitle: 'Импортиране на библиотека',
     importHint: 'CSV експорт от Soundiiz, TuneMyMusic, Exportify и подобни.',

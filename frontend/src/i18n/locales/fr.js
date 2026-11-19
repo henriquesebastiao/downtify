@@ -587,6 +587,13 @@ export default {
       'Ceci ne ressemble pas à un lien de vidéo YouTube ou de titre SoundCloud.',
     playlistDownloads: 'Téléchargements de playlists',
     sources: 'Téléchargé depuis',
+    fromWatch: 'De {name}',
+    fromWatchTitle: 'Le Monitor le télécharge pour {name}. Ouvre le suivi.',
+    watches: 'Téléchargements des suivis',
+    watchesHint:
+      'Les suivis du Monitor d’où viennent les chansons de cette file. Ouvrez-en un pour le mettre en pause ou l’arrêter.',
+    watchWaiting: 'encore {count}',
+    openWatchOriginal: 'Ouvrir l’original',
     noSourcesYet: 'Les téléchargements terminés indiquent leur source ici.',
     importTitle: 'Importer une bibliothèque',
     importHint:
