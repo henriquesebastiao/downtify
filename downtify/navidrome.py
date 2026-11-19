@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import re
 import secrets
+import threading
 import time
 import unicodedata
 from dataclasses import dataclass
@@ -418,6 +419,9 @@ def _effective_navidrome_settings(settings: dict[str, Any]) -> dict[str, Any]:
         'm3u_import': bool(raw.get('m3u_import', False)),
         'scan_after_download': bool(raw.get('scan_after_download', True)),
         'scan_full': bool(raw.get('scan_full', False)),
+        # Hold the scans Downtify starts while a Navidrome client is
+        # playing (see _trigger_library_scan / IdleScan).
+        'scan_when_idle': bool(raw.get('scan_when_idle', False)),
         'scan_wait_seconds': scan_wait_seconds,
         'scan_poll_seconds': scan_poll_seconds,
         'scan_retry_seconds': scan_retry_seconds,
@@ -528,6 +532,18 @@ class NavidromeClient:
             extra['fullScan'] = 'true'
         user, pwd = self._scan_credentials()
         self._request('startScan', extra or None, username=user, password=pwd)
+
+    def now_playing(self) -> list[dict[str, Any]]:
+        """What Navidrome's clients report playing right now
+        (``getNowPlaying``), for every user."""
+
+        user, pwd = self._scan_credentials()
+        body = self._request('getNowPlaying', username=user, password=pwd)
+        block = body.get('nowPlaying') if isinstance(body, dict) else None
+        entries = block.get('entry') if isinstance(block, dict) else None
+        if isinstance(entries, dict):
+            entries = [entries]
+        return [e for e in entries or [] if isinstance(e, dict)]
 
     def wait_scan_complete(self, max_wait_seconds: int) -> bool:
         deadline = time.monotonic() + max(10, max_wait_seconds)
@@ -1094,13 +1110,97 @@ def _match_songs_in_library(
     return song_ids, unmatched
 
 
+def someone_listening(client: NavidromeClient) -> bool:
+    """Whether any Navidrome client is playing. A failed check counts as
+    nobody, so scans are never held by an error."""
+
+    try:
+        return bool(client.now_playing())
+    except Exception as exc:
+        logger.info('navidrome: now-playing check failed err={}', exc)
+        return False
+
+
+class IdleScan:
+    """One Navidrome scan held until nobody is listening.
+
+    With ``scan_when_idle`` on, a scan Downtify would start while a
+    Navidrome client is playing is handed here instead: requests are
+    merged into one (full if any asked for full), and a background
+    thread checks every :attr:`poll_seconds` and starts it once nothing
+    is playing. Nothing else waits for it - the playlist sync that asked
+    goes on without a fresh scan.
+    """
+
+    poll_seconds = 60
+
+    def __init__(self) -> None:
+        self._lock = threading.Lock()
+        self._pending: Optional[tuple[NavidromeClient, bool]] = None
+        self._thread: Optional[threading.Thread] = None
+
+    @property
+    def pending(self) -> bool:
+        return self._pending is not None
+
+    def request(self, client: NavidromeClient, *, full: bool) -> None:
+        with self._lock:
+            if self._pending is not None:
+                full = full or self._pending[1]
+            self._pending = (client, full)
+            if self._thread is None or not self._thread.is_alive():
+                self._thread = threading.Thread(
+                    target=self._run, name='navidrome-idle-scan', daemon=True
+                )
+                self._thread.start()
+
+    def run_once(self) -> bool:
+        """Start the held scan if nobody is listening; returns whether
+        one is still held."""
+
+        with self._lock:
+            held = self._pending
+        if held is None:
+            return False
+        client, full = held
+        if someone_listening(client):
+            return True
+        with self._lock:
+            if self._pending is held:
+                self._pending = None
+        try:
+            client.start_scan(full=full)
+            logger.info('navidrome: nobody listening; held scan started')
+        except Exception as exc:
+            logger.info('navidrome: held scan failed err={}', exc)
+        return self.pending
+
+    def _run(self) -> None:
+        while True:
+            time.sleep(self.poll_seconds)
+            if not self.run_once():
+                return
+
+
+idle_scan = IdleScan()
+
+
 def _trigger_library_scan(
     client: NavidromeClient,
     cfg: dict[str, Any],
     track_count: int,
 ) -> bool:
-    """Start Navidrome scan and block until idle or timeout. Returns scan finished."""
+    """Start Navidrome scan and block until idle or timeout. Returns scan
+    finished. With ``scan_when_idle`` on and a client playing, the scan
+    is held (:class:`IdleScan`) and ``False`` returned at once."""
 
+    if cfg.get('scan_when_idle') and someone_listening(client):
+        logger.info(
+            'navidrome: someone is listening; library scan held until '
+            'playback stops'
+        )
+        idle_scan.request(client, full=bool(cfg.get('scan_full')))
+        return False
     wait_seconds = _scan_wait_budget(cfg, track_count)
     mode = 'full' if cfg.get('scan_full') else 'incremental'
     logger.info(

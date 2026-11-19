@@ -1782,6 +1782,9 @@ export default {
     navidromeM3uImport: '让 Navidrome 导入 M3U 播放列表',
     navidromeM3uImportHint:
       'Navidrome 会把 Downtify 写入的每个 M3U 变成带封面的播放列表。开启后，Downtify 不再通过 API 再创建一个。',
+    navidromeScanWhenIdle: '等没人收听时再扫描',
+    navidromeScanWhenIdleHint:
+      '只要有 Navidrome 应用正在播放，Downtify 在下载后发起的扫描就会等待（每分钟检查一次），以免打断播放。播放停止后，新歌曲才会出现在 Navidrome 中。',
     navidromePublic: '将 Navidrome 播放列表设为公开',
     primaryLibrary: '主音乐库文件夹',
     primaryLibraryHint:

@@ -1812,6 +1812,9 @@ export default {
     navidromeM3uImport: '讓 Navidrome 匯入 M3U 播放清單',
     navidromeM3uImportHint:
       'Navidrome 會把 Downtify 寫入的每個 M3U 變成附封面的播放清單。開啟後，Downtify 不再透過 API 另外建立一個。',
+    navidromeScanWhenIdle: '等沒人收聽時再掃描',
+    navidromeScanWhenIdleHint:
+      '只要有 Navidrome 應用程式正在播放，Downtify 在下載後發起的掃描就會等待（每分鐘檢查一次），以免打斷播放。播放停止後，新歌曲才會出現在 Navidrome 中。',
     navidromePublic: '將 Navidrome 播放清單設為公開',
     primaryLibrary: '主要媒體庫資料夾',
     primaryLibraryHint:
