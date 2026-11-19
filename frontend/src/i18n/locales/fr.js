@@ -2603,6 +2603,27 @@ export default {
     checkAgain: 'Vérifier à nouveau',
     coverOf: 'Pochette de {name}',
     noCover: 'Pas de pochette',
+    folder: {
+      title: 'Ce que contient le dossier de slskd',
+      total: '{files} fichiers · {size}',
+      files: '{count} fichiers',
+      library: 'Chansons de la bibliothèque',
+      libraryHint: 'Ce que la page de stockage compte comme chansons slskd.',
+      leftover: 'Restes',
+      leftoverHint:
+        'Copies que la vérification slskd ci-dessus compare à la bibliothèque.',
+      unlisted_audio: 'Audio que Downtify ne connaît pas',
+      unlisted_audioHint:
+        'Jamais importé, ou gardé après un import échoué. Absent de la bibliothèque et compté nulle part ailleurs.',
+      other: 'Autres fichiers',
+      otherHint: 'Pochettes, paroles et tout ce qui n’est pas une chanson.',
+      otherKinds: 'Autres fichiers par type :',
+      unlisted_audioList:
+        'Plus gros fichiers audio que Downtify ne connaît pas',
+      otherList: 'Plus gros autres fichiers',
+      units:
+        'Les tailles comptent 1 Go comme 1024³ octets ; certains explorateurs comptent 1000³, le même dossier peut donc y paraître plus gros.',
+    },
     badge: {
       notChecked: 'Non vérifié',
       allGood: 'Tout va bien',

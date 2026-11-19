@@ -2418,6 +2418,25 @@ export default {
     checkAgain: '重新檢查',
     coverOf: '{name} 的封面',
     noCover: '無封面',
+    folder: {
+      title: 'slskd 資料夾裡有什麼',
+      total: '{files} 個檔案 · {size}',
+      files: '{count} 個檔案',
+      library: '音樂庫歌曲',
+      libraryHint: '儲存空間頁面計為 slskd 歌曲的部分。',
+      leftover: '殘留檔案',
+      leftoverHint: '上方 slskd 檢查會與音樂庫比較的副本。',
+      unlisted_audio: 'Downtify 不認識的音訊',
+      unlisted_audioHint:
+        '從未匯入，或匯入失敗後保留下來的檔案。不在音樂庫中，其他地方也不計入。',
+      other: '其他檔案',
+      otherHint: '封面、歌詞以及其他不是歌曲的檔案。',
+      otherKinds: '依類型劃分的其他檔案：',
+      unlisted_audioList: 'Downtify 不認識的最大音訊檔案',
+      otherList: '最大的其他檔案',
+      units:
+        '這裡的大小按 1 GB = 1024³ 位元組計算；有些檔案瀏覽器按 1000³ 計算，因此同一資料夾在那裡可能顯示得更大。',
+    },
     badge: {
       notChecked: '未檢查',
       allGood: '一切正常',

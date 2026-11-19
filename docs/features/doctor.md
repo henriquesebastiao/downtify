@@ -33,6 +33,8 @@ Downtify rewrites the tags and cover of what it imports, so the two files never 
 
 **Delete identical copies** removes only those. Right before each one goes, it is checked again: same size and modification time as when it was compared, and its library twin still there. Emptied folders are removed, downloads resume, and Navidrome is asked to rescan. **Keep them and resume downloads** gives the queue back without deleting anything; so does doing nothing for an hour.
 
+**What's in slskd's folder** (shown after a health check) explains why a file browser shows the folder bigger than the storage page does. Every file in it is one of: a **library song** (what the storage page counts), a **leftover** (what the check above compares), **audio Downtify doesn't know** (never imported, or kept after an import failed — counted nowhere else), or **another file** (covers, lyrics, anything that isn't a song), with the largest of the last two listed by name. It only reads the folder. Sizes count 1 GB as 1024³ bytes; some file browsers count 1000³, so the same folder can show a bigger number there.
+
 Audio hashes are cached in `/data/doctor/audio_hashes.db` (SQLite; with PostgreSQL, in the PostgreSQL database), so checking again after a few new downloads only reads the new files.
 
 ## Duplicate playlists

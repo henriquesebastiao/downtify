@@ -312,6 +312,87 @@ def summarize_copies(results: Iterable[CopyResult]) -> dict[str, Any]:
     return out
 
 
+#: Files of each kind the slskd folder breakdown lists by name.
+FOLDER_EXAMPLES = 25
+#: Kinds of file in slskd's folder (:func:`slskd_folder_breakdown`).
+FOLDER_LIBRARY = 'library'
+FOLDER_LEFTOVER = 'leftover'
+FOLDER_UNLISTED = 'unlisted_audio'
+FOLDER_OTHER = 'other'
+FOLDER_KINDS = (FOLDER_LIBRARY, FOLDER_LEFTOVER, FOLDER_UNLISTED, FOLDER_OTHER)
+
+
+def slskd_folder_breakdown(
+    files: Iterable[tuple[str, int]],
+    *,
+    library: Collection[str],
+    leftovers: Collection[str],
+    audio_extensions: Collection[str],
+    examples: int = FOLDER_EXAMPLES,
+) -> dict[str, Any]:
+    """What slskd's folder holds, next to what Downtify counts.
+
+    *files* are ``(stored path, size)`` for every file on disk under
+    slskd's folder (``slskd/...``). Each is a library song (in
+    *library*), a leftover the slskd check looks at (in *leftovers*),
+    audio Downtify's listing doesn't know (never imported, or kept after
+    a failed import), or another kind of file (covers, lyrics, slskd's
+    own files). Library and leftovers are what the storage page counts;
+    the other two explain why the folder looks bigger on disk.
+    """
+
+    audio = {e.lower().lstrip('.') for e in audio_extensions}
+    lib = {norm(f) for f in library}
+    left = {norm(f) for f in leftovers}
+    totals = {kind: {'files': 0, 'bytes': 0} for kind in FOLDER_KINDS}
+    by_ext: dict[str, dict[str, int]] = defaultdict(
+        lambda: {'files': 0, 'bytes': 0}
+    )
+    listed: dict[str, list[tuple[int, str]]] = {
+        FOLDER_UNLISTED: [],
+        FOLDER_OTHER: [],
+    }
+    for raw, raw_size in files:
+        name = norm(raw)
+        size = max(0, int(raw_size or 0))
+        ext = PurePosixPath(name).suffix.lstrip('.').lower()
+        if name in lib:
+            kind = FOLDER_LIBRARY
+        elif name in left:
+            kind = FOLDER_LEFTOVER
+        elif ext in audio:
+            kind = FOLDER_UNLISTED
+        else:
+            kind = FOLDER_OTHER
+            bucket = by_ext[ext or '']
+            bucket['files'] += 1
+            bucket['bytes'] += size
+        totals[kind]['files'] += 1
+        totals[kind]['bytes'] += size
+        if kind in listed:
+            listed[kind].append((size, name))
+    return {
+        'total': {
+            'files': sum(t['files'] for t in totals.values()),
+            'bytes': sum(t['bytes'] for t in totals.values()),
+        },
+        'kinds': totals,
+        'other_by_extension': sorted(
+            ({'extension': ext, **row} for ext, row in by_ext.items()),
+            key=lambda row: (-row['bytes'], row['extension']),
+        )[:10],
+        'examples': {
+            kind: [
+                {'file': name, 'bytes': size}
+                for size, name in sorted(rows, key=lambda r: (-r[0], r[1]))[
+                    :examples
+                ]
+            ]
+            for kind, rows in listed.items()
+        },
+    }
+
+
 def prune_empty_dirs(start: Path, stop: Path) -> int:
     """Remove *start* and its empty parents, never *stop* or above."""
 
