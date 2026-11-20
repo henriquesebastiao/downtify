@@ -1857,6 +1857,9 @@ export default {
     coverMinHint:
       '이보다 작으면 Spotify, iTunes, YouTube Music에 같은 발매의 더 큰 커버를 요청하고 가장 큰 것을 씁니다. 끄면 곡 출처의 커버를 그대로 씁니다.',
     coverMinOff: '끔',
+    coverLargest: '항상 가장 큰 커버 사용',
+    coverLargestHint:
+      '다운로드할 때마다 Spotify, iTunes, YouTube Music에 해당 앨범 커버를 요청하고 가장 큰 것을 넣습니다(iTunes에서 1200 px인 경우가 많음). 곡마다 조금 느려집니다. 끄면: 최소 크기보다 작지 않은 한 곡 출처의 커버를 씁니다.',
     coverSize: '커버 해상도',
     coverSizeHint:
       'YouTube Music 및 Deezer에서 가져오는 커버에 적용됩니다. Spotify 커버는 항상 사용 가능한 최대 해상도로 저장됩니다.',

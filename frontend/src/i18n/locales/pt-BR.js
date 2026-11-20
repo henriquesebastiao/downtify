@@ -1880,6 +1880,9 @@ export default {
     coverMinHint:
       'Abaixo disto, Spotify, iTunes e YouTube Music são consultados por uma capa maior do mesmo lançamento, e a maior é usada. Desativado mantém a capa da fonte da faixa.',
     coverMinOff: 'Desativado',
+    coverLargest: 'Sempre usar a maior capa',
+    coverLargestHint:
+      'Cada download pede a capa do lançamento ao Spotify, iTunes e YouTube Music e incorpora a maior (muitas vezes 1200 px do iTunes). Um pouco mais lento por faixa. Desligado: a capa da fonte da faixa, a menos que esteja abaixo do mínimo.',
     coverSize: 'Tamanho da capa',
     coverSizeHint:
       'Para capas do YouTube Music e Deezer. Capas do Spotify sempre usam o maior tamanho disponível.',

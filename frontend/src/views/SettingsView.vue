@@ -799,6 +799,16 @@
                   @update:model-value="(v) => (s.cover_min_resolution = v)"
                 />
               </SettingRow>
+              <SettingRow
+                v-if="s.download_cover_art"
+                :label="t('settings.coverLargest')"
+                :description="t('settings.coverLargestHint')"
+              >
+                <UiSwitch
+                  v-model="s.cover_largest"
+                  :aria-label="t('settings.coverLargest')"
+                />
+              </SettingRow>
             </SettingGroup>
             <SettingGroup :title="t('settings.lyricsGroup')">
               <SettingRow

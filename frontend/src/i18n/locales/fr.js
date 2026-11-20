@@ -1916,6 +1916,9 @@ export default {
     coverMinHint:
       'En dessous, Spotify, iTunes et YouTube Music sont interrogés pour une pochette plus grande de la même sortie, et la plus grande est utilisée. Désactivé garde la pochette de la source du titre.',
     coverMinOff: 'Désactivé',
+    coverLargest: 'Toujours utiliser la plus grande pochette',
+    coverLargestHint:
+      'À chaque téléchargement, Spotify, iTunes et YouTube Music sont interrogés pour la pochette de la sortie et la plus grande est intégrée (souvent 1200 px depuis iTunes). Un peu plus lent par titre. Désactivé : la pochette de la source du titre, sauf si elle est sous le minimum.',
     coverSize: 'Taille de la pochette',
     coverSizeHint:
       'Pour les pochettes YouTube Music et Deezer. Celles de Spotify utilisent toujours la plus grande taille.',

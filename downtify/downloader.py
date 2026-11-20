@@ -454,6 +454,7 @@ class Downloader:
         organize_by_album: bool = False,
         download_cover_art: bool = True,
         cover_min_resolution: int = 0,
+        cover_largest: bool = False,
         write_isrc: bool = True,
         overwrite_existing_files: bool = True,
         cookies_store: Optional[CookiesStore] = None,
@@ -467,6 +468,9 @@ class Downloader:
         # The smallest cover (short side, px) worth embedding; 0 = take
         # what the track's source offers (see _download_cover_meeting).
         self.cover_min_resolution = max(0, int(cover_min_resolution or 0))
+        # Look for a larger cover on every download, not only below the
+        # minimum (see _download_cover_meeting).
+        self.cover_largest = bool(cover_largest)
         # Write each download's ISRC (downtify.isrc).
         self.write_isrc = bool(write_isrc)
         self.deemix_settings = normalize_settings(deemix_settings)
@@ -1851,6 +1855,7 @@ class _MetadataLookups:
                 _download_cover_meeting,
                 song,
                 getattr(downloader, 'cover_min_resolution', 0),
+                largest=getattr(downloader, 'cover_largest', False),
             )
             if downloader.download_cover_art
             else None
@@ -1935,7 +1940,7 @@ def _download_cover(url: str) -> Optional[bytes]:
 
 
 def _download_cover_meeting(
-    song: dict[str, Any], minimum: int
+    song: dict[str, Any], minimum: int, *, largest: bool = False
 ) -> Optional[bytes]:
     """The track's cover, or a larger one when it is under *minimum*.
 
@@ -1946,13 +1951,18 @@ def _download_cover_meeting(
     largest image wins - the minimum is a floor, not a fixed size. When
     no source reaches it, the largest found is still embedded rather
     than none.
+
+    With *largest* (the "Always use the largest cover" setting) those
+    sources are asked on every download, whatever the minimum: a YouTube
+    Music cover tops out around 1200 px and a Spotify one at 640 px,
+    while iTunes usually has the same release at 1200 px.
     """
 
     data = _download_cover(song.get('cover_url', ''))
-    if minimum <= 0:
+    if minimum <= 0 and not largest:
         return data
     have = image_short_side(data) if data else 0
-    if have >= minimum:
+    if have >= minimum and not largest:
         return data
     current = (
         cover_sources.CoverCandidate(source='download', data=data, width=have)
