@@ -618,6 +618,13 @@ export default {
       'Bu bir YouTube video ya da SoundCloud parça bağlantısına benzemiyor.',
     playlistDownloads: 'Çalma listesi indirmeleri',
     sources: 'İndirme kaynağı',
+    fromWatch: '{name} kaynaklı',
+    fromWatchTitle: 'Monitör bunu {name} için indiriyor. İzlemeyi açar.',
+    watches: 'İzlemeler için indirilenler',
+    watchesHint:
+      'Bu kuyruktaki şarkıların geldiği Monitör izlemeleri. Duraklatmak veya izlemeyi bırakmak için birini açın.',
+    watchWaiting: '{count} kaldı',
+    openWatchOriginal: 'Orijinali aç',
     noSourcesYet: 'Tamamlanan indirmeler kaynaklarını burada gösterir.',
     importTitle: 'Kitaplık içe aktar',
     importHint:
@@ -782,6 +789,14 @@ export default {
     ofBytes: '{total} içinden {done}',
     longJob:
       'Büyük bir kitaplık zaman alır. Bu sayfadan çıkabilirsiniz; yeniden başlatma kuyruğu kaldığı yerden sürdürür.',
+    lyricsQuickTitle: 'Eksik şarkı sözleri',
+    lyricsQuickHint:
+      'Kitaplıkta sözü olmayan parçaları tarar ve arada seçim yapmadan hemen söz arar. Diğer yükseltmeler başka bir çalıştırmaya kalır.',
+    lyricsQuickButton: 'Tara ve söz bul',
+    lyricsPlainOnly:
+      'Yalnızca senkronize olmayan sözler: {count} — bulunduğunda senkronize olanlarla değiştirilir',
+    lyricsOutcome:
+      'Eklenen sözler: {added} · Bulunamayan: {notFound} · Başarısız: {failed}',
     completed: 'İyileştirildi',
     skipped: 'Yapacak bir şey yok',
     failed: 'Başarısız',
@@ -1252,6 +1267,7 @@ export default {
     wantedSummary: 'Eksik: {releases} {songs}',
     wantedSongs: { one: '{count} şarkı', other: '{count} şarkı' },
     wantedReleases: { one: '{count} yayında', other: '{count} yayında' },
+    wantedUpcoming: '{count} duyuruldu',
     wantedUnchecked: {
       one: '{count} yayın henüz kontrol edilmedi',
       other: '{count} yayın henüz kontrol edilmedi',
@@ -1440,6 +1456,7 @@ export default {
     filter: {
       all: 'Tümü',
       missing: 'İndirilecek',
+      upcoming: 'Yakında',
       partly: 'Kısmen',
       complete: 'Tamam',
       not_watched: 'İzlenmeyen',
@@ -1450,6 +1467,8 @@ export default {
       complete: 'Tamam · {have}/{total}',
       partly: 'Kısmen · {have}/{total}',
       missing: 'İndirilecek',
+      upcoming: '{date} çıkıyor',
+      upcomingNoDate: 'Yakında',
       skipped: 'İzlemeden önce çıktı',
       not_watched: 'İzlenmiyor',
       off: 'Kapalı',
@@ -1684,6 +1703,17 @@ export default {
     sourceSoundcloud: 'SoundCloud',
     sourceSoundcloudHint:
       'Başka yerde olmayan yüklemeler ve SoundCloud bağlantılarının kendi parçası',
+    sourceNeedsTitle: 'Her kaynağın ihtiyacı',
+    sourceNeedsSlskd:
+      'slskd: ücretsiz Soulseek ağına bağlı kendi slskd sunucun. Abonelik yok; kalite insanların paylaştığı kadardır, çoğu zaman FLAC veya MP3 320.',
+    sourceNeedsDeemix:
+      'Deemix: kendi Deemix sunucun ve kendi Deezer hesabın. Ücretsiz hesap yalnızca MP3 128 kbps alır; MP3 320 ve FLAC için ücretli Deezer planı gerekir. Downtify bunu sağlamaz ve atlatmaz.',
+    sourceNeedsYoutube:
+      'YouTube Music ve YouTube: ayarlanacak bir şey yok. Ses kayıplıdır (yaklaşık 128–160 kbps).',
+    sourceNeedsSoundcloud:
+      'SoundCloud: ayarlanacak bir şey ve hesap yok. Yayınlar genellikle 128–160 kbps’tir.',
+    sourceNeedsCover:
+      'Kaynak ne olursa olsun, gömülen kapak Downtify’ın şarkı için indirdiği kapaktır (Ayarlar → İndirmeler → Kapak boyutu).',
     deemixTitle: 'Deemix',
     deemixHint:
       'Download from your own Deemix server. Requested quality requires the matching Deezer entitlement.',
@@ -1750,6 +1780,9 @@ export default {
     slskdInPlace: 'Dosyaları slskd klasöründe bırak',
     slskdInPlaceHint:
       'Açık: dosyaları yerinde etiketle ve koru. Kapalı: İndirilenler klasörüne kopyalayıp etiketle; kaynak yalnızca içe aktarma başarılı olursa silinir. Hata olursa kaynak korunur.',
+    slskdKeepCover: 'Daha büyükse dosyanın kendi kapağını koru',
+    slskdKeepCoverHint:
+      'Paylaşılan dosyalar çoğu zaman albümün tam boyutlu kapağını taşır. Açık: bir slskd dosyası, kendi kapağı Downtify’ın getirdiğinden (Spotify, YouTube Music) büyükse onu korur. Kapalı: getirilen kapak her zaman onun yerine geçer.',
     youtubeTitle: 'YouTube',
     cookies: 'YouTube çerezleri',
     cookiesHint:
@@ -1857,6 +1890,11 @@ export default {
     lyricsLrclibHint: 'Topluluk veritabanı — düz ve zamanlı sözler',
     lyricsNetease: 'NetEase Cloud Music',
     lyricsNeteaseHint: 'Geniş katalog, genellikle zamanlı',
+    lyricsKugou: 'Kugou Music',
+    lyricsKugouHint: 'Geniş katalog, zaman eşlemeli',
+    lyricsSyncedOnly: 'Yalnızca zaman eşlemeli şarkı sözleri',
+    lyricsSyncedOnlyHint:
+      'Zaman damgası olmayan sözleri atlar ve sonraki sağlayıcıya sorar. Kitaplığı yükselt de yalnızca düz sözü olan parçaları sözsüz sayar. Senkronize sözler bunların yerini alır, dosyanın kendi etiketlerinde de.',
     ratingsGroup: "Deezer'dan puanlar",
     ratingsHint:
       'Navidrome’daki şarkılarına Deezer’daki popülerliğine göre 0–5 yıldız verir, tıpkı dztnr gibi. Yıldızlar yukarıdaki Navidrome hesabına aittir.',

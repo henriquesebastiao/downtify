@@ -631,6 +631,14 @@ export default {
       'Αυτό δεν μοιάζει με σύνδεσμο βίντεο YouTube ή κομματιού SoundCloud.',
     playlistDownloads: 'Λήψεις λιστών',
     sources: 'Πηγή λήψης',
+    fromWatch: 'Από {name}',
+    fromWatchTitle:
+      'Η Παρακολούθηση το κατεβάζει για {name}. Άνοιγμα της παρακολούθησης.',
+    watches: 'Λήψεις για παρακολουθήσεις',
+    watchesHint:
+      'Οι παρακολουθήσεις από τις οποίες προέρχονται τα τραγούδια της ουράς. Ανοίξτε μία για παύση ή διακοπή.',
+    watchWaiting: 'απομένουν {count}',
+    openWatchOriginal: 'Άνοιγμα πρωτοτύπου',
     noSourcesYet: 'Οι ολοκληρωμένες λήψεις δείχνουν εδώ την πηγή τους.',
     importTitle: 'Εισαγωγή βιβλιοθήκης',
     importHint:
@@ -795,6 +803,14 @@ export default {
     ofBytes: '{done} από {total}',
     longJob:
       'Μια μεγάλη βιβλιοθήκη θέλει χρόνο. Μπορείτε να φύγετε από τη σελίδα, και μια επανεκκίνηση συνεχίζει την ουρά.',
+    lyricsQuickTitle: 'Στίχοι που λείπουν',
+    lyricsQuickHint:
+      'Σαρώνει τη βιβλιοθήκη για κομμάτια χωρίς στίχους και τους αναζητά αμέσως, χωρίς ενδιάμεση επιλογή. Οι άλλες αναβαθμίσεις μένουν για άλλη φορά.',
+    lyricsQuickButton: 'Σάρωση και εύρεση στίχων',
+    lyricsPlainOnly:
+      'Μόνο μη συγχρονισμένοι στίχοι: {count} — αντικαθίστανται με συγχρονισμένους όταν βρεθούν',
+    lyricsOutcome:
+      'Προστέθηκαν στίχοι: {added} · Δεν βρέθηκαν: {notFound} · Απέτυχαν: {failed}',
     completed: 'Αναβαθμίστηκαν',
     skipped: 'Τίποτα να γίνει',
     failed: 'Απέτυχαν',
@@ -1270,6 +1286,7 @@ export default {
     wantedSummary: 'Λείπουν: {songs} σε {releases}',
     wantedSongs: { one: '{count} τραγούδι', other: '{count} τραγούδια' },
     wantedReleases: { one: '{count} κυκλοφορία', other: '{count} κυκλοφορίες' },
+    wantedUpcoming: '{count} ανακοινωμένα',
     wantedUnchecked: {
       one: '{count} κυκλοφορία δεν έχει ελεγχθεί ακόμη',
       other: '{count} κυκλοφορίες δεν έχουν ελεγχθεί ακόμη',
@@ -1462,6 +1479,7 @@ export default {
     filter: {
       all: 'Όλες',
       missing: 'Για λήψη',
+      upcoming: 'Έρχονται',
       partly: 'Εν μέρει',
       complete: 'Πλήρεις',
       not_watched: 'Χωρίς παρακολούθηση',
@@ -1472,6 +1490,8 @@ export default {
       complete: 'Πλήρες · {have}/{total}',
       partly: 'Εν μέρει · {have}/{total}',
       missing: 'Για λήψη',
+      upcoming: 'Κυκλοφορεί {date}',
+      upcomingNoDate: 'Έρχεται σύντομα',
       skipped: 'Πριν την παρακολούθηση',
       not_watched: 'Χωρίς παρακολούθηση',
       off: 'Ανενεργό',
@@ -1719,6 +1739,17 @@ export default {
     sourceSoundcloud: 'SoundCloud',
     sourceSoundcloudHint:
       'Ανεβάσματα που λείπουν αλλού, και το ίδιο το κομμάτι των συνδέσμων SoundCloud',
+    sourceNeedsTitle: 'Τι χρειάζεται κάθε πηγή',
+    sourceNeedsSlskd:
+      'slskd: δικός σας διακομιστής slskd, συνδεδεμένος στο δωρεάν δίκτυο Soulseek. Χωρίς συνδρομή· η ποιότητα είναι ό,τι μοιράζονται οι χρήστες, συχνά FLAC ή MP3 320.',
+    sourceNeedsDeemix:
+      'Deemix: δικός σας διακομιστής Deemix και δικός σας λογαριασμός Deezer. Ένας δωρεάν λογαριασμός παίρνει μόνο MP3 128 kbps· τα MP3 320 και FLAC χρειάζονται πληρωμένο πρόγραμμα Deezer. Το Downtify δεν παρέχει ούτε παρακάμπτει κάποιο.',
+    sourceNeedsYoutube:
+      'YouTube Music και YouTube: τίποτα για ρύθμιση. Ο ήχος είναι με απώλειες (περίπου 128–160 kbps).',
+    sourceNeedsSoundcloud:
+      'SoundCloud: τίποτα για ρύθμιση, χωρίς λογαριασμό. Οι ροές είναι συνήθως 128–160 kbps.',
+    sourceNeedsCover:
+      'Όποια κι αν είναι η πηγή, το ενσωματωμένο εξώφυλλο είναι αυτό που κατεβάζει το Downtify για το τραγούδι (Ρυθμίσεις → Λήψεις → Μέγεθος εξωφύλλου).',
     deemixTitle: 'Deemix',
     deemixHint:
       'Download from your own Deemix server. Requested quality requires the matching Deezer entitlement.',
@@ -1787,6 +1818,9 @@ export default {
     slskdInPlace: 'Διατήρηση αρχείων στον φάκελο slskd',
     slskdInPlaceHint:
       'Ενεργό: επισήμανση των αρχείων εκεί όπου βρίσκονται και διατήρησή τους. Ανενεργό: αντιγραφή και επισήμανση στον φάκελο λήψεων· η πηγή αφαιρείται μόνο μετά από επιτυχή εισαγωγή. Σε αποτυχία διατηρείται.',
+    slskdKeepCover: 'Διατήρηση του εξωφύλλου του αρχείου όταν είναι μεγαλύτερο',
+    slskdKeepCoverHint:
+      'Τα κοινόχρηστα αρχεία συχνά έχουν το εξώφυλλο του άλμπουμ σε πλήρες μέγεθος. Ενεργό: ένα αρχείο slskd κρατά το δικό του εξώφυλλο όταν είναι μεγαλύτερο από αυτό που φέρνει το Downtify (Spotify, YouTube Music). Ανενεργό: το εξώφυλλο που φέρνει το αντικαθιστά πάντα.',
     youtubeTitle: 'YouTube',
     cookies: 'Cookies YouTube',
     cookiesHint:
@@ -1897,6 +1931,11 @@ export default {
     lyricsLrclibHint: 'Κοινοτική βάση — απλοί και συγχρονισμένοι στίχοι',
     lyricsNetease: 'NetEase Cloud Music',
     lyricsNeteaseHint: 'Μεγάλος κατάλογος, συνήθως συγχρονισμένος',
+    lyricsKugou: 'Kugou Music',
+    lyricsKugouHint: 'Μεγάλος κατάλογος, συγχρονισμένοι στίχοι',
+    lyricsSyncedOnly: 'Μόνο συγχρονισμένοι στίχοι',
+    lyricsSyncedOnlyHint:
+      'Παραλείπει στίχους χωρίς χρονοσημάνσεις και ρωτά τον επόμενο πάροχο. Η Αναβάθμιση βιβλιοθήκης μετρά τότε τα κομμάτια με απλούς στίχους ως χωρίς στίχους. Οι συγχρονισμένοι στίχοι τους αντικαθιστούν, και στα tags του ίδιου του αρχείου.',
     ratingsGroup: 'Βαθμολογίες από το Deezer',
     ratingsHint:
       'Δίνει στα τραγούδια σου στο Navidrome 0–5 αστέρια ανάλογα με τη δημοφιλία τους στο Deezer, όπως το dztnr. Τα αστέρια ανήκουν στον λογαριασμό Navidrome παραπάνω.',

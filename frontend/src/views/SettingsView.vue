@@ -168,6 +168,18 @@
                 @enable-slskd="s.slskd.enabled = true"
                 @enable-deemix="s.deemix.enabled = true"
               />
+              <div class="px-4 pt-4 pb-1 text-[13px] text-pretty text-muted">
+                <p class="font-semibold text-fg">
+                  {{ t('settings.sourceNeedsTitle') }}
+                </p>
+                <ul class="mt-1.5 flex list-disc flex-col gap-1 pl-5">
+                  <li>{{ t('settings.sourceNeedsSlskd') }}</li>
+                  <li>{{ t('settings.sourceNeedsDeemix') }}</li>
+                  <li>{{ t('settings.sourceNeedsYoutube') }}</li>
+                  <li>{{ t('settings.sourceNeedsSoundcloud') }}</li>
+                </ul>
+                <p class="mt-1.5">{{ t('settings.sourceNeedsCover') }}</p>
+              </div>
             </SettingGroup>
 
             <SettingGroup
@@ -385,6 +397,15 @@
                   <UiSwitch
                     v-model="s.slskd.leave_in_place"
                     :aria-label="t('settings.slskdInPlace')"
+                  />
+                </SettingRow>
+                <SettingRow
+                  :label="t('settings.slskdKeepCover')"
+                  :description="t('settings.slskdKeepCoverHint')"
+                >
+                  <UiSwitch
+                    v-model="s.slskd.keep_file_cover"
+                    :aria-label="t('settings.slskdKeepCover')"
                   />
                 </SettingRow>
               </template>
@@ -787,6 +808,16 @@
                 <UiSwitch
                   v-model="s.download_lyrics"
                   :aria-label="t('settings.lyrics')"
+                />
+              </SettingRow>
+              <SettingRow
+                v-if="s.download_lyrics"
+                :label="t('settings.lyricsSyncedOnly')"
+                :description="t('settings.lyricsSyncedOnlyHint')"
+              >
+                <UiSwitch
+                  v-model="s.lyrics_synced_only"
+                  :aria-label="t('settings.lyricsSyncedOnly')"
                 />
               </SettingRow>
               <SettingRow

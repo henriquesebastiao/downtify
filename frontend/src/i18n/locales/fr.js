@@ -639,6 +639,13 @@ export default {
       'Ceci ne ressemble pas à un lien de vidéo YouTube ou de titre SoundCloud.',
     playlistDownloads: 'Téléchargements de playlists',
     sources: 'Téléchargé depuis',
+    fromWatch: 'De {name}',
+    fromWatchTitle: 'Le Monitor le télécharge pour {name}. Ouvre le suivi.',
+    watches: 'Téléchargements des suivis',
+    watchesHint:
+      'Les suivis du Monitor d’où viennent les chansons de cette file. Ouvrez-en un pour le mettre en pause ou l’arrêter.',
+    watchWaiting: 'encore {count}',
+    openWatchOriginal: 'Ouvrir l’original',
     noSourcesYet: 'Les téléchargements terminés indiquent leur source ici.',
     importTitle: 'Importer une bibliothèque',
     importHint:
@@ -807,6 +814,14 @@ export default {
     ofBytes: '{done} sur {total}',
     longJob:
       'Une grande bibliothèque prend du temps. Vous pouvez quitter cette page, et un redémarrage reprend la file.',
+    lyricsQuickTitle: 'Paroles manquantes',
+    lyricsQuickHint:
+      'Analyse la bibliothèque à la recherche de titres sans paroles et les cherche aussitôt, sans étape de choix. Les autres améliorations attendent un autre passage.',
+    lyricsQuickButton: 'Analyser et trouver les paroles',
+    lyricsPlainOnly:
+      'Paroles non synchronisées seulement : {count} — remplacées par des synchronisées si trouvées',
+    lyricsOutcome:
+      'Paroles ajoutées : {added} · Introuvables : {notFound} · Échecs : {failed}',
     completed: 'Améliorés',
     skipped: 'Rien à faire',
     failed: 'Échecs',
@@ -1287,6 +1302,7 @@ export default {
     wantedSummary: 'Manquant : {songs} dans {releases}',
     wantedSongs: { one: '{count} titre', other: '{count} titres' },
     wantedReleases: { one: '{count} sortie', other: '{count} sorties' },
+    wantedUpcoming: '{count} annoncés',
     wantedUnchecked: {
       one: '{count} sortie pas encore vérifiée',
       other: '{count} sorties pas encore vérifiées',
@@ -1477,6 +1493,7 @@ export default {
     filter: {
       all: 'Toutes',
       missing: 'À télécharger',
+      upcoming: 'À venir',
       partly: 'En partie',
       complete: 'Complètes',
       not_watched: 'Non suivies',
@@ -1487,6 +1504,8 @@ export default {
       complete: 'Complète · {have}/{total}',
       partly: 'En partie · {have}/{total}',
       missing: 'À télécharger',
+      upcoming: 'Sortie le {date}',
+      upcomingNoDate: 'Bientôt',
       skipped: 'Sortie avant le suivi',
       not_watched: 'Non suivie',
       off: 'Désactivée',
@@ -1734,6 +1753,17 @@ export default {
     sourceSoundcloud: 'SoundCloud',
     sourceSoundcloudHint:
       'Les mises en ligne absentes ailleurs, et le titre même des liens SoundCloud',
+    sourceNeedsTitle: 'Ce que demande chaque source',
+    sourceNeedsSlskd:
+      'slskd : votre propre serveur slskd, relié au réseau gratuit Soulseek. Sans abonnement ; la qualité est ce que les gens partagent, souvent FLAC ou MP3 320.',
+    sourceNeedsDeemix:
+      'Deemix : votre propre serveur Deemix et votre propre compte Deezer. Un compte gratuit n’obtient que du MP3 128 kbps ; MP3 320 et FLAC demandent une offre Deezer payante. Downtify n’en fournit pas et n’en contourne pas.',
+    sourceNeedsYoutube:
+      'YouTube Music et YouTube : rien à configurer. Le son est avec perte (environ 128–160 kbps).',
+    sourceNeedsSoundcloud:
+      'SoundCloud : rien à configurer, aucun compte. Les flux sont en général à 128–160 kbps.',
+    sourceNeedsCover:
+      'Quelle que soit la source, la pochette intégrée est celle que Downtify récupère pour la chanson (Réglages → Téléchargements → Taille de la pochette).',
     deemixTitle: 'Deemix',
     deemixHint:
       'Télécharger avec votre serveur Deemix. La qualité demandée nécessite les droits Deezer correspondants.',
@@ -1801,6 +1831,9 @@ export default {
     slskdInPlace: 'Laisser les fichiers dans le dossier slskd',
     slskdInPlaceHint:
       'Activé : tague les fichiers sur place et conserve-les. Désactivé : copie et tague dans Téléchargements ; la source est supprimée uniquement après un import réussi. En cas d’échec, la source est conservée.',
+    slskdKeepCover: 'Garder la pochette du fichier si elle est plus grande',
+    slskdKeepCoverHint:
+      'Les fichiers partagés contiennent souvent la pochette de l’album en pleine taille. Activé : un fichier slskd garde sa pochette si elle est plus grande que celle que Downtify récupère (Spotify, YouTube Music). Désactivé : la pochette récupérée la remplace toujours.',
     youtubeTitle: 'YouTube',
     cookies: 'Cookies YouTube',
     cookiesHint:
@@ -1912,6 +1945,11 @@ export default {
     lyricsLrclibHint: 'Base communautaire — paroles simples et synchronisées',
     lyricsNetease: 'NetEase Cloud Music',
     lyricsNeteaseHint: 'Vaste catalogue, généralement synchronisé',
+    lyricsKugou: 'Kugou Music',
+    lyricsKugouHint: 'Grand catalogue, synchronisées',
+    lyricsSyncedOnly: 'Paroles synchronisées uniquement',
+    lyricsSyncedOnlyHint:
+      'Ignore les paroles sans horodatage et interroge le fournisseur suivant. Améliorer la bibliothèque compte alors les titres n’ayant que des paroles simples comme sans paroles. Les paroles synchronisées les remplacent, y compris dans les tags du fichier.',
     ratingsGroup: 'Notes depuis Deezer',
     ratingsHint:
       'Attribue à tes morceaux dans Navidrome de 0 à 5 étoiles selon leur popularité sur Deezer, comme dztnr. Les étoiles appartiennent au compte Navidrome ci-dessus.',

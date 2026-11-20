@@ -580,6 +580,12 @@ export default {
     invalidAudioLink: '這看起來不是 YouTube 影片或 SoundCloud 歌曲連結。',
     playlistDownloads: '播放清單下載',
     sources: '下載來源',
+    fromWatch: '來自 {name}',
+    fromWatchTitle: '監控正在為 {name} 下載此歌曲。開啟該監控。',
+    watches: '依監控下載',
+    watchesHint: '佇列中歌曲來自的監控。開啟監控可暫停或停止監控。',
+    watchWaiting: '還剩 {count}',
+    openWatchOriginal: '開啟來源',
     noSourcesYet: '下載完成後，來源會顯示在這裡。',
     importTitle: '匯入媒體庫',
     importHint: '從 Soundiiz、TuneMyMusic、Exportify 等服務匯出的 CSV。',
@@ -737,6 +743,12 @@ export default {
     ofBytes: '{done} / {total}',
     longJob:
       '媒體庫較大時需要一些時間。你可以離開這個頁面，重新啟動後也會接續處理佇列。',
+    lyricsQuickTitle: '缺少的歌詞',
+    lyricsQuickHint:
+      '掃描音樂庫中沒有歌詞的歌曲，並立即查找歌詞，中間無需選擇。其他升級留待下次執行。',
+    lyricsQuickButton: '掃描並查找歌詞',
+    lyricsPlainOnly: '只有非同步歌詞：{count} — 找到同步歌詞後取代',
+    lyricsOutcome: '已新增歌詞：{added} · 未找到：{notFound} · 失敗：{failed}',
     completed: '已升級',
     skipped: '無須處理',
     failed: '失敗',
@@ -1182,6 +1194,7 @@ export default {
     wantedSummary: '{releases} 缺少 {songs}',
     wantedSongs: { one: '{count} 首歌曲', other: '{count} 首歌曲' },
     wantedReleases: { one: '{count} 張發行作品', other: '{count} 張發行作品' },
+    wantedUpcoming: '{count} 張已公布',
     wantedUnchecked: {
       one: '{count} 張發行作品尚未檢查',
       other: '{count} 張發行作品尚未檢查',
@@ -1361,6 +1374,7 @@ export default {
     filter: {
       all: '全部',
       missing: '待下載',
+      upcoming: '即將發行',
       partly: '部分',
       complete: '完整',
       not_watched: '未關注',
@@ -1371,6 +1385,8 @@ export default {
       complete: '完整 · {have}/{total}',
       partly: '部分 · {have}/{total}',
       missing: '待下載',
+      upcoming: '{date} 發行',
+      upcomingNoDate: '即將發行',
       skipped: '關注前已發行',
       not_watched: '未關注',
       off: '已關閉',
@@ -1600,6 +1616,17 @@ export default {
     sourceSoundcloud: 'SoundCloud',
     sourceSoundcloudHint:
       '其他來源沒有的上傳內容，以及 SoundCloud 連結本身的歌曲',
+    sourceNeedsTitle: '各來源需要什麼',
+    sourceNeedsSlskd:
+      'slskd：你自己的 slskd 伺服器，連接免費的 Soulseek 網路。無需訂閱；音質取決於他人分享的檔案，常見 FLAC 或 MP3 320。',
+    sourceNeedsDeemix:
+      'Deemix：你自己的 Deemix 伺服器和你自己的 Deezer 帳號。免費帳號只能取得 MP3 128 kbps；MP3 320 和 FLAC 需要 Deezer 付費方案。Downtify 不提供也不繞過訂閱。',
+    sourceNeedsYoutube:
+      'YouTube Music 和 YouTube：無需設定。音訊為有損（約 128–160 kbps）。',
+    sourceNeedsSoundcloud:
+      'SoundCloud：無需設定，也無需帳號。串流通常為 128–160 kbps。',
+    sourceNeedsCover:
+      '無論來源如何，嵌入的封面都是 Downtify 為這首歌取得的封面（設定 → 下載 → 封面尺寸）。',
     deemixTitle: 'Deemix',
     deemixHint:
       '從你自己的 Deemix 伺服器下載。要取得指定音質，需有相應的 Deezer 權限。',
@@ -1664,6 +1691,9 @@ export default {
     slskdInPlace: '將檔案留在 slskd 資料夾',
     slskdInPlaceHint:
       '開啟：直接在原處寫入標籤並保留檔案。關閉：複製到下載資料夾並寫入標籤，成功匯入後移除來源檔案。複製、寫入標籤或驗證失敗時會保留來源檔案。',
+    slskdKeepCover: '檔案自帶封面較大時保留',
+    slskdKeepCoverHint:
+      '分享的檔案常帶有專輯的完整尺寸封面。開啟：slskd 檔案自帶的封面比 Downtify 取得的（Spotify、YouTube Music）更大時予以保留。關閉：總是以取得的封面取代。',
     youtubeTitle: 'YouTube',
     cookies: 'YouTube Cookie',
     cookiesHint:
@@ -1765,6 +1795,11 @@ export default {
     lyricsLrclibHint: '社群資料庫，提供純文字和時間同步歌詞',
     lyricsNetease: '網易雲音樂',
     lyricsNeteaseHint: '曲庫龐大，通常有時間同步歌詞',
+    lyricsKugou: '酷狗音樂',
+    lyricsKugouHint: '曲庫大，逐行同步',
+    lyricsSyncedOnly: '僅限同步歌詞',
+    lyricsSyncedOnlyHint:
+      '略過沒有時間軸的歌詞，改問下一個來源。「升級音樂庫」也會把只有純文字歌詞的歌曲算作缺少歌詞。找到同步歌詞後會取代它們，檔案本身的標籤裡也會寫入。',
     ratingsGroup: '來自 Deezer 的評分',
     ratingsHint:
       '依歌曲在 Deezer 上的熱度，為 Navidrome 中的歌曲打 0–5 顆星，類似 dztnr。星級會儲存在上方的 Navidrome 帳號中。',

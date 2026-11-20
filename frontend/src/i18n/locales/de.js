@@ -642,6 +642,14 @@ export default {
       'Das sieht nicht wie ein YouTube-Video- oder SoundCloud-Titellink aus.',
     playlistDownloads: 'Playlist-Downloads',
     sources: 'Heruntergeladen von',
+    fromWatch: 'Von {name}',
+    fromWatchTitle:
+      'Der Monitor lädt das für {name} herunter. Öffnet die Beobachtung.',
+    watches: 'Downloads für Beobachtungen',
+    watchesHint:
+      'Die Monitor-Beobachtungen, aus denen die Songs in dieser Warteschlange stammen. Öffne eine, um sie zu pausieren oder zu beenden.',
+    watchWaiting: 'noch {count}',
+    openWatchOriginal: 'Original öffnen',
     noSourcesYet:
       'Bei abgeschlossenen Downloads wird hier die Quelle angezeigt.',
     importTitle: 'Bibliothek importieren',
@@ -807,6 +815,14 @@ export default {
     ofBytes: '{done} von {total}',
     longJob:
       'Bei einer großen Bibliothek dauert es eine Weile. Du kannst diese Seite verlassen; nach einem Neustart wird die Warteschlange fortgesetzt.',
+    lyricsQuickTitle: 'Fehlende Songtexte',
+    lyricsQuickHint:
+      'Durchsucht die Bibliothek nach Titeln ohne Songtext und sucht sie sofort, ohne Zwischenschritt. Andere Verbesserungen bleiben für einen späteren Lauf.',
+    lyricsQuickButton: 'Scannen und Songtexte suchen',
+    lyricsPlainOnly:
+      'Nur nicht synchronisierte Texte: {count} — werden durch synchronisierte ersetzt, sobald gefunden',
+    lyricsOutcome:
+      'Songtexte hinzugefügt: {added} · Nicht gefunden: {notFound} · Fehlgeschlagen: {failed}',
     completed: 'Verbessert',
     skipped: 'Keine Änderung nötig',
     failed: 'Fehlgeschlagen',
@@ -1287,6 +1303,7 @@ export default {
       one: '{count} Veröffentlichung',
       other: '{count} Veröffentlichungen',
     },
+    wantedUpcoming: '{count} angekündigt',
     wantedUnchecked: {
       one: '{count} Veröffentlichung noch nicht geprüft',
       other: '{count} Veröffentlichungen noch nicht geprüft',
@@ -1486,6 +1503,7 @@ export default {
     filter: {
       all: 'Alle',
       missing: 'Herunterzuladen',
+      upcoming: 'Demnächst',
       partly: 'Teilweise da',
       complete: 'Vollständig',
       not_watched: 'Nicht beobachtet',
@@ -1496,6 +1514,8 @@ export default {
       complete: 'Vollständig · {have}/{total}',
       partly: 'Teilweise · {have}/{total}',
       missing: 'Herunterzuladen',
+      upcoming: 'Erscheint {date}',
+      upcomingNoDate: 'Erscheint bald',
       skipped: 'Vor der Beobachtung erschienen',
       not_watched: 'Nicht beobachtet',
       off: 'Aus',
@@ -1738,6 +1758,17 @@ export default {
     sourceSoundcloud: 'SoundCloud',
     sourceSoundcloudHint:
       'Uploads, die anderswo fehlen, und der Titel selbst bei SoundCloud-Links',
+    sourceNeedsTitle: 'Was jede Quelle braucht',
+    sourceNeedsSlskd:
+      'slskd: ein eigener slskd-Server, verbunden mit dem kostenlosen Soulseek-Netz. Kein Abo; die Qualität ist, was Leute teilen, oft FLAC oder MP3 320.',
+    sourceNeedsDeemix:
+      'Deemix: ein eigener Deemix-Server und ein eigenes Deezer-Konto. Ein kostenloses Konto bekommt nur MP3 128 kbit/s; MP3 320 und FLAC brauchen ein bezahltes Deezer-Abo. Downtify stellt keins bereit und umgeht keins.',
+    sourceNeedsYoutube:
+      'YouTube Music und YouTube: nichts einzurichten. Der Ton ist verlustbehaftet (etwa 128–160 kbit/s).',
+    sourceNeedsSoundcloud:
+      'SoundCloud: nichts einzurichten, kein Konto. Streams haben meist 128–160 kbit/s.',
+    sourceNeedsCover:
+      'Egal welche Quelle: Eingebettet wird das Cover, das Downtify für den Song lädt (Einstellungen → Downloads → Covergröße).',
     deemixTitle: 'Deemix',
     deemixHint:
       'Download from your own Deemix server. Requested quality requires the matching Deezer entitlement.',
@@ -1807,6 +1838,9 @@ export default {
     slskdInPlace: 'Dateien im slskd-Ordner belassen',
     slskdInPlaceHint:
       'Ein: Dateien am Speicherort taggen und behalten. Aus: in Downloads kopieren und taggen; die Quelle wird erst nach erfolgreichem Import entfernt. Bei Fehlern bleibt sie erhalten.',
+    slskdKeepCover: 'Eigenes Cover der Datei behalten, wenn es größer ist',
+    slskdKeepCoverHint:
+      'Geteilte Dateien enthalten oft das Album-Cover in voller Größe. An: Eine slskd-Datei behält ihr Cover, wenn es größer ist als das, das Downtify lädt (Spotify, YouTube Music). Aus: Das geladene Cover ersetzt es immer.',
     youtubeTitle: 'YouTube',
     cookies: 'YouTube-Cookies',
     cookiesHint:
@@ -1920,6 +1954,11 @@ export default {
       'Community-Datenbank - einfache und zeitsynchronisierte Songtexte',
     lyricsNetease: 'NetEase Cloud Music',
     lyricsNeteaseHint: 'Großer Katalog, meist zeitsynchronisierte Songtexte',
+    lyricsKugou: 'Kugou Music',
+    lyricsKugouHint: 'Großer Katalog, zeitsynchron',
+    lyricsSyncedOnly: 'Nur zeitsynchrone Songtexte',
+    lyricsSyncedOnlyHint:
+      'Songtexte ohne Zeitstempel werden übersprungen, stattdessen wird der nächste Anbieter gefragt. „Bibliothek verbessern“ zählt dann Titel mit nur einfachem Text als fehlend. Synchronisierte Texte ersetzen sie dann, auch in den Tags der Datei selbst.',
     ratingsGroup: 'Bewertungen von Deezer',
     ratingsHint:
       'Vergibt an deine Songs in Navidrome 0–5 Sterne danach, wie beliebt sie auf Deezer sind – wie dztnr. Die Sterne gehören zum oben eingetragenen Navidrome-Konto.',

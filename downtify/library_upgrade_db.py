@@ -520,3 +520,27 @@ def check_is_fresh(
         checked = checked.replace(tzinfo=timezone.utc)
     age = datetime.now(timezone.utc) - checked
     return age < timedelta(days=max_age_days)
+
+
+def lyrics_outcome(db: LibraryUpgradeDB, run_id: int) -> dict[str, int]:
+    """Of a run's tracks queued for lyrics, how many got them (``added``),
+    came back without (``not_found``), failed, or are still to go
+    (``pending``)."""
+
+    found = {'added': 0, 'not_found': 0, 'failed': 0, 'pending': 0}
+    with db.db.connect() as conn:
+        rows = conn.execute(
+            """SELECT status, changed FROM library_upgrade_jobs
+               WHERE run_id = ? AND categories LIKE ?""",
+            (run_id, '%"lyrics"%'),
+        ).fetchall()
+    for row in rows:
+        status = str(row['status'])
+        if status == JOB_FAILED:
+            found['failed'] += 1
+        elif status in {JOB_DONE, JOB_SKIPPED}:
+            added = 'lyrics' in _json_list(row['changed'])
+            found['added' if added else 'not_found'] += 1
+        else:
+            found['pending'] += 1
+    return found

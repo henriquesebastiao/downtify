@@ -715,6 +715,8 @@ DEFAULT_SETTINGS: dict[str, Any] = {
     'deemix': dict(DEEMIX_DEFAULTS),
     'lyrics_providers': list(lyrics.PROVIDER_ORDER),
     'download_lyrics': True,
+    # Keep only time-synced lyrics; plain ones count as none found.
+    'lyrics_synced_only': False,
     'lyrics_lrc_beside': True,
     'lyrics_lrc_dir': lyrics.DEFAULT_LYRICS_LRC_DIR,
     'format': 'mp3',
@@ -768,6 +770,9 @@ DEFAULT_SETTINGS: dict[str, Any] = {
         'download_dir': '/downloads',
         'source_dir': '/slskd',
         'leave_in_place': True,
+        # Keep the cover an slskd file came with when it is larger than
+        # the one Downtify fetches (downloader._keep_larger_file_cover).
+        'keep_file_cover': False,
         'timeout_seconds': 20,
         'search_retries': 5,
         'search_poll_seconds': 15,
@@ -1015,6 +1020,7 @@ def _effective_slskd_settings(settings: dict[str, Any]) -> dict[str, Any]:
         'download_dir': download_dir,
         'source_dir': source_dir,
         'leave_in_place': leave_in_place,
+        'keep_file_cover': bool(raw.get('keep_file_cover', False)),
         'extensions': _slskd_extensions(raw),
         'timeout_seconds': bounded('timeout_seconds', 20, 5, 120),
         'search_retries': bounded('search_retries', 5, 1, 20),
@@ -9204,6 +9210,10 @@ async def update_settings_endpoint(
             if 'lyrics_providers' in payload or 'download_lyrics' in payload:
                 state.downloader.lyrics_providers = (
                     _effective_lyrics_providers(state.settings)
+                )
+            if 'lyrics_synced_only' in payload:
+                state.downloader.lyrics_synced_only = bool(
+                    state.settings.get('lyrics_synced_only')
                 )
             if 'organize_by_artist' in payload:
                 state.downloader.organize_by_artist = bool(

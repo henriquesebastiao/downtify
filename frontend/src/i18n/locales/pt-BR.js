@@ -621,6 +621,14 @@ export default {
       'Isso não parece um link de vídeo do YouTube nem de faixa do SoundCloud.',
     playlistDownloads: 'Downloads de playlists',
     sources: 'Baixado de',
+    fromWatch: 'De {name}',
+    fromWatchTitle:
+      'O Monitor está baixando isto para {name}. Abre o monitoramento.',
+    watches: 'Baixando para monitoramentos',
+    watchesHint:
+      'Os monitoramentos de onde vêm as músicas desta fila. Abra um para pausá-lo ou parar de monitorar.',
+    watchWaiting: 'faltam {count}',
+    openWatchOriginal: 'Abrir o original',
     noSourcesYet: 'Downloads concluídos mostram a origem aqui.',
     importTitle: 'Importar uma biblioteca',
     importHint:
@@ -788,6 +796,14 @@ export default {
     ofBytes: '{done} de {total}',
     longJob:
       'Uma biblioteca grande demora. Você pode sair desta página, e um reinício continua a fila.',
+    lyricsQuickTitle: 'Letras que faltam',
+    lyricsQuickHint:
+      'Procura na biblioteca faixas sem letra e já busca as letras, sem escolher nada no meio. As outras melhorias ficam para outra vez.',
+    lyricsQuickButton: 'Escanear e buscar letras',
+    lyricsPlainOnly:
+      'Só letra não sincronizada: {count} — trocada pela sincronizada quando encontrada',
+    lyricsOutcome:
+      'Letras adicionadas: {added} · Não encontradas: {notFound} · Falhas: {failed}',
     completed: 'Melhoradas',
     skipped: 'Nada a fazer',
     failed: 'Falharam',
@@ -1258,6 +1274,7 @@ export default {
     wantedSummary: 'Faltando: {songs} em {releases}',
     wantedSongs: { one: '{count} música', other: '{count} músicas' },
     wantedReleases: { one: '{count} lançamento', other: '{count} lançamentos' },
+    wantedUpcoming: '{count} anunciados',
     wantedUnchecked: {
       one: '{count} lançamento ainda não verificado',
       other: '{count} lançamentos ainda não verificados',
@@ -1446,6 +1463,7 @@ export default {
     filter: {
       all: 'Todos',
       missing: 'Para baixar',
+      upcoming: 'Em breve',
       partly: 'Em parte',
       complete: 'Completos',
       not_watched: 'Não acompanhados',
@@ -1456,6 +1474,8 @@ export default {
       complete: 'Completo · {have}/{total}',
       partly: 'Em parte · {have}/{total}',
       missing: 'Para baixar',
+      upcoming: 'Sai em {date}',
+      upcomingNoDate: 'Em breve',
       skipped: 'Anterior ao acompanhamento',
       not_watched: 'Não acompanhado',
       off: 'Desativado',
@@ -1699,6 +1719,17 @@ export default {
     sourceSoundcloud: 'SoundCloud',
     sourceSoundcloudHint:
       'Uploads que faltam em outras fontes, e a própria faixa dos links do SoundCloud',
+    sourceNeedsTitle: 'O que cada fonte precisa',
+    sourceNeedsSlskd:
+      'slskd: seu próprio servidor slskd, ligado à rede gratuita Soulseek. Sem assinatura; a qualidade é o que as pessoas compartilham, muitas vezes FLAC ou MP3 320.',
+    sourceNeedsDeemix:
+      'Deemix: seu próprio servidor Deemix e sua própria conta Deezer. Uma conta gratuita só recebe MP3 128 kbps; MP3 320 e FLAC precisam de um plano pago da Deezer. O Downtify não fornece nem contorna um.',
+    sourceNeedsYoutube:
+      'YouTube Music e YouTube: nada para configurar. O áudio é com perdas (cerca de 128–160 kbps).',
+    sourceNeedsSoundcloud:
+      'SoundCloud: nada para configurar, sem conta. As transmissões costumam ser de 128–160 kbps.',
+    sourceNeedsCover:
+      'Seja qual for a fonte, a capa embutida é a que o Downtify busca para a música (Configurações → Downloads → Tamanho da capa).',
     deemixTitle: 'Deemix',
     deemixHint:
       'Download from your own Deemix server. Requested quality requires the matching Deezer entitlement.',
@@ -1766,6 +1797,9 @@ export default {
     slskdInPlace: 'Manter arquivos na pasta do slskd',
     slskdInPlaceHint:
       'Ativado: marca os arquivos no local e os mantém. Desativado: copia e marca em Downloads; remove a origem somente após a importação bem-sucedida. Falhas mantêm a origem.',
+    slskdKeepCover: 'Manter a capa do arquivo quando for maior',
+    slskdKeepCoverHint:
+      'Arquivos compartilhados costumam trazer a capa do álbum em tamanho cheio. Ligado: um arquivo do slskd mantém a própria capa quando ela é maior que a que o Downtify busca (Spotify, YouTube Music). Desligado: a capa buscada sempre a substitui.',
     youtubeTitle: 'YouTube',
     cookies: 'Cookies do YouTube',
     cookiesHint:
@@ -1875,6 +1909,11 @@ export default {
     lyricsLrclibHint: 'Banco comunitário — letras simples e sincronizadas',
     lyricsNetease: 'NetEase Cloud Music',
     lyricsNeteaseHint: 'Catálogo grande, normalmente sincronizado',
+    lyricsKugou: 'Kugou Music',
+    lyricsKugouHint: 'Catálogo grande, sincronizadas',
+    lyricsSyncedOnly: 'Só letras sincronizadas',
+    lyricsSyncedOnlyHint:
+      'Ignora letras sem marcação de tempo e pergunta ao próximo provedor. Melhorar biblioteca passa a contar faixas só com letra simples como sem letra. A letra sincronizada então a substitui, também nas tags do próprio arquivo.',
     ratingsGroup: 'Avaliações do Deezer',
     ratingsHint:
       'Dá às suas músicas no Navidrome de 0 a 5 estrelas conforme a popularidade no Deezer, como o dztnr. As estrelas pertencem à conta do Navidrome acima.',

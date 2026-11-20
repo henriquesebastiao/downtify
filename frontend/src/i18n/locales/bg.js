@@ -611,6 +611,13 @@ export default {
       'Това не прилича на линк към видео в YouTube или песен в SoundCloud.',
     playlistDownloads: 'Изтегляния на плейлисти',
     sources: 'Изтеглено от',
+    fromWatch: 'От {name}',
+    fromWatchTitle: 'Мониторът изтегля това за {name}. Отваря наблюдението.',
+    watches: 'Изтегляне за наблюдения',
+    watchesHint:
+      'Наблюденията в Монитор, от които идват песните в опашката. Отворете някое, за да го спрете на пауза или да спрете наблюдението.',
+    watchWaiting: 'Още {count}',
+    openWatchOriginal: 'Отваряне на оригинала',
     noSourcesYet: 'Завършените изтегляния показват източника си тук.',
     importTitle: 'Импортиране на библиотека',
     importHint: 'CSV експорт от Soundiiz, TuneMyMusic, Exportify и подобни.',
@@ -774,6 +781,14 @@ export default {
     ofBytes: '{done} от {total}',
     longJob:
       'Голяма библиотека отнема време. Може да напуснете страницата, а рестарт продължава опашката.',
+    lyricsQuickTitle: 'Липсващи текстове',
+    lyricsQuickHint:
+      'Сканира библиотеката за песни без текстове и веднага ги търси, без избор между двете стъпки. Другите подобрения остават за друго пускане.',
+    lyricsQuickButton: 'Сканиране и търсене на текстове',
+    lyricsPlainOnly:
+      'Само несинхронизиран текст: {count} — заменя се със синхронизиран, когато бъде намерен',
+    lyricsOutcome:
+      'Добавени текстове: {added} · Не са намерени: {notFound} · Неуспешни: {failed}',
     completed: 'Подобрени',
     skipped: 'Няма какво да се прави',
     failed: 'Неуспешни',
@@ -1244,6 +1259,7 @@ export default {
     wantedSummary: 'Липсват: {songs} в {releases}',
     wantedSongs: { one: '{count} песен', other: '{count} песни' },
     wantedReleases: { one: '{count} издание', other: '{count} издания' },
+    wantedUpcoming: '{count} обявени',
     wantedUnchecked: {
       one: '{count} издание още не е проверено',
       other: '{count} издания още не са проверени',
@@ -1430,6 +1446,7 @@ export default {
     filter: {
       all: 'Всички',
       missing: 'За изтегляне',
+      upcoming: 'Предстоящи',
       partly: 'Частично',
       complete: 'Пълни',
       not_watched: 'Неследени',
@@ -1440,6 +1457,8 @@ export default {
       complete: 'Пълно · {have}/{total}',
       partly: 'Частично · {have}/{total}',
       missing: 'За изтегляне',
+      upcoming: 'Излиза {date}',
+      upcomingNoDate: 'Предстои',
       skipped: 'Излязло преди следенето',
       not_watched: 'Не се следи',
       off: 'Изключено',
@@ -1679,6 +1698,17 @@ export default {
     sourceSoundcloud: 'SoundCloud',
     sourceSoundcloudHint:
       'Качвания, които липсват другаде, и самата песен при линкове от SoundCloud',
+    sourceNeedsTitle: 'Какво е нужно за всеки източник',
+    sourceNeedsSlskd:
+      'slskd: собствен slskd сървър, свързан с безплатната мрежа Soulseek. Без абонамент; качеството е каквото споделят хората, често FLAC или MP3 320.',
+    sourceNeedsDeemix:
+      'Deemix: собствен Deemix сървър и собствен акаунт в Deezer. Безплатният акаунт дава само MP3 128 kbps; MP3 320 и FLAC изискват платен план на Deezer. Downtify не предоставя и не заобикаля такъв.',
+    sourceNeedsYoutube:
+      'YouTube Music и YouTube: нищо за настройване. Звукът е със загуби (около 128–160 kbps).',
+    sourceNeedsSoundcloud:
+      'SoundCloud: нищо за настройване, без акаунт. Потоците обикновено са 128–160 kbps.',
+    sourceNeedsCover:
+      'Независимо от източника, вградената обложка е тази, която Downtify изтегля за песента (Настройки → Изтегляния → Размер на обложката).',
     deemixTitle: 'Deemix',
     deemixHint:
       'Download from your own Deemix server. Requested quality requires the matching Deezer entitlement.',
@@ -1745,6 +1775,9 @@ export default {
     slskdInPlace: 'Остави файловете в папката на slskd',
     slskdInPlaceHint:
       'Включено: файловете се маркират на място и се запазват. Изключено: копират се в папката за изтегляния, а източникът се премахва само след успешен импорт. При грешка източникът се запазва.',
+    slskdKeepCover: 'Запазване на обложката на файла, когато е по-голяма',
+    slskdKeepCoverHint:
+      'Споделените файлове често носят обложката на албума в пълен размер. Вкл.: файл от slskd запазва своята обложка, ако е по-голяма от изтеглената от Downtify (Spotify, YouTube Music). Изкл.: изтеглената обложка винаги я заменя.',
     youtubeTitle: 'YouTube',
     cookies: 'Бисквитки за YouTube',
     cookiesHint:
@@ -1853,6 +1886,11 @@ export default {
     lyricsLrclibHint: 'Общностна база — обикновени и синхронизирани текстове',
     lyricsNetease: 'NetEase Cloud Music',
     lyricsNeteaseHint: 'Голям каталог, обикновено синхронизиран',
+    lyricsKugou: 'Kugou Music',
+    lyricsKugouHint: 'Голям каталог, синхронизирани по време',
+    lyricsSyncedOnly: 'Само синхронизирани текстове',
+    lyricsSyncedOnlyHint:
+      'Пропуска текстове без времеви маркери и пита следващия доставчик. Тогава „Подобряване на библиотеката“ брои песни само с обикновен текст като липсващи. Синхронизираният текст ги заменя, и в таговете на самия файл.',
     ratingsGroup: 'Оценки от Deezer',
     ratingsHint:
       'Дава на песните ти в Navidrome от 0 до 5 звезди според популярността им в Deezer, като dztnr. Звездите принадлежат на акаунта в Navidrome по-горе.',

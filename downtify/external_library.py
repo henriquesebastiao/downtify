@@ -454,7 +454,7 @@ def _lyrics_for_import(
             return None, False
     except OSError:
         pass
-    existing = read_track_lyrics(full)
+    existing = read_track_lyrics(full, raw=True)
     tagged = existing.get('plain') or existing.get('synced') or ''
     if lyrics_mod.looks_like_lrc(tagged):
         plain = lyrics_mod._strip_lrc_timestamps(tagged) or tagged

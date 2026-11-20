@@ -1185,6 +1185,8 @@ def _artist_release_row(
         'artist': artist_name,
         'cover_url': _cover_from_images(row),
         'year': _year_from_release_date(row.get('release_date')),
+        # Its day: one in the future is announced, not out yet.
+        'release_date': str(row.get('release_date') or '').strip(),
         'explicit': bool(row.get('explicit_lyrics')),
         'url': str(row.get('link') or ''),
         'source': 'deezer',

@@ -899,6 +899,9 @@ def build_app() -> FastAPI:
     api.state.downloader.on_outcome = api.record_download_outcome
     # A download gets the tags an admin set for its album by hand.
     api.state.downloader.album_override = api.album_override_for
+    api.state.downloader.lyrics_synced_only = bool(
+        api.state.settings.get('lyrics_synced_only')
+    )
     api.providers.set_cover_minimum(
         api._clamp_cover_min_resolution(
             api.state.settings.get('cover_min_resolution', 0)

@@ -29,7 +29,7 @@ O modo padrão reescreve **capas, letras e tags**. A [substituição por Deemix]
 Uma faixa conta como atrasada quando:
 
 - o lado menor da capa incorporada é **menor que o tamanho desejado** (uma faixa sem capa nenhuma também conta);
-- ela não tem **nem** letra incorporada **nem** um arquivo `.lrc` (ao lado do arquivo ou na pasta de letras das Configurações);
+- ela não tem **nem** letra incorporada **nem** um arquivo `.lrc` (ao lado do arquivo ou na pasta de letras das Configurações) — com [Só letras sincronizadas](lyrics.md#time-synced-lyrics-only) ligado, quando ela não tem letra **sincronizada**, e só letras sincronizadas são gravadas;
 - falta **álbum**, **artista do álbum**, **ano** ou **número da faixa** nas tags.
 
 **Atualizar tags** só funciona para faixas de que o Downtify ainda tem o ID da faixa no Spotify — as que baixou de um link do Spotify, guardadas no [índice de faixas](library-catalog.md#what-gets-stored). As outras faixas entram na fila mas voltam como _Nada a fazer_.
@@ -76,9 +76,13 @@ Duas coisas sempre a anulam:
 
 Quando uma análise não acha mais nada a fazer _porque_ tudo foi verificado recentemente, ela diz isso e se oferece para rodar de novo sem a memória, em vez de deixar você com um "nada para melhorar" sem explicação.
 
+### Escanear e buscar letras
+
+**Escanear e buscar letras** escaneia a biblioteca e, assim que o escaneamento termina, começa a buscar letras para as faixas sem letra, sem nada para escolher no meio. Essa execução só busca letras; capas e tags ficam para outra.
+
 ## Enquanto roda
 
-O painel de progresso mostra as faixas concluídas da fila, um valor aproximado de dados (`8.4 GB of 51.3 GB`) e quantas foram melhoradas, não tinham nada a fazer ou falharam. Cada faixa mostra o que está fazendo — _Identificando_, _Procurando capa_, _Procurando letra_, _Gravando o arquivo_ — e termina com o que mudou, por exemplo `artwork 1200px (itunes)`.
+O painel de progresso mostra as faixas concluídas da fila, um valor aproximado de dados (`8.4 GB of 51.3 GB`) e quantas foram melhoradas, não tinham nada a fazer ou falharam. Cada faixa mostra o que está fazendo — _Identificando_, _Procurando capa_, _Procurando letra_, _Gravando o arquivo_ — e termina com o que mudou, por exemplo `artwork 1200px (itunes)`. Quando a execução busca letras, uma linha abaixo conta as faixas que ganharam letra, as que nenhum provedor tinha e as que falharam.
 
 **Pausar** para depois da faixa em andamento e mantém a fila. **Parar** descarta o resto; as faixas já melhoradas continuam melhoradas. Você pode sair da página — a execução continua, e qualquer outra aba aberta acompanha.
 

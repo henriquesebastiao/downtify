@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import base64
 import contextlib
+import functools
 import os
 import re
 import shutil
@@ -50,6 +51,7 @@ from .content_advisory import (
 )
 from .cookie_refresh import note_ytdlp_message
 from .cookies import CookiesStore, private_cookiefile
+from .cover_art import extract_embedded_cover
 from .deemix_provider import download_from_deemix, normalize_settings
 from .download_log import (
     OUTCOME_COMPLETED,
@@ -480,6 +482,9 @@ class Downloader:
         self.audio_bitrate = audio_bitrate
         self.output_template = output_template
         self.lyrics_providers = list(lyrics_providers or [])
+        #: Keep only time-synced lyrics (the ``lyrics_synced_only``
+        #: setting): plain lyrics count as none found.
+        self.lyrics_synced_only = False
         # Optional LyricsLookupCache: skips providers that already came
         # back empty for a song.
         self.lyrics_cache = lyrics_cache
@@ -566,6 +571,7 @@ class Downloader:
             'min_bitrate': _int(raw.get('min_bitrate'), 256, 0, 10000),
             **normalize_slskd_quality(raw),
             'leave_in_place': bool(raw.get('leave_in_place', True)),
+            'keep_file_cover': bool(raw.get('keep_file_cover', False)),
             'max_parallel_downloads': _int(
                 raw.get('max_parallel_downloads'), 3, 1, 8
             ),
@@ -1417,7 +1423,11 @@ class Downloader:
 
         if found.lyrics is not None:
             try:
-                embed_lyrics(final_path, found.lyrics)
+                embed_lyrics(
+                    final_path,
+                    found.lyrics,
+                    embed_synced=self.lyrics_synced_only,
+                )
             except Exception:
                 succeeded = False
                 logger.exception('Failed to embed lyrics into {}', final_path)
@@ -1542,6 +1552,8 @@ class Downloader:
             found = lookups.collect()
         finally:
             lookups.cancel()
+        if provider == 'slskd' and self.slskd_settings.get('keep_file_cover'):
+            found = _keep_larger_file_cover(found, source_path)
 
         # Never drop a cover.jpg into slskd's own folders.
         tagged = self._tag_file(
@@ -1845,7 +1857,10 @@ class _MetadataLookups:
         )
         self._lyrics = (
             self._pool.submit(
-                lyrics_mod.fetch,
+                # The keyword only when it's on: the call stays as it was.
+                functools.partial(lyrics_mod.fetch, synced_only=True)
+                if getattr(downloader, 'lyrics_synced_only', False)
+                else lyrics_mod.fetch,
                 song,
                 downloader.lyrics_providers,
                 downloader.lyrics_cache,
@@ -2049,6 +2064,38 @@ def _release_type_for_tags(song: dict[str, Any]) -> str:
     ``RELEASETYPE`` / the MP4 freeform equivalent)."""
 
     return str(song.get('release_type') or '').strip().lower()
+
+
+def _keep_larger_file_cover(
+    found: '_LookupResults', source: Path
+) -> '_LookupResults':
+    """*found* with the cover the downloaded file came with, when that
+    one is larger than the fetched cover (the slskd ``keep_file_cover``
+    setting): shared files often carry the release's full-size artwork,
+    larger than YouTube Music's or Spotify's. A file without a cover, or
+    with a smaller or unreadable one, changes nothing."""
+
+    try:
+        data, _mime = extract_embedded_cover(source)
+    except Exception:
+        logger.opt(exception=True).debug(
+            'Could not read the cover of {}', source
+        )
+        return found
+    if not data:
+        return found
+    own = image_short_side(data)
+    fetched = image_short_side(found.cover_bytes) if found.cover_bytes else 0
+    if own <= fetched:
+        return found
+    logger.info(
+        "Keeping the file's own {}px cover over the fetched {}px one: {}",
+        own,
+        fetched,
+        source.name,
+    )
+    found.cover_bytes = data
+    return found
 
 
 def embed_metadata(
@@ -2502,8 +2549,12 @@ def embed_lyrics(
     lyrics: 'lyrics_mod.Lyrics',
     *,
     sidecar: Optional[Path] = None,
+    embed_synced: bool = False,
 ) -> None:
     """Embed plain lyrics into the audio tag and write a .lrc sidecar
-    when synced lyrics are available."""
+    when synced lyrics are available; with *embed_synced*, the tag gets
+    the synced text too."""
 
-    lyrics_mod.write_to_file(path, lyrics, sidecar=sidecar)
+    lyrics_mod.write_to_file(
+        path, lyrics, sidecar=sidecar, embed_synced=embed_synced
+    )

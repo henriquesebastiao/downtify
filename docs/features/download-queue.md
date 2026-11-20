@@ -39,6 +39,12 @@ With [slskd](slskd-navidrome.md) first in the source order, a song it can't serv
 
 Click a reason to see what to change and the latest songs it happened to, with details such as the best match's score or how many files the quality rules turned down. The line below says what was used instead. Songs slskd served, and songs already in the library, aren't counted. **Reset** starts the count over, so after changing a setting the next downloads show whether it helped. Songs and files are not touched.
 
+## Which watch is downloading a song
+
+A song the [Playlist Monitor](playlist-monitor.md) downloads says which watch it is for: under its title, **From …** with the playlist's cover or the artist's photo. Click it to open that watch's page, where you can pause it or stop watching. The **Downloading for watches** panel next to the queue lists every watch with songs in the queue — how many, and how many are still to go — with a link to the original playlist or artist. It's the quickest way to find the generated mix or playlist that keeps bringing in songs you don't listen to.
+
+Songs you download yourself show no watch.
+
 ## Restarting or updating
 
 The queue outlives a restart, a crash or a container update. The songs that were waiting — and the ones that were mid-download when Downtify stopped, which start over — are queued again on the next start, and a paused queue comes back paused. So with a long queue:

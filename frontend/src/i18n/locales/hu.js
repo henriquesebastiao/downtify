@@ -621,6 +621,14 @@ export default {
       'Ez nem tűnik YouTube videó- vagy SoundCloud számlinknek.',
     playlistDownloads: 'Lejátszásilista-letöltések',
     sources: 'Letöltési forrás',
+    fromWatch: 'Innen: {name}',
+    fromWatchTitle:
+      'A Figyelő ezt a(z) {name} miatt tölti le. Megnyitja a figyelést.',
+    watches: 'Letöltések figyelésekhez',
+    watchesHint:
+      'A Figyelő figyelései, amelyekből a sorban lévő dalok jönnek. Nyiss meg egyet a szüneteltetéshez vagy leállításhoz.',
+    watchWaiting: 'még {count}',
+    openWatchOriginal: 'Eredeti megnyitása',
     noSourcesYet: 'A kész letöltések forrása itt jelenik meg.',
     importTitle: 'Könyvtár importálása',
     importHint:
@@ -785,6 +793,14 @@ export default {
     ofBytes: '{total} / {done}',
     longJob:
       'Egy nagy könyvtár sokáig tart. Elhagyhatod ezt az oldalt, és újraindítás után a sor folytatódik.',
+    lyricsQuickTitle: 'Hiányzó dalszövegek',
+    lyricsQuickHint:
+      'Megkeresi a könyvtárban a dalszöveg nélküli számokat, és rögtön szöveget keres hozzájuk, köztes választás nélkül. A többi javítás egy másik futtatásra marad.',
+    lyricsQuickButton: 'Keresés és dalszövegek pótlása',
+    lyricsPlainOnly:
+      'Csak szinkronizálatlan szöveg: {count} — szinkronizáltra cserélődik, ha van',
+    lyricsOutcome:
+      'Hozzáadott dalszöveg: {added} · Nem található: {notFound} · Sikertelen: {failed}',
     completed: 'Feljavítva',
     skipped: 'Nincs tennivaló',
     failed: 'Hibára futott',
@@ -1259,6 +1275,7 @@ export default {
       one: '{count} kiadványban',
       other: '{count} kiadványban',
     },
+    wantedUpcoming: '{count} bejelentett',
     wantedUnchecked: {
       one: '{count} kiadvány még nincs ellenőrizve',
       other: '{count} kiadvány még nincs ellenőrizve',
@@ -1446,6 +1463,7 @@ export default {
     filter: {
       all: 'Mind',
       missing: 'Letöltendő',
+      upcoming: 'Hamarosan',
       partly: 'Részben megvan',
       complete: 'Teljes',
       not_watched: 'Nem figyelt',
@@ -1456,6 +1474,8 @@ export default {
       complete: 'Teljes · {have}/{total}',
       partly: 'Részben · {have}/{total}',
       missing: 'Letöltendő',
+      upcoming: 'Megjelenik: {date}',
+      upcomingNoDate: 'Hamarosan',
       skipped: 'A figyelés előtt jelent meg',
       not_watched: 'Nem figyelt',
       off: 'Kikapcsolva',
@@ -1697,6 +1717,17 @@ export default {
     sourceSoundcloud: 'SoundCloud',
     sourceSoundcloudHint:
       'Máshol hiányzó feltöltések, és a SoundCloud linkek saját száma',
+    sourceNeedsTitle: 'Mit igényel az egyes források',
+    sourceNeedsSlskd:
+      'slskd: saját slskd szerver, az ingyenes Soulseek hálózathoz kapcsolva. Nincs előfizetés; a minőség az, amit mások megosztanak, gyakran FLAC vagy MP3 320.',
+    sourceNeedsDeemix:
+      'Deemix: saját Deemix szerver és saját Deezer-fiók. Ingyenes fiókkal csak MP3 128 kbps jár; az MP3 320 és a FLAC fizetős Deezer-csomagot igényel. A Downtify nem ad ilyet, és nem is kerüli meg.',
+    sourceNeedsYoutube:
+      'YouTube Music és YouTube: nincs mit beállítani. A hang veszteséges (kb. 128–160 kbps).',
+    sourceNeedsSoundcloud:
+      'SoundCloud: nincs mit beállítani, fiók sem kell. A streamek általában 128–160 kbps-osak.',
+    sourceNeedsCover:
+      'Bármelyik forrás is, a beágyazott borító az, amelyet a Downtify a dalhoz letölt (Beállítások → Letöltések → Borítóméret).',
     deemixTitle: 'Deemix',
     deemixHint:
       'Download from your own Deemix server. Requested quality requires the matching Deezer entitlement.',
@@ -1765,6 +1796,9 @@ export default {
     slskdInPlace: 'Fájlok hagyása az slskd mappában',
     slskdInPlaceHint:
       'Bekapcsolva: címkézés a helyükön, a fájlok megtartásával. Kikapcsolva: másolás és címkézés a Letöltések mappába; a forrás csak sikeres import után törlődik. Hiba esetén megmarad.',
+    slskdKeepCover: 'A fájl saját borítója marad, ha nagyobb',
+    slskdKeepCoverHint:
+      'A megosztott fájlokban gyakran benne van az album teljes méretű borítója. Be: az slskd-fájl megtartja a saját borítóját, ha nagyobb annál, amit a Downtify letölt (Spotify, YouTube Music). Ki: a letöltött borító mindig lecseréli.',
     youtubeTitle: 'YouTube',
     cookies: 'YouTube sütik',
     cookiesHint:
@@ -1873,6 +1907,11 @@ export default {
     lyricsLrclibHint: 'Közösségi adatbázis — sima és időzített dalszöveg',
     lyricsNetease: 'NetEase Cloud Music',
     lyricsNeteaseHint: 'Nagy katalógus, általában időzített',
+    lyricsKugou: 'Kugou Music',
+    lyricsKugouHint: 'Nagy katalógus, időzített',
+    lyricsSyncedOnly: 'Csak időzített dalszövegek',
+    lyricsSyncedOnlyHint:
+      'Az időbélyeg nélküli dalszövegeket kihagyja, és a következő szolgáltatót kérdezi. A Könyvtár feljavítása ekkor a csak sima szöveggel rendelkező számokat hiányzónak veszi. A szinkronizált szöveg ezután lecseréli, a fájl saját címkéiben is.',
     ratingsGroup: 'Értékelések a Deezerről',
     ratingsHint:
       'A Navidrome-ban lévő daloknak 0–5 csillagot ad aszerint, mennyire népszerűek a Deezeren, mint a dztnr. A csillagok a fenti Navidrome-fiókhoz tartoznak.',
