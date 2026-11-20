@@ -495,6 +495,62 @@ def find_track_preview(
     return matches[0][1]
 
 
+def find_track_cover(artist: str, title: str, px: int) -> str:
+    """The cover of the release Deezer has *artist*'s *title* on, at the
+    smallest of Deezer's sizes that reaches *px* (its largest, 1000px,
+    when none does), or ``""``.
+
+    Matched like :func:`find_track_preview`: the row's artist must be
+    *artist* and its title *title*, ignoring ``(Live)``-style suffixes,
+    so another song's cover is never taken. Raises :class:`ValueError`
+    when Deezer didn't really answer.
+    """
+
+    wanted_artist = file_name_key(artist)
+    wanted_title = title_key(title)
+    if not wanted_artist or not wanted_title:
+        return ''
+    try:
+        resp = httpx.get(
+            _TRACK_SEARCH_URL,
+            params={'q': f'{artist} {title}', 'limit': 25},
+            timeout=_TIMEOUT,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+    except Exception as exc:
+        logger.opt(exception=True).debug('Deezer track search failed')
+        raise ValueError('Could not reach Deezer') from exc
+    if not isinstance(data, dict) or data.get('error'):
+        raise ValueError('Deezer refused the request')
+    for row in data.get('data') or []:
+        if not isinstance(row, dict):
+            continue
+        row_artist = str((row.get('artist') or {}).get('name') or '')
+        if file_name_key(row_artist) != wanted_artist:
+            continue
+        titles = {
+            title_key(row.get('title')),
+            title_key(row.get('title_short')),
+        }
+        if wanted_title not in titles:
+            continue
+        album = row.get('album') or {}
+        if not isinstance(album, dict):
+            continue
+        largest = ''
+        for suffix, pixels in _COVER_SIZES:
+            url = str(album.get(f'cover_{suffix}') or '')
+            if not url:
+                continue
+            largest = url
+            if pixels >= px:
+                return url
+        if largest:
+            return largest
+    return ''
+
+
 def fetch_artist_full(artist_id: str, lang: str) -> dict[str, Any]:
     """Bio, social links and related-artist names for a Deezer artist id.
 

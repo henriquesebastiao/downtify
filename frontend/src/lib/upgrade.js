@@ -31,7 +31,7 @@ export function deezerRecordingId(value) {
 export const ARTWORK_SOURCES = ['highest', 'spotify', 'itunes', 'youtube-music']
 
 /** Target sizes offered for "upgrade artwork below". */
-export const ARTWORK_SIZES = [300, 500, 600, 1000, 1200]
+export const ARTWORK_SIZES = [300, 600, 1000, 1200, 1400]
 
 const EMPTY_COUNTS = {
   total: 0,

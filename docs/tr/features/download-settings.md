@@ -111,20 +111,17 @@ Bu `cover.jpg`, albüm klasöründeki tüm parçalarca paylaşılır. Kitaplık 
 
 ## Kapak çözünürlüğü
 
-Yalnızca **Kapakları indir** (yukarıda) açıkken geçerlidir. Downtify’ın **YouTube Music** veya **Deezer** kaynaklı gömülü kapak için istediği hedef boyutu (piksel cinsinden genişlik ve yükseklik) belirler. Bir hazır değer (300, 600, 800, 1000, 1200) seçin ya da kaydırıcıyı **300 ile 1200** arasında herhangi bir yere sürükleyin; geçerli değer piksel olarak yanında gösterilir. Varsayılan 600’dür.
+Yalnızca **Kapakları indir** (yukarıda) açıkken geçerlidir. **Kapak boyutu**, her indirmenin gömülü kapağının hedeflediği boyuttur (piksel cinsinden genişlik ve yükseklik). Bir hazır değer (600, 1000, 1200, 1400, 2000) seçin ya da **300 ile 3000** arasında bir değer yazın. Varsayılan 1200’dür.
 
-Kitaplığınızı Plex gibi, kapakları Downtify’ın varsayılan olarak gömdüğünden daha yüksek çözünürlükte gösteren bir medya sunucusuna beslerken kullanışlıdır.
+Parçanın kendi kaynağının sunduğu kapak daha küçükse — Spotify’ın en büyüğü 640 px, Deezer’ınki 1000 px — Downtify aynı şarkının kapağını Spotify, iTunes, YouTube Music ve Deezer’dan aynı anda, her birinden bu boyutta ister ve en büyüğünü gömer. Bir kapak yalnızca sanatçı ve başlık parçayla eşleşiyorsa sayılır; böylece başka bir şarkının kapağı asla kullanılmaz.
 
-İki kaynak ayarı farklı uygular, çünkü yalnızca biri gerçekten istek üzerine yeniden boyutlandırılabilir:
+Kapaklar asla büyütülmez. iTunes ve YouTube Music özgün görsellerini istenen boyuta küçültür, özgün görsel daha küçükse onu olduğu gibi gönderir — yayınların çoğu orada 1400 px veya daha büyüktür. Deezer yalnızca dört sabit boyut sunar (56, 250, 500 ve 1000 px); boyuta ulaşan en küçüğü kullanılır. Hiçbir kaynak boyuta ulaşmazsa bulunan en büyük kapak gömülür ve günlük bunu belirtir.
 
-- **YouTube Music** küçük resimleri URL’leri düzenlenerek yeniden boyutlandırılabilir — gerçek CDN’de doğrulandı, yüksek hazır değerler çoğu albüm kapağı için (yalnızca büyütme değil) gerçekten daha fazla ayrıntı döndürür, kaynak görüntünün kendi çözünürlüğüne kadar.
-- **Deezer**, herhangi bir parça, albüm, sanatçı veya çalma listesi kapağı için yalnızca dört sabit boyut sunar (56, 250, 500 ve 1000 px) — istenebilecek ara boyut yoktur. Downtify, bu dördünün yapılandırılan değerden en az o kadar büyük olan en küçüğünü seçer (300 px istemek 500 px olanı getirir, çünkü tam 300 px boyutu yoktur); 1000 px’ten fazlasını istemek de Deezer’ın en büyüğü olan 1000 px’i getirir.
+**En küçük kapak boyutu** (varsayılan olarak kapalı) bu hedefi yükseltir: kapağın iki değerden büyüğüne ulaşması gerekir ve en küçük değerin altındaki **Kapak boyutu** düğmeleri gri görünür.
 
-::: info Spotify kaynaklı kapaklar etkilenmez
-Downtify, Spotify’ın herkese açık embed API’sinin Spotify tarafından çözülen parçalar/albümler/çalma listeleri için sunduğu **en büyük** kapağı zaten gömer — istenebilecek daha büyük boyut yok. Bu ayar yalnızca YouTube Music (serbest metin araması, YouTube URL’leri ve sesin kendisi için YouTube Music ile yeniden eşleştirilen her Spotify parçası) veya Deezer (yapıştırılmış bir Deezer bağlantısı ya da [Listeler](charts.md)’den bir parça) üzerinden çözülen parçalar için tavanı yükseltir.
-:::
+Kitaplığınızda zaten olan kapakları bu boyuta getirmek için kapak kategorisiyle **Kitaplığı iyileştir**’i çalıştırın; varsayılan olarak 1200 px’in altındaki kapakları yükseltir.
 
-Bu değeri Ayarlar’da değiştirmek, o an açık olan arama sayfası dahil hemen etkili olur — diskte zaten bulunan hiçbir şeyi yeniden indirmeyi gerektirmez.
+Bu değeri Ayarlar’da değiştirmek hemen etkili olur — diskte zaten olan hiçbir şeyi yeniden indirmek gerekmez.
 
 ## Var olan dosyaların üzerine yaz
 

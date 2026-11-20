@@ -25,6 +25,11 @@ def _offline_metadata_lookups(monkeypatch):
     monkeypatch.setattr(downloader_mod, '_fetch_itunes_genre', lambda s: '')
     monkeypatch.setattr(downloader_mod, '_download_cover', lambda url: None)
     monkeypatch.setattr(downloader_mod.isrc_mod, 'lookup', lambda song: None)
+    # Every download below the cover size goal asks the cover sources for
+    # a larger cover (downloader.cover_goal).
+    monkeypatch.setattr(
+        downloader_mod.cover_sources, '_source_url', lambda *a, **k: ''
+    )
 
 
 @pytest.fixture(autouse=True)

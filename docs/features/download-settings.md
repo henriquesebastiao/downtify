@@ -111,24 +111,17 @@ That `cover.jpg` is shared by every track in the album folder. Deleting a track 
 
 ## Cover art resolution
 
-Only relevant when **Download cover art** (above) is on. Sets the target size (width and height, in pixels) Downtify requests for embedded cover art sourced from **YouTube Music** or **Deezer**. Pick a preset (300, 600, 800, 1000, 1200) or drag the slider anywhere from **300 to 1200**; the current value in pixels is shown next to it. Default is 600.
+Only relevant when **Download cover art** (above) is on. **Cover size** is the size every download's embedded cover aims for, in pixels (width and height). Pick a preset (600, 1000, 1200, 1400, 2000) or type any value from **300 to 3000**. Default is 1200.
 
-This is useful when feeding your library into a media server like Plex that displays cover art at higher resolution than Downtify embedded by default.
+When the cover a track's own source offers is smaller — Spotify's largest is 640 px, Deezer's 1000 px — Downtify asks Spotify, iTunes, YouTube Music and Deezer at once for the same song's cover, each at the cover size, and embeds the largest. A cover only counts when its artist and title match the track, so another song's art is never used.
 
-The two sources apply the setting differently, since only one of them can actually be resized on demand:
+Covers are never enlarged. iTunes and YouTube Music scale their original artwork down to the size asked for, and send the original itself when it is smaller — most releases have 1400 px or more there. Deezer only offers four fixed sizes (56, 250, 500 and 1000 px); the smallest one that reaches the cover size is used. When no source reaches the cover size, the largest cover found is embedded and the log says so.
 
-- **YouTube Music** thumbnails can be resized by editing their URL — verified against the live CDN, the higher presets return genuinely more detail (not just upscaling) for most album art, up to the source image's own resolution.
-- **Deezer** only ever offers four fixed sizes for any track, album, artist or playlist cover (56, 250, 500 and 1000px) — there's no in-between size to request. Downtify picks the smallest of those four that's still at least as big as the configured value (asking for 300px gets the 500px one, since there's no exact 300px size); asking for more than 1000px still gets the 1000px one, Deezer's largest.
+**Minimum cover size** (off by default) raises that goal: a cover has to reach the larger of the two, and **Cover size** buttons below the minimum are greyed out.
 
-::: info Spotify-sourced covers aren't affected
-Downtify already embeds the **largest** cover Spotify's public embed API offers for Spotify-resolved tracks/albums/playlists — there's no larger size to request. This setting only raises the ceiling for tracks resolved through YouTube Music (free-text search, YouTube URLs, and any Spotify track re-matched to YouTube Music for the actual audio) or Deezer (a pasted Deezer link, or a track from [Charts](charts.md)).
-:::
+To bring covers already in your library up to this size, run **Upgrade library** with the artwork category; it upgrades covers under 1200 px by default.
 
-**Minimum cover size** (off by default) works the other way round: it is a floor, not a fixed size. When the cover a track's source offers is smaller than it — Spotify's largest is usually 640 px — Downtify asks Spotify, iTunes and YouTube Music for the same release's artwork, as **Upgrade library** does, and embeds the largest. If none reaches the minimum, the largest one found is still embedded rather than none, and the log says so.
-
-The two work together. A cover smaller than the minimum would only be thrown away for a larger one, so YouTube Music and Deezer are asked for at least the minimum cover size in the first place (up to 1200 px, past which YouTube Music only upscales), and **Cover size** buttons below it are greyed out. Neither setting ever stops a download: when no cover is big enough, the largest found is used.
-
-Changing this value in Settings takes effect immediately, including for the currently-open search page — it does not require re-downloading anything already on disk.
+Changing this value in Settings takes effect immediately — it does not require re-downloading anything already on disk.
 
 ## Overwrite existing files
 

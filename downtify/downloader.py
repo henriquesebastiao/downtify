@@ -64,6 +64,7 @@ from .itunes import fetch_genre as _fetch_itunes_genre
 from .library_paths import library_stored_path, slskd_dir_from_downloader
 from .m3u import sanitize_playlist_name
 from .providers import (
+    cover_resolution,
     enrich_from_match,
     excluded_source,
     excluding_sources,
@@ -1817,7 +1818,7 @@ class _MetadataLookups:
             self._pool.submit(
                 _download_cover_meeting,
                 song,
-                getattr(downloader, 'cover_min_resolution', 0),
+                cover_goal(getattr(downloader, 'cover_min_resolution', 0)),
             )
             if downloader.download_cover_art
             else None
@@ -1887,8 +1888,21 @@ def _lookup_result(
 
 
 def _download_cover(url: str) -> Optional[bytes]:
+    """The cover at *url*. A small Spotify cover (300 or 64 px) is asked
+    for at Spotify's 640 px size first, and at *url* as given only when
+    that fails."""
+
     if not url:
         return None
+    largest = spotify_mod.largest_cover_url(url)
+    if largest != url:
+        data = _fetch_cover(largest)
+        if data:
+            return data
+    return _fetch_cover(url)
+
+
+def _fetch_cover(url: str) -> Optional[bytes]:
     try:
         response = httpx.get(url, timeout=15)
         response.raise_for_status()
@@ -1896,6 +1910,16 @@ def _download_cover(url: str) -> Optional[bytes]:
         logger.opt(exception=True).warning('Failed to fetch cover art {}', url)
         return None
     return response.content
+
+
+def cover_goal(minimum: int) -> int:
+    """The cover size a download aims for: the "Cover size" setting
+    (1200px by default), or the "Minimum cover size" when larger. A
+    track's own cover below it is swapped for the largest the cover
+    sources have (:func:`_download_cover_meeting`) - Spotify's largest
+    is 640px, so a Spotify track's cover is always looked for."""
+
+    return max(int(minimum or 0), cover_resolution())
 
 
 def _download_cover_meeting(

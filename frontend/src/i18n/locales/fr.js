@@ -1826,11 +1826,11 @@ export default {
       'Désactivez pour des fichiers plus légers et des téléchargements plus rapides.',
     coverMin: 'Taille minimale de la pochette',
     coverMinHint:
-      'En dessous, Spotify, iTunes et YouTube Music sont interrogés pour une pochette plus grande de la même sortie, et la plus grande est utilisée. Désactivé garde la pochette de la source du titre.',
+      'Relève l’objectif de taille de pochette ci-dessus à au moins cette valeur. Désactivé : seule la taille de pochette fixe l’objectif.',
     coverMinOff: 'Désactivé',
     coverSize: 'Taille de la pochette',
     coverSizeHint:
-      'Pour les pochettes YouTube Music et Deezer. Celles de Spotify utilisent toujours la plus grande taille.',
+      'La taille visée par la pochette de chaque téléchargement. Une plus petite – la plus grande de Spotify fait 640 px – est remplacée par la plus grande que Spotify, iTunes, YouTube Music ou Deezer ont pour le même titre. Les pochettes ne sont jamais agrandies.',
     coverSizeRaised:
       'La taille minimale de pochette ci-dessous la porte à {px} px ; les tailles plus petites sont donc grisées.',
     coverSizeRaisedShort: 'Portée à {px} px par la taille minimale de pochette',

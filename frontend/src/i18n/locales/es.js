@@ -1806,11 +1806,11 @@ export default {
       'Desactívalo para archivos más pequeños y descargas más rápidas.',
     coverMin: 'Tamaño mínimo de portada',
     coverMinHint:
-      'Por debajo, se pide a Spotify, iTunes y YouTube Music una portada más grande del mismo lanzamiento y se usa la mayor. Desactivado conserva la portada de la fuente de la pista.',
+      'Sube el objetivo de tamaño de portada de arriba al menos a este valor. Desactivado: el objetivo es solo el tamaño de portada.',
     coverMinOff: 'Desactivado',
     coverSize: 'Tamaño de portada',
     coverSizeHint:
-      'Para portadas de YouTube Music y Deezer. Las de Spotify siempre usan el mayor tamaño disponible.',
+      'El tamaño al que apunta la portada de cada descarga. Una más pequeña – la mayor de Spotify es de 640 px – se sustituye por la mayor que tengan Spotify, iTunes, YouTube Music o Deezer para la misma canción. Las portadas nunca se amplían.',
     coverSizeRaised:
       'El tamaño mínimo de portada de abajo lo eleva a {px} px, por eso los tamaños menores aparecen atenuados.',
     coverSizeRaisedShort: 'Elevado a {px} px por el tamaño mínimo de portada',

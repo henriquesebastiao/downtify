@@ -696,7 +696,7 @@ MIN_TRACK_DURATION_SETTING_SECONDS = 0
 MAX_TRACK_DURATION_SETTING_SECONDS = 6 * 3600
 
 MIN_COVER_RESOLUTION = 300
-MAX_COVER_RESOLUTION = 1200
+MAX_COVER_RESOLUTION = 3000
 #: iTunes serves up to 3000px; nothing larger is ever offered.
 MAX_COVER_MIN_RESOLUTION = 3000
 
@@ -925,15 +925,14 @@ def _clamp_cover_resolution(value: Any) -> int:
     """Coerce and clamp the requested cover art target size, in pixels.
 
     Keeps the setting inside ``[MIN_COVER_RESOLUTION,
-    MAX_COVER_RESOLUTION]``. Affects YouTube Music-sourced cover art
-    (see ``providers.set_cover_resolution``, which resizes a thumbnail
-    URL directly) and Deezer-sourced cover art (see
-    ``deezer._cover_from_images``, which instead picks the smallest of
-    Deezer's four fixed image sizes that still meets it, reading this
-    same value via ``providers.cover_resolution``). Spotify-sourced
-    covers are unaffected: Downtify already uses the largest size
-    Spotify's embed API offers, with no equivalent to resize or pick
-    from.
+    MAX_COVER_RESOLUTION]``. It is the size every download's cover aims
+    for (``downloader.cover_goal``): YouTube Music and iTunes covers are
+    asked for at it (see ``providers.set_cover_resolution``), Deezer's
+    nearest fixed size is picked (``deezer._cover_from_images``), and a
+    track whose own cover is smaller - every Spotify track, whose
+    largest is 640px - gets the largest those sources have.
+    ``MAX_COVER_RESOLUTION`` is the largest master either has been seen
+    to keep.
     """
     try:
         px = int(value)

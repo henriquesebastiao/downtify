@@ -44,7 +44,7 @@ from typing import Any, Callable, Optional
 from loguru import logger
 from mutagen import File as MutagenFile
 
-from . import cover_sources, spotify
+from . import cover_sources, providers, spotify
 from . import lyrics as lyrics_mod
 from .download_queue import queue_pause
 from .downloader import embed_lyrics, embed_metadata
@@ -89,7 +89,7 @@ SUPPORTED_CATEGORIES = (*CATEGORIES, 'audio')
 #: catches a truncated or corrupted copy.
 _DURATION_TOLERANCE_SECONDS = 2.0
 
-DEFAULT_ARTWORK_MIN_PX = 600
+DEFAULT_ARTWORK_MIN_PX = 1200
 DEFAULT_RECHECK_DAYS = 30
 
 #: Upper bound on how often progress is pushed to connected clients: a
@@ -474,6 +474,8 @@ def _pick_artwork(
         song,
         current=cover_sources.current_cover(full),
         preference=options.artwork_source,
+        # Asked for at least the size being upgraded to.
+        px=max(options.artwork_min_px, providers.cover_resolution()),
     )
     if better is None:
         return _Artwork(px=have)

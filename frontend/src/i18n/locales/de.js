@@ -1833,11 +1833,11 @@ export default {
       'Deaktiviere die Option für kleinere Dateien und schnellere Downloads.',
     coverMin: 'Mindestgröße des Covers',
     coverMinHint:
-      'Darunter werden Spotify, iTunes und YouTube Music nach einem größeren Cover derselben Veröffentlichung gefragt, und das größte wird verwendet. Aus behält das Cover der Quelle des Titels.',
+      'Hebt das Ziel der Covergröße oben auf mindestens diesen Wert. Aus: Nur die Covergröße ist das Ziel.',
     coverMinOff: 'Aus',
     coverSize: 'Covergröße',
     coverSizeHint:
-      'Für Cover von YouTube Music und Deezer. Spotify-Cover werden immer in der größten verfügbaren Auflösung geladen.',
+      'Die Größe, die das Cover jedes Downloads anstrebt. Ein kleineres – das größte von Spotify hat 640 px – wird durch das größte ersetzt, das Spotify, iTunes, YouTube Music oder Deezer für denselben Titel haben. Cover werden nie vergrößert.',
     coverSizeRaised:
       'Die Mindest-Covergröße unten hebt dies auf {px} px an, kleinere Größen sind daher ausgegraut.',
     coverSizeRaisedShort: 'Durch die Mindest-Covergröße auf {px} px angehoben',

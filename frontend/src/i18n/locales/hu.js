@@ -1787,11 +1787,11 @@ export default {
     coverArtHint: 'Kapcsold ki a kisebb fájlokért és gyorsabb letöltésért.',
     coverMin: 'Borító minimális mérete',
     coverMinHint:
-      'Ez alatt a Spotify, az iTunes és a YouTube Music nagyobb borítót ad ugyanahhoz a kiadáshoz, és a legnagyobb lesz használva. Kikapcsolva a dal forrásának borítója marad.',
+      'Legalább erre emeli a fenti borítóméret-célt. Kikapcsolva: csak a borítóméret a cél.',
     coverMinOff: 'Ki',
     coverSize: 'Borító mérete',
     coverSizeHint:
-      'YouTube Music és Deezer borítókhoz. A Spotify borítók mindig a legnagyobb méretűek.',
+      'Az a méret, amelyre minden letöltés borítója törekszik. A kisebbet – a Spotify legnagyobbja 640 px – lecseréli a legnagyobbra, amely a Spotify, az iTunes, a YouTube Music vagy a Deezer kínálatában van ugyanahhoz a dalhoz. A borítókat sosem nagyítja.',
     coverSizeRaised:
       'Az alábbi minimális borítóméret ezt {px} px-re emeli, ezért a kisebb méretek szürkék.',
     coverSizeRaisedShort: 'A minimális borítóméret {px} px-re emeli',

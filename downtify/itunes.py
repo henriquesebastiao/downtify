@@ -22,6 +22,10 @@ from loguru import logger
 _ITUNES_SEARCH_URL = 'https://itunes.apple.com/search'
 _TIMEOUT = 10  # seconds
 _MIN_INTERVAL = 0.35  # seconds between API calls (rate-limit courtesy)
+# A rate-limited request (HTTP 429, or the 403 Apple sometimes answers
+# with instead) is tried again after these waits, in seconds.
+_RETRY_STATUSES = frozenset({403, 429})
+_RETRY_WAITS = (2.0, 5.0)
 
 # ── In-memory cache ────────────────────────────────────────────────
 # key = "normalized_artist|normalized_album" → genre string.
@@ -89,19 +93,37 @@ def _search_itunes(
     *country* picks the store (two letters; Apple's default, ``US``,
     when empty) - its prices, currency and links.
     """
+    return _search_or_none(query, limit, entity=entity, country=country) or []
+
+
+def _search_or_none(
+    query: str, limit: int = 5, *, entity: str = 'song', country: str = ''
+) -> Optional[list[dict[str, Any]]]:
+    """:func:`_search_itunes`, but ``None`` when the request failed
+    (rate limit, network) rather than found nothing."""
     _rate_wait()
     params = f'term={quote_plus(query)}&entity={entity}&limit={limit}'
     if country:
         params += f'&country={country}'
     url = f'{_ITUNES_SEARCH_URL}?{params}'
     logger.debug('iTunes lookup: {}', url)
-    try:
-        resp = httpx.get(url, timeout=_TIMEOUT)
-        resp.raise_for_status()
-        data = resp.json()
-    except Exception:
-        logger.opt(exception=True).debug('iTunes Search API failed')
-        return []
+    data = None
+    for attempt in range(1 + len(_RETRY_WAITS)):
+        try:
+            resp = httpx.get(url, timeout=_TIMEOUT)
+            resp.raise_for_status()
+            data = resp.json()
+            break
+        except Exception as exc:
+            status = getattr(getattr(exc, 'response', None), 'status_code', 0)
+            if status in _RETRY_STATUSES and attempt < len(_RETRY_WAITS):
+                # Apple's limit is per minute: a short wait usually clears it.
+                time.sleep(_RETRY_WAITS[attempt])
+                continue
+            logger.opt(exception=True).debug('iTunes Search API failed')
+            return None
+    if not isinstance(data, dict):
+        return None
     results = data.get('results') or []
     logger.debug(
         'iTunes Search returned {} result(s) for q={!r}',
@@ -289,16 +311,18 @@ def fetch_artwork_url(song: dict[str, Any], size: int = 1200) -> str:
             return artwork_url_at(cached, size) if cached else ''
 
     query = f'{artist} {title}'.strip()
-    match = _pick_best(_search_itunes(query, limit=5), artist, title)
+    rows = _search_or_none(query, limit=5)
+    failed = rows is None
+    match = _pick_best(rows or [], artist, title)
     if match is None and album:
-        match = _pick_best(
-            _search_itunes(f'{artist} {title} {album}'.strip(), limit=5),
-            artist,
-            title,
-        )
+        rows = _search_or_none(f'{artist} {title} {album}'.strip(), limit=5)
+        failed = failed or rows is None
+        match = _pick_best(rows or [], artist, title)
 
     base = str((match or {}).get('artworkUrl100') or '').strip()
-    if cache_key:
+    # A failed request (rate limit, network) isn't "iTunes has no cover":
+    # remembering it would leave the whole album without iTunes art.
+    if cache_key and (base or not failed):
         with _cache_lock:
             _artwork_cache.setdefault(cache_key, base)
     if not base:

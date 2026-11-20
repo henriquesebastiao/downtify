@@ -111,20 +111,17 @@ Diese `cover.jpg` teilen sich alle Titel im Albumordner. Löscht du einen Titel 
 
 ## Cover-Auflösung
 
-Nur relevant, wenn **Cover herunterladen** (oben) an ist. Legt die Zielgröße (Breite und Höhe in Pixeln) fest, die Downtify für eingebettete Cover von **YouTube Music** oder **Deezer** anfordert. Wähle eine Voreinstellung (300, 600, 800, 1000, 1200) oder ziehe den Schieberegler irgendwo zwischen **300 und 1200**; der aktuelle Wert in Pixeln steht daneben. Standard ist 600.
+Nur relevant, wenn **Cover herunterladen** (oben) an ist. **Covergröße** ist die Größe, die das eingebettete Cover jedes Downloads anstrebt, in Pixeln (Breite und Höhe). Wähle eine Voreinstellung (600, 1000, 1200, 1400, 2000) oder gib einen Wert von **300 bis 3000** ein. Standard ist 1200.
 
-Das ist nützlich, wenn du deine Bibliothek in einen Medienserver wie Plex einspeist, der Cover in höherer Auflösung anzeigt, als Downtify standardmäßig einbettet.
+Ist das Cover der eigenen Quelle eines Titels kleiner — das größte von Spotify hat 640 px, das von Deezer 1000 px —, fragt Downtify Spotify, iTunes, YouTube Music und Deezer gleichzeitig nach dem Cover desselben Titels, jeweils in der Covergröße, und bettet das größte ein. Ein Cover zählt nur, wenn Künstler und Titel zum Titel passen, damit nie das Cover eines anderen Songs verwendet wird.
 
-Die beiden Quellen setzen die Einstellung unterschiedlich um, da nur eine von ihnen tatsächlich auf Abruf skaliert werden kann:
+Cover werden nie vergrößert. iTunes und YouTube Music verkleinern ihr Originalbild auf die angefragte Größe und schicken das Original selbst, wenn es kleiner ist — die meisten Veröffentlichungen haben dort 1400 px oder mehr. Deezer bietet nur vier feste Größen (56, 250, 500 und 1000 px); die kleinste, die die Covergröße erreicht, wird verwendet. Erreicht keine Quelle die Covergröße, wird das größte gefundene Cover eingebettet, und das Log vermerkt es.
 
-- Thumbnails von **YouTube Music** lassen sich durch Ändern ihrer URL skalieren — am echten CDN geprüft, liefern die höheren Voreinstellungen bei den meisten Covern tatsächlich mehr Details (nicht nur Hochskalierung), bis zur Auflösung des Quellbilds selbst.
-- **Deezer** bietet für das Cover jedes Titels, Albums, Künstlers oder jeder Playlist nur vier feste Größen (56, 250, 500 und 1000 px) — eine Zwischengröße gibt es nicht. Downtify wählt die kleinste dieser vier, die mindestens so groß ist wie der eingestellte Wert (bei 300 px gibt es die 500-px-Version, da es keine exakte 300-px-Größe gibt); wer mehr als 1000 px verlangt, bekommt ebenfalls die 1000-px-Version, die größte von Deezer.
+**Mindestgröße des Covers** (standardmäßig aus) hebt dieses Ziel an: Ein Cover muss den größeren der beiden Werte erreichen, und Knöpfe für die **Covergröße** unter dem Minimum sind ausgegraut.
 
-::: info Cover aus Spotify sind nicht betroffen
-Downtify bettet bereits das **größte** Cover ein, das Spotifys öffentliche Embed-API für von Spotify aufgelöste Titel/Alben/Playlists anbietet — eine größere Größe gibt es nicht. Diese Einstellung hebt nur die Obergrenze für Titel an, die über YouTube Music aufgelöst werden (Freitextsuche, YouTube-URLs und jeder Spotify-Titel, der für das eigentliche Audio erneut YouTube Music zugeordnet wird) oder über Deezer (ein eingefügter Deezer-Link oder ein Titel aus den [Charts](charts.md)).
-:::
+Um Cover, die schon in deiner Bibliothek liegen, auf diese Größe zu bringen, starte **Bibliothek verbessern** mit der Kategorie für Cover; standardmäßig verbessert sie Cover unter 1200 px.
 
-Eine Änderung dieses Werts in den Einstellungen wirkt sofort, auch für die gerade geöffnete Suchseite — sie erfordert kein erneutes Herunterladen von etwas, das schon auf der Festplatte liegt.
+Eine Änderung dieses Werts in den Einstellungen wirkt sofort — sie erfordert kein erneutes Herunterladen von etwas, das schon auf der Festplatte liegt.
 
 ## Vorhandene Dateien überschreiben
 

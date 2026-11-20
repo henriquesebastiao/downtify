@@ -369,7 +369,7 @@ const {
   canCancel,
 } = useUpgrade()
 
-const artworkMin = ref(600)
+const artworkMin = ref(1200)
 const artworkSource = ref('highest')
 const recheckDays = ref(30)
 const replaceAudio = ref(false)

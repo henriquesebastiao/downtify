@@ -229,24 +229,24 @@ def _act_span(
     return None
 
 
-DEFAULT_COVER_RESOLUTION = 600
+DEFAULT_COVER_RESOLUTION = 1200
 
 # Mutable module-level target, set from Settings (see
 # set_cover_resolution) so every function below that resolves a YouTube
 # Music thumbnail through _upgrade_thumbnail picks it up without each of
 # them needing to accept and thread a resolution parameter through their
-# own callers. Verified against the live CDN that requesting larger
-# than the hardcoded 600px default actually returns more real detail
-# (not just upscaling) up to roughly 1200-1400px depending on the
-# source image.
+# own callers. Verified against the live CDN: YouTube Music resizes the
+# release's master image to the size asked for, and sends the master
+# itself - 1400 to 2400px for the releases measured - when asked for
+# more, never an enlarged copy.
 _cover_resolution = DEFAULT_COVER_RESOLUTION
 # The "Minimum cover size" setting (0 = off). A first request smaller
 # than it would only be thrown away for a larger cover from another
 # source (downloader._download_cover_meeting), so the first request asks
-# for at least this much - up to _MAX_FIRST_REQUEST, past which YouTube
-# Music only upscales.
+# for at least this much - up to _MAX_FIRST_REQUEST, the largest master
+# YouTube Music or iTunes has been seen to keep.
 _cover_minimum = 0
-_MAX_FIRST_REQUEST = 1200
+_MAX_FIRST_REQUEST = 3000
 
 
 def set_cover_resolution(pixels: int) -> None:
@@ -287,6 +287,12 @@ def _resize_thumbnail(url: str, size: int) -> str:
     if not url:
         return url
     return re.sub(r'=w\d+-h\d+.*$', f'=w{size}-h{size}-l90-rj', url)
+
+
+def resize_thumbnail(url: str, size: int) -> str:
+    """*url* (a YouTube Music cover) asked for at *size* pixels."""
+
+    return _resize_thumbnail(url, size)
 
 
 def _upgrade_thumbnail(url: str) -> str:
