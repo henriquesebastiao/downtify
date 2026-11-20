@@ -98,6 +98,7 @@ export default {
       'features/storage-usage.md': 'Stockage et utilisation',
       'features/music-trash.md': 'Corbeille musicale',
       'features/doctor.md': 'Docteur',
+      'features/backups.md': 'Sauvegardes',
       'features/replace-audio.md': 'Remplacer l’audio',
       'features/external-playlists.md': 'Importer des playlists existantes',
       'features/m3u-export.md': 'Export M3U',

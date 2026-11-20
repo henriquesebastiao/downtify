@@ -1098,6 +1098,7 @@
             >
               <ServerPortSetting />
             </SettingGroup>
+            <BackupSettings />
           </template>
 
           <template v-else-if="section === 'apps'">
@@ -1230,6 +1231,7 @@ import ActivitySettings from '/src/components/settings/ActivitySettings.vue'
 import DoctorSettings from '/src/components/settings/DoctorSettings.vue'
 import NavidromeRatings from '/src/components/settings/NavidromeRatings.vue'
 import AppsSettings from '/src/components/settings/AppsSettings.vue'
+import BackupSettings from '/src/components/settings/BackupSettings.vue'
 import ServerPortSetting from '/src/components/settings/ServerPortSetting.vue'
 import HiddenLibrarySettings from '/src/components/settings/HiddenLibrarySettings.vue'
 import UsersSettings from '/src/components/settings/UsersSettings.vue'

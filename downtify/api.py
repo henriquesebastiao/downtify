@@ -431,6 +431,7 @@ from . import (
     artist_photo_proxy,
     artist_profile,
     audio_replace,
+    backup,
     catalog_worker,
     compilation,
     cookie_refresh,
@@ -748,6 +749,8 @@ DEFAULT_SETTINGS: dict[str, Any] = {
     # Smallest acceptable cover (px, short side); 0 = off. Below it a
     # larger one is looked for (downloader._download_cover_meeting).
     'cover_min_resolution': 0,
+    # Hours between automatic backups (0: off; downtify/backup.py).
+    'backup_interval_hours': 0,
     # Ask Spotify, iTunes and YouTube Music for every download's cover and
     # embed the largest (downloader._download_cover_meeting).
     'cover_largest': False,
@@ -9143,6 +9146,8 @@ async def update_settings_endpoint(
                 state.settings[key] = _clamp_cover_resolution(raw_value)
             elif key == 'cover_min_resolution':
                 state.settings[key] = _clamp_cover_min_resolution(raw_value)
+            elif key == 'backup_interval_hours':
+                state.settings[key] = backup.clamp_interval(raw_value)
             elif key == 'cover_largest':
                 state.settings[key] = raw_value is True
             elif key == 'ui_language':

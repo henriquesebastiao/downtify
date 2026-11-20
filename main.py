@@ -35,6 +35,7 @@ from downtify import (
     account_routes,
     api,
     auth_routes,
+    backup_routes,
     doctor_routes,
     download_policy_routes,
     mobile_routes,
@@ -731,6 +732,8 @@ def build_app() -> FastAPI:
         # The library's size once an hour, for the growth on the library
         # usage page (downtify/library_usage.py).
         api.spawn_task(api.usage_snapshot_loop(), name='usage-snapshot-loop')
+        # Automatic backups (Settings > Server > Backups).
+        api.spawn_task(backup_routes.schedule_loop(), name='backup-schedule')
         # The repeat schedule of the Navidrome star ratings. Its name must
         # not start with "navidrome-ratings": that prefix is the
         # library-only lease a running job holds.
@@ -931,6 +934,7 @@ def build_app() -> FastAPI:
     app.include_router(navidrome_ratings_routes.router)
     app.include_router(download_policy_routes.router)
     app.include_router(wanted_routes.router)
+    app.include_router(backup_routes.router)
 
     @app.get('/list')
     def list_downloads(request: Request, refresh: bool = False) -> list[str]:

@@ -109,6 +109,16 @@ class TrackIndex:
             return None
         return self.lookup(tid)
 
+    def spotify_ids_by_filename(self) -> dict[str, str]:
+        """``{filename: Spotify track id}`` for every indexed file (a
+        backup records which track each library file was)."""
+
+        with self._connect() as conn:
+            rows = conn.execute(
+                'SELECT spotify_track_id, filename FROM library_tracks'
+            ).fetchall()
+        return {str(r['filename']): str(r['spotify_track_id']) for r in rows}
+
     def spotify_id_for_filename(self, filename: str) -> Optional[str]:
         """The Spotify track a library file was downloaded for, if known.
 
