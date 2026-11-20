@@ -94,7 +94,7 @@ const settings = ref({
   download_delay_seconds: 0,
   max_track_duration_seconds: 600,
   external_sync_delay_seconds: 0,
-  cover_resolution: 600,
+  cover_resolution: 1200,
   download_cover_art: true,
   overwrite_existing_files: true,
   write_isrc: true,
@@ -112,7 +112,7 @@ const MIN_TRACK_DURATION_SECONDS = 0
 const MAX_TRACK_DURATION_SECONDS = 21600
 
 const MIN_COVER_RESOLUTION = 300
-const MAX_COVER_RESOLUTION = 1200
+const MAX_COVER_RESOLUTION = 3000
 
 const settingsOptions = {
   audio_providers: [
@@ -137,7 +137,7 @@ const settingsOptions = {
   external_sync_delay_seconds_presets: [0, 5, 15, 30, 60],
   external_sync_delay_seconds_min: MIN_DOWNLOAD_DELAY_SECONDS,
   external_sync_delay_seconds_max: MAX_DOWNLOAD_DELAY_SECONDS,
-  cover_resolution_presets: [300, 600, 800, 1000, 1200],
+  cover_resolution_presets: [600, 1000, 1200, 1400, 2000],
   cover_min_resolution_presets: [0, 600, 1000, 1200],
   cover_resolution_min: MIN_COVER_RESOLUTION,
   cover_resolution_max: MAX_COVER_RESOLUTION,

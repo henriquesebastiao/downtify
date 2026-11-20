@@ -1835,14 +1835,14 @@ export default {
     coverArtHint: 'Turn off for smaller files and faster downloads.',
     coverMin: 'Minimum cover size',
     coverMinHint:
-      'Below this, Spotify, iTunes and YouTube Music are asked for a larger cover of the same release, and the largest is used. Off keeps the cover the track’s source offers.',
+      'Raises the cover size goal above to at least this. Off: the cover size alone is the goal.',
     coverMinOff: 'Off',
     coverLargest: 'Always use the largest cover',
     coverLargestHint:
       'Every download asks Spotify, iTunes and YouTube Music for the release’s cover and embeds the largest (often 1200 px from iTunes). A little slower per track. Off: the track’s own source cover, unless it is below the minimum.',
     coverSize: 'Cover size',
     coverSizeHint:
-      'For art from YouTube Music and Deezer. Spotify art is always the largest available.',
+      'The size every download’s cover aims for. A smaller one – Spotify’s largest is 640 px – is replaced by the largest Spotify, iTunes, YouTube Music or Deezer has for the same song. Covers are never enlarged.',
     coverSizeRaised:
       'The minimum cover size below raises this to {px} px, so smaller sizes are greyed out.',
     coverSizeRaisedShort: 'Raised to {px} px by the minimum cover size',

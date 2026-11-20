@@ -1858,14 +1858,14 @@ export default {
     coverArtHint: 'Daha küçük dosyalar ve daha hızlı indirmeler için kapat.',
     coverMin: 'En küçük kapak boyutu',
     coverMinHint:
-      'Bunun altında Spotify, iTunes ve YouTube Music’ten aynı yayının daha büyük kapağı istenir ve en büyüğü kullanılır. Kapalıyken parçanın kaynağının kapağı kalır.',
+      'Yukarıdaki kapak boyutu hedefini en az bu değere çıkarır. Kapalı: hedef yalnızca kapak boyutudur.',
     coverMinOff: 'Kapalı',
     coverLargest: 'Her zaman en büyük kapağı kullan',
     coverLargestHint:
       'Her indirmede Spotify, iTunes ve YouTube Music’ten yayının kapağı istenir ve en büyüğü gömülür (çoğu zaman iTunes’tan 1200 px). Parça başına biraz daha yavaş. Kapalı: en küçük boyutun altında değilse parçanın kaynağının kapağı.',
     coverSize: 'Kapak boyutu',
     coverSizeHint:
-      'YouTube Music ve Deezer kapakları için. Spotify kapakları her zaman en büyük boyuttadır.',
+      'Her indirmenin kapağının hedeflediği boyut. Daha küçük bir kapak – Spotify’ın en büyüğü 640 px – Spotify, iTunes, YouTube Music veya Deezer’ın aynı şarkı için sahip olduğu en büyük kapakla değiştirilir. Kapaklar asla büyütülmez.',
     coverSizeRaised:
       'Aşağıdaki en küçük kapak boyutu bunu {px} px’e yükseltir, bu yüzden daha küçük boyutlar soluk gösterilir.',
     coverSizeRaisedShort:

@@ -111,20 +111,17 @@ Ezt a `cover.jpg` fájlt az albummappa összes száma megosztja. Egy szám törl
 
 ## Borító felbontása
 
-Csak akkor számít, ha a **Borítók letöltése** (fent) be van kapcsolva. Beállítja a célméretet (szélesség és magasság, pixelben), amelyet a Downtify a **YouTube Music** vagy a **Deezer** forrású beágyazott borítóhoz kér. Válassz egy előbeállítást (300, 600, 800, 1000, 1200), vagy húzd a csúszkát **300 és 1200** között bárhová; a jelenlegi érték pixelben mellette látszik. Az alapértelmezett 600.
+Csak akkor számít, ha a **Borítók letöltése** (fent) be van kapcsolva. A **Borító mérete** az a méret, amelyre minden letöltés beágyazott borítója törekszik, pixelben (szélesség és magasság). Válassz egy előbeállítást (600, 1000, 1200, 1400, 2000), vagy írj be bármilyen értéket **300 és 3000** között. Az alapértelmezett 1200.
 
-Hasznos, ha a könyvtáradat olyan médiaszerverbe táplálod, mint a Plex, amely a borítókat nagyobb felbontásban jeleníti meg, mint amit a Downtify alapból beágyaz.
+Ha a dal saját forrásának borítója kisebb — a Spotify legnagyobbja 640 px, a Deezeré 1000 px —, a Downtify egyszerre kéri a Spotifytól, az iTunestól, a YouTube Musictól és a Deezertől ugyanannak a dalnak a borítóját, mindegyiktől ebben a méretben, és a legnagyobbat ágyazza be. Egy borító csak akkor számít, ha az előadó és a cím egyezik a dallal, így más dal borítója sosem kerül bele.
 
-A két forrás eltérően alkalmazza a beállítást, mivel csak az egyiket lehet ténylegesen igény szerint átméretezni:
+A borítókat sosem nagyítja. Az iTunes és a YouTube Music az eredeti képét a kért méretre kicsinyíti, és magát az eredetit küldi, ha az kisebb — a legtöbb kiadás ott 1400 px vagy nagyobb. A Deezer csak négy rögzített méretet kínál (56, 250, 500 és 1000 px); a legkisebb, amely eléri a méretet, lesz használva. Ha egyik forrás sem éri el, a legnagyobb talált borító kerül beágyazásra, és a napló ezt jelzi.
 
-- A **YouTube Music** bélyegképei az URL szerkesztésével átméretezhetők — az élő CDN-en ellenőrizve a magasabb előbeállítások a legtöbb albumborítónál valóban több részletet adnak (nem csak felskálázást), egészen a forráskép saját felbontásáig.
-- A **Deezer** bármely szám, album, előadó vagy lejátszási lista borítójához csak négy fix méretet kínál (56, 250, 500 és 1000 px) — nincs köztes méret, amit kérni lehetne. A Downtify a négy közül a legkisebbet választja, amely még legalább akkora, mint a beállított érték (300 px kérésére az 500 px-eset kapod, mert nincs pontosan 300 px-es méret); 1000 px-nél többet kérve is az 1000 px-es jön, a Deezer legnagyobbja.
+A **Borító minimális mérete** (alapból kikapcsolva) megemeli ezt a célt: a borítónak a két érték közül a nagyobbat kell elérnie, és a minimum alatti **Borító mérete** gombok szürkék.
 
-::: info A Spotify-forrású borítókat ez nem érinti
-A Downtify már a **legnagyobb** borítót beágyazza, amit a Spotify nyilvános embed API-ja a Spotify által feloldott számokhoz/albumokhoz/lejátszási listákhoz kínál — nincs nagyobb méret, amit kérni lehetne. Ez a beállítás csak a YouTube Musicon keresztül feloldott számoknál (szabad szöveges keresés, YouTube URL-ek, és minden Spotify-szám, amelyet a tényleges hanghoz újra a YouTube Musichoz társítottak), illetve a Deezeren át feloldottaknál (beillesztett Deezer-hivatkozás vagy egy szám a [Listák](charts.md) közül) emeli a plafont.
-:::
+A könyvtáradban már meglévő borítók erre a méretre hozásához futtasd a **Könyvtár feljavítása** funkciót a borítók kategóriájával; alapból az 1200 px alatti borítókat javítja.
 
-Ennek az értéknek a módosítása a Beállításokban azonnal érvénybe lép, a jelenleg megnyitott keresőoldalra is — nem kell újra letölteni semmit, ami már a lemezen van.
+Az érték módosítása a Beállításokban azonnal érvényes — nem kell újra letölteni semmit, ami már a lemezen van.
 
 ## Meglévő fájlok felülírása
 

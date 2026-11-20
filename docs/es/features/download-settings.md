@@ -111,20 +111,17 @@ Ese `cover.jpg` lo comparten todas las canciones de la carpeta del álbum. Borra
 
 ## Resolución de la portada
 
-Solo importa cuando **Descargar portadas** (arriba) está activado. Fija el tamaño objetivo (ancho y alto, en píxeles) que Downtify pide para la portada incrustada procedente de **YouTube Music** o **Deezer**. Elige un valor predefinido (300, 600, 800, 1000, 1200) o arrastra el control deslizante de **300 a 1200**; el valor actual en píxeles aparece a su lado. Por defecto es 600.
+Solo importa cuando **Descargar portadas** (arriba) está activado. **Tamaño de portada** es el tamaño al que apunta la portada incrustada de cada descarga, en píxeles (ancho y alto). Elige un valor predefinido (600, 1000, 1200, 1400, 2000) o escribe cualquier valor de **300 a 3000**. Por defecto es 1200.
 
-Es útil al alimentar tu biblioteca a un servidor multimedia como Plex, que muestra portadas con más resolución de la que Downtify incrusta por defecto.
+Cuando la portada que ofrece la fuente de la pista es más pequeña — la mayor de Spotify es de 640 px, la de Deezer de 1000 px —, Downtify pide a la vez a Spotify, iTunes, YouTube Music y Deezer la portada de la misma canción, cada una a ese tamaño, e incrusta la mayor. Una portada solo cuenta si el artista y el título coinciden con la pista, así que nunca se usa la de otra canción.
 
-Las dos fuentes aplican el ajuste de forma distinta, ya que solo una de ellas puede redimensionarse realmente bajo demanda:
+Las portadas nunca se amplían. iTunes y YouTube Music reducen su imagen original al tamaño pedido y envían el original cuando es más pequeño — la mayoría de los lanzamientos tienen allí 1400 px o más. Deezer solo ofrece cuatro tamaños fijos (56, 250, 500 y 1000 px); se usa el más pequeño que alcanza el tamaño de portada. Si ninguna fuente lo alcanza, se incrusta la portada más grande encontrada y el registro lo indica.
 
-- Las miniaturas de **YouTube Music** se pueden redimensionar editando su URL — comprobado contra el CDN real, los valores altos devuelven de verdad más detalle (no solo ampliación) en la mayoría de portadas, hasta la resolución de la propia imagen de origen.
-- **Deezer** solo ofrece cuatro tamaños fijos para la portada de cualquier canción, álbum, artista o playlist (56, 250, 500 y 1000 px) — no hay tamaño intermedio que pedir. Downtify elige el menor de esos cuatro que aún sea al menos tan grande como el valor configurado (pedir 300 px da la de 500 px, ya que no existe un tamaño exacto de 300 px); pedir más de 1000 px también da la de 1000 px, la mayor de Deezer.
+**Tamaño mínimo de portada** (desactivado por defecto) sube ese objetivo: una portada tiene que alcanzar el mayor de los dos valores, y los botones de **Tamaño de portada** por debajo del mínimo aparecen en gris.
 
-::: info Las portadas procedentes de Spotify no se ven afectadas
-Downtify ya incrusta la **mayor** portada que ofrece la API de embed pública de Spotify para canciones/álbumes/playlists resueltos por Spotify — no hay un tamaño mayor que pedir. Este ajuste solo eleva el techo para las canciones resueltas por YouTube Music (búsqueda de texto libre, URL de YouTube y cualquier canción de Spotify reasignada a YouTube Music para el audio en sí) o por Deezer (un enlace de Deezer pegado, o una canción de las [Listas de éxitos](charts.md)).
-:::
+Para llevar a este tamaño las portadas que ya están en tu biblioteca, ejecuta **Mejorar biblioteca** con la categoría de portadas; por defecto mejora las portadas de menos de 1200 px.
 
-Cambiar este valor en Ajustes surte efecto de inmediato, incluso en la página de búsqueda abierta en ese momento — no obliga a volver a descargar nada que ya esté en disco.
+Cambiar este valor en Ajustes surte efecto de inmediato — no hace falta volver a descargar nada de lo que ya está en el disco.
 
 ## Sobrescribir archivos existentes
 

@@ -1855,14 +1855,14 @@ export default {
       '비활성화하면 파일 크기가 줄어들고 다운로드 속도가 빨라집니다.',
     coverMin: '최소 커버 크기',
     coverMinHint:
-      '이보다 작으면 Spotify, iTunes, YouTube Music에 같은 발매의 더 큰 커버를 요청하고 가장 큰 것을 씁니다. 끄면 곡 출처의 커버를 그대로 씁니다.',
+      '위의 커버 크기 목표를 최소 이 값으로 올립니다. 끄면 커버 크기만 목표가 됩니다.',
     coverMinOff: '끔',
     coverLargest: '항상 가장 큰 커버 사용',
     coverLargestHint:
       '다운로드할 때마다 Spotify, iTunes, YouTube Music에 해당 앨범 커버를 요청하고 가장 큰 것을 넣습니다(iTunes에서 1200 px인 경우가 많음). 곡마다 조금 느려집니다. 끄면: 최소 크기보다 작지 않은 한 곡 출처의 커버를 씁니다.',
     coverSize: '커버 해상도',
     coverSizeHint:
-      'YouTube Music 및 Deezer에서 가져오는 커버에 적용됩니다. Spotify 커버는 항상 사용 가능한 최대 해상도로 저장됩니다.',
+      '모든 다운로드의 커버가 목표로 하는 크기입니다. 이보다 작은 커버(Spotify의 최대 크기는 640px)는 Spotify, iTunes, YouTube Music, Deezer에 있는 같은 곡의 가장 큰 커버로 바뀝니다. 커버를 확대하지는 않습니다.',
     coverSizeRaised:
       '아래의 최소 커버 크기 때문에 {px}px로 올라가므로 더 작은 크기는 흐리게 표시됩니다.',
     coverSizeRaisedShort: '최소 커버 크기 때문에 {px}px로 올라감',
