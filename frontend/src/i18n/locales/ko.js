@@ -566,6 +566,13 @@ export default {
       '올바른 YouTube 영상 또는 SoundCloud 트랙 링크 형식이 아닙니다.',
     playlistDownloads: '재생목록 다운로드',
     sources: '다운로드 출처',
+    fromWatch: '{name}에서',
+    fromWatchTitle: '모니터가 {name} 때문에 내려받고 있습니다. 감시를 엽니다.',
+    watches: '감시별 다운로드',
+    watchesHint:
+      '이 대기열의 노래가 어느 모니터 감시에서 왔는지 보여 줍니다. 열어서 일시 중지하거나 감시를 멈추세요.',
+    watchWaiting: '{count}곡 남음',
+    openWatchOriginal: '원본 열기',
     noSourcesYet: '완료된 다운로드의 출처가 여기에 표시됩니다.',
     importTitle: '라이브러리 가져오기',
     importHint: 'Soundiiz, TuneMyMusic, Exportify 등에서 내보낸 CSV 파일.',

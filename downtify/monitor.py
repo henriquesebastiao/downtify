@@ -2531,6 +2531,62 @@ async def check_watch(
         )
 
 
+def _watch_cover_file(
+    playlist: MonitoredPlaylist, downloader: Downloader
+) -> str:
+    """Where a watched playlist's cover is saved (see
+    :func:`_download_cover_for_watch`), relative to the download folder -
+    what ``/playlist-cover?file=`` takes. ``''`` for an artist (the page
+    shows the artist's photo) or when the path can't be worked out."""
+
+    if playlist.kind != KIND_PLAYLIST:
+        return ''
+    try:
+        organize = (
+            downloader.organize_by_artist or downloader.organize_by_album
+        )
+        root = Path(downloader.download_dir)
+        m3u_path = m3u.m3u_path_for(
+            root,
+            playlist.name,
+            playlist_subdir=None
+            if organize
+            else m3u.sanitize_playlist_name(playlist.name),
+        )
+        return Path(m3u_path).with_suffix('.jpg').relative_to(root).as_posix()
+    except Exception:
+        return ''
+
+
+def queue_watch(
+    playlist: MonitoredPlaylist, downloader: Downloader
+) -> dict[str, Any]:
+    """The watch a download came from, as the queue shows it."""
+
+    return {
+        'id': playlist.id,
+        'name': playlist.name,
+        'kind': playlist.kind,
+        'url': playlist.url,
+        'source': playlist.source,
+        'cover_file': _watch_cover_file(playlist, downloader),
+    }
+
+
+def with_watch(
+    broadcast: Callable[[dict[str, Any]], Any], watch: dict[str, Any]
+) -> Callable[[dict[str, Any]], Any]:
+    """*broadcast*, adding ``watch`` to every song event, so the queue can
+    say which watch is downloading each song."""
+
+    def send(message: dict[str, Any]) -> Any:
+        if isinstance(message, dict) and 'song' in message:
+            message = {**message, 'watch': watch}
+        return broadcast(message)
+
+    return send
+
+
 async def _check_watch_online(
     playlist: MonitoredPlaylist,
     db: PlaylistMonitorDB,
@@ -2549,6 +2605,10 @@ async def _check_watch_online(
         return 0
     _checks_running.add(playlist.id)
     try:
+        if playlist.kind != KIND_PODCAST:
+            broadcast = with_watch(
+                broadcast, queue_watch(playlist, downloader)
+            )
         if playlist.kind == KIND_PODCAST:
             if podcasts is None:
                 logger.warning(

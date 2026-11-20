@@ -566,6 +566,13 @@ export default {
       'Bu bir YouTube video ya da SoundCloud parça bağlantısına benzemiyor.',
     playlistDownloads: 'Çalma listesi indirmeleri',
     sources: 'İndirme kaynağı',
+    fromWatch: '{name} kaynaklı',
+    fromWatchTitle: 'Monitör bunu {name} için indiriyor. İzlemeyi açar.',
+    watches: 'İzlemeler için indirilenler',
+    watchesHint:
+      'Bu kuyruktaki şarkıların geldiği Monitör izlemeleri. Duraklatmak veya izlemeyi bırakmak için birini açın.',
+    watchWaiting: '{count} kaldı',
+    openWatchOriginal: 'Orijinali aç',
     noSourcesYet: 'Tamamlanan indirmeler kaynaklarını burada gösterir.',
     importTitle: 'Kitaplık içe aktar',
     importHint:
