@@ -1679,6 +1679,17 @@ export default {
     sourceSoundcloud: 'SoundCloud',
     sourceSoundcloudHint:
       'Subidas que faltan en otros sitios, y la propia canción de los enlaces de SoundCloud',
+    sourceNeedsTitle: 'Qué necesita cada fuente',
+    sourceNeedsSlskd:
+      'slskd: tu propio servidor slskd, conectado a la red gratuita Soulseek. Sin suscripción; la calidad es lo que comparte la gente, a menudo FLAC o MP3 320.',
+    sourceNeedsDeemix:
+      'Deemix: tu propio servidor Deemix y tu propia cuenta de Deezer. Una cuenta gratuita solo obtiene MP3 128 kbps; MP3 320 y FLAC necesitan un plan de pago de Deezer. Downtify no lo proporciona ni lo evita.',
+    sourceNeedsYoutube:
+      'YouTube Music y YouTube: nada que configurar. El audio es con pérdida (unos 128–160 kbps).',
+    sourceNeedsSoundcloud:
+      'SoundCloud: nada que configurar, sin cuenta. Las transmisiones suelen ser de 128–160 kbps.',
+    sourceNeedsCover:
+      'Sea cual sea la fuente, la portada incrustada es la que Downtify obtiene para la canción (Ajustes → Descargas → Tamaño de portada).',
     deemixTitle: 'Deemix',
     deemixHint:
       'Download from your own Deemix server. Requested quality requires the matching Deezer entitlement.',

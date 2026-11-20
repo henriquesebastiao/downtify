@@ -1648,6 +1648,17 @@ export default {
     sourceSoundcloud: 'SoundCloud',
     sourceSoundcloudHint:
       'Başka yerde olmayan yüklemeler ve SoundCloud bağlantılarının kendi parçası',
+    sourceNeedsTitle: 'Her kaynağın ihtiyacı',
+    sourceNeedsSlskd:
+      'slskd: ücretsiz Soulseek ağına bağlı kendi slskd sunucun. Abonelik yok; kalite insanların paylaştığı kadardır, çoğu zaman FLAC veya MP3 320.',
+    sourceNeedsDeemix:
+      'Deemix: kendi Deemix sunucun ve kendi Deezer hesabın. Ücretsiz hesap yalnızca MP3 128 kbps alır; MP3 320 ve FLAC için ücretli Deezer planı gerekir. Downtify bunu sağlamaz ve atlatmaz.',
+    sourceNeedsYoutube:
+      'YouTube Music ve YouTube: ayarlanacak bir şey yok. Ses kayıplıdır (yaklaşık 128–160 kbps).',
+    sourceNeedsSoundcloud:
+      'SoundCloud: ayarlanacak bir şey ve hesap yok. Yayınlar genellikle 128–160 kbps’tir.',
+    sourceNeedsCover:
+      'Kaynak ne olursa olsun, gömülen kapak Downtify’ın şarkı için indirdiği kapaktır (Ayarlar → İndirmeler → Kapak boyutu).',
     deemixTitle: 'Deemix',
     deemixHint:
       'Download from your own Deemix server. Requested quality requires the matching Deezer entitlement.',

@@ -1662,6 +1662,17 @@ export default {
     sourceSoundcloud: 'SoundCloud',
     sourceSoundcloudHint:
       'Máshol hiányzó feltöltések, és a SoundCloud linkek saját száma',
+    sourceNeedsTitle: 'Mit igényel az egyes források',
+    sourceNeedsSlskd:
+      'slskd: saját slskd szerver, az ingyenes Soulseek hálózathoz kapcsolva. Nincs előfizetés; a minőség az, amit mások megosztanak, gyakran FLAC vagy MP3 320.',
+    sourceNeedsDeemix:
+      'Deemix: saját Deemix szerver és saját Deezer-fiók. Ingyenes fiókkal csak MP3 128 kbps jár; az MP3 320 és a FLAC fizetős Deezer-csomagot igényel. A Downtify nem ad ilyet, és nem is kerüli meg.',
+    sourceNeedsYoutube:
+      'YouTube Music és YouTube: nincs mit beállítani. A hang veszteséges (kb. 128–160 kbps).',
+    sourceNeedsSoundcloud:
+      'SoundCloud: nincs mit beállítani, fiók sem kell. A streamek általában 128–160 kbps-osak.',
+    sourceNeedsCover:
+      'Bármelyik forrás is, a beágyazott borító az, amelyet a Downtify a dalhoz letölt (Beállítások → Letöltések → Borítóméret).',
     deemixTitle: 'Deemix',
     deemixHint:
       'Download from your own Deemix server. Requested quality requires the matching Deezer entitlement.',

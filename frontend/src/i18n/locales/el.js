@@ -1684,6 +1684,17 @@ export default {
     sourceSoundcloud: 'SoundCloud',
     sourceSoundcloudHint:
       'Ανεβάσματα που λείπουν αλλού, και το ίδιο το κομμάτι των συνδέσμων SoundCloud',
+    sourceNeedsTitle: 'Τι χρειάζεται κάθε πηγή',
+    sourceNeedsSlskd:
+      'slskd: δικός σας διακομιστής slskd, συνδεδεμένος στο δωρεάν δίκτυο Soulseek. Χωρίς συνδρομή· η ποιότητα είναι ό,τι μοιράζονται οι χρήστες, συχνά FLAC ή MP3 320.',
+    sourceNeedsDeemix:
+      'Deemix: δικός σας διακομιστής Deemix και δικός σας λογαριασμός Deezer. Ένας δωρεάν λογαριασμός παίρνει μόνο MP3 128 kbps· τα MP3 320 και FLAC χρειάζονται πληρωμένο πρόγραμμα Deezer. Το Downtify δεν παρέχει ούτε παρακάμπτει κάποιο.',
+    sourceNeedsYoutube:
+      'YouTube Music και YouTube: τίποτα για ρύθμιση. Ο ήχος είναι με απώλειες (περίπου 128–160 kbps).',
+    sourceNeedsSoundcloud:
+      'SoundCloud: τίποτα για ρύθμιση, χωρίς λογαριασμό. Οι ροές είναι συνήθως 128–160 kbps.',
+    sourceNeedsCover:
+      'Όποια κι αν είναι η πηγή, το ενσωματωμένο εξώφυλλο είναι αυτό που κατεβάζει το Downtify για το τραγούδι (Ρυθμίσεις → Λήψεις → Μέγεθος εξωφύλλου).',
     deemixTitle: 'Deemix',
     deemixHint:
       'Download from your own Deemix server. Requested quality requires the matching Deezer entitlement.',

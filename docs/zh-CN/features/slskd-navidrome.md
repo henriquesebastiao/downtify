@@ -22,6 +22,8 @@ icon: lucide/share-2
 | **SoundCloud** | 默认关闭。搜索 SoundCloud；粘贴 SoundCloud 链接时下载对应的确切歌曲，参见 [SoundCloud](soundcloud.md)。 |
 | **slskd** | 通过 slskd 搜索 Soulseek，并下载最佳匹配文件。 |
 
+各来源需要什么：**slskd** 需要你自己的 slskd 服务器，连接免费的 Soulseek 网络（无需订阅；音质取决于他人分享的文件，常见 FLAC 或 MP3 320）。**Deemix** 需要你自己的 Deemix 服务器和你自己的 Deezer 账号：免费账号只能获得 MP3 128 kbps，MP3 320 和 FLAC 需要 Deezer 付费套餐。**YouTube Music**、**YouTube** 和 **SoundCloud** 无需设置，音频为有损，约 128–160 kbps。无论来源如何，嵌入的封面都是 Downtify 为这首歌获取的封面，尺寸取自下载设置中的封面尺寸。
+
 启用 slskd 会将其放在列表首位。若 slskd 成为唯一来源，之后仍会尝试 YouTube Music 和 YouTube，避免 slskd 找不到歌曲时无法下载。下载队列会显示每首歌曲的实际来源。
 
 从搜索栏下载的歌曲会使用结果中的标题、艺人和时长，按相同顺序尝试各来源。选中的 YouTube Music 视频不会被固定为音频，因此 slskd 可以先提供其他版本或无损文件，再使用 YouTube 作为备用。
