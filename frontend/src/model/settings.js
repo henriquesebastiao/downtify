@@ -23,6 +23,7 @@ const settings = ref({
     api_key: '',
     source_dir: '/slskd',
     leave_in_place: true,
+    keep_file_cover: false,
     timeout_seconds: 20,
     search_retries: 5,
     search_poll_seconds: 15,

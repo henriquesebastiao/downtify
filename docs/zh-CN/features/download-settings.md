@@ -146,7 +146,7 @@ YouTube 音频的比特率最高约为 **128–160 kbps**（AAC 或 Opus），Do
 
 ### 封面来自 Spotify 或 YouTube Music，而非音频文件
 
-无论下载的音频自带什么封面（包括 slskd 文件中嵌入的高分辨率封面），写入标签时都会**丢弃并替换**。Downtify 始终会从 Spotify 或 YouTube Music 获取曲目封面（SoundCloud 链接则使用 SoundCloud 封面），并按你设置的[封面分辨率](#cover-art-resolution)（默认 600px）嵌入。标题、艺人、专辑和其他标签也一样：不会保留来源音频自身的标签。
+无论下载的音频自带什么封面（包括 slskd 文件中嵌入的高分辨率封面），写入标签时都会**丢弃并替换**。Downtify 始终会从 Spotify 或 YouTube Music 获取曲目封面（SoundCloud 链接则使用 SoundCloud 封面），并按你设置的[封面分辨率](#cover-art-resolution)（默认 600px）嵌入。标题、艺人、专辑和其他标签也一样：不会保留来源音频自身的标签。唯一的例外是**文件自带封面更大时保留**（设置 → 音频来源 → slskd，默认关闭）：开启后，如果 slskd 文件自带的封面比获取的封面更大，就会保留它。分享的文件常带有专辑的完整尺寸封面，这样可以两全其美。
 
 如果只是想为已有文件添加大尺寸封面，重新下载并不是最佳方法。[升级媒体库](library-upgrade.md)会将每个文件的嵌入封面与 Spotify、iTunes 和 YouTube Music 的版本进行比较，写入最大尺寸的图片，补充缺失歌词和标签，而不会改动音频。
 

@@ -1642,6 +1642,9 @@ export default {
     slskdInPlace: '將檔案留在 slskd 資料夾',
     slskdInPlaceHint:
       '開啟：直接在原處寫入標籤並保留檔案。關閉：複製到下載資料夾並寫入標籤，成功匯入後移除來源檔案。複製、寫入標籤或驗證失敗時會保留來源檔案。',
+    slskdKeepCover: '檔案自帶封面較大時保留',
+    slskdKeepCoverHint:
+      '分享的檔案常帶有專輯的完整尺寸封面。開啟：slskd 檔案自帶的封面比 Downtify 取得的（Spotify、YouTube Music）更大時予以保留。關閉：總是以取得的封面取代。',
     youtubeTitle: 'YouTube',
     cookies: 'YouTube Cookie',
     cookiesHint:

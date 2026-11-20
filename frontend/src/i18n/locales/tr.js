@@ -1725,6 +1725,9 @@ export default {
     slskdInPlace: 'Dosyaları slskd klasöründe bırak',
     slskdInPlaceHint:
       'Açık: dosyaları yerinde etiketle ve koru. Kapalı: İndirilenler klasörüne kopyalayıp etiketle; kaynak yalnızca içe aktarma başarılı olursa silinir. Hata olursa kaynak korunur.',
+    slskdKeepCover: 'Daha büyükse dosyanın kendi kapağını koru',
+    slskdKeepCoverHint:
+      'Paylaşılan dosyalar çoğu zaman albümün tam boyutlu kapağını taşır. Açık: bir slskd dosyası, kendi kapağı Downtify’ın getirdiğinden (Spotify, YouTube Music) büyükse onu korur. Kapalı: getirilen kapak her zaman onun yerine geçer.',
     youtubeTitle: 'YouTube',
     cookies: 'YouTube çerezleri',
     cookiesHint:

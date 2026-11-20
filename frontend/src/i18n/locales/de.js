@@ -1783,6 +1783,9 @@ export default {
     slskdInPlace: 'Dateien im slskd-Ordner belassen',
     slskdInPlaceHint:
       'Ein: Dateien am Speicherort taggen und behalten. Aus: in Downloads kopieren und taggen; die Quelle wird erst nach erfolgreichem Import entfernt. Bei Fehlern bleibt sie erhalten.',
+    slskdKeepCover: 'Eigenes Cover der Datei behalten, wenn es größer ist',
+    slskdKeepCoverHint:
+      'Geteilte Dateien enthalten oft das Album-Cover in voller Größe. An: Eine slskd-Datei behält ihr Cover, wenn es größer ist als das, das Downtify lädt (Spotify, YouTube Music). Aus: Das geladene Cover ersetzt es immer.',
     youtubeTitle: 'YouTube',
     cookies: 'YouTube-Cookies',
     cookiesHint:

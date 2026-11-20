@@ -1721,6 +1721,9 @@ export default {
     slskdInPlace: 'slskd 폴더에 파일 그대로 유지',
     slskdInPlaceHint:
       '켜짐: 원래 위치에서 태그를 작성하고 파일을 유지합니다. 꺼짐: 다운로드 폴더로 복사하고 태그를 작성한 뒤 가져오기가 성공해야 원본을 삭제합니다. 실패하면 원본을 유지합니다.',
+    slskdKeepCover: '파일 자체 커버가 더 크면 유지',
+    slskdKeepCoverHint:
+      '공유 파일에는 앨범의 원본 크기 커버가 들어 있는 경우가 많습니다. 켜면: slskd 파일의 자체 커버가 Downtify가 가져온 커버(Spotify, YouTube Music)보다 크면 그대로 둡니다. 끄면: 가져온 커버로 항상 바꿉니다.',
     youtubeTitle: 'YouTube',
     cookies: 'YouTube 쿠키',
     cookiesHint:

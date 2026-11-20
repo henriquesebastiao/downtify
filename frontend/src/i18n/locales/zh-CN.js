@@ -1612,6 +1612,9 @@ export default {
     slskdInPlace: '将文件保留在 slskd 文件夹中',
     slskdInPlaceHint:
       '开启：在原位置写入标签并保留文件。关闭：复制并标记到下载文件夹；仅在成功导入后删除源文件。复制、标记或验证失败时会保留源文件。',
+    slskdKeepCover: '文件自带封面更大时保留',
+    slskdKeepCoverHint:
+      '分享的文件常带有专辑的完整尺寸封面。开启：slskd 文件自带的封面比 Downtify 获取的（Spotify、YouTube Music）更大时予以保留。关闭：总是用获取的封面替换。',
     youtubeTitle: 'YouTube',
     cookies: 'YouTube Cookie',
     cookiesHint:

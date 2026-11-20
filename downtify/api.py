@@ -769,6 +769,9 @@ DEFAULT_SETTINGS: dict[str, Any] = {
         'download_dir': '/downloads',
         'source_dir': '/slskd',
         'leave_in_place': True,
+        # Keep the cover an slskd file came with when it is larger than
+        # the one Downtify fetches (downloader._keep_larger_file_cover).
+        'keep_file_cover': False,
         'timeout_seconds': 20,
         'search_retries': 5,
         'search_poll_seconds': 15,
@@ -1016,6 +1019,7 @@ def _effective_slskd_settings(settings: dict[str, Any]) -> dict[str, Any]:
         'download_dir': download_dir,
         'source_dir': source_dir,
         'leave_in_place': leave_in_place,
+        'keep_file_cover': bool(raw.get('keep_file_cover', False)),
         'extensions': _slskd_extensions(raw),
         'timeout_seconds': bounded('timeout_seconds', 20, 5, 120),
         'search_retries': bounded('search_retries', 5, 1, 20),
