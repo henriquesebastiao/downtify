@@ -82,7 +82,7 @@ Steuert, wie viele Songs gleichzeitig heruntergeladen werden. Wähle eine Vorein
 | **8** | Schneller bei großen Playlists |
 | **bis 30** | Am besten für sehr schnelle Verbindungen; braucht mehr CPU und Bandbreite und erhöht die Chance, von YouTube gedrosselt zu werden. |
 
-Das Limit gilt für jeden Batch-Download — Playlist-/Album-Downloads, den Batch-Queue-Endpunkt und CSV-[Bibliotheksimporte](library-import.md) — sowie für die Abfragen der Synchronisierung der **[Vorhandenen Musikordner](external-library.md)** (Songtexte, Cover, Genre). Es gilt **nicht** für die Durchläufe der Playlist-Überwachung, die neue Titel einzeln herunterladen. Eine Änderung dieses Werts in den Einstellungen wirkt sofort ohne Neustart; der Server begrenzt jeden Wert außerhalb von `1–30`.
+Das Limit gilt für jeden Batch-Download — Playlist-/Album-Downloads, den Batch-Queue-Endpunkt und CSV-[Bibliotheksimporte](library-import.md) — sowie für die Abfragen der Synchronisierung der **[Vorhandenen Musikordner](external-library.md)** (Songtexte, Cover, Genre). Es gilt auch für die Prüfungen der [Playlist-Überwachung](playlist-monitor.md): Die Downloads einer Überwachung warten wie alle anderen auf einen freien Platz und stehen solange als wartend in der Warteschlange. Viele Überwachungen auf einmal hinzuzufügen, **Jetzt prüfen** oder **Alle fehlenden herunterladen** starten so nie mehr Downloads als hier eingestellt. Eine Änderung dieses Werts in den Einstellungen wirkt sofort ohne Neustart; der Server begrenzt jeden Wert außerhalb von `1–30`.
 
 ## Pause zwischen Downloads
 

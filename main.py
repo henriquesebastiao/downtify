@@ -108,7 +108,12 @@ from downtify.likes import LikedTracks
 from downtify.loudness import LoudnessAnalyzer
 from downtify.lyrics import read_track_lyrics
 from downtify.lyrics_cache import LyricsLookupCache
-from downtify.monitor import PlaylistMonitorDB, monitor_loop, reconcile_loop
+from downtify.monitor import (
+    PlaylistMonitorDB,
+    monitor_loop,
+    reconcile_loop,
+    share_download_slots,
+)
 from downtify.navidrome_index import NavidromeIndex
 from downtify.oidc import (
     OIDCConfig,
@@ -673,6 +678,8 @@ def build_app() -> FastAPI:
             ),
             name='playlist-spotify-cache',
         )
+        # Watch downloads share the "Parallel downloads" limit.
+        share_download_slots(lambda: api.state.download_semaphore)
         api.spawn_task(
             monitor_loop(
                 db=api.state.monitor_db,
