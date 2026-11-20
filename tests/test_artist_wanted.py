@@ -146,6 +146,7 @@ def test_wanted_view_groups_by_artist_with_totals(db, monkeypatch):
         'artists': 2,
         'unchecked': 0,
         'unchecked_releases': 0,
+        'upcoming': 0,
     }
     first = view['artists'][1]
     assert [r['name'] for r in first['releases']] == ['First', 'Second']
@@ -170,6 +171,7 @@ def test_unchecked_artist_is_listed_and_counted(db, monkeypatch):
         'artists': 1,
         'unchecked': 1,
         'unchecked_releases': 1,
+        'upcoming': 0,
     }
     assert view['artists'][0]['unchecked'] == 1
     assert view['artists'][0]['releases'][0]['checked'] is False
@@ -248,6 +250,7 @@ def test_no_artist_watches_is_empty(db):
             'artists': 0,
             'unchecked': 0,
             'unchecked_releases': 0,
+            'upcoming': 0,
         },
     }
 

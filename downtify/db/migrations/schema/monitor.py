@@ -87,6 +87,7 @@ DDL: list[str] = [
         not_own BIGINT NOT NULL DEFAULT 0,
         choice TEXT NOT NULL DEFAULT '',
         listed_at TEXT NOT NULL,
+        release_date TEXT NOT NULL DEFAULT '',
         PRIMARY KEY (playlist_id, album_id),
         FOREIGN KEY (playlist_id) REFERENCES monitored_playlists (id)
             ON DELETE CASCADE

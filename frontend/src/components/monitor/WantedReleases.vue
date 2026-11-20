@@ -16,8 +16,14 @@
           <template v-if="totals.tracks > 0">
             {{ summaryLine }}
           </template>
-          <template v-if="totals.uncheckedReleases > 0">
+          <template v-if="data.totals?.upcoming > 0">
             <template v-if="totals.tracks > 0"> · </template>
+            {{ t('monitor.wantedUpcoming', { count: data.totals.upcoming }) }}
+          </template>
+          <template v-if="totals.uncheckedReleases > 0">
+            <template v-if="totals.tracks > 0 || data.totals?.upcoming > 0">
+              ·
+            </template>
             {{
               t('monitor.wantedUnchecked', { count: totals.uncheckedReleases })
             }}
@@ -204,7 +210,12 @@ import UiSkeleton from '../ui/UiSkeleton.vue'
 import UiSwitch from '../ui/UiSwitch.vue'
 import monitorAPI from '/src/model/monitor'
 import { useUi } from '/src/model/ui'
-import { canSwitch, isOn, stateTone } from '/src/lib/artistReleases'
+import {
+  canSwitch,
+  isOn,
+  stateLabel as releaseStateLabel,
+  stateTone,
+} from '/src/lib/artistReleases'
 import {
   TYPES,
   filterWanted,
@@ -220,7 +231,7 @@ import { useI18n } from '/src/i18n'
 // The releases listed (read or not), for the tab's count badge.
 const emit = defineEmits(['totals'])
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const ui = useUi()
 
 const data = ref(null)
@@ -273,13 +284,7 @@ function typeLabel(release) {
 
 // Same wording as an artist's own page.
 function stateLabel(release) {
-  if (release.state === 'complete' || release.state === 'partly') {
-    return t(`artistReleases.state.${release.state}`, {
-      have: release.have,
-      total: release.total || '?',
-    })
-  }
-  return t(`artistReleases.state.${release.state}`)
+  return releaseStateLabel(release, t, locale.value)
 }
 
 function errorOf(err) {

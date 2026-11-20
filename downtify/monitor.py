@@ -17,7 +17,13 @@ from typing import Any, Callable, Optional
 from loguru import logger
 
 from . import deezer, m3u, musicbrainz, providers, spotify
-from .artist_catalogue import ArtistCatalogue, release_key, watch_kinds
+from .artist_catalogue import (
+    ArtistCatalogue,
+    release_day,
+    release_key,
+    upcoming,
+    watch_kinds,
+)
 from .artist_catalogue import wanted as release_wanted
 from .artist_release_store import ArtistReleaseStore
 from .cover_cache import CoverArtCache
@@ -1697,8 +1703,38 @@ def _deezer_releases(
             len(releases),
         )
         if playlist.new_only and not playlist.baseline_pending:
-            db.mark_albums_skipped(playlist.id, releases)
+            db.mark_albums_skipped(playlist.id, out_already(releases))
     return releases
+
+
+def out_already(albums: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """*albums* without the announced ones: a "new releases only" watch
+    records what is out as already there, never what is still to come."""
+
+    return [a for a in albums if not upcoming(a)]
+
+
+def spread_release_dates(albums: list[dict[str, Any]]) -> None:
+    """Give every listing of a release the date one catalogue has for
+    it (YouTube Music gives a year at most), so an announced album that
+    another catalogue lists already waits for its release day too."""
+
+    dates: dict[tuple[str, str], str] = {}
+    for album in albums:
+        day = release_day(album)
+        key = (
+            release_key(str(album.get('name') or '')),
+            release_type_of(album),
+        )
+        if len(day) > len(dates.get(key, '')):
+            dates[key] = day
+    for album in albums:
+        key = (
+            release_key(str(album.get('name') or '')),
+            release_type_of(album),
+        )
+        if len(dates.get(key, '')) > len(release_day(album)):
+            album['release_date'] = dates[key]
 
 
 def _musicbrainz_releases(
@@ -1764,7 +1800,7 @@ def _musicbrainz_releases(
             len(releases),
         )
         if playlist.new_only and not playlist.baseline_pending:
-            db.mark_albums_skipped(playlist.id, releases)
+            db.mark_albums_skipped(playlist.id, out_already(releases))
     known = {
         (release_key(str(a.get('name') or '')), release_type_of(a))
         for a in listed
@@ -2051,6 +2087,7 @@ async def check_artist(  # noqa: PLR0914  # one sweep: discography, releases, tr
             db.update_playlist, playlist.id, last_checked=_now_iso()
         )
         return 0
+    spread_release_dates(albums)
     # The watch's page lists the whole catalogue from this listing.
     await asyncio.to_thread(db.catalogue.record, playlist.id, albums)
 
@@ -2066,7 +2103,7 @@ async def check_artist(  # noqa: PLR0914  # one sweep: discography, releases, tr
             )
             return 0
         skipped = await asyncio.to_thread(
-            db.mark_albums_skipped, playlist.id, albums
+            db.mark_albums_skipped, playlist.id, out_already(albums)
         )
         logger.info(
             'Artist "{}" watches new releases only: {} existing release(s) '
@@ -2103,6 +2140,8 @@ async def check_artist(  # noqa: PLR0914  # one sweep: discography, releases, tr
         if a.get('album_id')
         and a['album_id'] not in seen
         and release_wanted(a, wanted_types, kinds, choices)
+        # Announced, not out yet: downloaded on its release day.
+        and not upcoming(a)
     ]
     if new_albums:
         logger.info(
@@ -2660,7 +2699,14 @@ async def monitor_loop(
                 await queue_pause.wait()
                 if not pl.enabled:
                     continue
-                if not _is_due(pl.last_checked, pl.interval_minutes):
+                if not _is_due(pl.last_checked, pl.interval_minutes) and not (
+                    pl.kind == KIND_ARTIST
+                    and await asyncio.to_thread(
+                        db.catalogue.release_day_arrived,
+                        pl.id,
+                        pl.last_checked,
+                    )
+                ):
                     continue
                 downloader = get_downloader()
                 if downloader is None:

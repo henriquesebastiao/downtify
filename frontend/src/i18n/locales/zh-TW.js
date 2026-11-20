@@ -1142,6 +1142,7 @@ export default {
     wantedSummary: '{releases} 缺少 {songs}',
     wantedSongs: { one: '{count} 首歌曲', other: '{count} 首歌曲' },
     wantedReleases: { one: '{count} 張發行作品', other: '{count} 張發行作品' },
+    wantedUpcoming: '{count} 張已公布',
     wantedUnchecked: {
       one: '{count} 張發行作品尚未檢查',
       other: '{count} 張發行作品尚未檢查',
@@ -1321,6 +1322,7 @@ export default {
     filter: {
       all: '全部',
       missing: '待下載',
+      upcoming: '即將發行',
       partly: '部分',
       complete: '完整',
       not_watched: '未關注',
@@ -1331,6 +1333,8 @@ export default {
       complete: '完整 · {have}/{total}',
       partly: '部分 · {have}/{total}',
       missing: '待下載',
+      upcoming: '{date} 發行',
+      upcomingNoDate: '即將發行',
       skipped: '關注前已發行',
       not_watched: '未關注',
       off: '已關閉',

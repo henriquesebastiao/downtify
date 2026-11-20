@@ -1215,6 +1215,7 @@ export default {
       one: '{count} kiadványban',
       other: '{count} kiadványban',
     },
+    wantedUpcoming: '{count} bejelentett',
     wantedUnchecked: {
       one: '{count} kiadvány még nincs ellenőrizve',
       other: '{count} kiadvány még nincs ellenőrizve',
@@ -1402,6 +1403,7 @@ export default {
     filter: {
       all: 'Mind',
       missing: 'Letöltendő',
+      upcoming: 'Hamarosan',
       partly: 'Részben megvan',
       complete: 'Teljes',
       not_watched: 'Nem figyelt',
@@ -1412,6 +1414,8 @@ export default {
       complete: 'Teljes · {have}/{total}',
       partly: 'Részben · {have}/{total}',
       missing: 'Letöltendő',
+      upcoming: 'Megjelenik: {date}',
+      upcomingNoDate: 'Hamarosan',
       skipped: 'A figyelés előtt jelent meg',
       not_watched: 'Nem figyelt',
       off: 'Kikapcsolva',

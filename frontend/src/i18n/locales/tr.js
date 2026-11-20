@@ -1207,6 +1207,7 @@ export default {
     wantedSummary: 'Eksik: {releases} {songs}',
     wantedSongs: { one: '{count} şarkı', other: '{count} şarkı' },
     wantedReleases: { one: '{count} yayında', other: '{count} yayında' },
+    wantedUpcoming: '{count} duyuruldu',
     wantedUnchecked: {
       one: '{count} yayın henüz kontrol edilmedi',
       other: '{count} yayın henüz kontrol edilmedi',
@@ -1395,6 +1396,7 @@ export default {
     filter: {
       all: 'Tümü',
       missing: 'İndirilecek',
+      upcoming: 'Yakında',
       partly: 'Kısmen',
       complete: 'Tamam',
       not_watched: 'İzlenmeyen',
@@ -1405,6 +1407,8 @@ export default {
       complete: 'Tamam · {have}/{total}',
       partly: 'Kısmen · {have}/{total}',
       missing: 'İndirilecek',
+      upcoming: '{date} çıkıyor',
+      upcomingNoDate: 'Yakında',
       skipped: 'İzlemeden önce çıktı',
       not_watched: 'İzlenmiyor',
       off: 'Kapalı',

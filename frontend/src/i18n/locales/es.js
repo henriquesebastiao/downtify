@@ -1227,6 +1227,7 @@ export default {
       one: '{count} lanzamiento',
       other: '{count} lanzamientos',
     },
+    wantedUpcoming: '{count} anunciados',
     wantedUnchecked: {
       one: '{count} lanzamiento sin comprobar todavía',
       other: '{count} lanzamientos sin comprobar todavía',
@@ -1415,6 +1416,7 @@ export default {
     filter: {
       all: 'Todos',
       missing: 'Por descargar',
+      upcoming: 'Próximos',
       partly: 'En parte',
       complete: 'Completos',
       not_watched: 'No seguidos',
@@ -1425,6 +1427,8 @@ export default {
       complete: 'Completo · {have}/{total}',
       partly: 'En parte · {have}/{total}',
       missing: 'Por descargar',
+      upcoming: 'Sale el {date}',
+      upcomingNoDate: 'Próximamente',
       skipped: 'Anterior al seguimiento',
       not_watched: 'No seguido',
       off: 'Desactivado',
