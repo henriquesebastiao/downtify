@@ -492,6 +492,58 @@ export default {
     playCountSpotify: 'Plays on Spotify',
     playCountYoutubeMusic: 'Plays on YouTube Music (approximate)',
   },
+  slskdMisses: {
+    title: "Why slskd wasn't used",
+    hint: 'Songs another source downloaded, or nothing found, after slskd had nothing. Click a reason for examples and what to change.',
+    reset: 'Reset',
+    resetTitle: 'Start the count over?',
+    resetBody:
+      'Forgets every reason recorded so far, so the next downloads show whether a settings change helped. Songs and files are not touched.',
+    empty:
+      'Nothing yet: since the last reset, slskd served every download it was asked for.',
+    since: '{count} songs, since {when}',
+    usedInstead: 'Used instead:',
+    nothingFound: 'nothing found',
+    reason: {
+      not_configured: 'slskd not set up',
+      unreachable: "Couldn't reach slskd",
+      search_failed: "Search didn't start",
+      search_timeout: 'Search ran out of time',
+      no_results: 'Nobody shared it',
+      no_match: 'No file matched the song',
+      low_confidence: 'Match below the minimum score',
+      quality_filtered: 'Blocked by quality rules',
+      timeout: 'Download ran out of time',
+      transfer_failed: 'Transfers failed',
+      tag_mismatch: 'Wrong song in the file',
+      unknown: 'Unknown',
+    },
+    fix: {
+      not_configured:
+        'Fill in the server URL and API key in Settings → Audio sources.',
+      unreachable:
+        'slskd was down or unreachable at the time. Check that it runs and the server URL is right.',
+      search_failed:
+        'slskd refused the search, often while it is still connecting to the Soulseek network.',
+      search_timeout:
+        'Searches took longer than the timeout. Raise the total timeout in Settings → Audio sources.',
+      no_results:
+        "No user had the song with a free upload slot. Rare songs often aren't on Soulseek; another try later can find them.",
+      no_match:
+        'Files came back, but none matched the title, artist and length closely enough.',
+      low_confidence:
+        'A close file turned up, but scored below the match threshold that protects against wrong songs (remixes, live versions).',
+      quality_filtered:
+        'Matching files were found, but none passed the format and bitrate rules. Allowing more formats, a lower minimum bitrate, or files with no listed bitrate lets them through.',
+      timeout:
+        "A file was picked but didn't arrive in time. Raise the total or queued timeout.",
+      transfer_failed:
+        'Every file picked was refused or never arrived complete (peers going offline, long queues). Raising Candidate attempts tries more files.',
+      tag_mismatch:
+        "The downloaded file's tags named another song, so it was set aside and kept in slskd's folder.",
+      unknown: 'Recorded without a reason.',
+    },
+  },
   queue: {
     globalPause: 'Pause downloads and watches',
     globalResume: 'Resume downloads and watches',
@@ -1479,6 +1531,9 @@ export default {
       one: '{count} song keeps failing',
       other: '{count} songs keep failing',
     },
+    failuresClear: 'Clear',
+    failuresClearHint:
+      'Clear starts the list over after you changed a setting; songs that still fail come back on the next check.',
     attempts: { one: '{count} try', other: '{count} tries' },
     lastTried: 'last tried {when}',
     songsTitle: 'Songs from this watch',

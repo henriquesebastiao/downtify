@@ -466,6 +466,52 @@ export default {
     playCountSpotify: 'Spotify 播放次数',
     playCountYoutubeMusic: 'YouTube Music 播放次数（估算）',
   },
+  slskdMisses: {
+    title: '为何没有使用 slskd',
+    hint: 'slskd 没有结果后，由其他来源下载或哪里都找不到的歌曲。点击某个原因查看示例和可调整的设置。',
+    reset: '重置',
+    resetTitle: '重新开始统计？',
+    resetBody:
+      '清除目前记录的所有原因，以便接下来的下载显示设置改动是否有效。不会改动歌曲和文件。',
+    empty: '暂无记录：自上次重置以来，slskd 完成了所有交给它的下载。',
+    since: '自 {when} 起 {count} 首',
+    usedInstead: '改用：',
+    nothingFound: '未找到',
+    reason: {
+      not_configured: '未设置 slskd',
+      unreachable: '无法连接 slskd',
+      search_failed: '搜索未能开始',
+      search_timeout: '搜索超时',
+      no_results: '没人分享',
+      no_match: '没有匹配的文件',
+      low_confidence: '匹配低于最低分',
+      quality_filtered: '被音质规则拦下',
+      timeout: '下载超时',
+      transfer_failed: '传输失败',
+      tag_mismatch: '文件里是别的歌',
+      unknown: '未知',
+    },
+    fix: {
+      not_configured: '在“设置 → 音频来源”中填写服务器地址和 API 密钥。',
+      unreachable:
+        '当时 slskd 未运行或无法连接。请检查它是否在运行、地址是否正确。',
+      search_failed: 'slskd 拒绝了搜索，常见于它仍在连接 Soulseek 网络时。',
+      search_timeout: '搜索超过了时限。请在“设置 → 音频来源”中调高总超时。',
+      no_results:
+        '没有空闲上传位的用户拥有这首歌。冷门歌曲常常不在 Soulseek 上，稍后再试可能找到。',
+      no_match: '有文件返回，但没有一个在标题、艺人和时长上足够匹配。',
+      low_confidence:
+        '找到了相近的文件，但低于防止错歌（混音、现场版）的阈值。',
+      quality_filtered:
+        '找到了匹配的文件，但都没通过格式和码率规则。允许更多格式、降低最低码率或允许未标码率的文件即可放行。',
+      timeout: '已选中文件，但没有按时到达。请调高总超时或排队超时。',
+      transfer_failed:
+        '选中的文件都被拒绝或没能完整到达（对方离线、排队太长）。增加候选尝试次数可尝试更多文件。',
+      tag_mismatch:
+        '下载文件的标签指向另一首歌，因此被搁置并保留在 slskd 文件夹中。',
+      unknown: '记录时没有原因。',
+    },
+  },
   queue: {
     globalPause: '暂停下载和监控',
     globalResume: '恢复下载和监控',
@@ -1396,6 +1442,9 @@ export default {
       one: '{count} 首歌曲持续失败',
       other: '{count} 首歌曲持续失败',
     },
+    failuresClear: '清除',
+    failuresClearHint:
+      '修改设置后可用“清除”重新开始列表；仍然失败的歌曲会在下次检查时重新出现。',
     attempts: { one: '{count} 次尝试', other: '{count} 次尝试' },
     lastTried: '上次尝试于 {when}',
     songsTitle: '此监控中的歌曲',

@@ -501,6 +501,58 @@ export default {
     playCountSpotify: 'Lejátszások a Spotifyon',
     playCountYoutubeMusic: 'Lejátszások a YouTube Musicon (hozzávetőleges)',
   },
+  slskdMisses: {
+    title: 'Miért nem az slskd töltötte le',
+    hint: 'Dalok, amelyeket másik forrás töltött le, vagy sehol sem találtak, miután az slskd-nek nem volt. Kattints egy okra a példákért és a teendőkért.',
+    reset: 'Nullázás',
+    resetTitle: 'Újrakezdjük a számlálást?',
+    resetBody:
+      'Elfelejti az eddig rögzített okokat, így a következő letöltések megmutatják, segített-e egy beállítás. A dalokhoz és fájlokhoz nem nyúl.',
+    empty:
+      'Még semmi: a legutóbbi nullázás óta az slskd minden kért letöltést teljesített.',
+    since: '{count} dal, {when} óta',
+    usedInstead: 'Helyette használt:',
+    nothingFound: 'nem található',
+    reason: {
+      not_configured: 'Az slskd nincs beállítva',
+      unreachable: 'Az slskd nem érhető el',
+      search_failed: 'A keresés nem indult el',
+      search_timeout: 'A keresés kifutott az időből',
+      no_results: 'Senki sem osztotta meg',
+      no_match: 'Egy fájl sem egyezett',
+      low_confidence: 'Egyezés a minimális pontszám alatt',
+      quality_filtered: 'A minőségi szabályok kiszűrték',
+      timeout: 'A letöltés kifutott az időből',
+      transfer_failed: 'Sikertelen átvitelek',
+      tag_mismatch: 'Rossz dal a fájlban',
+      unknown: 'Ismeretlen',
+    },
+    fix: {
+      not_configured:
+        'Add meg a szerver URL-jét és az API-kulcsot a Beállítások → Hangforrások alatt.',
+      unreachable:
+        'Az slskd akkor nem volt elérhető. Ellenőrizd, hogy fut-e és jó-e az URL.',
+      search_failed:
+        'Az slskd elutasította a keresést, gyakran amíg még a Soulseek hálózathoz csatlakozik.',
+      search_timeout:
+        'A keresések túllépték az időkorlátot. Növeld a teljes időkorlátot a Beállítások → Hangforrások alatt.',
+      no_results:
+        'Senkinek sem volt meg a dal szabad feltöltési hellyel. A ritka dalok gyakran hiányoznak a Soulseekről; egy későbbi próbálkozás megtalálhatja.',
+      no_match:
+        'Jöttek fájlok, de egyik sem egyezett elég jól címben, előadóban és hosszban.',
+      low_confidence:
+        'Előkerült egy hasonló fájl, de a rossz dalok (remixek, élő felvételek) ellen védő küszöb alatt.',
+      quality_filtered:
+        'Találtak egyező fájlokat, de egyik sem felelt meg a formátum- és bitrátaszabályoknak. Több formátum, alacsonyabb minimális bitráta vagy a bitráta nélküli fájlok engedése átengedi őket.',
+      timeout:
+        'Kiválasztottak egy fájlt, de nem érkezett meg időben. Növeld a teljes vagy a sorban állási időkorlátot.',
+      transfer_failed:
+        'Minden kiválasztott fájlt elutasítottak, vagy sosem érkezett meg teljesen (offline felhasználók, hosszú sorok). Több jelöltpróbálkozás több fájlt próbál.',
+      tag_mismatch:
+        'A letöltött fájl címkéi másik dalt neveztek meg, ezért félretette az slskd mappájában.',
+      unknown: 'Ok nélkül rögzítve.',
+    },
+  },
   queue: {
     globalPause: 'Letöltések és figyelések szüneteltetése',
     globalResume: 'Letöltések és figyelések folytatása',
@@ -1513,6 +1565,9 @@ export default {
       one: '{count} szám továbbra is sikertelen',
       other: '{count} szám továbbra is sikertelen',
     },
+    failuresClear: 'Törlés',
+    failuresClearHint:
+      'A törlés újrakezdi a listát egy beállítás módosítása után; a továbbra is hibás dalok a következő ellenőrzésnél visszajönnek.',
     attempts: { one: '{count} próbálkozás', other: '{count} próbálkozás' },
     lastTried: 'utoljára {when}',
     songsTitle: 'Számok ebből a figyelésből',

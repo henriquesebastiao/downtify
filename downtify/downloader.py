@@ -77,7 +77,11 @@ from .providers import (
     soundcloud_track_url,
 )
 from .release_files import matches_release
-from .slskd_provider import download_from_slskd, normalize_slskd_quality
+from .slskd_provider import (
+    download_from_slskd,
+    normalize_slskd_quality,
+)
+from .slskd_provider import take_miss as take_slskd_miss
 
 # Extensions that count as "this song is already downloaded". Deliberately
 # excludes sidecars written next to the audio (.lrc, cover.jpg, .m3u) so a
@@ -396,6 +400,11 @@ def _translate_download_error(
     )
 
 
+#: Why slskd had nothing for the download running on this thread (set
+#: when it falls through to the next source, reported with the outcome).
+_SLSKD_MISS = threading.local()
+
+
 class Downloader:
     """Wraps ``yt-dlp`` plus ``mutagen`` tagging."""
 
@@ -624,6 +633,11 @@ class Downloader:
                 )
                 if local is not None:
                     return None, None, 'slskd', local
+                # Why: told with the outcome (see _report_outcome).
+                _SLSKD_MISS.value = take_slskd_miss() or {
+                    'reason': 'unknown',
+                    'detail': '',
+                }
                 logger.info(
                     'Audio provider slskd: no match for {!r}', song.get('name')
                 )
@@ -1093,6 +1107,8 @@ class Downloader:
             if progress_cb:
                 progress_cb(*args)
 
+        _SLSKD_MISS.value = None
+
         try:
             if cancel_check:
                 return self._download(song, progress, subdir, cancel_check)
@@ -1334,8 +1350,13 @@ class Downloader:
         """Tell :attr:`on_outcome` how a download ended (best effort)."""
 
         hook = self.on_outcome
+        miss = getattr(_SLSKD_MISS, 'value', None)
+        _SLSKD_MISS.value = None
         if hook is None:
             return
+        if miss is not None:
+            # slskd was asked first and had nothing: say why.
+            song = {**song, 'slskd_miss': miss}
         try:
             hook(song, outcome, filename)
         except Exception:

@@ -299,7 +299,7 @@ Over the chosen period (7, 30 or 90 days, remembered in the browser) a watch sho
 
 A watch's page also shows:
 
-- **Songs on disk**, **Downloaded by it**, **Already in library** and **Failing** — how its songs got there, and how many keep failing to download (listed further down, with the number of tries and the last error)
+- **Songs on disk**, **Downloaded by it**, **Already in library** and **Failing** — how its songs got there, and how many keep failing to download (listed further down, with the number of tries and the last error; **Clear** starts that list over after a settings change, and songs that still fail come back on the next check)
 - **Where the audio came from** — YouTube Music, YouTube, Soulseek (slskd) or Deemix, per song on disk
 - **Songs from this watch** — every song it holds, newest first, including ones that have since left the playlist, with filters (**Last 30 days** — or whichever period is chosen — **Downloaded by it**, **Already in library**, **Before tracking**). Select songs to play them, queue them, add them to a playlist, save them as a ZIP or delete them — for example to clean up what a mix brought in over the last week
 - **Open in Library** (the playlist's page, or the artist's for an artist watch), **Open original** and **Check now**

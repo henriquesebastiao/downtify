@@ -163,6 +163,10 @@
           </ul>
         </UiPanel>
 
+        <SlskdMisses
+          v-if="auth.isAdmin.value"
+          :finished="counts.done + counts.failed"
+        />
         <UiPanel
           v-if="watchRows.length"
           :title="t('queue.watches')"
@@ -258,6 +262,7 @@ import PageHeader from '/src/components/library/PageHeader.vue'
 import QueueItem from '/src/components/queue/QueueItem.vue'
 import DownloadExclusions from '/src/components/queue/DownloadExclusions.vue'
 import CsvImport from '/src/components/queue/CsvImport.vue'
+import SlskdMisses from '/src/components/queue/SlskdMisses.vue'
 import {
   useDownloadManager,
   useProgressTracker,

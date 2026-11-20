@@ -474,6 +474,52 @@ export default {
     playCountSpotify: 'Spotify 播放次數',
     playCountYoutubeMusic: 'YouTube Music 播放次數（約略值）',
   },
+  slskdMisses: {
+    title: '為何沒有使用 slskd',
+    hint: 'slskd 沒有結果後，由其他來源下載或哪裡都找不到的歌曲。點擊某個原因查看範例和可調整的設定。',
+    reset: '重設',
+    resetTitle: '重新開始統計？',
+    resetBody:
+      '清除目前記錄的所有原因，讓接下來的下載顯示設定變更是否有效。不會改動歌曲和檔案。',
+    empty: '暫無記錄：自上次重設以來，slskd 完成了所有交給它的下載。',
+    since: '自 {when} 起 {count} 首',
+    usedInstead: '改用：',
+    nothingFound: '未找到',
+    reason: {
+      not_configured: '未設定 slskd',
+      unreachable: '無法連線 slskd',
+      search_failed: '搜尋未能開始',
+      search_timeout: '搜尋逾時',
+      no_results: '沒人分享',
+      no_match: '沒有相符的檔案',
+      low_confidence: '比對低於最低分',
+      quality_filtered: '被音質規則擋下',
+      timeout: '下載逾時',
+      transfer_failed: '傳輸失敗',
+      tag_mismatch: '檔案裡是別的歌',
+      unknown: '未知',
+    },
+    fix: {
+      not_configured: '在「設定 → 音訊來源」中填寫伺服器網址和 API 金鑰。',
+      unreachable:
+        '當時 slskd 未執行或無法連線。請檢查它是否在執行、網址是否正確。',
+      search_failed: 'slskd 拒絕了搜尋，常見於它仍在連線 Soulseek 網路時。',
+      search_timeout: '搜尋超過了時限。請在「設定 → 音訊來源」中調高總逾時。',
+      no_results:
+        '沒有空閒上傳位的使用者擁有這首歌。冷門歌曲常常不在 Soulseek 上，稍後再試可能找到。',
+      no_match: '有檔案回傳，但沒有一個在標題、藝人和長度上足夠相符。',
+      low_confidence:
+        '找到了相近的檔案，但低於防止錯歌（混音、現場版）的門檻。',
+      quality_filtered:
+        '找到了相符的檔案，但都沒通過格式和位元率規則。允許更多格式、降低最低位元率或允許未標位元率的檔案即可放行。',
+      timeout: '已選中檔案，但沒有按時到達。請調高總逾時或排隊逾時。',
+      transfer_failed:
+        '選中的檔案都被拒絕或沒能完整到達（對方離線、排隊太長）。增加候選嘗試次數可嘗試更多檔案。',
+      tag_mismatch:
+        '下載檔案的標籤指向另一首歌，因此被擱置並保留在 slskd 資料夾中。',
+      unknown: '記錄時沒有原因。',
+    },
+  },
   queue: {
     globalPause: '暫停下載和監看',
     globalResume: '繼續下載和監看',
@@ -1422,6 +1468,9 @@ export default {
       one: '{count} 首歌曲持續失敗',
       other: '{count} 首歌曲持續失敗',
     },
+    failuresClear: '清除',
+    failuresClearHint:
+      '修改設定後可用「清除」重新開始清單；仍然失敗的歌曲會在下次檢查時重新出現。',
     attempts: { one: '嘗試 {count} 次', other: '嘗試 {count} 次' },
     lastTried: '上次嘗試：{when}',
     songsTitle: '來自此監看項目的歌曲',

@@ -508,6 +508,58 @@ export default {
     playCountSpotify: 'Reproducciones en Spotify',
     playCountYoutubeMusic: 'Reproducciones en YouTube Music (aproximado)',
   },
+  slskdMisses: {
+    title: 'Por qué no se usó slskd',
+    hint: 'Canciones que descargó otra fuente, o que no se encontraron, después de que slskd no tuviera nada. Pulsa un motivo para ver ejemplos y qué cambiar.',
+    reset: 'Reiniciar',
+    resetTitle: '¿Empezar la cuenta de nuevo?',
+    resetBody:
+      'Olvida todos los motivos registrados hasta ahora, para que las próximas descargas muestren si un cambio de ajustes ayudó. Las canciones y archivos no se tocan.',
+    empty:
+      'Nada todavía: desde el último reinicio, slskd sirvió todas las descargas que se le pidieron.',
+    since: '{count} canciones desde {when}',
+    usedInstead: 'Usado en su lugar:',
+    nothingFound: 'nada encontrado',
+    reason: {
+      not_configured: 'slskd sin configurar',
+      unreachable: 'No se pudo conectar con slskd',
+      search_failed: 'La búsqueda no empezó',
+      search_timeout: 'La búsqueda se quedó sin tiempo',
+      no_results: 'Nadie la compartía',
+      no_match: 'Ningún archivo coincidía',
+      low_confidence: 'Coincidencia bajo la puntuación mínima',
+      quality_filtered: 'Bloqueado por las reglas de calidad',
+      timeout: 'La descarga se quedó sin tiempo',
+      transfer_failed: 'Fallaron las transferencias',
+      tag_mismatch: 'Canción equivocada en el archivo',
+      unknown: 'Desconocido',
+    },
+    fix: {
+      not_configured:
+        'Rellena la URL del servidor y la clave API en Ajustes → Fuentes de audio.',
+      unreachable:
+        'slskd no estaba disponible en ese momento. Comprueba que funciona y que la URL es correcta.',
+      search_failed:
+        'slskd rechazó la búsqueda, a menudo mientras aún se conecta a la red Soulseek.',
+      search_timeout:
+        'Las búsquedas tardaron más que el límite. Sube el tiempo límite total en Ajustes → Fuentes de audio.',
+      no_results:
+        'Nadie tenía la canción con un hueco de subida libre. Las canciones raras a menudo no están en Soulseek; otro intento más tarde puede encontrarlas.',
+      no_match:
+        'Llegaron archivos, pero ninguno coincidía lo bastante con título, artista y duración.',
+      low_confidence:
+        'Apareció un archivo parecido, pero por debajo del umbral que evita canciones equivocadas (remixes, versiones en directo).',
+      quality_filtered:
+        'Se encontraron archivos que coincidían, pero ninguno pasó las reglas de formato y bitrate. Permitir más formatos, un bitrate mínimo más bajo o archivos sin bitrate indicado los deja pasar.',
+      timeout:
+        'Se eligió un archivo, pero no llegó a tiempo. Sube el tiempo límite total o en cola.',
+      transfer_failed:
+        'Cada archivo elegido fue rechazado o nunca llegó completo (usuarios desconectados, colas largas). Más intentos de candidatos prueban más archivos.',
+      tag_mismatch:
+        'Las etiquetas del archivo descargado nombraban otra canción, así que se apartó y se guardó en la carpeta de slskd.',
+      unknown: 'Registrado sin motivo.',
+    },
+  },
   queue: {
     globalPause: 'Pausar descargas y seguimientos',
     globalResume: 'Reanudar descargas y seguimientos',
@@ -1529,6 +1581,9 @@ export default {
       one: '{count} canción sigue fallando',
       other: '{count} canciones siguen fallando',
     },
+    failuresClear: 'Vaciar',
+    failuresClearHint:
+      'Vaciar empieza la lista de nuevo tras cambiar un ajuste; las canciones que sigan fallando vuelven en la próxima comprobación.',
     attempts: { one: '{count} intento', other: '{count} intentos' },
     lastTried: 'último intento {when}',
     songsTitle: 'Canciones de esta vigilancia',

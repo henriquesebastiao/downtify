@@ -504,6 +504,58 @@ export default {
     playCountSpotify: 'Reproduções no Spotify',
     playCountYoutubeMusic: 'Reproduções no YouTube Music (aproximado)',
   },
+  slskdMisses: {
+    title: 'Por que o slskd não foi usado',
+    hint: 'Músicas que outra fonte baixou, ou que não foram encontradas, depois que o slskd não tinha nada. Clique num motivo para ver exemplos e o que mudar.',
+    reset: 'Zerar',
+    resetTitle: 'Recomeçar a contagem?',
+    resetBody:
+      'Esquece todos os motivos registrados até agora, para que os próximos downloads mostrem se uma mudança de configuração ajudou. Músicas e arquivos não são tocados.',
+    empty:
+      'Nada ainda: desde o último reinício, o slskd atendeu todos os downloads pedidos.',
+    since: '{count} músicas desde {when}',
+    usedInstead: 'Usado no lugar:',
+    nothingFound: 'nada encontrado',
+    reason: {
+      not_configured: 'slskd não configurado',
+      unreachable: 'Não deu para acessar o slskd',
+      search_failed: 'A busca não começou',
+      search_timeout: 'A busca demorou demais',
+      no_results: 'Ninguém compartilhava',
+      no_match: 'Nenhum arquivo correspondia',
+      low_confidence: 'Correspondência abaixo da nota mínima',
+      quality_filtered: 'Barrado pelas regras de qualidade',
+      timeout: 'O download demorou demais',
+      transfer_failed: 'Transferências falharam',
+      tag_mismatch: 'Música errada no arquivo',
+      unknown: 'Desconhecido',
+    },
+    fix: {
+      not_configured:
+        'Preencha a URL do servidor e a chave de API em Configurações → Fontes de áudio.',
+      unreachable:
+        'O slskd estava fora do ar naquela hora. Verifique se está rodando e se a URL está certa.',
+      search_failed:
+        'O slskd recusou a busca, muitas vezes enquanto ainda conecta à rede Soulseek.',
+      search_timeout:
+        'As buscas passaram do tempo limite. Aumente o tempo limite total em Configurações → Fontes de áudio.',
+      no_results:
+        'Ninguém tinha a música com vaga de upload livre. Músicas raras muitas vezes não estão no Soulseek; outra tentativa depois pode achar.',
+      no_match:
+        'Vieram arquivos, mas nenhum batia o bastante com título, artista e duração.',
+      low_confidence:
+        'Apareceu um arquivo parecido, mas abaixo do limite que protege contra músicas erradas (remixes, ao vivo).',
+      quality_filtered:
+        'Arquivos correspondentes foram encontrados, mas nenhum passou nas regras de formato e bitrate. Permitir mais formatos, um bitrate mínimo menor ou arquivos sem bitrate informado deixa passar.',
+      timeout:
+        'Um arquivo foi escolhido, mas não chegou a tempo. Aumente o tempo limite total ou na fila.',
+      transfer_failed:
+        'Todo arquivo escolhido foi recusado ou nunca chegou completo (usuários offline, filas longas). Mais tentativas de candidatos testam mais arquivos.',
+      tag_mismatch:
+        'As tags do arquivo baixado indicavam outra música, então ele foi deixado de lado e mantido na pasta do slskd.',
+      unknown: 'Registrado sem motivo.',
+    },
+  },
   queue: {
     globalPause: 'Pausar downloads e monitoramentos',
     globalResume: 'Retomar downloads e monitoramentos',
@@ -1514,6 +1566,9 @@ export default {
       one: '{count} música continua falhando',
       other: '{count} músicas continuam falhando',
     },
+    failuresClear: 'Limpar',
+    failuresClearHint:
+      'Limpar recomeça a lista depois que você mudou uma configuração; músicas que ainda falham voltam na próxima verificação.',
     attempts: { one: '{count} tentativa', other: '{count} tentativas' },
     lastTried: 'última tentativa {when}',
     songsTitle: 'Músicas deste monitoramento',
