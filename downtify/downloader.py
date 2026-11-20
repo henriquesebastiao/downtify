@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import base64
 import contextlib
+import functools
 import os
 import re
 import shutil
@@ -50,6 +51,7 @@ from .content_advisory import (
 )
 from .cookie_refresh import note_ytdlp_message
 from .cookies import CookiesStore, private_cookiefile
+from .cover_art import extract_embedded_cover
 from .deemix_provider import download_from_deemix, normalize_settings
 from .download_log import (
     OUTCOME_COMPLETED,
@@ -76,7 +78,11 @@ from .providers import (
     soundcloud_track_url,
 )
 from .release_files import matches_release
-from .slskd_provider import download_from_slskd, normalize_slskd_quality
+from .slskd_provider import (
+    download_from_slskd,
+    normalize_slskd_quality,
+)
+from .slskd_provider import take_miss as take_slskd_miss
 
 # Extensions that count as "this song is already downloaded". Deliberately
 # excludes sidecars written next to the audio (.lrc, cover.jpg, .m3u) so a
@@ -395,6 +401,11 @@ def _translate_download_error(
     )
 
 
+#: Why slskd had nothing for the download running on this thread (set
+#: when it falls through to the next source, reported with the outcome).
+_SLSKD_MISS = threading.local()
+
+
 class Downloader:
     """Wraps ``yt-dlp`` plus ``mutagen`` tagging."""
 
@@ -444,6 +455,7 @@ class Downloader:
         organize_by_album: bool = False,
         download_cover_art: bool = True,
         cover_min_resolution: int = 0,
+        cover_largest: bool = False,
         write_isrc: bool = True,
         overwrite_existing_files: bool = True,
         cookies_store: Optional[CookiesStore] = None,
@@ -457,6 +469,9 @@ class Downloader:
         # The smallest cover (short side, px) worth embedding; 0 = take
         # what the track's source offers (see _download_cover_meeting).
         self.cover_min_resolution = max(0, int(cover_min_resolution or 0))
+        # Look for a larger cover on every download, not only below the
+        # minimum (see _download_cover_meeting).
+        self.cover_largest = bool(cover_largest)
         # Write each download's ISRC (downtify.isrc).
         self.write_isrc = bool(write_isrc)
         self.deemix_settings = normalize_settings(deemix_settings)
@@ -472,6 +487,9 @@ class Downloader:
         self.audio_bitrate = audio_bitrate
         self.output_template = output_template
         self.lyrics_providers = list(lyrics_providers or [])
+        #: Keep only time-synced lyrics (the ``lyrics_synced_only``
+        #: setting): plain lyrics count as none found.
+        self.lyrics_synced_only = False
         # Optional LyricsLookupCache: skips providers that already came
         # back empty for a song.
         self.lyrics_cache = lyrics_cache
@@ -558,6 +576,7 @@ class Downloader:
             'min_bitrate': _int(raw.get('min_bitrate'), 256, 0, 10000),
             **normalize_slskd_quality(raw),
             'leave_in_place': bool(raw.get('leave_in_place', True)),
+            'keep_file_cover': bool(raw.get('keep_file_cover', False)),
             'max_parallel_downloads': _int(
                 raw.get('max_parallel_downloads'), 3, 1, 8
             ),
@@ -619,6 +638,11 @@ class Downloader:
                 )
                 if local is not None:
                     return None, None, 'slskd', local
+                # Why: told with the outcome (see _report_outcome).
+                _SLSKD_MISS.value = take_slskd_miss() or {
+                    'reason': 'unknown',
+                    'detail': '',
+                }
                 logger.info(
                     'Audio provider slskd: no match for {!r}', song.get('name')
                 )
@@ -1088,6 +1112,8 @@ class Downloader:
             if progress_cb:
                 progress_cb(*args)
 
+        _SLSKD_MISS.value = None
+
         try:
             if cancel_check:
                 return self._download(song, progress, subdir, cancel_check)
@@ -1329,8 +1355,13 @@ class Downloader:
         """Tell :attr:`on_outcome` how a download ended (best effort)."""
 
         hook = self.on_outcome
+        miss = getattr(_SLSKD_MISS, 'value', None)
+        _SLSKD_MISS.value = None
         if hook is None:
             return
+        if miss is not None:
+            # slskd was asked first and had nothing: say why.
+            song = {**song, 'slskd_miss': miss}
         try:
             hook(song, outcome, filename)
         except Exception:
@@ -1397,7 +1428,11 @@ class Downloader:
 
         if found.lyrics is not None:
             try:
-                embed_lyrics(final_path, found.lyrics)
+                embed_lyrics(
+                    final_path,
+                    found.lyrics,
+                    embed_synced=self.lyrics_synced_only,
+                )
             except Exception:
                 succeeded = False
                 logger.exception('Failed to embed lyrics into {}', final_path)
@@ -1522,6 +1557,8 @@ class Downloader:
             found = lookups.collect()
         finally:
             lookups.cancel()
+        if provider == 'slskd' and self.slskd_settings.get('keep_file_cover'):
+            found = _keep_larger_file_cover(found, source_path)
 
         # Never drop a cover.jpg into slskd's own folders.
         tagged = self._tag_file(
@@ -1825,7 +1862,10 @@ class _MetadataLookups:
         )
         self._lyrics = (
             self._pool.submit(
-                lyrics_mod.fetch,
+                # The keyword only when it's on: the call stays as it was.
+                functools.partial(lyrics_mod.fetch, synced_only=True)
+                if getattr(downloader, 'lyrics_synced_only', False)
+                else lyrics_mod.fetch,
                 song,
                 downloader.lyrics_providers,
                 downloader.lyrics_cache,
@@ -1923,7 +1963,7 @@ def cover_goal(minimum: int) -> int:
 
 
 def _download_cover_meeting(
-    song: dict[str, Any], minimum: int
+    song: dict[str, Any], minimum: int, *, largest: bool = False
 ) -> Optional[bytes]:
     """The track's cover, or a larger one when it is under *minimum*.
 
@@ -1934,13 +1974,18 @@ def _download_cover_meeting(
     largest image wins - the minimum is a floor, not a fixed size. When
     no source reaches it, the largest found is still embedded rather
     than none.
+
+    With *largest* (the "Always use the largest cover" setting) those
+    sources are asked on every download, whatever the minimum: a YouTube
+    Music cover tops out around 1200 px and a Spotify one at 640 px,
+    while iTunes usually has the same release at 1200 px.
     """
 
     data = _download_cover(song.get('cover_url', ''))
-    if minimum <= 0:
+    if minimum <= 0 and not largest:
         return data
     have = image_short_side(data) if data else 0
-    if have >= minimum:
+    if have >= minimum and not largest:
         return data
     current = (
         cover_sources.CoverCandidate(source='download', data=data, width=have)
@@ -2052,6 +2097,38 @@ def _release_type_for_tags(song: dict[str, Any]) -> str:
     ``RELEASETYPE`` / the MP4 freeform equivalent)."""
 
     return str(song.get('release_type') or '').strip().lower()
+
+
+def _keep_larger_file_cover(
+    found: '_LookupResults', source: Path
+) -> '_LookupResults':
+    """*found* with the cover the downloaded file came with, when that
+    one is larger than the fetched cover (the slskd ``keep_file_cover``
+    setting): shared files often carry the release's full-size artwork,
+    larger than YouTube Music's or Spotify's. A file without a cover, or
+    with a smaller or unreadable one, changes nothing."""
+
+    try:
+        data, _mime = extract_embedded_cover(source)
+    except Exception:
+        logger.opt(exception=True).debug(
+            'Could not read the cover of {}', source
+        )
+        return found
+    if not data:
+        return found
+    own = image_short_side(data)
+    fetched = image_short_side(found.cover_bytes) if found.cover_bytes else 0
+    if own <= fetched:
+        return found
+    logger.info(
+        "Keeping the file's own {}px cover over the fetched {}px one: {}",
+        own,
+        fetched,
+        source.name,
+    )
+    found.cover_bytes = data
+    return found
 
 
 def embed_metadata(
@@ -2505,8 +2582,12 @@ def embed_lyrics(
     lyrics: 'lyrics_mod.Lyrics',
     *,
     sidecar: Optional[Path] = None,
+    embed_synced: bool = False,
 ) -> None:
     """Embed plain lyrics into the audio tag and write a .lrc sidecar
-    when synced lyrics are available."""
+    when synced lyrics are available; with *embed_synced*, the tag gets
+    the synced text too."""
 
-    lyrics_mod.write_to_file(path, lyrics, sidecar=sidecar)
+    lyrics_mod.write_to_file(
+        path, lyrics, sidecar=sidecar, embed_synced=embed_synced
+    )

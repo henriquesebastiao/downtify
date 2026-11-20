@@ -312,6 +312,7 @@ def release_summary(group: dict[str, Any]) -> dict[str, Any]:
         'name': group['title'],
         'artist': credit_text(group['credit']),
         'year': group['date'][:4],
+        'release_date': group['date'],
         'release_type': 'EP'
         if group['primary'] == 'ep'
         else group['primary'].title(),

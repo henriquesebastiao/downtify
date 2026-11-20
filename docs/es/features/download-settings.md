@@ -82,7 +82,7 @@ Controla cuántas canciones se descargan a la vez. Elige un valor predefinido (1
 | **8** | Más rápido para playlists grandes |
 | **hasta 30** | Lo mejor para conexiones muy rápidas; usa más CPU y ancho de banda, y aumenta la probabilidad de que YouTube te limite. |
 
-El límite se aplica a toda descarga por lotes — descargas de playlists/álbumes, el endpoint de la cola por lotes y las [importaciones de biblioteca](library-import.md) por CSV — y a las consultas de la sincronización de **[Carpetas de música existentes](external-library.md)** (letras, portadas, género). **No** se aplica a los barridos del Monitor de playlists, que descargan las canciones nuevas de una en una. Cambiar este valor en Ajustes surte efecto de inmediato sin reiniciar; el servidor limita cualquier valor fuera de `1–30`.
+El límite se aplica a toda descarga por lotes — descargas de playlists/álbumes, el endpoint de la cola por lotes y las [importaciones de biblioteca](library-import.md) por CSV — y a las consultas de la sincronización de **[Carpetas de música existentes](external-library.md)** (letras, portadas, género). También se aplica a las comprobaciones del [Monitor de playlists](playlist-monitor.md): las descargas de un seguimiento esperan un hueco libre como cualquier otra y aparecen en espera en la cola, así que añadir muchos seguimientos a la vez, **Comprobar ahora** o **Descargar todo lo que falta** nunca lanzan más descargas que este límite. Cambiar este valor en Ajustes surte efecto de inmediato sin reiniciar; el servidor limita cualquier valor fuera de `1–30`.
 
 ## Pausa entre descargas
 

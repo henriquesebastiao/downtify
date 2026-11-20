@@ -517,6 +517,58 @@ export default {
     playCountSpotify: 'Wiedergaben auf Spotify',
     playCountYoutubeMusic: 'Wiedergaben auf YouTube Music (ungefähr)',
   },
+  slskdMisses: {
+    title: 'Warum slskd nicht genutzt wurde',
+    hint: 'Songs, die eine andere Quelle geladen hat oder die nirgends gefunden wurden, nachdem slskd nichts hatte. Klicke auf einen Grund für Beispiele und was zu ändern ist.',
+    reset: 'Zurücksetzen',
+    resetTitle: 'Zählung neu beginnen?',
+    resetBody:
+      'Vergisst alle bisher erfassten Gründe, damit die nächsten Downloads zeigen, ob eine geänderte Einstellung geholfen hat. Songs und Dateien bleiben unberührt.',
+    empty:
+      'Noch nichts: Seit dem letzten Zurücksetzen hat slskd jeden Download geliefert.',
+    since: '{count} Songs seit {when}',
+    usedInstead: 'Stattdessen genutzt:',
+    nothingFound: 'nichts gefunden',
+    reason: {
+      not_configured: 'slskd nicht eingerichtet',
+      unreachable: 'slskd nicht erreichbar',
+      search_failed: 'Suche nicht gestartet',
+      search_timeout: 'Suche hat zu lange gedauert',
+      no_results: 'Niemand teilt ihn',
+      no_match: 'Keine Datei passte zum Song',
+      low_confidence: 'Treffer unter der Mindestpunktzahl',
+      quality_filtered: 'Von Qualitätsregeln blockiert',
+      timeout: 'Download hat zu lange gedauert',
+      transfer_failed: 'Übertragungen fehlgeschlagen',
+      tag_mismatch: 'Falscher Song in der Datei',
+      unknown: 'Unbekannt',
+    },
+    fix: {
+      not_configured:
+        'Trage Server-URL und API-Schlüssel unter Einstellungen → Audioquellen ein.',
+      unreachable:
+        'slskd war zu dem Zeitpunkt nicht erreichbar. Prüfe, ob es läuft und die Server-URL stimmt.',
+      search_failed:
+        'slskd hat die Suche abgelehnt, oft während es sich noch mit dem Soulseek-Netz verbindet.',
+      search_timeout:
+        'Suchen dauerten länger als das Zeitlimit. Erhöhe das Gesamt-Zeitlimit unter Einstellungen → Audioquellen.',
+      no_results:
+        'Niemand hatte den Song mit einem freien Upload-Platz. Seltene Songs fehlen oft auf Soulseek; ein späterer Versuch kann sie finden.',
+      no_match:
+        'Es kamen Dateien zurück, aber keine passte gut genug zu Titel, Künstler und Länge.',
+      low_confidence:
+        'Eine ähnliche Datei wurde gefunden, lag aber unter der Schwelle, die vor falschen Songs (Remixe, Live-Versionen) schützt.',
+      quality_filtered:
+        'Passende Dateien wurden gefunden, aber keine bestand die Format- und Bitraten-Regeln. Mehr Formate, eine niedrigere Mindestbitrate oder Dateien ohne angegebene Bitrate lassen sie durch.',
+      timeout:
+        'Eine Datei wurde gewählt, kam aber nicht rechtzeitig an. Erhöhe das Gesamt- oder Warteschlangen-Zeitlimit.',
+      transfer_failed:
+        'Jede gewählte Datei wurde abgelehnt oder kam nie vollständig an (Nutzer offline, lange Warteschlangen). Mehr Kandidaten-Versuche probieren mehr Dateien.',
+      tag_mismatch:
+        'Die Tags der geladenen Datei nannten einen anderen Song, daher wurde sie beiseitegelegt und im slskd-Ordner behalten.',
+      unknown: 'Ohne Grund erfasst.',
+    },
+  },
   queue: {
     globalPause: 'Downloads und Überwachung pausieren',
     globalResume: 'Downloads und Überwachung fortsetzen',
@@ -590,6 +642,14 @@ export default {
       'Das sieht nicht wie ein YouTube-Video- oder SoundCloud-Titellink aus.',
     playlistDownloads: 'Playlist-Downloads',
     sources: 'Heruntergeladen von',
+    fromWatch: 'Von {name}',
+    fromWatchTitle:
+      'Der Monitor lädt das für {name} herunter. Öffnet die Beobachtung.',
+    watches: 'Downloads für Beobachtungen',
+    watchesHint:
+      'Die Monitor-Beobachtungen, aus denen die Songs in dieser Warteschlange stammen. Öffne eine, um sie zu pausieren oder zu beenden.',
+    watchWaiting: 'noch {count}',
+    openWatchOriginal: 'Original öffnen',
     noSourcesYet:
       'Bei abgeschlossenen Downloads wird hier die Quelle angezeigt.',
     importTitle: 'Bibliothek importieren',
@@ -755,6 +815,14 @@ export default {
     ofBytes: '{done} von {total}',
     longJob:
       'Bei einer großen Bibliothek dauert es eine Weile. Du kannst diese Seite verlassen; nach einem Neustart wird die Warteschlange fortgesetzt.',
+    lyricsQuickTitle: 'Fehlende Songtexte',
+    lyricsQuickHint:
+      'Durchsucht die Bibliothek nach Titeln ohne Songtext und sucht sie sofort, ohne Zwischenschritt. Andere Verbesserungen bleiben für einen späteren Lauf.',
+    lyricsQuickButton: 'Scannen und Songtexte suchen',
+    lyricsPlainOnly:
+      'Nur nicht synchronisierte Texte: {count} — werden durch synchronisierte ersetzt, sobald gefunden',
+    lyricsOutcome:
+      'Songtexte hinzugefügt: {added} · Nicht gefunden: {notFound} · Fehlgeschlagen: {failed}',
     completed: 'Verbessert',
     skipped: 'Keine Änderung nötig',
     failed: 'Fehlgeschlagen',
@@ -1235,6 +1303,7 @@ export default {
       one: '{count} Veröffentlichung',
       other: '{count} Veröffentlichungen',
     },
+    wantedUpcoming: '{count} angekündigt',
     wantedUnchecked: {
       one: '{count} Veröffentlichung noch nicht geprüft',
       other: '{count} Veröffentlichungen noch nicht geprüft',
@@ -1434,6 +1503,7 @@ export default {
     filter: {
       all: 'Alle',
       missing: 'Herunterzuladen',
+      upcoming: 'Demnächst',
       partly: 'Teilweise da',
       complete: 'Vollständig',
       not_watched: 'Nicht beobachtet',
@@ -1444,6 +1514,8 @@ export default {
       complete: 'Vollständig · {have}/{total}',
       partly: 'Teilweise · {have}/{total}',
       missing: 'Herunterzuladen',
+      upcoming: 'Erscheint {date}',
+      upcomingNoDate: 'Erscheint bald',
       skipped: 'Vor der Beobachtung erschienen',
       not_watched: 'Nicht beobachtet',
       off: 'Aus',
@@ -1533,6 +1605,9 @@ export default {
       one: '{count} Titel schlägt immer wieder fehl',
       other: '{count} Titel schlagen immer wieder fehl',
     },
+    failuresClear: 'Leeren',
+    failuresClearHint:
+      'Leeren beginnt die Liste neu, nachdem du eine Einstellung geändert hast; Songs, die weiter scheitern, erscheinen bei der nächsten Prüfung wieder.',
     attempts: { one: '{count} Versuch', other: '{count} Versuche' },
     lastTried: 'zuletzt versucht {when}',
     songsTitle: 'Titel aus dieser Überwachung',
@@ -1683,6 +1758,17 @@ export default {
     sourceSoundcloud: 'SoundCloud',
     sourceSoundcloudHint:
       'Uploads, die anderswo fehlen, und der Titel selbst bei SoundCloud-Links',
+    sourceNeedsTitle: 'Was jede Quelle braucht',
+    sourceNeedsSlskd:
+      'slskd: ein eigener slskd-Server, verbunden mit dem kostenlosen Soulseek-Netz. Kein Abo; die Qualität ist, was Leute teilen, oft FLAC oder MP3 320.',
+    sourceNeedsDeemix:
+      'Deemix: ein eigener Deemix-Server und ein eigenes Deezer-Konto. Ein kostenloses Konto bekommt nur MP3 128 kbit/s; MP3 320 und FLAC brauchen ein bezahltes Deezer-Abo. Downtify stellt keins bereit und umgeht keins.',
+    sourceNeedsYoutube:
+      'YouTube Music und YouTube: nichts einzurichten. Der Ton ist verlustbehaftet (etwa 128–160 kbit/s).',
+    sourceNeedsSoundcloud:
+      'SoundCloud: nichts einzurichten, kein Konto. Streams haben meist 128–160 kbit/s.',
+    sourceNeedsCover:
+      'Egal welche Quelle: Eingebettet wird das Cover, das Downtify für den Song lädt (Einstellungen → Downloads → Covergröße).',
     deemixTitle: 'Deemix',
     deemixHint:
       'Download from your own Deemix server. Requested quality requires the matching Deezer entitlement.',
@@ -1752,6 +1838,9 @@ export default {
     slskdInPlace: 'Dateien im slskd-Ordner belassen',
     slskdInPlaceHint:
       'Ein: Dateien am Speicherort taggen und behalten. Aus: in Downloads kopieren und taggen; die Quelle wird erst nach erfolgreichem Import entfernt. Bei Fehlern bleibt sie erhalten.',
+    slskdKeepCover: 'Eigenes Cover der Datei behalten, wenn es größer ist',
+    slskdKeepCoverHint:
+      'Geteilte Dateien enthalten oft das Album-Cover in voller Größe. An: Eine slskd-Datei behält ihr Cover, wenn es größer ist als das, das Downtify lädt (Spotify, YouTube Music). Aus: Das geladene Cover ersetzt es immer.',
     youtubeTitle: 'YouTube',
     cookies: 'YouTube-Cookies',
     cookiesHint:
@@ -1835,6 +1924,9 @@ export default {
     coverMinHint:
       'Hebt das Ziel der Covergröße oben auf mindestens diesen Wert. Aus: Nur die Covergröße ist das Ziel.',
     coverMinOff: 'Aus',
+    coverLargest: 'Immer das größte Cover verwenden',
+    coverLargestHint:
+      'Bei jedem Download werden Spotify, iTunes und YouTube Music nach dem Cover der Veröffentlichung gefragt und das größte eingebettet (oft 1200 px von iTunes). Etwas langsamer pro Titel. Aus: das Cover der Quelle des Titels, außer es liegt unter dem Minimum.',
     coverSize: 'Covergröße',
     coverSizeHint:
       'Die Größe, die das Cover jedes Downloads anstrebt. Ein kleineres – das größte von Spotify hat 640 px – wird durch das größte ersetzt, das Spotify, iTunes, YouTube Music oder Deezer für denselben Titel haben. Cover werden nie vergrößert.',
@@ -1865,6 +1957,11 @@ export default {
       'Community-Datenbank - einfache und zeitsynchronisierte Songtexte',
     lyricsNetease: 'NetEase Cloud Music',
     lyricsNeteaseHint: 'Großer Katalog, meist zeitsynchronisierte Songtexte',
+    lyricsKugou: 'Kugou Music',
+    lyricsKugouHint: 'Großer Katalog, zeitsynchron',
+    lyricsSyncedOnly: 'Nur zeitsynchrone Songtexte',
+    lyricsSyncedOnlyHint:
+      'Songtexte ohne Zeitstempel werden übersprungen, stattdessen wird der nächste Anbieter gefragt. „Bibliothek verbessern“ zählt dann Titel mit nur einfachem Text als fehlend. Synchronisierte Texte ersetzen sie dann, auch in den Tags der Datei selbst.',
     ratingsGroup: 'Bewertungen von Deezer',
     ratingsHint:
       'Vergibt an deine Songs in Navidrome 0–5 Sterne danach, wie beliebt sie auf Deezer sind – wie dztnr. Die Sterne gehören zum oben eingetragenen Navidrome-Konto.',
@@ -2204,6 +2301,43 @@ export default {
       youtube: 'YouTube',
       link: 'Link',
     },
+  },
+  backup: {
+    title: 'Sicherungen',
+    hint: 'Einstellungen, jede Überwachung mit ihren Optionen und eine Liste aller Songs der Bibliothek (Künstler, Titel, Album, Herkunft). Nicht die Musikdateien: Gehen diese verloren, weiß eine wiederhergestellte Installation, welche Songs sie hatte, und lädt sie erneut herunter.',
+    schedule: 'Automatische Sicherungen',
+    scheduleHint:
+      'Die neuesten {keep} Sicherungen bleiben erhalten. Eine neue wird geschrieben und geprüft, bevor die älteste gelöscht wird.',
+    every0: 'Aus',
+    every24: 'Täglich',
+    every72: 'Alle 3 Tage',
+    every168: 'Wöchentlich',
+    saved: 'Gespeicherte Sicherungen',
+    savedHint:
+      'Liegen im Ordner backups neben settings.json. Laden Sie eine herunter, um eine Kopie außerhalb dieses Servers zu haben. Sie enthält Ihre Einstellungen samt Passwörtern und API-Schlüsseln: Halten Sie sie privat.',
+    now: 'Jetzt sichern',
+    done: 'Sicherung gespeichert',
+    failed: 'Die letzte Sicherung ist fehlgeschlagen: {error}',
+    none: 'Noch keine Sicherungen.',
+    counts: 'Überwachungen: {watches} · Songs: {songs} · {size}',
+    download: 'Herunterladen',
+    restore: 'Wiederherstellen',
+    fromFile: 'Sicherungsdatei wiederherstellen',
+    fromFileHint:
+      'Laden Sie eine Sicherung dieses oder eines anderen Downtify, zum Beispiel in eine neue Installation. Überwachungen, die es hier schon gibt, bleiben unverändert.',
+    part_settings: 'Einstellungen',
+    part_watches: 'Überwachungen',
+    part_songs: 'In der Bibliothek fehlende Songs erneut herunterladen',
+    chooseFile: 'Sicherungsdatei wählen…',
+    confirmTitle: 'Diese Sicherung wiederherstellen?',
+    confirmBody:
+      'Wiederhergestellt wird: {parts}. Ihre aktuellen Einstellungen werden durch die der Sicherung ersetzt.',
+    restored: 'Sicherung wiederhergestellt',
+    resultSettings: 'Einstellungen wiederhergestellt',
+    resultWatches:
+      '{added} Überwachungen hinzugefügt, {present} schon vorhanden',
+    resultSongs: '{missing} Songs fehlen, {queued} zum Download eingereiht',
+    resultNoSongs: 'Es fehlten keine Songs',
   },
   port: {
     label: 'Port',

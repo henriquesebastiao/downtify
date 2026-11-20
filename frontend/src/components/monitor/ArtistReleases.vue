@@ -268,6 +268,7 @@ import {
   isOn,
   sectioned,
   sourceNames,
+  stateLabel as releaseStateLabel,
   stateTone,
 } from '/src/lib/artistReleases'
 import { useI18n } from '/src/i18n'
@@ -276,7 +277,7 @@ const props = defineProps({
   watchId: { type: Number, required: true },
 })
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const ui = useUi()
 
 const data = ref(null)
@@ -323,13 +324,7 @@ const summary = computed(() => {
 })
 
 function stateLabel(release) {
-  if (release.state === 'complete' || release.state === 'partly') {
-    return t(`artistReleases.state.${release.state}`, {
-      have: release.have,
-      total: release.total || '?',
-    })
-  }
-  return t(`artistReleases.state.${release.state}`)
+  return releaseStateLabel(release, t, locale.value)
 }
 
 function errorOf(err) {

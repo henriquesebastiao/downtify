@@ -1432,6 +1432,53 @@ def _wait_for_slskd_file(
     )
 
 
+# ── Why slskd didn't deliver ───────────────────────────────────────────
+# A download that slskd can't serve falls through to the next source. The
+# reason is kept for the thread that asked (one download per thread), so
+# the downloader can say why another source was used (see
+# downtify.slskd_misses).
+
+#: Reasons, in the order a download gets further: when several queries
+#: fail differently, the one that got furthest is reported.
+MISS_REASONS = (
+    'not_configured',
+    'unreachable',
+    'search_failed',
+    'search_timeout',
+    'no_results',
+    'no_match',
+    'low_confidence',
+    'quality_filtered',
+    'timeout',
+    'transfer_failed',
+    'tag_mismatch',
+)
+
+_miss = threading.local()
+
+
+def take_miss() -> Optional[dict[str, str]]:
+    """Why the last :func:`download_from_slskd` on this thread found
+    nothing (``{reason, detail}``), once; ``None`` when it didn't fail or
+    was never called."""
+
+    found = getattr(_miss, 'value', None)
+    _miss.value = None
+    return found
+
+
+def _missed(reason: str, detail: str = '') -> None:
+    """Remember why slskd found nothing, unless an earlier query of the
+    same download already got further. Returns ``None`` for ``return
+    _missed(...)``."""
+
+    current = getattr(_miss, 'value', None)
+    if current is None or MISS_REASONS.index(reason) >= MISS_REASONS.index(
+        current['reason']
+    ):
+        _miss.value = {'reason': reason, 'detail': str(detail)[:200]}
+
+
 def download_from_slskd(  # noqa: PLR0914  # search, rank, enqueue, poll, finalize
     song: dict[str, Any],
     settings: dict[str, Any],
@@ -1439,6 +1486,7 @@ def download_from_slskd(  # noqa: PLR0914  # search, rank, enqueue, poll, finali
     *,
     cancel_check=None,
 ) -> Optional[Path]:
+    _miss.value = None
     if cancel_check:
         cancel_check()
     if not bool(settings.get('enabled')):
@@ -1448,12 +1496,12 @@ def download_from_slskd(  # noqa: PLR0914  # search, rank, enqueue, poll, finali
         logger.info(
             'slskd: missing configuration title={!r}', song.get('name')
         )
-        return None
+        return _missed('not_configured')
     if not client.can_connect():
         logger.info(
             'slskd: connectivity check failed base_url={!r}', client.base_url
         )
-        return None
+        return _missed('unreachable')
 
     output_dir = Path(
         str(
@@ -1472,7 +1520,7 @@ def download_from_slskd(  # noqa: PLR0914  # search, rank, enqueue, poll, finali
     spotify_row = snapshot_spotify_metadata(song)
     queries = _slskd_search_queries(spotify_row)
     if not queries:
-        return None
+        return _missed('no_match', 'no title or artist to search for')
 
     label = f'{song.get("name")} - {", ".join(song.get("artists") or [])}'
 
@@ -1510,10 +1558,11 @@ def download_from_slskd(  # noqa: PLR0914  # search, rank, enqueue, poll, finali
                     'slskd: download timeout during search title={!r}',
                     song.get('name'),
                 )
-                return None
+                return _missed('search_timeout')
             report(8.0, 'searching')
             search_id = client.start_search(query) or ''
             if not search_id:
+                _missed('search_failed')
                 continue
             if not client.wait_search_complete(
                 search_id,
@@ -1522,12 +1571,20 @@ def download_from_slskd(  # noqa: PLR0914  # search, rank, enqueue, poll, finali
                 deadline=deadline,
                 **({'cancel_check': cancel_check} if cancel_check else {}),
             ):
+                _missed('search_timeout')
                 client.delete_search(search_id)
                 search_id = ''
                 continue
             raw_responses = client.search_responses(search_id)
             responses = _filter_slskd_responses(raw_responses)
             if not responses:
+                _missed(
+                    'no_results',
+                    f'{len(raw_responses)} users answered, none with a free '
+                    'slot and an unlocked file'
+                    if raw_responses
+                    else 'nobody had it',
+                )
                 client.delete_search(search_id)
                 search_id = ''
                 continue
@@ -1555,6 +1612,7 @@ def download_from_slskd(  # noqa: PLR0914  # search, rank, enqueue, poll, finali
                     song.get('name'),
                     len(responses),
                 )
+                _missed('no_match', f'{len(responses)} users answered')
                 client.delete_search(search_id)
                 search_id = ''
                 continue
@@ -1575,12 +1633,22 @@ def download_from_slskd(  # noqa: PLR0914  # search, rank, enqueue, poll, finali
                     _file_basename(str(top.get('filename') or '')),
                     min_score,
                 )
+                _missed(
+                    'low_confidence',
+                    f'best match {top.get("match_score")}, needs {min_score}: '
+                    f'{_file_basename(str(top.get("filename") or ""))}',
+                )
                 client.delete_search(search_id)
                 search_id = ''
                 continue
 
             selected = _select_download_candidates(qualified, settings)
             if not selected:
+                _missed(
+                    'quality_filtered',
+                    f'{len(qualified)} matching files, none passed the '
+                    'format and bitrate rules',
+                )
                 logger.info(
                     'slskd: no files passed quality filters for query={!r} '
                     'title={!r}',
@@ -1626,7 +1694,7 @@ def download_from_slskd(  # noqa: PLR0914  # search, rank, enqueue, poll, finali
                 'slskd: download timeout before transfer title={!r}',
                 song.get('name'),
             )
-            return None
+            return _missed('timeout')
 
         roots = _search_roots(settings, client)
 
@@ -1714,6 +1782,11 @@ def download_from_slskd(  # noqa: PLR0914  # search, rank, enqueue, poll, finali
                         len(files),
                         _file_basename(filename)[:120],
                     )
+                    _missed(
+                        'tag_mismatch',
+                        f'{spotify_file_tag_mismatch_label(mismatch_row)}: '
+                        f'{_file_basename(filename)}',
+                    )
                     found = None
 
             if found is not None:
@@ -1738,4 +1811,9 @@ def download_from_slskd(  # noqa: PLR0914  # search, rank, enqueue, poll, finali
             song.get('name'),
             len(files),
         )
-        return None
+        if _past_deadline(deadline):
+            return _missed('timeout', f'{len(files)} files tried')
+        return _missed(
+            'transfer_failed',
+            f'{len(files)} files tried: none arrived complete',
+        )

@@ -82,7 +82,7 @@ Contrôle combien de morceaux sont téléchargés en même temps. Choisissez une
 | **8** | Plus rapide pour les grandes playlists |
 | **jusqu’à 30** | Idéal pour les connexions très rapides ; utilise plus de CPU et de bande passante, et augmente le risque que YouTube vous limite. |
 
-La limite s’applique à tout téléchargement par lot — téléchargements de playlists/albums, endpoint de file par lot et [imports de bibliothèque](library-import.md) CSV — et aux recherches de la synchronisation des **[Dossiers de musique existants](external-library.md)** (paroles, pochettes, genre). Elle ne s’applique **pas** aux passages du Suivi de playlists, qui téléchargent les nouveaux morceaux un par un. Modifier cette valeur dans les Paramètres prend effet immédiatement sans redémarrage ; le serveur ramène toute valeur hors de `1–30` dans cet intervalle.
+La limite s’applique à tout téléchargement par lot — téléchargements de playlists/albums, endpoint de file par lot et [imports de bibliothèque](library-import.md) CSV — et aux recherches de la synchronisation des **[Dossiers de musique existants](external-library.md)** (paroles, pochettes, genre). Elle s’applique aussi aux vérifications du [Suivi de playlists](playlist-monitor.md) : les téléchargements d’un suivi attendent une place libre comme les autres et apparaissent en attente dans la file. Ajouter beaucoup de suivis d’un coup, **Vérifier maintenant** ou **Télécharger tout ce qui manque** ne lancent donc jamais plus de téléchargements que cette limite. Modifier cette valeur dans les Paramètres prend effet immédiatement sans redémarrage ; le serveur ramène toute valeur hors de `1–30` dans cet intervalle.
 
 ## Pause entre téléchargements
 

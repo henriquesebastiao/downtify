@@ -8,7 +8,7 @@ import functools
 import os
 import re
 import sqlite3
-from collections.abc import Iterator
+from collections.abc import AsyncIterator, Iterator
 from dataclasses import asdict, dataclass
 from datetime import datetime, time, timedelta, timezone
 from pathlib import Path
@@ -17,7 +17,13 @@ from typing import Any, Callable, Optional
 from loguru import logger
 
 from . import deezer, m3u, musicbrainz, providers, spotify
-from .artist_catalogue import ArtistCatalogue, release_key, watch_kinds
+from .artist_catalogue import (
+    ArtistCatalogue,
+    release_day,
+    release_key,
+    upcoming,
+    watch_kinds,
+)
 from .artist_catalogue import wanted as release_wanted
 from .artist_release_store import ArtistReleaseStore
 from .cover_cache import CoverArtCache
@@ -1344,7 +1350,10 @@ async def _fetch_watch_track(
 
     observed: dict[str, Any] = {}
     progress = _progress_cb(song, playlist.name, broadcast, loop, observed)
-    async with queue_pause.running():
+    async with (
+        _download_slot(song, playlist.name, broadcast),
+        queue_pause.running(),
+    ):
         filename = await loop.run_in_executor(
             DOWNLOAD_EXECUTOR,
             lambda: downloader.download(song, progress, subdir=subdir),
@@ -1576,6 +1585,56 @@ def _sync_library_playlist(
         logger.exception('Navidrome sync failed for "{}"', playlist.name)
 
 
+#: Where the "Parallel downloads" limit lives (``api.state
+#: .download_semaphore``, replaced when the setting changes), set by
+#: :func:`share_download_slots`. A watch's downloads take a slot from it
+#: like every other download, so a burst of checks - a hundred watches
+#: added at once each starting its first check, "Check now", "Download
+#: all missing" - never runs more downloads than the setting allows.
+def _no_download_limit() -> Optional[asyncio.Semaphore]:
+    return None
+
+
+_download_slots: Callable[[], Optional[asyncio.Semaphore]] = _no_download_limit
+
+
+def share_download_slots(
+    get: Callable[[], Optional[asyncio.Semaphore]],
+) -> None:
+    """Make watch downloads wait for the limit *get* returns."""
+
+    global _download_slots
+    _download_slots = get
+
+
+@contextlib.asynccontextmanager
+async def _download_slot(
+    song: dict[str, Any],
+    label: str,
+    broadcast: Callable[[dict[str, Any]], Any],
+) -> AsyncIterator[None]:
+    """Hold one "Parallel downloads" slot for a watch's download.
+
+    While every slot is taken the song shows in the queue as waiting
+    (``queued``), as a pasted link would.
+    """
+
+    sem = _download_slots()
+    if sem is None:
+        yield
+        return
+    if sem.locked():
+        await broadcast({
+            'song': song,
+            'progress': 0,
+            'message': '',
+            'status': 'queued',
+            'playlist_name': label,
+        })
+    async with sem:
+        yield
+
+
 def _progress_cb(
     song: dict[str, Any],
     label: str,
@@ -1697,8 +1756,38 @@ def _deezer_releases(
             len(releases),
         )
         if playlist.new_only and not playlist.baseline_pending:
-            db.mark_albums_skipped(playlist.id, releases)
+            db.mark_albums_skipped(playlist.id, out_already(releases))
     return releases
+
+
+def out_already(albums: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """*albums* without the announced ones: a "new releases only" watch
+    records what is out as already there, never what is still to come."""
+
+    return [a for a in albums if not upcoming(a)]
+
+
+def spread_release_dates(albums: list[dict[str, Any]]) -> None:
+    """Give every listing of a release the date one catalogue has for
+    it (YouTube Music gives a year at most), so an announced album that
+    another catalogue lists already waits for its release day too."""
+
+    dates: dict[tuple[str, str], str] = {}
+    for album in albums:
+        day = release_day(album)
+        key = (
+            release_key(str(album.get('name') or '')),
+            release_type_of(album),
+        )
+        if len(day) > len(dates.get(key, '')):
+            dates[key] = day
+    for album in albums:
+        key = (
+            release_key(str(album.get('name') or '')),
+            release_type_of(album),
+        )
+        if len(dates.get(key, '')) > len(release_day(album)):
+            album['release_date'] = dates[key]
 
 
 def _musicbrainz_releases(
@@ -1764,7 +1853,7 @@ def _musicbrainz_releases(
             len(releases),
         )
         if playlist.new_only and not playlist.baseline_pending:
-            db.mark_albums_skipped(playlist.id, releases)
+            db.mark_albums_skipped(playlist.id, out_already(releases))
     known = {
         (release_key(str(a.get('name') or '')), release_type_of(a))
         for a in listed
@@ -2051,6 +2140,7 @@ async def check_artist(  # noqa: PLR0914  # one sweep: discography, releases, tr
             db.update_playlist, playlist.id, last_checked=_now_iso()
         )
         return 0
+    spread_release_dates(albums)
     # The watch's page lists the whole catalogue from this listing.
     await asyncio.to_thread(db.catalogue.record, playlist.id, albums)
 
@@ -2066,7 +2156,7 @@ async def check_artist(  # noqa: PLR0914  # one sweep: discography, releases, tr
             )
             return 0
         skipped = await asyncio.to_thread(
-            db.mark_albums_skipped, playlist.id, albums
+            db.mark_albums_skipped, playlist.id, out_already(albums)
         )
         logger.info(
             'Artist "{}" watches new releases only: {} existing release(s) '
@@ -2103,6 +2193,8 @@ async def check_artist(  # noqa: PLR0914  # one sweep: discography, releases, tr
         if a.get('album_id')
         and a['album_id'] not in seen
         and release_wanted(a, wanted_types, kinds, choices)
+        # Announced, not out yet: downloaded on its release day.
+        and not upcoming(a)
     ]
     if new_albums:
         logger.info(
@@ -2212,7 +2304,10 @@ async def check_artist(  # noqa: PLR0914  # one sweep: discography, releases, tr
             await queue_pause.wait()
             try:
                 observed: dict[str, Any] = {}
-                async with queue_pause.running():
+                async with (
+                    _download_slot(song, playlist.name, broadcast),
+                    queue_pause.running(),
+                ):
                     filename = await loop.run_in_executor(
                         DOWNLOAD_EXECUTOR,
                         lambda s=song, a=album, progress_state=observed: (
@@ -2531,6 +2626,62 @@ async def check_watch(
         )
 
 
+def _watch_cover_file(
+    playlist: MonitoredPlaylist, downloader: Downloader
+) -> str:
+    """Where a watched playlist's cover is saved (see
+    :func:`_download_cover_for_watch`), relative to the download folder -
+    what ``/playlist-cover?file=`` takes. ``''`` for an artist (the page
+    shows the artist's photo) or when the path can't be worked out."""
+
+    if playlist.kind != KIND_PLAYLIST:
+        return ''
+    try:
+        organize = (
+            downloader.organize_by_artist or downloader.organize_by_album
+        )
+        root = Path(downloader.download_dir)
+        m3u_path = m3u.m3u_path_for(
+            root,
+            playlist.name,
+            playlist_subdir=None
+            if organize
+            else m3u.sanitize_playlist_name(playlist.name),
+        )
+        return Path(m3u_path).with_suffix('.jpg').relative_to(root).as_posix()
+    except Exception:
+        return ''
+
+
+def queue_watch(
+    playlist: MonitoredPlaylist, downloader: Downloader
+) -> dict[str, Any]:
+    """The watch a download came from, as the queue shows it."""
+
+    return {
+        'id': playlist.id,
+        'name': playlist.name,
+        'kind': playlist.kind,
+        'url': playlist.url,
+        'source': playlist.source,
+        'cover_file': _watch_cover_file(playlist, downloader),
+    }
+
+
+def with_watch(
+    broadcast: Callable[[dict[str, Any]], Any], watch: dict[str, Any]
+) -> Callable[[dict[str, Any]], Any]:
+    """*broadcast*, adding ``watch`` to every song event, so the queue can
+    say which watch is downloading each song."""
+
+    def send(message: dict[str, Any]) -> Any:
+        if isinstance(message, dict) and 'song' in message:
+            message = {**message, 'watch': watch}
+        return broadcast(message)
+
+    return send
+
+
 async def _check_watch_online(
     playlist: MonitoredPlaylist,
     db: PlaylistMonitorDB,
@@ -2549,6 +2700,10 @@ async def _check_watch_online(
         return 0
     _checks_running.add(playlist.id)
     try:
+        if playlist.kind != KIND_PODCAST:
+            broadcast = with_watch(
+                broadcast, queue_watch(playlist, downloader)
+            )
         if playlist.kind == KIND_PODCAST:
             if podcasts is None:
                 logger.warning(
@@ -2600,7 +2755,14 @@ async def monitor_loop(
                 await queue_pause.wait()
                 if not pl.enabled:
                     continue
-                if not _is_due(pl.last_checked, pl.interval_minutes):
+                if not _is_due(pl.last_checked, pl.interval_minutes) and not (
+                    pl.kind == KIND_ARTIST
+                    and await asyncio.to_thread(
+                        db.catalogue.release_day_arrived,
+                        pl.id,
+                        pl.last_checked,
+                    )
+                ):
                     continue
                 downloader = get_downloader()
                 if downloader is None:

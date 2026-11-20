@@ -474,6 +474,52 @@ export default {
     playCountSpotify: 'Spotify 播放次數',
     playCountYoutubeMusic: 'YouTube Music 播放次數（約略值）',
   },
+  slskdMisses: {
+    title: '為何沒有使用 slskd',
+    hint: 'slskd 沒有結果後，由其他來源下載或哪裡都找不到的歌曲。點擊某個原因查看範例和可調整的設定。',
+    reset: '重設',
+    resetTitle: '重新開始統計？',
+    resetBody:
+      '清除目前記錄的所有原因，讓接下來的下載顯示設定變更是否有效。不會改動歌曲和檔案。',
+    empty: '暫無記錄：自上次重設以來，slskd 完成了所有交給它的下載。',
+    since: '自 {when} 起 {count} 首',
+    usedInstead: '改用：',
+    nothingFound: '未找到',
+    reason: {
+      not_configured: '未設定 slskd',
+      unreachable: '無法連線 slskd',
+      search_failed: '搜尋未能開始',
+      search_timeout: '搜尋逾時',
+      no_results: '沒人分享',
+      no_match: '沒有相符的檔案',
+      low_confidence: '比對低於最低分',
+      quality_filtered: '被音質規則擋下',
+      timeout: '下載逾時',
+      transfer_failed: '傳輸失敗',
+      tag_mismatch: '檔案裡是別的歌',
+      unknown: '未知',
+    },
+    fix: {
+      not_configured: '在「設定 → 音訊來源」中填寫伺服器網址和 API 金鑰。',
+      unreachable:
+        '當時 slskd 未執行或無法連線。請檢查它是否在執行、網址是否正確。',
+      search_failed: 'slskd 拒絕了搜尋，常見於它仍在連線 Soulseek 網路時。',
+      search_timeout: '搜尋超過了時限。請在「設定 → 音訊來源」中調高總逾時。',
+      no_results:
+        '沒有空閒上傳位的使用者擁有這首歌。冷門歌曲常常不在 Soulseek 上，稍後再試可能找到。',
+      no_match: '有檔案回傳，但沒有一個在標題、藝人和長度上足夠相符。',
+      low_confidence:
+        '找到了相近的檔案，但低於防止錯歌（混音、現場版）的門檻。',
+      quality_filtered:
+        '找到了相符的檔案，但都沒通過格式和位元率規則。允許更多格式、降低最低位元率或允許未標位元率的檔案即可放行。',
+      timeout: '已選中檔案，但沒有按時到達。請調高總逾時或排隊逾時。',
+      transfer_failed:
+        '選中的檔案都被拒絕或沒能完整到達（對方離線、排隊太長）。增加候選嘗試次數可嘗試更多檔案。',
+      tag_mismatch:
+        '下載檔案的標籤指向另一首歌，因此被擱置並保留在 slskd 資料夾中。',
+      unknown: '記錄時沒有原因。',
+    },
+  },
   queue: {
     globalPause: '暫停下載和監看',
     globalResume: '繼續下載和監看',
@@ -534,6 +580,12 @@ export default {
     invalidAudioLink: '這看起來不是 YouTube 影片或 SoundCloud 歌曲連結。',
     playlistDownloads: '播放清單下載',
     sources: '下載來源',
+    fromWatch: '來自 {name}',
+    fromWatchTitle: '監控正在為 {name} 下載此歌曲。開啟該監控。',
+    watches: '依監控下載',
+    watchesHint: '佇列中歌曲來自的監控。開啟監控可暫停或停止監控。',
+    watchWaiting: '還剩 {count}',
+    openWatchOriginal: '開啟來源',
     noSourcesYet: '下載完成後，來源會顯示在這裡。',
     importTitle: '匯入媒體庫',
     importHint: '從 Soundiiz、TuneMyMusic、Exportify 等服務匯出的 CSV。',
@@ -691,6 +743,12 @@ export default {
     ofBytes: '{done} / {total}',
     longJob:
       '媒體庫較大時需要一些時間。你可以離開這個頁面，重新啟動後也會接續處理佇列。',
+    lyricsQuickTitle: '缺少的歌詞',
+    lyricsQuickHint:
+      '掃描音樂庫中沒有歌詞的歌曲，並立即查找歌詞，中間無需選擇。其他升級留待下次執行。',
+    lyricsQuickButton: '掃描並查找歌詞',
+    lyricsPlainOnly: '只有非同步歌詞：{count} — 找到同步歌詞後取代',
+    lyricsOutcome: '已新增歌詞：{added} · 未找到：{notFound} · 失敗：{failed}',
     completed: '已升級',
     skipped: '無須處理',
     failed: '失敗',
@@ -1136,6 +1194,7 @@ export default {
     wantedSummary: '{releases} 缺少 {songs}',
     wantedSongs: { one: '{count} 首歌曲', other: '{count} 首歌曲' },
     wantedReleases: { one: '{count} 張發行作品', other: '{count} 張發行作品' },
+    wantedUpcoming: '{count} 張已公布',
     wantedUnchecked: {
       one: '{count} 張發行作品尚未檢查',
       other: '{count} 張發行作品尚未檢查',
@@ -1315,6 +1374,7 @@ export default {
     filter: {
       all: '全部',
       missing: '待下載',
+      upcoming: '即將發行',
       partly: '部分',
       complete: '完整',
       not_watched: '未關注',
@@ -1325,6 +1385,8 @@ export default {
       complete: '完整 · {have}/{total}',
       partly: '部分 · {have}/{total}',
       missing: '待下載',
+      upcoming: '{date} 發行',
+      upcomingNoDate: '即將發行',
       skipped: '關注前已發行',
       not_watched: '未關注',
       off: '已關閉',
@@ -1406,6 +1468,9 @@ export default {
       one: '{count} 首歌曲持續失敗',
       other: '{count} 首歌曲持續失敗',
     },
+    failuresClear: '清除',
+    failuresClearHint:
+      '修改設定後可用「清除」重新開始清單；仍然失敗的歌曲會在下次檢查時重新出現。',
     attempts: { one: '嘗試 {count} 次', other: '嘗試 {count} 次' },
     lastTried: '上次嘗試：{when}',
     songsTitle: '來自此監看項目的歌曲',
@@ -1551,6 +1616,17 @@ export default {
     sourceSoundcloud: 'SoundCloud',
     sourceSoundcloudHint:
       '其他來源沒有的上傳內容，以及 SoundCloud 連結本身的歌曲',
+    sourceNeedsTitle: '各來源需要什麼',
+    sourceNeedsSlskd:
+      'slskd：你自己的 slskd 伺服器，連接免費的 Soulseek 網路。無需訂閱；音質取決於他人分享的檔案，常見 FLAC 或 MP3 320。',
+    sourceNeedsDeemix:
+      'Deemix：你自己的 Deemix 伺服器和你自己的 Deezer 帳號。免費帳號只能取得 MP3 128 kbps；MP3 320 和 FLAC 需要 Deezer 付費方案。Downtify 不提供也不繞過訂閱。',
+    sourceNeedsYoutube:
+      'YouTube Music 和 YouTube：無需設定。音訊為有損（約 128–160 kbps）。',
+    sourceNeedsSoundcloud:
+      'SoundCloud：無需設定，也無需帳號。串流通常為 128–160 kbps。',
+    sourceNeedsCover:
+      '無論來源如何，嵌入的封面都是 Downtify 為這首歌取得的封面（設定 → 下載 → 封面尺寸）。',
     deemixTitle: 'Deemix',
     deemixHint:
       '從你自己的 Deemix 伺服器下載。要取得指定音質，需有相應的 Deezer 權限。',
@@ -1615,6 +1691,9 @@ export default {
     slskdInPlace: '將檔案留在 slskd 資料夾',
     slskdInPlaceHint:
       '開啟：直接在原處寫入標籤並保留檔案。關閉：複製到下載資料夾並寫入標籤，成功匯入後移除來源檔案。複製、寫入標籤或驗證失敗時會保留來源檔案。',
+    slskdKeepCover: '檔案自帶封面較大時保留',
+    slskdKeepCoverHint:
+      '分享的檔案常帶有專輯的完整尺寸封面。開啟：slskd 檔案自帶的封面比 Downtify 取得的（Spotify、YouTube Music）更大時予以保留。關閉：總是以取得的封面取代。',
     youtubeTitle: 'YouTube',
     cookies: 'YouTube Cookie',
     cookiesHint:
@@ -1688,6 +1767,9 @@ export default {
     coverMinHint:
       '將上方的封面尺寸目標至少提高到此值。關閉：僅以封面尺寸為目標。',
     coverMinOff: '關閉',
+    coverLargest: '一律使用最大的封面',
+    coverLargestHint:
+      '每次下載都會向 Spotify、iTunes 和 YouTube Music 要求該發行的封面，並嵌入最大的一張（iTunes 常為 1200 px）。每首歌稍慢一些。關閉：使用歌曲來源的封面，除非它小於最小尺寸。',
     coverSize: '封面尺寸',
     coverSizeHint:
       '每次下載的封面所追求的尺寸。較小的封面（Spotify 最大為 640 px）會換成 Spotify、iTunes、YouTube Music 或 Deezer 為同一首歌提供的最大封面。封面絕不會被放大。',
@@ -1716,6 +1798,11 @@ export default {
     lyricsLrclibHint: '社群資料庫，提供純文字和時間同步歌詞',
     lyricsNetease: '網易雲音樂',
     lyricsNeteaseHint: '曲庫龐大，通常有時間同步歌詞',
+    lyricsKugou: '酷狗音樂',
+    lyricsKugouHint: '曲庫大，逐行同步',
+    lyricsSyncedOnly: '僅限同步歌詞',
+    lyricsSyncedOnlyHint:
+      '略過沒有時間軸的歌詞，改問下一個來源。「升級音樂庫」也會把只有純文字歌詞的歌曲算作缺少歌詞。找到同步歌詞後會取代它們，檔案本身的標籤裡也會寫入。',
     ratingsGroup: '來自 Deezer 的評分',
     ratingsHint:
       '依歌曲在 Deezer 上的熱度，為 Navidrome 中的歌曲打 0–5 顆星，類似 dztnr。星級會儲存在上方的 Navidrome 帳號中。',
@@ -2031,6 +2118,41 @@ export default {
       youtube: 'YouTube',
       link: '連結',
     },
+  },
+  backup: {
+    title: '備份',
+    hint: '設定、每個監控及其選項，以及媒體庫中每首歌曲的清單（藝人、標題、專輯、來源）。不包含音樂檔案：如果檔案遺失，還原後的安裝知道曾有哪些歌曲，並會重新下載。',
+    schedule: '自動備份',
+    scheduleHint:
+      '保留最新的 {keep} 份備份。新備份寫入並驗證通過後，才會刪除最舊的一份。',
+    every0: '關閉',
+    every24: '每天',
+    every72: '每 3 天',
+    every168: '每週',
+    saved: '已儲存的備份',
+    savedHint:
+      '存放在 settings.json 旁的 backups 資料夾。下載一份，就能在這台伺服器之外留一份副本。它包含你的全部設定，包括密碼與 API 金鑰：請妥善保管。',
+    now: '立即備份',
+    done: '備份已儲存',
+    failed: '上次備份失敗：{error}',
+    none: '還沒有備份。',
+    counts: '監控：{watches} · 歌曲：{songs} · {size}',
+    download: '下載',
+    restore: '還原',
+    fromFile: '從備份檔案還原',
+    fromFileHint:
+      '載入本 Downtify 或其他 Downtify 的備份，例如載入全新安裝。此處已有的監控維持不變。',
+    part_settings: '設定',
+    part_watches: '監控',
+    part_songs: '重新下載媒體庫中缺少的歌曲',
+    chooseFile: '選擇備份檔案…',
+    confirmTitle: '還原此備份？',
+    confirmBody: '將還原：{parts}。目前的設定會被備份中的設定取代。',
+    restored: '備份已還原',
+    resultSettings: '設定已還原',
+    resultWatches: '新增 {added} 個監控，{present} 個已存在',
+    resultSongs: '缺少 {missing} 首歌曲，{queued} 首已加入下載佇列',
+    resultNoSongs: '沒有缺少的歌曲',
   },
   port: {
     label: '連接埠',

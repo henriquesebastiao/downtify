@@ -82,7 +82,7 @@ Azt szabályozza, hány dal tölt le egyszerre. Válassz egy előbeállítást (
 | **8** | Gyorsabb nagy lejátszási listáknál |
 | **legfeljebb 30** | Nagyon gyors kapcsolatokhoz a legjobb; több CPU-t és sávszélességet használ, és növeli az esélyét, hogy a YouTube korlátozza a kéréseidet. |
 
-A korlát minden kötegelt letöltésre vonatkozik — lejátszási lista-/albumletöltések, a kötegelt sorvégpont és a CSV [könyvtárimportok](library-import.md) —, valamint a **[Meglévő zenei mappák](external-library.md)** szinkronizálási lekérdezéseire (dalszövegek, borítók, műfaj). **Nem** vonatkozik a Lejátszási lista figyelő átfésüléseire, amelyek az új számokat egyesével töltik le. Ennek az értéknek a módosítása a Beállításokban újraindítás nélkül azonnal érvénybe lép; a szerver az `1–30` tartományon kívüli értékeket a tartományba szorítja.
+A korlát minden kötegelt letöltésre vonatkozik — lejátszási lista-/albumletöltések, a kötegelt sorvégpont és a CSV [könyvtárimportok](library-import.md) —, valamint a **[Meglévő zenei mappák](external-library.md)** szinkronizálási lekérdezéseire (dalszövegek, borítók, műfaj). A [Lejátszási lista figyelő](playlist-monitor.md) ellenőrzéseire is vonatkozik: egy figyelés letöltései a többihez hasonlóan szabad helyre várnak, és addig várakozóként látszanak a sorban, így sok figyelés egyszerre hozzáadása, az **Ellenőrzés most** vagy a **Minden hiányzó letöltése** sem indít ennél több letöltést. Ennek az értéknek a módosítása a Beállításokban újraindítás nélkül azonnal érvénybe lép; a szerver az `1–30` tartományon kívüli értékeket a tartományba szorítja.
 
 ## Szünet a letöltések között
 

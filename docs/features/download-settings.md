@@ -82,7 +82,7 @@ Controls how many songs are downloaded simultaneously. Pick a preset (1, 2, 3, 5
 | **8** | Faster for large playlists |
 | **up to 30** | Best for very fast connections; uses more CPU and bandwidth, and increases the chance of YouTube rate-limiting you. |
 
-The limit applies to every batch download — playlist/album downloads, the batch queue endpoint, and CSV [library imports](library-import.md) — and to **[Existing music folders](external-library.md)** Sync lookups (lyrics, covers, genre). It does **not** apply to Playlist Monitor sweeps, which download new tracks one at a time. Changing this value in Settings takes effect immediately without a restart; the server clamps any value outside `1–30`.
+The limit applies to every batch download — playlist/album downloads, the batch queue endpoint, and CSV [library imports](library-import.md) — and to **[Existing music folders](external-library.md)** Sync lookups (lyrics, covers, genre). It applies to [Playlist Monitor](playlist-monitor.md) checks too: a watch's downloads wait for a free slot like any other, showing as waiting in the queue, so adding many watches at once, **Check now** or **Download all missing** never runs more downloads than this. Changing this value in Settings takes effect immediately without a restart; the server clamps any value outside `1–30`.
 
 ## Delay between downloads
 
@@ -145,7 +145,7 @@ A file whose audio you replaced — with **Replace audio**, or by saving another
 
 ### Cover art comes from Spotify or YouTube Music, not from the file
 
-Whatever artwork the downloaded audio carries — including a high-resolution cover embedded in an slskd file — is **discarded and replaced** during tagging. Downtify always embeds the cover it fetches for the track from Spotify or YouTube Music (or SoundCloud's artwork, for a SoundCloud link), at the [cover art resolution](#cover-art-resolution) you configured (600 px by default). The same applies to the title, artists, album and the rest of the tags: the source's own tags are not kept.
+Whatever artwork the downloaded audio carries — including a high-resolution cover embedded in an slskd file — is **discarded and replaced** during tagging. Downtify always embeds the cover it fetches for the track from Spotify or YouTube Music (or SoundCloud's artwork, for a SoundCloud link), at the [cover art resolution](#cover-art-resolution) you configured (600 px by default). The same applies to the title, artists, album and the rest of the tags: the source's own tags are not kept. The one exception is **Keep the file's own cover when it's bigger** (Settings → Audio sources → slskd, off by default): with it on, an slskd file keeps the cover it came with when that one is larger than the fetched cover. Shared files often carry the album's full-size artwork, so this gets the best of both.
 
 If what you want is bigger artwork on files you already have, re-downloading is the long way around. [Upgrade library](library-upgrade.md) does exactly that — it compares each file's embedded cover against Spotify, iTunes and YouTube Music, writes the largest one, fills in missing lyrics and tags, and never touches the audio.
 

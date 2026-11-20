@@ -97,6 +97,7 @@ export default {
       'features/storage-usage.md': '存储空间与用量',
       'features/music-trash.md': '音乐回收站',
       'features/doctor.md': '医生',
+      'features/backups.md': '备份',
       'features/replace-audio.md': '替换音频',
       'features/external-playlists.md': '导入现有播放列表',
       'features/m3u-export.md': '导出 M3U',

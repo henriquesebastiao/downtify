@@ -35,6 +35,7 @@ from downtify import (
     account_routes,
     api,
     auth_routes,
+    backup_routes,
     doctor_routes,
     download_policy_routes,
     mobile_routes,
@@ -108,7 +109,12 @@ from downtify.likes import LikedTracks
 from downtify.loudness import LoudnessAnalyzer
 from downtify.lyrics import read_track_lyrics
 from downtify.lyrics_cache import LyricsLookupCache
-from downtify.monitor import PlaylistMonitorDB, monitor_loop, reconcile_loop
+from downtify.monitor import (
+    PlaylistMonitorDB,
+    monitor_loop,
+    reconcile_loop,
+    share_download_slots,
+)
 from downtify.navidrome_index import NavidromeIndex
 from downtify.oidc import (
     OIDCConfig,
@@ -136,6 +142,7 @@ from downtify.server_port import (
     set_restart_handler,
     write_runtime_port,
 )
+from downtify.slskd_misses import SlskdMisses
 from downtify.stream import stream_cache_from_env
 from downtify.telemetry import redact_url_secrets
 from downtify.track_index import TrackIndex
@@ -449,6 +456,7 @@ def _open_library_stores(monitor_db_path: Path | Database) -> None:
     api.state.playlist_hidden = PlaylistHiddenSongs(library_db)
     api.state.file_providers = FileProviders(library_db)
     api.state.download_log = DownloadLog(library_db)
+    api.state.slskd_misses = SlskdMisses(library_db)
     api.state.usage_snapshots = UsageSnapshots(library_db)
     api.state.external_playlist_imports = ExternalPlaylistImports(library_db)
     api.state.loudness_analyzer = LoudnessAnalyzer(
@@ -671,6 +679,8 @@ def build_app() -> FastAPI:
             ),
             name='playlist-spotify-cache',
         )
+        # Watch downloads share the "Parallel downloads" limit.
+        share_download_slots(lambda: api.state.download_semaphore)
         api.spawn_task(
             monitor_loop(
                 db=api.state.monitor_db,
@@ -722,6 +732,8 @@ def build_app() -> FastAPI:
         # The library's size once an hour, for the growth on the library
         # usage page (downtify/library_usage.py).
         api.spawn_task(api.usage_snapshot_loop(), name='usage-snapshot-loop')
+        # Automatic backups (Settings > Server > Backups).
+        api.spawn_task(backup_routes.schedule_loop(), name='backup-schedule')
         # The repeat schedule of the Navidrome star ratings. Its name must
         # not start with "navidrome-ratings": that prefix is the
         # library-only lease a running job holds.
@@ -879,6 +891,7 @@ def build_app() -> FastAPI:
         cover_min_resolution=api._clamp_cover_min_resolution(
             api.state.settings.get('cover_min_resolution', 0)
         ),
+        cover_largest=api.state.settings.get('cover_largest') is True,
         write_isrc=bool(api.state.settings.get('write_isrc', True)),
         overwrite_existing_files=bool(
             api.state.settings.get('overwrite_existing_files', True)
@@ -897,6 +910,9 @@ def build_app() -> FastAPI:
     api.state.downloader.on_outcome = api.record_download_outcome
     # A download gets the tags an admin set for its album by hand.
     api.state.downloader.album_override = api.album_override_for
+    api.state.downloader.lyrics_synced_only = bool(
+        api.state.settings.get('lyrics_synced_only')
+    )
     api.providers.set_cover_minimum(
         api._clamp_cover_min_resolution(
             api.state.settings.get('cover_min_resolution', 0)
@@ -918,6 +934,7 @@ def build_app() -> FastAPI:
     app.include_router(navidrome_ratings_routes.router)
     app.include_router(download_policy_routes.router)
     app.include_router(wanted_routes.router)
+    app.include_router(backup_routes.router)
 
     @app.get('/list')
     def list_downloads(request: Request, refresh: bool = False) -> list[str]:

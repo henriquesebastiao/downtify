@@ -98,6 +98,7 @@ export default {
       'features/storage-usage.md': 'Depolama ve kullanım',
       'features/music-trash.md': 'Müzik çöp kutusu',
       'features/doctor.md': 'Doktor',
+      'features/backups.md': 'Yedekler',
       'features/replace-audio.md': 'Sesi değiştir',
       'features/external-playlists.md': 'Import existing playlists',
       'features/m3u-export.md': 'M3U dışa aktarma',

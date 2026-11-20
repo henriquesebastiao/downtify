@@ -16,10 +16,19 @@ Les catalogues diffèrent : un morceau qu’un fournisseur ne connaît pas figur
 
 | Fournisseur | Paroles | Remarques |
 |----------|--------|-------|
-| **[LRCLIB](https://lrclib.net)** | Simples et synchronisées | Base de données communautaire gratuite, sans clé. Correspondance sur le titre, l’artiste principal, l’album et la durée. |
+| **[LRCLIB](https://lrclib.net)** | Simples et synchronisées | Base de données communautaire gratuite, sans clé. Correspondance sur le titre, l’artiste principal, l’album et la durée. Si cela ne trouve rien de synchronisé, sa recherche est essayée aussi ; un résultat est retenu si le titre, l’artiste et la durée (à quelques secondes près) concordent. |
 | **NetEase Cloud Music** | Généralement synchronisées | Grand catalogue, fort sur les sorties asiatiques et souvent aussi sur les occidentales. Correspondance sur le titre, l’artiste et la durée ; un résultat dont l’artiste est orthographié autrement (chinois traditionnel ou simplifié, par exemple) n’est accepté que lorsque le titre et la durée concordent tous deux. |
+| **Kugou Music** | Synchronisées | Grand catalogue, fort sur les sorties chinoises et avec beaucoup de sorties occidentales. Correspondance comme pour NetEase ; la ligne de titre et les crédits d’écriture du début sont retirés. |
 
-Dans **Paramètres → Tags et paroles → Fournisseurs**, vous pouvez faire glisser les fournisseurs dans l’ordre de votre choix, ou utiliser les flèches, et en désactiver. Au moins un reste activé ; pour cesser entièrement de chercher des paroles, utilisez l’interrupteur **Télécharger les paroles**.
+Dans **Paramètres → Tags et paroles → Fournisseurs**, vous pouvez faire glisser les fournisseurs dans l’ordre de votre choix, ou utiliser les flèches, et en désactiver. Au moins un reste activé ; pour cesser entièrement de chercher des paroles, utilisez l’interrupteur **Télécharger les paroles**. Un fournisseur ajouté par une mise à jour démarre désactivé si vous aviez déjà enregistré votre propre liste : activez-le là.
+
+### Paroles synchronisées uniquement
+
+**Paramètres → Tags et paroles → Paroles synchronisées uniquement** (désactivé par défaut) ne garde que les paroles horodatées : un fournisseur qui n’a que des paroles simples pour une chanson compte comme n’ayant rien, et le suivant est interrogé. [Améliorer la bibliothèque](library-upgrade.md) compte alors aussi comme sans paroles un titre qui n’a que des paroles simples. Les paroles synchronisées qu’un fichier a déjà comptent toujours : un fichier `.lrc` à côté, des paroles horodatées dans ses tags ou une trame ID3 `SYLT` (comme en ont parfois les fichiers d’autres applis). Avec le réglage activé, les paroles synchronisées trouvées remplacent les paroles simples : dans le fichier `.lrc` et dans le tag de paroles du fichier lui-même, pour que les lecteurs qui ne lisent que les tags les affichent aussi synchronisées. L’analyse indique aussi combien de titres sans paroles n’avaient que des paroles simples.
+
+### Trouver des paroles pour les titres qui n’en ont pas
+
+**Bibliothèque → Améliorer la bibliothèque → Analyser et trouver les paroles** cherche dans la bibliothèque les titres sans paroles et leur trouve des paroles aussitôt, avec une barre de progression. À la fin, il indique combien de titres ont reçu des paroles, pour combien aucune n’a été trouvée et combien ont échoué. Voir [Améliorer la bibliothèque](library-upgrade.md#while-it-runs).
 
 ::: info Et Genius, Musixmatch et AZLyrics ?
 Ils ne sont pas disponibles, et Downtify ne les propose plus :

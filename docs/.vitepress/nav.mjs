@@ -68,6 +68,7 @@ export const NAV = [
       { title: 'Storage & Usage', page: 'features/storage-usage.md' },
       { title: 'Music Trash', page: 'features/music-trash.md' },
       { title: 'Doctor', page: 'features/doctor.md' },
+      { title: 'Backups', page: 'features/backups.md' },
       { title: 'Replace Audio', page: 'features/replace-audio.md' },
       { title: 'M3U Export', page: 'features/m3u-export.md' },
       {

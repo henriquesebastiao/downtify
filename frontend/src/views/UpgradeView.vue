@@ -47,6 +47,20 @@
         :description="t('upgrade.deleteOriginalsHint')"
       />
     </UiPanel>
+    <UiPanel
+      v-if="canScan"
+      :title="t('upgrade.lyricsQuickTitle')"
+      :description="t('upgrade.lyricsQuickHint')"
+    >
+      <UiButton
+        variant="secondary"
+        icon="lyrics"
+        :loading="loading"
+        @click="scanForLyrics"
+      >
+        {{ t('upgrade.lyricsQuickButton') }}
+      </UiButton>
+    </UiPanel>
     <p v-if="status.finalizationError" role="alert" class="text-sm text-danger">
       {{ status.finalizationError }}
     </p>
@@ -114,6 +128,25 @@
         </div>
       </dl>
       <p
+        v-if="lyricsRan"
+        class="mt-3 flex items-start gap-2 text-[13px] text-muted"
+      >
+        <AppIcon name="lyrics" :size="16" class="mt-0.5 shrink-0" />
+        {{
+          t('upgrade.lyricsOutcome', {
+            added: status.lyrics.added,
+            notFound: status.lyrics.notFound,
+            failed: status.lyrics.failed,
+          })
+        }}
+      </p>
+      <p
+        v-if="lyricsRan && summary.plainLyricsOnly"
+        class="mt-1 pl-6 text-[13px] text-muted"
+      >
+        {{ t('upgrade.lyricsPlainOnly', { count: summary.plainLyricsOnly }) }}
+      </p>
+      <p
         v-if="isRunning"
         class="mt-4 flex items-start gap-2 text-[13px] text-muted"
       >
@@ -143,7 +176,18 @@
               :description="t(`upgrade.${name}Hint`)"
               class="flex-1"
               @update:model-value="(on) => toggle(name, on)"
-            />
+            >
+              <span
+                v-if="name === 'lyrics' && summary.plainLyricsOnly"
+                class="mt-1 block text-[13px] text-muted"
+              >
+                {{
+                  t('upgrade.lyricsPlainOnly', {
+                    count: summary.plainLyricsOnly,
+                  })
+                }}
+              </span>
+            </UiSwitch>
             <UiBadge tone="accent">
               {{
                 t('upgrade.tracksAffected', {
@@ -401,6 +445,26 @@ const runScan = () =>
     artwork_source: artworkSource.value,
     recheck_days: recheckDays.value,
   })
+
+// Scan, then look lyrics up for the tracks without them at once: the
+// other categories are left for another run.
+const scanForLyrics = () =>
+  startScan({
+    artwork_min_px: artworkMin.value,
+    artwork_source: artworkSource.value,
+    recheck_days: recheckDays.value,
+    categories: ['lyrics'],
+    start_after_scan: true,
+  })
+
+const lyricsRan = computed(
+  () =>
+    (status.value.run?.categories || []).includes('lyrics') &&
+    status.value.lyrics.added +
+      status.value.lyrics.notFound +
+      status.value.lyrics.failed >
+      0
+)
 
 // "Nothing to upgrade" when everything was simply checked recently is a
 // dead end without a way past the memory.
