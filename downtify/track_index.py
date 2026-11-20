@@ -9,6 +9,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
 
+from .db.batching import in_short_transactions
 from .db.config import Dialect
 from .db.core import Connection, Database, as_database
 from .library_cache_keys import file_content_key
@@ -289,7 +290,8 @@ class TrackIndex:
                WHERE filename IS NOT NULL AND filename != ''""",
         )
         imported = 0
-        for track_id, filename in rows:
+        # A few commits instead of one per row (downtify/db/batching.py).
+        for track_id, filename in in_short_transactions(self.db, rows):
             tid = str(track_id or '').strip()
             if not _SPOTIFY_TRACK_ID.fullmatch(tid):
                 continue

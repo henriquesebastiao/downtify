@@ -16,6 +16,7 @@ import mimetypes
 import os
 import sys
 import threading
+import time
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any, Optional
@@ -550,6 +551,9 @@ def _open_library_stores(monitor_db_path: Path | Database) -> None:
         DATABASE_DIR / 'external_sync.json'
     )
     ctx = api.library_context()
+    # The library is unreachable until these two finish, and they go
+    # through every watch's download history on every start.
+    backfill_started = time.monotonic()
     try:
         imported = api.state.track_index.backfill_from_monitor_db(
             monitor_db_path
@@ -575,6 +579,10 @@ def _open_library_stores(monitor_db_path: Path | Database) -> None:
             )
     except Exception:
         logger.exception('Playlist catalog backfill from monitor db failed')
+    logger.info(
+        'Watch history checked against the library in {:.1f} s',
+        time.monotonic() - backfill_started,
+    )
     try:
         registered = ensure_batch_records(
             api.state.playlist_batch_store,
