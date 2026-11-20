@@ -2192,6 +2192,43 @@ export default {
       link: 'Lien',
     },
   },
+  backup: {
+    title: 'Sauvegardes',
+    hint: 'Les paramètres, chaque suivi avec ses options et la liste de tous les morceaux de la bibliothèque (artiste, titre, album, provenance). Pas les fichiers audio : s’ils sont perdus, une installation restaurée sait quels morceaux elle avait et les télécharge de nouveau.',
+    schedule: 'Sauvegardes automatiques',
+    scheduleHint:
+      'Les {keep} sauvegardes les plus récentes sont gardées. Une nouvelle est écrite et vérifiée avant que la plus ancienne soit supprimée.',
+    every0: 'Désactivé',
+    every24: 'Chaque jour',
+    every72: 'Tous les 3 jours',
+    every168: 'Chaque semaine',
+    saved: 'Sauvegardes enregistrées',
+    savedHint:
+      'Gardées dans le dossier backups à côté de settings.json. Téléchargez-en une pour avoir une copie hors de ce serveur. Elle contient vos paramètres tels quels, mots de passe et clés d’API compris : gardez-la privée.',
+    now: 'Sauvegarder maintenant',
+    done: 'Sauvegarde enregistrée',
+    failed: 'La dernière sauvegarde a échoué : {error}',
+    none: 'Aucune sauvegarde pour l’instant.',
+    counts: 'Suivis : {watches} · Morceaux : {songs} · {size}',
+    download: 'Télécharger',
+    restore: 'Restaurer',
+    fromFile: 'Restaurer un fichier de sauvegarde',
+    fromFileHint:
+      'Chargez une sauvegarde de ce Downtify ou d’un autre, par exemple dans une nouvelle installation. Les suivis qui existent déjà ici ne sont pas modifiés.',
+    part_settings: 'Paramètres',
+    part_watches: 'Suivis',
+    part_songs: 'Retélécharger les morceaux absents de la bibliothèque',
+    chooseFile: 'Choisir un fichier de sauvegarde…',
+    confirmTitle: 'Restaurer cette sauvegarde ?',
+    confirmBody:
+      'Ceci rétablit : {parts}. Vos paramètres actuels sont remplacés par ceux de la sauvegarde.',
+    restored: 'Sauvegarde restaurée',
+    resultSettings: 'Paramètres restaurés',
+    resultWatches: '{added} suivis ajoutés, {present} déjà présents',
+    resultSongs:
+      '{missing} morceaux manquants, {queued} mis en file de téléchargement',
+    resultNoSongs: 'Aucun morceau ne manquait',
+  },
   port: {
     label: 'Port',
     hint: 'Le port sur lequel Downtify écoute. Il s’applique au démarrage du serveur, ou tout de suite avec « Enregistrer et redémarrer ».',

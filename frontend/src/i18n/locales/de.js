@@ -2205,6 +2205,43 @@ export default {
       link: 'Link',
     },
   },
+  backup: {
+    title: 'Sicherungen',
+    hint: 'Einstellungen, jede Überwachung mit ihren Optionen und eine Liste aller Songs der Bibliothek (Künstler, Titel, Album, Herkunft). Nicht die Musikdateien: Gehen diese verloren, weiß eine wiederhergestellte Installation, welche Songs sie hatte, und lädt sie erneut herunter.',
+    schedule: 'Automatische Sicherungen',
+    scheduleHint:
+      'Die neuesten {keep} Sicherungen bleiben erhalten. Eine neue wird geschrieben und geprüft, bevor die älteste gelöscht wird.',
+    every0: 'Aus',
+    every24: 'Täglich',
+    every72: 'Alle 3 Tage',
+    every168: 'Wöchentlich',
+    saved: 'Gespeicherte Sicherungen',
+    savedHint:
+      'Liegen im Ordner backups neben settings.json. Laden Sie eine herunter, um eine Kopie außerhalb dieses Servers zu haben. Sie enthält Ihre Einstellungen samt Passwörtern und API-Schlüsseln: Halten Sie sie privat.',
+    now: 'Jetzt sichern',
+    done: 'Sicherung gespeichert',
+    failed: 'Die letzte Sicherung ist fehlgeschlagen: {error}',
+    none: 'Noch keine Sicherungen.',
+    counts: 'Überwachungen: {watches} · Songs: {songs} · {size}',
+    download: 'Herunterladen',
+    restore: 'Wiederherstellen',
+    fromFile: 'Sicherungsdatei wiederherstellen',
+    fromFileHint:
+      'Laden Sie eine Sicherung dieses oder eines anderen Downtify, zum Beispiel in eine neue Installation. Überwachungen, die es hier schon gibt, bleiben unverändert.',
+    part_settings: 'Einstellungen',
+    part_watches: 'Überwachungen',
+    part_songs: 'In der Bibliothek fehlende Songs erneut herunterladen',
+    chooseFile: 'Sicherungsdatei wählen…',
+    confirmTitle: 'Diese Sicherung wiederherstellen?',
+    confirmBody:
+      'Wiederhergestellt wird: {parts}. Ihre aktuellen Einstellungen werden durch die der Sicherung ersetzt.',
+    restored: 'Sicherung wiederhergestellt',
+    resultSettings: 'Einstellungen wiederhergestellt',
+    resultWatches:
+      '{added} Überwachungen hinzugefügt, {present} schon vorhanden',
+    resultSongs: '{missing} Songs fehlen, {queued} zum Download eingereiht',
+    resultNoSongs: 'Es fehlten keine Songs',
+  },
   port: {
     label: 'Port',
     hint: 'Der Port, an dem Downtify Anfragen entgegennimmt. Die Änderung gilt beim nächsten Serverstart oder sofort mit „Speichern und neu starten“.',

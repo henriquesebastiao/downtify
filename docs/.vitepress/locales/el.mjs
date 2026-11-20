@@ -99,6 +99,7 @@ export default {
       'features/storage-usage.md': 'Χώρος και χρήση',
       'features/music-trash.md': 'Κάδος μουσικής',
       'features/doctor.md': 'Γιατρός',
+      'features/backups.md': 'Αντίγραφα ασφαλείας',
       'features/replace-audio.md': 'Αντικατάσταση ήχου',
       'features/external-playlists.md': 'Import existing playlists',
       'features/m3u-export.md': 'Εξαγωγή M3U',

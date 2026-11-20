@@ -97,6 +97,7 @@ export default {
       'features/storage-usage.md': '저장 공간 및 사용량',
       'features/music-trash.md': '음악 휴지통',
       'features/doctor.md': '닥터',
+      'features/backups.md': '백업',
       'features/replace-audio.md': '오디오 교체',
       'features/external-playlists.md': 'Import existing playlists',
       'features/m3u-export.md': 'M3U 내보내기',

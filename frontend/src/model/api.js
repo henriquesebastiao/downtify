@@ -4,6 +4,7 @@ import config from '/src/config.js'
 
 import { v4 as uuidv4 } from 'uuid'
 
+import { restoreParams } from '/src/lib/backups'
 import { coverURL, fileURL, saveName } from '/src/lib/paths'
 
 const API = axios.create({
@@ -457,6 +458,41 @@ function deleteDownloadsBatch(files) {
 // folder instead of being buffered in memory by fetch.
 function prepareLibraryArchive(files) {
   return API.post('/api/library/archive', { files })
+}
+
+// ── Backups (Settings > Server; downtify/backup_routes.py) ──────────
+function getBackups() {
+  return API.get('/api/backups')
+}
+
+function createBackup() {
+  return API.post('/api/backups', null, { timeout: 0 })
+}
+
+/** `hours`: 0 (off), 24, 72 or 168. */
+function setBackupSchedule(hours) {
+  return API.put('/api/backups/schedule', { interval_hours: Number(hours) })
+}
+
+function backupDownloadURL(name) {
+  return `/api/backups/${encodeURIComponent(name)}`
+}
+
+/** `parts`: `{settings, watches, songs}` - what to bring back. */
+function restoreBackup(name, parts) {
+  return API.post(`/api/backups/${encodeURIComponent(name)}/restore`, null, {
+    params: restoreParams(parts),
+    timeout: 0,
+  })
+}
+
+// The backup file is sent as the raw request body, like cookies.txt.
+function restoreBackupFile(file, parts) {
+  return API.post('/api/backups/restore', file, {
+    params: restoreParams(parts),
+    headers: { 'Content-Type': 'application/octet-stream' },
+    timeout: 0,
+  })
 }
 
 function libraryArchiveURL(token) {
@@ -1237,6 +1273,12 @@ export default {
   renameServer,
   getServerPort,
   setServerPort,
+  getBackups,
+  createBackup,
+  setBackupSchedule,
+  backupDownloadURL,
+  restoreBackup,
+  restoreBackupFile,
   getReplaceCandidates,
   replaceAudio,
   replaceAudioFromFile,
