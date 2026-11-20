@@ -82,7 +82,7 @@ Aynı anda kaç şarkının indirileceğini belirler. Bir hazır değer (1, 2, 3
 | **8** | Büyük çalma listeleri için daha hızlı |
 | **30’a kadar** | Çok hızlı bağlantılar için en iyisi; daha çok CPU ve bant genişliği kullanır, YouTube’un sizi hız sınırına takma olasılığını artırır. |
 
-Sınır her toplu indirmeye — çalma listesi/albüm indirmeleri, toplu kuyruk uç noktası ve CSV [kitaplık içe aktarmaları](library-import.md) — ve **[Mevcut müzik klasörleri](external-library.md)** eşitleme aramalarına (sözler, kapaklar, tür) uygulanır. Yeni parçaları tek tek indiren Çalma Listesi İzleyici taramalarına **uygulanmaz**. Bu değeri Ayarlar’da değiştirmek yeniden başlatmadan hemen etkili olur; sunucu `1–30` dışındaki her değeri bu aralığa çeker.
+Sınır her toplu indirmeye — çalma listesi/albüm indirmeleri, toplu kuyruk uç noktası ve CSV [kitaplık içe aktarmaları](library-import.md) — ve **[Mevcut müzik klasörleri](external-library.md)** eşitleme aramalarına (sözler, kapaklar, tür) uygulanır. [Çalma Listesi İzleyici](playlist-monitor.md) kontrollerine de uygulanır: bir izlemenin indirmeleri de diğerleri gibi boş bir yer bekler ve o sırada kuyrukta bekliyor olarak görünür; böylece çok sayıda izlemeyi aynı anda eklemek, **Şimdi kontrol et** veya **Eksiklerin hepsini indir** asla bu sınırdan fazla indirme başlatmaz. Bu değeri Ayarlar’da değiştirmek yeniden başlatmadan hemen etkili olur; sunucu `1–30` dışındaki her değeri bu aralığa çeker.
 
 ## İndirmeler arası bekleme
 

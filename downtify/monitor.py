@@ -8,7 +8,7 @@ import functools
 import os
 import re
 import sqlite3
-from collections.abc import Iterator
+from collections.abc import AsyncIterator, Iterator
 from dataclasses import asdict, dataclass
 from datetime import datetime, time, timedelta, timezone
 from pathlib import Path
@@ -1344,7 +1344,10 @@ async def _fetch_watch_track(
 
     observed: dict[str, Any] = {}
     progress = _progress_cb(song, playlist.name, broadcast, loop, observed)
-    async with queue_pause.running():
+    async with (
+        _download_slot(song, playlist.name, broadcast),
+        queue_pause.running(),
+    ):
         filename = await loop.run_in_executor(
             DOWNLOAD_EXECUTOR,
             lambda: downloader.download(song, progress, subdir=subdir),
@@ -1574,6 +1577,56 @@ def _sync_library_playlist(
         )
     except Exception:
         logger.exception('Navidrome sync failed for "{}"', playlist.name)
+
+
+#: Where the "Parallel downloads" limit lives (``api.state
+#: .download_semaphore``, replaced when the setting changes), set by
+#: :func:`share_download_slots`. A watch's downloads take a slot from it
+#: like every other download, so a burst of checks - a hundred watches
+#: added at once each starting its first check, "Check now", "Download
+#: all missing" - never runs more downloads than the setting allows.
+def _no_download_limit() -> Optional[asyncio.Semaphore]:
+    return None
+
+
+_download_slots: Callable[[], Optional[asyncio.Semaphore]] = _no_download_limit
+
+
+def share_download_slots(
+    get: Callable[[], Optional[asyncio.Semaphore]],
+) -> None:
+    """Make watch downloads wait for the limit *get* returns."""
+
+    global _download_slots
+    _download_slots = get
+
+
+@contextlib.asynccontextmanager
+async def _download_slot(
+    song: dict[str, Any],
+    label: str,
+    broadcast: Callable[[dict[str, Any]], Any],
+) -> AsyncIterator[None]:
+    """Hold one "Parallel downloads" slot for a watch's download.
+
+    While every slot is taken the song shows in the queue as waiting
+    (``queued``), as a pasted link would.
+    """
+
+    sem = _download_slots()
+    if sem is None:
+        yield
+        return
+    if sem.locked():
+        await broadcast({
+            'song': song,
+            'progress': 0,
+            'message': '',
+            'status': 'queued',
+            'playlist_name': label,
+        })
+    async with sem:
+        yield
 
 
 def _progress_cb(
@@ -2212,7 +2265,10 @@ async def check_artist(  # noqa: PLR0914  # one sweep: discography, releases, tr
             await queue_pause.wait()
             try:
                 observed: dict[str, Any] = {}
-                async with queue_pause.running():
+                async with (
+                    _download_slot(song, playlist.name, broadcast),
+                    queue_pause.running(),
+                ):
                     filename = await loop.run_in_executor(
                         DOWNLOAD_EXECUTOR,
                         lambda s=song, a=album, progress_state=observed: (
