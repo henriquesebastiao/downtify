@@ -1789,6 +1789,9 @@ export default {
     coverMinHint:
       'Ez alatt a Spotify, az iTunes és a YouTube Music nagyobb borítót ad ugyanahhoz a kiadáshoz, és a legnagyobb lesz használva. Kikapcsolva a dal forrásának borítója marad.',
     coverMinOff: 'Ki',
+    coverLargest: 'Mindig a legnagyobb borító',
+    coverLargestHint:
+      'Minden letöltésnél a Spotify, az iTunes és a YouTube Music is meg lesz kérdezve a kiadás borítójáról, és a legnagyobb kerül a fájlba (gyakran 1200 px az iTunes-ról). Számonként kicsit lassabb. Ki: a szám forrásának borítója, hacsak nem kisebb a minimumnál.',
     coverSize: 'Borító mérete',
     coverSizeHint:
       'YouTube Music és Deezer borítókhoz. A Spotify borítók mindig a legnagyobb méretűek.',

@@ -1688,6 +1688,9 @@ export default {
     coverMinHint:
       '低於此尺寸時，會向 Spotify、iTunes 和 YouTube Music 要求同一發行的較大封面，並使用最大的。關閉則保留曲目來源提供的封面。',
     coverMinOff: '關閉',
+    coverLargest: '一律使用最大的封面',
+    coverLargestHint:
+      '每次下載都會向 Spotify、iTunes 和 YouTube Music 要求該發行的封面，並嵌入最大的一張（iTunes 常為 1200 px）。每首歌稍慢一些。關閉：使用歌曲來源的封面，除非它小於最小尺寸。',
     coverSize: '封面尺寸',
     coverSizeHint:
       '適用於 YouTube Music 和 Deezer 的封面。Spotify 封面一律使用可取得的最大尺寸。',

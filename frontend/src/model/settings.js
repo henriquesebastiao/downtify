@@ -55,6 +55,7 @@ const settings = ref({
   format: '',
   bitrate: '320',
   cover_min_resolution: 0,
+  cover_largest: false,
   output: '',
   generate_m3u: true,
   download_cover_art_playlists: true,

@@ -745,6 +745,9 @@ DEFAULT_SETTINGS: dict[str, Any] = {
     # Smallest acceptable cover (px, short side); 0 = off. Below it a
     # larger one is looked for (downloader._download_cover_meeting).
     'cover_min_resolution': 0,
+    # Ask Spotify, iTunes and YouTube Music for every download's cover and
+    # embed the largest (downloader._download_cover_meeting).
+    'cover_largest': False,
     # Write each download's ISRC, the recording's own code (downtify.isrc).
     'write_isrc': True,
     'download_cover_art': True,
@@ -9074,6 +9077,8 @@ async def update_settings_endpoint(
                 state.settings[key] = _clamp_cover_resolution(raw_value)
             elif key == 'cover_min_resolution':
                 state.settings[key] = _clamp_cover_min_resolution(raw_value)
+            elif key == 'cover_largest':
+                state.settings[key] = raw_value is True
             elif key == 'ui_language':
                 # Not a language code: the saved one stays.
                 state.settings[key] = _clean_ui_language(raw_value) or (
@@ -9160,6 +9165,10 @@ async def update_settings_endpoint(
             if 'cover_min_resolution' in payload:
                 state.downloader.cover_min_resolution = state.settings[
                     'cover_min_resolution'
+                ]
+            if 'cover_largest' in payload:
+                state.downloader.cover_largest = state.settings[
+                    'cover_largest'
                 ]
             if 'write_isrc' in payload:
                 state.downloader.write_isrc = bool(

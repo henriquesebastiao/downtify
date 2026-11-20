@@ -1749,6 +1749,9 @@ export default {
     coverMinHint:
       'Below this, Spotify, iTunes and YouTube Music are asked for a larger cover of the same release, and the largest is used. Off keeps the cover the track’s source offers.',
     coverMinOff: 'Off',
+    coverLargest: 'Always use the largest cover',
+    coverLargestHint:
+      'Every download asks Spotify, iTunes and YouTube Music for the release’s cover and embeds the largest (often 1200 px from iTunes). A little slower per track. Off: the track’s own source cover, unless it is below the minimum.',
     coverSize: 'Cover size',
     coverSizeHint:
       'For art from YouTube Music and Deezer. Spotify art is always the largest available.',

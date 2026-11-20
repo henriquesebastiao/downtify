@@ -879,6 +879,7 @@ def build_app() -> FastAPI:
         cover_min_resolution=api._clamp_cover_min_resolution(
             api.state.settings.get('cover_min_resolution', 0)
         ),
+        cover_largest=api.state.settings.get('cover_largest') is True,
         write_isrc=bool(api.state.settings.get('write_isrc', True)),
         overwrite_existing_files=bool(
             api.state.settings.get('overwrite_existing_files', True)

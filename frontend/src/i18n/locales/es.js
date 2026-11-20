@@ -1808,6 +1808,9 @@ export default {
     coverMinHint:
       'Por debajo, se pide a Spotify, iTunes y YouTube Music una portada más grande del mismo lanzamiento y se usa la mayor. Desactivado conserva la portada de la fuente de la pista.',
     coverMinOff: 'Desactivado',
+    coverLargest: 'Usar siempre la portada más grande',
+    coverLargestHint:
+      'En cada descarga se pide la portada del lanzamiento a Spotify, iTunes y YouTube Music y se incrusta la más grande (a menudo 1200 px de iTunes). Algo más lento por pista. Desactivado: la portada de la fuente de la pista, salvo que esté por debajo del mínimo.',
     coverSize: 'Tamaño de portada',
     coverSizeHint:
       'Para portadas de YouTube Music y Deezer. Las de Spotify siempre usan el mayor tamaño disponible.',

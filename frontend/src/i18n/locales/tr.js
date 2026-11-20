@@ -1772,6 +1772,9 @@ export default {
     coverMinHint:
       'Bunun altında Spotify, iTunes ve YouTube Music’ten aynı yayının daha büyük kapağı istenir ve en büyüğü kullanılır. Kapalıyken parçanın kaynağının kapağı kalır.',
     coverMinOff: 'Kapalı',
+    coverLargest: 'Her zaman en büyük kapağı kullan',
+    coverLargestHint:
+      'Her indirmede Spotify, iTunes ve YouTube Music’ten yayının kapağı istenir ve en büyüğü gömülür (çoğu zaman iTunes’tan 1200 px). Parça başına biraz daha yavaş. Kapalı: en küçük boyutun altında değilse parçanın kaynağının kapağı.',
     coverSize: 'Kapak boyutu',
     coverSizeHint:
       'YouTube Music ve Deezer kapakları için. Spotify kapakları her zaman en büyük boyuttadır.',
