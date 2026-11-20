@@ -741,6 +741,14 @@ export default {
     ofBytes: '{total} / {done}',
     longJob:
       'Egy nagy könyvtár sokáig tart. Elhagyhatod ezt az oldalt, és újraindítás után a sor folytatódik.',
+    lyricsQuickTitle: 'Hiányzó dalszövegek',
+    lyricsQuickHint:
+      'Megkeresi a könyvtárban a dalszöveg nélküli számokat, és rögtön szöveget keres hozzájuk, köztes választás nélkül. A többi javítás egy másik futtatásra marad.',
+    lyricsQuickButton: 'Keresés és dalszövegek pótlása',
+    lyricsPlainOnly:
+      'Csak szinkronizálatlan szöveg: {count} — szinkronizáltra cserélődik, ha van',
+    lyricsOutcome:
+      'Hozzáadott dalszöveg: {added} · Nem található: {notFound} · Sikertelen: {failed}',
     completed: 'Feljavítva',
     skipped: 'Nincs tennivaló',
     failed: 'Hibára futott',
@@ -1830,6 +1838,11 @@ export default {
     lyricsLrclibHint: 'Közösségi adatbázis — sima és időzített dalszöveg',
     lyricsNetease: 'NetEase Cloud Music',
     lyricsNeteaseHint: 'Nagy katalógus, általában időzített',
+    lyricsKugou: 'Kugou Music',
+    lyricsKugouHint: 'Nagy katalógus, időzített',
+    lyricsSyncedOnly: 'Csak időzített dalszövegek',
+    lyricsSyncedOnlyHint:
+      'Az időbélyeg nélküli dalszövegeket kihagyja, és a következő szolgáltatót kérdezi. A Könyvtár feljavítása ekkor a csak sima szöveggel rendelkező számokat hiányzónak veszi. A szinkronizált szöveg ezután lecseréli, a fájl saját címkéiben is.',
     ratingsGroup: 'Értékelések a Deezerről',
     ratingsHint:
       'A Navidrome-ban lévő daloknak 0–5 csillagot ad aszerint, mennyire népszerűek a Deezeren, mint a dztnr. A csillagok a fenti Navidrome-fiókhoz tartoznak.',

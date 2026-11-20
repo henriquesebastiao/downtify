@@ -29,7 +29,7 @@ Az alapértelmezett mód **borítókat, dalszövegeket és címkéket** ír újr
 Egy szám akkor számít lemaradottnak, ha:
 
 - a beágyazott borítója rövidebb oldala **kisebb a célméretnél** (a borító nélküli szám is számít);
-- **sem** beágyazott dalszövege, **sem** `.lrc` kísérőfájlja nincs (a fájl mellett vagy a Beállítások dalszövegmappájában);
+- **sem** beágyazott dalszövege, **sem** `.lrc` kísérőfájlja nincs (a fájl mellett vagy a Beállítások dalszövegmappájában) — bekapcsolt [Csak időzített dalszövegek](lyrics.md#time-synced-lyrics-only) mellett: ha nincs **időzített** dalszövege, és csak időzített szöveg íródik;
 - a címkéiből hiányzik az **album**, az **albumelőadó**, az **év** vagy a **számsorszám**.
 
 A **Címkék frissítése** csak olyan számokra működik, amelyekhez a Downtifynak még megvan a Spotify-számazonosítója — azokra, amelyeket Spotify-hivatkozásból töltött le, és a [számindexben](library-catalog.md#what-gets-stored) tart. A többi szám sorba kerül, de _Nincs tennivaló_ eredménnyel jön vissza.
@@ -76,9 +76,13 @@ Két dolog mindig felülírja:
 
 Amikor egy beolvasás azért nem talál tennivalót, _mert_ mindent nemrég ellenőriztek, ezt megmondja, és felajánlja az újrafuttatást a memória nélkül, ahelyett hogy megmagyarázatlan „nincs mit feljavítani” üzenettel hagyna.
 
+### Keresés és dalszövegek pótlása
+
+A **Keresés és dalszövegek pótlása** átnézi a könyvtárat, és amint a keresés véget ér, dalszöveget kezd keresni a szöveg nélküli számokhoz, köztes választás nélkül. Ez a futtatás csak dalszöveget keres; a borítók és címkék egy másikra maradnak.
+
 ## Futás közben
 
-Az előrehaladás panel a sorból elkészült számokat, egy hozzávetőleges adatmennyiséget (`8.4 GB of 51.3 GB`) és azt mutatja, hány lett feljavítva, hánynál nem volt tennivaló, vagy hány hibázott. Minden szám megmutatja, mit csinál — _Azonosítás_, _Borító keresése_, _Dalszöveg keresése_, _Fájl írása_ — és azzal zárul, ami változott, pl. `artwork 1200px (itunes)`.
+Az előrehaladás panel a sorból elkészült számokat, egy hozzávetőleges adatmennyiséget (`8.4 GB of 51.3 GB`) és azt mutatja, hány lett feljavítva, hánynál nem volt tennivaló, vagy hány hibázott. Minden szám megmutatja, mit csinál — _Azonosítás_, _Borító keresése_, _Dalszöveg keresése_, _Fájl írása_ — és azzal zárul, ami változott, pl. `artwork 1200px (itunes)`. Ha a futtatás dalszöveget keres, alatta egy sor megszámolja a dalszöveget kapott számokat, azokat, amelyekhez egyik szolgáltatónak sem volt, és a sikerteleneket.
 
 A **Szünet** a folyamatban lévő szám után megáll, és megtartja a sort. A **Leállítás** eldobja a többit; a már feljavított számok feljavítva maradnak. Elhagyhatod az oldalt — a futás megy tovább, és bármely másik megnyitott lap követi.
 

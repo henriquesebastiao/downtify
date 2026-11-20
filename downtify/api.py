@@ -714,6 +714,8 @@ DEFAULT_SETTINGS: dict[str, Any] = {
     'deemix': dict(DEEMIX_DEFAULTS),
     'lyrics_providers': list(lyrics.PROVIDER_ORDER),
     'download_lyrics': True,
+    # Keep only time-synced lyrics; plain ones count as none found.
+    'lyrics_synced_only': False,
     'lyrics_lrc_beside': True,
     'lyrics_lrc_dir': lyrics.DEFAULT_LYRICS_LRC_DIR,
     'format': 'mp3',
@@ -9144,6 +9146,10 @@ async def update_settings_endpoint(
             if 'lyrics_providers' in payload or 'download_lyrics' in payload:
                 state.downloader.lyrics_providers = (
                     _effective_lyrics_providers(state.settings)
+                )
+            if 'lyrics_synced_only' in payload:
+                state.downloader.lyrics_synced_only = bool(
+                    state.settings.get('lyrics_synced_only')
                 )
             if 'organize_by_artist' in payload:
                 state.downloader.organize_by_artist = bool(

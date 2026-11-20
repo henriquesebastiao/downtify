@@ -13,7 +13,9 @@ Three categories are handled, all of them writes to tags:
     iTunes or YouTube Music has for the track.
 ``lyrics``
     Fill in lyrics for tracks that have none, through the ordered
-    provider list (see :mod:`downtify.lyrics`).
+    provider list (see :mod:`downtify.lyrics`). With the
+    ``lyrics_synced_only`` setting, a track counts as having lyrics only
+    when they are time-synced, and only synced lyrics are written.
 ``metadata``
     Re-read the track from Spotify and write back album, album artist,
     release date and track number.
@@ -67,6 +69,7 @@ from .library_upgrade_db import (
     STATE_SCANNING,
     LibraryUpgradeDB,
     check_is_fresh,
+    lyrics_outcome,
 )
 from .lyrics import read_track_lyrics
 
@@ -82,6 +85,19 @@ CATEGORY_METADATA = 'metadata'
 
 #: Every category a scan reports on, in the order the UI shows them.
 CATEGORIES = (CATEGORY_ARTWORK, CATEGORY_LYRICS, CATEGORY_METADATA)
+#: The lyrics check made with Time-synced lyrics only on, kept apart:
+#: a track found to have lyrics before may have only plain ones.
+CHECK_LYRICS_SYNCED = 'lyrics_synced'
+
+
+def check_key(category: str, synced_only: bool = False) -> str:
+    """Name a category's check is remembered under."""
+
+    if synced_only and category == CATEGORY_LYRICS:
+        return CHECK_LYRICS_SYNCED
+    return category
+
+
 SUPPORTED_CATEGORIES = (*CATEGORIES, 'audio')
 
 #: How far a rewritten file's duration may drift from the original
@@ -112,6 +128,8 @@ class UpgradeOptions:
     delete_replaced_audio: bool = False
     files: tuple[str, ...] = ()
     deemix_recordings: dict[str, str] = field(default_factory=dict)
+    #: Start upgrading the chosen categories as soon as the scan ends.
+    start_after_scan: bool = False
 
     def as_dict(self) -> dict[str, Any]:
         result = {
@@ -127,6 +145,8 @@ class UpgradeOptions:
                 result['deemix_recordings'] = dict(self.deemix_recordings)
         if self.files:
             result['files'] = list(self.files)
+        if self.start_after_scan:
+            result['start_after_scan'] = True
         return result
 
 
@@ -177,6 +197,7 @@ def options_from(payload: dict[str, Any]) -> UpgradeOptions:
         files=tuple(str(f) for f in payload.get('files', [])[:1000])
         if isinstance(payload.get('files'), list)
         else (),
+        start_after_scan=payload.get('start_after_scan') is True,
     )
 
 
@@ -197,7 +218,9 @@ def _metadata_gaps(entry: dict[str, Any]) -> list[str]:
 
 
 def _summarize(
-    jobs: list[dict[str, Any]], recently_checked: int = 0
+    jobs: list[dict[str, Any]],
+    recently_checked: int = 0,
+    plain_lyrics_only: int = 0,
 ) -> dict[str, Any]:
     """How many tracks (and bytes) each category accounts for."""
 
@@ -218,6 +241,9 @@ def _summarize(
         # Tracks the scan didn't even read, because every category had
         # been looked at recently enough.
         'recently_checked': int(recently_checked),
+        # Of the tracks missing lyrics, those that only have plain
+        # (unsynced) ones, with Time-synced lyrics only on.
+        'plain_lyrics_only': int(plain_lyrics_only),
     }
 
 
@@ -226,18 +252,28 @@ def track_findings(
     full_path: Path,
     *,
     artwork_min_px: int,
+    synced_only: bool = False,
 ) -> list[str]:
     """Which categories this track is behind on."""
 
     found: list[str] = []
     if int(entry.get('cover_px') or 0) < artwork_min_px:
         found.append(CATEGORY_ARTWORK)
-    existing = read_track_lyrics(full_path)
-    if not (existing.get('synced') or existing.get('plain')):
+    if not has_lyrics(full_path, synced_only=synced_only):
         found.append(CATEGORY_LYRICS)
     if _metadata_gaps(entry):
         found.append(CATEGORY_METADATA)
     return found
+
+
+def has_lyrics(full_path: Path, *, synced_only: bool = False) -> bool:
+    """Whether a track has lyrics: any, or with *synced_only* time-synced
+    ones (a ``.lrc`` sidecar or synced lyrics in its tags)."""
+
+    if synced_only:
+        return lyrics_mod.has_synced_lyrics(full_path)
+    existing = read_track_lyrics(full_path)
+    return bool(existing.get('synced') or existing.get('plain'))
 
 
 # ── The song a track describes ────────────────────────────────────────
@@ -491,14 +527,19 @@ def _pick_lyrics(
 
     if CATEGORY_LYRICS not in options.categories:
         return None
-    existing = read_track_lyrics(full)
-    if existing.get('synced') or existing.get('plain'):
+    settings = deps.settings()
+    synced_only = bool(settings.get('lyrics_synced_only'))
+    if has_lyrics(full, synced_only=synced_only):
         return None
-    providers = list(deps.settings().get('lyrics_providers') or [])
+    providers = list(settings.get('lyrics_providers') or [])
     if not providers:
         return None
-    found = lyrics_mod.fetch(song, providers, deps.lyrics_cache)
-    return found if found is not None and found.has_any() else None
+    found = lyrics_mod.fetch(
+        song, providers, deps.lyrics_cache, synced_only=synced_only
+    )
+    if found is None or not found.usable(synced_only):
+        return None
+    return found
 
 
 def _publish_staged_lrc(source: Path, destination: Path) -> None:
@@ -538,6 +579,7 @@ def _write_upgrade(
     artwork: _Artwork,
     new_lyrics: Optional[lyrics_mod.Lyrics],
     write_tags: bool,
+    embed_synced: bool = False,
 ) -> Optional[str]:
     """Rewrite *full* through a verified working copy; error text or ``None``."""
 
@@ -565,6 +607,7 @@ def _write_upgrade(
                 stage.staged,
                 new_lyrics,
                 sidecar=stage.staged.with_suffix('.lrc'),
+                embed_synced=embed_synced,
             )
     except Exception as exc:
         _discard(stage)
@@ -663,6 +706,7 @@ def upgrade_track(
         artwork=artwork,
         new_lyrics=new_lyrics,
         write_tags=bool(changed),
+        embed_synced=bool(deps.settings().get('lyrics_synced_only')),
     )
     if error == _READ_ONLY_DETAIL:
         return UpgradeOutcome(JOB_SKIPPED, error, checked=False)
@@ -741,6 +785,8 @@ class LibraryUpgradeRunner:
             'state': run['state'],
             'run': run,
             'counts': counts,
+            # How the lyrics part went: added, none found, failed.
+            'lyrics': lyrics_outcome(self.db, int(run['id'])),
             # Carried by every progress message, not only the initial
             # GET, so a client that only ever sees WebSocket updates
             # still knows what the scan found.
@@ -806,11 +852,14 @@ class LibraryUpgradeRunner:
                 wanted_files = set(options.files)
                 entries = [e for e in entries if e['file'] in wanted_files]
             self._scan_total = len(entries)
+            synced_only = bool(self.deps.settings().get('lyrics_synced_only'))
             checks = self.db.checks_for([str(e['file']) for e in entries])
             jobs: list[dict[str, Any]] = []
             checked: list[tuple[str, list[str]]] = []
             total_bytes = 0
-            skipped = 0
+            # Tracks not even read (all checked recently), and tracks
+            # missing lyrics that only have plain ones.
+            tally = {'skipped': 0, 'plain_only': 0}
             for index, entry in enumerate(entries, start=1):
                 if self._stop.is_set():
                     self.db.set_state(run_id, STATE_CANCELLED)
@@ -830,19 +879,24 @@ class LibraryUpgradeRunner:
                     })
                     continue
                 due = self._categories_due(
-                    checks.get(stored) or {}, options.recheck_days
+                    checks.get(stored) or {},
+                    options.recheck_days,
+                    synced_only=synced_only,
                 )
                 if not due:
                     # Every category was looked at recently: don't even
                     # read the file.
-                    skipped += 1
+                    tally['skipped'] += 1
                     continue
                 full = resolve_track(stored, ctx)
                 if full is None:
                     continue
                 behind = set(
                     track_findings(
-                        entry, full, artwork_min_px=options.artwork_min_px
+                        entry,
+                        full,
+                        artwork_min_px=options.artwork_min_px,
+                        synced_only=synced_only,
                     )
                 )
                 found = [name for name in CATEGORIES if name in due & behind]
@@ -850,7 +904,16 @@ class LibraryUpgradeRunner:
                 # next scan doesn't read this file again for those.
                 clean = sorted(due - behind)
                 if clean:
-                    checked.append((stored, clean))
+                    checked.append((
+                        stored,
+                        [check_key(n, synced_only) for n in clean],
+                    ))
+                if (
+                    synced_only
+                    and CATEGORY_LYRICS in found
+                    and read_track_lyrics(full, raw=True).get('plain')
+                ):
+                    tally['plain_only'] += 1
                 if found:
                     jobs.append({
                         'file': stored,
@@ -862,28 +925,40 @@ class LibraryUpgradeRunner:
             self.db.record_checks(checked, app_version=self.deps.version)
             self.db.add_jobs(run_id, jobs)
             self.db.set_totals(run_id, len(entries), total_bytes)
-            self.db.set_summary(run_id, _summarize(jobs, skipped))
+            self.db.set_summary(
+                run_id, _summarize(jobs, tally['skipped'], tally['plain_only'])
+            )
             self.db.set_state(run_id, STATE_READY)
+            if options.start_after_scan and jobs and not queue_pause.paused:
+                # "Scan, then upgrade": the chosen categories, at once.
+                self.db.set_categories(run_id, list(options.categories))
+                self._begin(run_id, options)
+                return
         except Exception:
             logger.opt(exception=True).error('Library upgrade scan failed')
             self.db.set_state(run_id, STATE_CANCELLED)
         self._publish()
 
     def _categories_due(
-        self, track_checks: dict[str, Any], recheck_days: int
+        self,
+        track_checks: dict[str, Any],
+        recheck_days: int,
+        *,
+        synced_only: bool = False,
     ) -> set[str]:
         """Categories this track hasn't had looked at recently.
 
         Kept per category: repairing a track's artwork says nothing
         about whether anyone ever went looking for its lyrics, so a
-        later run for another category must still consider it.
+        later run for another category must still consider it. With
+        *synced_only*, only a lyrics check made that way counts.
         """
 
         return {
             name
             for name in CATEGORIES
             if not check_is_fresh(
-                track_checks.get(name),
+                track_checks.get(check_key(name, synced_only)),
                 app_version=self.deps.version,
                 max_age_days=recheck_days,
             )
@@ -897,6 +972,7 @@ class LibraryUpgradeRunner:
             'category_bytes': stored.get('category_bytes') or {},
             'tracks': int(stored.get('tracks') or 0),
             'recently_checked': int(stored.get('recently_checked') or 0),
+            'plain_lyrics_only': int(stored.get('plain_lyrics_only') or 0),
             'library_tracks': int(run['total_tracks'] or 0),
             'library_bytes': int(run['total_bytes'] or 0),
         }
@@ -1083,9 +1159,10 @@ class LibraryUpgradeRunner:
             # Only the categories this run actually looked at: the rest
             # stay due, so a later run for them still considers the
             # track.
+            synced_only = bool(self.deps.settings().get('lyrics_synced_only'))
             self.db.record_check(
                 stored,
-                todo,
+                [check_key(name, synced_only) for name in todo],
                 app_version=self.deps.version,
                 artwork_px=outcome.artwork_px,
                 artwork_source=outcome.artwork_source,

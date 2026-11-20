@@ -697,6 +697,12 @@ export default {
     ofBytes: '{done} / {total}',
     longJob:
       '媒體庫較大時需要一些時間。你可以離開這個頁面，重新啟動後也會接續處理佇列。',
+    lyricsQuickTitle: '缺少的歌詞',
+    lyricsQuickHint:
+      '掃描音樂庫中沒有歌詞的歌曲，並立即查找歌詞，中間無需選擇。其他升級留待下次執行。',
+    lyricsQuickButton: '掃描並查找歌詞',
+    lyricsPlainOnly: '只有非同步歌詞：{count} — 找到同步歌詞後取代',
+    lyricsOutcome: '已新增歌詞：{added} · 未找到：{notFound} · 失敗：{failed}',
     completed: '已升級',
     skipped: '無須處理',
     failed: '失敗',
@@ -1726,6 +1732,11 @@ export default {
     lyricsLrclibHint: '社群資料庫，提供純文字和時間同步歌詞',
     lyricsNetease: '網易雲音樂',
     lyricsNeteaseHint: '曲庫龐大，通常有時間同步歌詞',
+    lyricsKugou: '酷狗音樂',
+    lyricsKugouHint: '曲庫大，逐行同步',
+    lyricsSyncedOnly: '僅限同步歌詞',
+    lyricsSyncedOnlyHint:
+      '略過沒有時間軸的歌詞，改問下一個來源。「升級音樂庫」也會把只有純文字歌詞的歌曲算作缺少歌詞。找到同步歌詞後會取代它們，檔案本身的標籤裡也會寫入。',
     ratingsGroup: '來自 Deezer 的評分',
     ratingsHint:
       '依歌曲在 Deezer 上的熱度，為 Navidrome 中的歌曲打 0–5 顆星，類似 dztnr。星級會儲存在上方的 Navidrome 帳號中。',

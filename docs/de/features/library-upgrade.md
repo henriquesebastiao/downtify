@@ -29,7 +29,7 @@ Der Standardmodus schreibt **Cover, Songtexte und Tags** neu. Der optionale [Dee
 Ein Titel gilt als zurückliegend, wenn:
 
 - die kurze Seite seines eingebetteten Covers **kleiner als die Zielgröße** ist (ein Titel ganz ohne Cover zählt auch);
-- er **weder** eingebettete Songtexte **noch** ein `.lrc`-Sidecar hat (neben der Datei oder im Songtext-Ordner aus den Einstellungen);
+- er **weder** eingebettete Songtexte **noch** ein `.lrc`-Sidecar hat (neben der Datei oder im Songtext-Ordner aus den Einstellungen) — mit eingeschaltetem [Nur zeitsynchrone Songtexte](lyrics.md#time-synced-lyrics-only): wenn er keine **zeitsynchronen** Songtexte hat, und es werden nur synchrone geschrieben;
 - in seinen Tags **Album**, **Album-Künstler**, **Jahr** oder **Titelnummer** fehlt.
 
 **Tags aktualisieren** funktioniert nur für Titel, für die Downtify noch eine Spotify-Titel-ID hat — die, die es von einem Spotify-Link heruntergeladen hat und die im [Titelindex](library-catalog.md#what-gets-stored) stehen. Andere Titel werden eingereiht, kommen aber als _Keine Änderung nötig_ zurück.
@@ -76,9 +76,13 @@ Zwei Dinge heben es immer auf:
 
 Findet ein Scan nichts mehr zu tun, _weil_ alles kürzlich geprüft wurde, sagt er das und bietet an, ohne das Gedächtnis erneut zu laufen, statt dich mit einem unerklärten „nichts zu verbessern“ zurückzulassen.
 
+### Scannen und Songtexte suchen
+
+**Scannen und Songtexte suchen** durchsucht die Bibliothek und beginnt, sobald der Scan endet, Songtexte für die Titel ohne zu suchen, ohne Auswahl dazwischen. In diesem Lauf werden nur Songtexte gesucht; Cover und Tags bleiben für einen anderen.
+
 ## Während es läuft
 
-Das Fortschrittspanel zeigt erledigte Titel aus der Warteschlange, eine ungefähre Datenmenge (`8.4 GB of 51.3 GB`) und wie viele verbessert wurden, nichts zu tun hatten oder fehlschlugen. Jeder Titel zeigt, was er gerade tut — _Zuordnung_, _Cover werden gesucht_, _Songtexte werden gesucht_, _Datei wird geschrieben_ — und endet mit dem, was sich änderte, z. B. `artwork 1200px (itunes)`.
+Das Fortschrittspanel zeigt erledigte Titel aus der Warteschlange, eine ungefähre Datenmenge (`8.4 GB of 51.3 GB`) und wie viele verbessert wurden, nichts zu tun hatten oder fehlschlugen. Jeder Titel zeigt, was er gerade tut — _Zuordnung_, _Cover werden gesucht_, _Songtexte werden gesucht_, _Datei wird geschrieben_ — und endet mit dem, was sich änderte, z. B. `artwork 1200px (itunes)`. Sucht der Lauf Songtexte, zählt eine Zeile darunter die Titel, die Songtexte bekommen haben, die, für die kein Anbieter welche hatte, und die fehlgeschlagenen.
 
 **Pausieren** stoppt nach dem laufenden Titel und behält die Warteschlange. **Anhalten** verwirft den Rest; bereits verbesserte Titel bleiben verbessert. Du kannst die Seite verlassen — der Lauf geht weiter, und jeder andere offene Tab folgt mit.
 

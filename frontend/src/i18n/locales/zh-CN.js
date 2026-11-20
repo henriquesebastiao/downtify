@@ -687,6 +687,12 @@ export default {
     ofBytes: '{done} / {total}',
     longJob:
       '大型音乐库可能需要较长时间。你可以离开此页面，服务器重启后也会继续处理队列。',
+    lyricsQuickTitle: '缺少的歌词',
+    lyricsQuickHint:
+      '扫描音乐库中没有歌词的歌曲，并立即查找歌词，中间无需选择。其他升级留待下次运行。',
+    lyricsQuickButton: '扫描并查找歌词',
+    lyricsPlainOnly: '只有非同步歌词：{count} — 找到同步歌词后替换',
+    lyricsOutcome: '已添加歌词：{added} · 未找到：{notFound} · 失败：{failed}',
     completed: '已升级',
     skipped: '无需处理',
     failed: '失败',
@@ -1697,6 +1703,11 @@ export default {
     lyricsLrclibHint: '社区数据库，提供纯文本和时间轴歌词',
     lyricsNetease: '网易云音乐',
     lyricsNeteaseHint: '曲库丰富，通常提供时间轴歌词',
+    lyricsKugou: '酷狗音乐',
+    lyricsKugouHint: '曲库大，逐行同步',
+    lyricsSyncedOnly: '仅限同步歌词',
+    lyricsSyncedOnlyHint:
+      '跳过没有时间轴的歌词，改问下一个来源。“升级音乐库”也会把只有纯文本歌词的歌曲算作缺少歌词。找到同步歌词后会替换它们，文件自身的标签里也会写入。',
     ratingsGroup: '来自 Deezer 的评分',
     ratingsHint:
       '根据歌曲在 Deezer 上的热度，为 Navidrome 中的歌曲打 0–5 星，类似 dztnr。星级保存在上方的 Navidrome 账户中。',

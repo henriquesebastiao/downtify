@@ -16,10 +16,19 @@ Kataloglar farklıdır: bir sağlayıcının hiç duymadığı şarkı çoğu za
 
 | Sağlayıcı | Sözler | Notlar |
 |----------|--------|-------|
-| **[LRCLIB](https://lrclib.net)** | Düz ve zamanla eşzamanlı | Ücretsiz topluluk veritabanı, anahtar yok. Başlık, ana sanatçı, albüm ve süreyle eşleştirilir. |
+| **[LRCLIB](https://lrclib.net)** | Düz ve zamanla eşzamanlı | Ücretsiz topluluk veritabanı, anahtar yok. Başlık, ana sanatçı, albüm ve süreyle eşleştirilir. Bu yolla zaman eşlemeli bir şey bulunmazsa araması da denenir; başlık, sanatçı ve süre (birkaç saniye içinde) uyuyorsa sonuç kabul edilir. |
 | **NetEase Cloud Music** | Genellikle zamanla eşzamanlı | Büyük katalog; Asya yayınlarında güçlü, çoğu zaman Batı yayınlarında da. Başlık, sanatçı ve süreyle eşleştirilir; sanatçısı farklı yazılmış bir sonuç (örneğin geleneksel ve basitleştirilmiş Çince) yalnızca başlık ve süre ikisi de tuttuğunda kabul edilir. |
+| **Kugou Music** | Zaman eşlemeli | Geniş katalog, Çin yayınlarında güçlü ve birçok Batılı yayın da var. NetEase gibi eşleştirilir; baştaki başlık satırı ve söz yazarı bilgileri atılır. |
 
-**Ayarlar → Etiketler ve sözler → Sağlayıcılar** içinde sağlayıcıları tercih ettiğiniz sıraya sürükleyebilir ya da oklarla taşıyabilir ve herhangi birini kapatabilirsiniz. En az biri açık kalır; söz aramayı tamamen durdurmak için **Şarkı sözlerini indir** anahtarını kullanın.
+**Ayarlar → Etiketler ve sözler → Sağlayıcılar** içinde sağlayıcıları tercih ettiğiniz sıraya sürükleyebilir ya da oklarla taşıyabilir ve herhangi birini kapatabilirsiniz. En az biri açık kalır; söz aramayı tamamen durdurmak için **Şarkı sözlerini indir** anahtarını kullanın. Kendi listeni zaten kaydettiysen, bir güncellemeyle eklenen sağlayıcı kapalı başlar: onu orada aç.
+
+### Yalnızca zaman eşlemeli sözler
+
+**Ayarlar → Etiketler ve şarkı sözleri → Yalnızca zaman eşlemeli şarkı sözleri** (varsayılan olarak kapalı) yalnızca zaman damgalı sözleri tutar: bir sağlayıcının şarkı için yalnızca düz sözü varsa hiç yok sayılır ve sonraki sağlayıcıya sorulur. [Kitaplığı yükselt](library-upgrade.md) de yalnızca düz sözü olan bir parçayı sözsüz sayar. Bir dosyanın zaten sahip olduğu zaman eşlemeli sözler her zaman sayılır: yanındaki bir `.lrc` dosyası, etiketlerdeki zaman damgalı sözler veya bir ID3 `SYLT` çerçevesi (diğer uygulamalardan gelen dosyalarda bazen olduğu gibi). Ayar açıkken Downtify'ın bulduğu zaman eşlemeli sözler düz sözlerin yerini alır: `.lrc` dosyasında ve dosyanın kendi söz etiketinde, böylece yalnızca etiketleri okuyan oynatıcılar da sözleri eşlemeli gösterir. Tarama, sözü eksik parçalardan kaçında yalnızca düz söz olduğunu da söyler.
+
+### Sözü olmayan parçalar için söz bulma
+
+**Kitaplık → Kitaplığı yükselt → Tara ve söz bul** kitaplıkta sözü olmayan parçaları tarar ve hemen söz arar, ilerleme çubuğuyla. Sonunda kaç parçaya söz eklendiğini, kaçı için bulunamadığını ve kaçının başarısız olduğunu söyler. Bkz. [Kitaplığı yükselt](library-upgrade.md#while-it-runs).
 
 ::: info Peki Genius, Musixmatch ve AZLyrics?
 Kullanılamıyorlar ve Downtify artık sunmuyor:

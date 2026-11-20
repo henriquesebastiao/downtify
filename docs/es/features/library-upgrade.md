@@ -29,7 +29,7 @@ El modo predeterminado reescribe **portadas, letras y etiquetas**. La [sustituci
 Una canción cuenta como atrasada cuando:
 
 - el lado menor de su portada incrustada es **menor que el tamaño objetivo** (una canción sin portada también cuenta);
-- no tiene **ni** letra incrustada **ni** archivo `.lrc` (junto al archivo o en la carpeta de letras de Ajustes);
+- no tiene **ni** letra incrustada **ni** archivo `.lrc` (junto al archivo o en la carpeta de letras de Ajustes) — con [Solo letras sincronizadas](lyrics.md#time-synced-lyrics-only) activado, cuando no tiene letra **sincronizada**, y solo se escriben letras sincronizadas;
 - falta **álbum**, **artista del álbum**, **año** o **número de canción** en sus etiquetas.
 
 **Actualizar etiquetas** solo funciona para canciones de las que Downtify aún tiene el ID de canción de Spotify — las que descargó de un enlace de Spotify, guardadas en el [índice de canciones](library-catalog.md#what-gets-stored). Las demás canciones entran en la cola pero vuelven como _Nada que hacer_.
@@ -76,9 +76,13 @@ Dos cosas siempre la anulan:
 
 Cuando un escaneo no encuentra nada que hacer _porque_ todo se comprobó hace poco, lo dice y se ofrece a ejecutarse otra vez sin la memoria, en lugar de dejarte con un «nada que mejorar» sin explicación.
 
+### Escanear y buscar letras
+
+**Escanear y buscar letras** escanea la biblioteca y, en cuanto termina, empieza a buscar letras para las pistas que no tienen, sin nada que elegir entre medias. En esa ejecución solo se buscan letras; las portadas y etiquetas quedan para otra.
+
 ## Mientras se ejecuta
 
-El panel de progreso muestra las canciones hechas de la cola, una cifra aproximada de datos (`8.4 GB of 51.3 GB`) y cuántas se mejoraron, no tenían nada que hacer o fallaron. Cada canción muestra lo que está haciendo — _Identificando_, _Buscando portada_, _Buscando letra_, _Escribiendo el archivo_ — y termina con lo que cambió, p. ej. `artwork 1200px (itunes)`.
+El panel de progreso muestra las canciones hechas de la cola, una cifra aproximada de datos (`8.4 GB of 51.3 GB`) y cuántas se mejoraron, no tenían nada que hacer o fallaron. Cada canción muestra lo que está haciendo — _Identificando_, _Buscando portada_, _Buscando letra_, _Escribiendo el archivo_ — y termina con lo que cambió, p. ej. `artwork 1200px (itunes)`. Cuando la ejecución busca letras, una línea debajo cuenta las pistas que consiguieron letra, aquellas para las que ningún proveedor tenía y las que fallaron.
 
 **Pausar** se detiene tras la canción en curso y conserva la cola. **Detener** descarta el resto; las canciones ya mejoradas siguen mejoradas. Puedes salir de la página — la ejecución sigue, y cualquier otra pestaña abierta la sigue.
 
