@@ -497,6 +497,57 @@ export default {
     playCountSpotify: 'Spotify 재생 횟수',
     playCountYoutubeMusic: 'YouTube Music 재생 횟수 (근사치)',
   },
+  slskdMisses: {
+    title: 'slskd를 쓰지 못한 이유',
+    hint: 'slskd에 없어서 다른 소스가 받았거나 아무 데서도 찾지 못한 곡입니다. 이유를 누르면 예시와 바꿀 설정이 나옵니다.',
+    reset: '초기화',
+    resetTitle: '집계를 처음부터 다시 할까요?',
+    resetBody:
+      '지금까지 기록된 이유를 모두 지워, 다음 다운로드로 설정 변경이 도움이 됐는지 볼 수 있게 합니다. 곡과 파일은 건드리지 않습니다.',
+    empty:
+      '아직 없음: 마지막 초기화 이후 slskd가 요청받은 모든 다운로드를 처리했습니다.',
+    since: '{when}부터 {count}곡',
+    usedInstead: '대신 사용:',
+    nothingFound: '찾지 못함',
+    reason: {
+      not_configured: 'slskd 미설정',
+      unreachable: 'slskd에 연결 못 함',
+      search_failed: '검색이 시작되지 않음',
+      search_timeout: '검색 시간 초과',
+      no_results: '공유한 사람이 없음',
+      no_match: '맞는 파일 없음',
+      low_confidence: '최소 점수 미달',
+      quality_filtered: '품질 규칙에 막힘',
+      timeout: '다운로드 시간 초과',
+      transfer_failed: '전송 실패',
+      tag_mismatch: '파일 속 곡이 다름',
+      unknown: '알 수 없음',
+    },
+    fix: {
+      not_configured: '설정 → 오디오 소스에서 서버 URL과 API 키를 입력하세요.',
+      unreachable:
+        '그때 slskd가 꺼져 있거나 연결되지 않았습니다. 실행 중인지, URL이 맞는지 확인하세요.',
+      search_failed:
+        'slskd가 검색을 거부했습니다. Soulseek 네트워크에 아직 연결하는 중일 때가 많습니다.',
+      search_timeout:
+        '검색이 제한 시간을 넘었습니다. 설정 → 오디오 소스에서 전체 제한 시간을 늘리세요.',
+      no_results:
+        '업로드 슬롯이 빈 사용자 중 이 곡을 가진 사람이 없었습니다. 드문 곡은 Soulseek에 없을 때가 많고, 나중에 다시 시도하면 찾을 수 있습니다.',
+      no_match:
+        '파일은 왔지만 제목, 아티스트, 길이가 충분히 맞는 파일이 없었습니다.',
+      low_confidence:
+        '비슷한 파일이 있었지만 잘못된 곡(리믹스, 라이브)을 막는 기준 점수에 못 미쳤습니다.',
+      quality_filtered:
+        '맞는 파일은 있었지만 형식과 비트레이트 규칙을 통과한 파일이 없었습니다. 형식을 더 허용하거나, 최소 비트레이트를 낮추거나, 비트레이트 표시가 없는 파일을 허용하면 통과합니다.',
+      timeout:
+        '파일을 골랐지만 제때 도착하지 않았습니다. 전체 또는 대기열 제한 시간을 늘리세요.',
+      transfer_failed:
+        '고른 파일이 모두 거부되었거나 끝까지 받지 못했습니다(상대가 오프라인, 긴 대기열). 후보 시도 횟수를 늘리면 더 많은 파일을 시도합니다.',
+      tag_mismatch:
+        '받은 파일의 태그가 다른 곡을 가리켜 slskd 폴더에 따로 두었습니다.',
+      unknown: '이유 없이 기록됨.',
+    },
+  },
   queue: {
     globalPause: '다운로드 및 모니터링 일시 중지',
     globalResume: '다운로드 및 모니터링 재개',
@@ -566,6 +617,13 @@ export default {
       '올바른 YouTube 영상 또는 SoundCloud 트랙 링크 형식이 아닙니다.',
     playlistDownloads: '재생목록 다운로드',
     sources: '다운로드 출처',
+    fromWatch: '{name}에서',
+    fromWatchTitle: '모니터가 {name} 때문에 내려받고 있습니다. 감시를 엽니다.',
+    watches: '감시별 다운로드',
+    watchesHint:
+      '이 대기열의 노래가 어느 모니터 감시에서 왔는지 보여 줍니다. 열어서 일시 중지하거나 감시를 멈추세요.',
+    watchWaiting: '{count}곡 남음',
+    openWatchOriginal: '원본 열기',
     noSourcesYet: '완료된 다운로드의 출처가 여기에 표시됩니다.',
     importTitle: '라이브러리 가져오기',
     importHint: 'Soundiiz, TuneMyMusic, Exportify 등에서 내보낸 CSV 파일.',
@@ -729,6 +787,14 @@ export default {
     ofBytes: '{done} / {total}',
     longJob:
       '라이브러리 용량이 큰 경우 시간이 걸릴 수 있습니다. 이 페이지를 벗어나도 무방하며, 서버를 재시작해도 대기열을 이어서 작업합니다.',
+    lyricsQuickTitle: '없는 가사',
+    lyricsQuickHint:
+      '가사가 없는 곡을 찾아 바로 가사를 검색합니다. 중간에 고를 필요가 없으며, 다른 업그레이드는 다음 실행으로 남깁니다.',
+    lyricsQuickButton: '스캔하고 가사 찾기',
+    lyricsPlainOnly:
+      '동기화되지 않은 가사만 있음: {count} — 동기화 가사를 찾으면 바뀝니다',
+    lyricsOutcome:
+      '가사 추가: {added} · 찾지 못함: {notFound} · 실패: {failed}',
     completed: '업그레이드 완료',
     skipped: '작업 불필요',
     failed: '실패',
@@ -1197,6 +1263,7 @@ export default {
     wantedSummary: '{releases}에서 {songs} 없음',
     wantedSongs: { one: '{count}곡', other: '{count}곡' },
     wantedReleases: { one: '발매작 {count}개', other: '발매작 {count}개' },
+    wantedUpcoming: '발매 예정 {count}개',
     wantedUnchecked: {
       one: '아직 확인 안 된 발매작 {count}개',
       other: '아직 확인 안 된 발매작 {count}개',
@@ -1382,6 +1449,7 @@ export default {
     filter: {
       all: '전체',
       missing: '받을 예정',
+      upcoming: '발매 예정',
       partly: '일부',
       complete: '완료',
       not_watched: '지켜보지 않음',
@@ -1392,6 +1460,8 @@ export default {
       complete: '완료 · {have}/{total}',
       partly: '일부 · {have}/{total}',
       missing: '받을 예정',
+      upcoming: '{date} 발매 예정',
+      upcomingNoDate: '곧 발매',
       skipped: '감시 전에 발매',
       not_watched: '지켜보지 않음',
       off: '꺼짐',
@@ -1475,6 +1545,9 @@ export default {
       one: '{count}곡이 계속 실패함',
       other: '{count}곡이 계속 실패함',
     },
+    failuresClear: '지우기',
+    failuresClearHint:
+      '설정을 바꾼 뒤 지우기로 목록을 새로 시작하세요. 계속 실패하는 곡은 다음 확인 때 다시 나타납니다.',
     attempts: { one: '{count}회 시도', other: '{count}회 시도' },
     lastTried: '마지막 시도 {when}',
     songsTitle: '이 모니터링의 곡',
@@ -1624,6 +1697,17 @@ export default {
     sourceSoundcloud: 'SoundCloud',
     sourceSoundcloudHint:
       '다른 곳에 없는 업로드, 그리고 SoundCloud 링크의 원래 트랙',
+    sourceNeedsTitle: '소스별로 필요한 것',
+    sourceNeedsSlskd:
+      'slskd: 무료 Soulseek 네트워크에 연결된 자신의 slskd 서버. 구독 없음. 음질은 사람들이 공유한 그대로이며 FLAC나 MP3 320인 경우가 많습니다.',
+    sourceNeedsDeemix:
+      'Deemix: 자신의 Deemix 서버와 자신의 Deezer 계정. 무료 계정은 MP3 128kbps만 받습니다. MP3 320과 FLAC는 유료 Deezer 요금제가 필요합니다. Downtify는 요금제를 제공하거나 우회하지 않습니다.',
+    sourceNeedsYoutube:
+      'YouTube Music과 YouTube: 설정할 것 없음. 오디오는 손실 압축입니다(약 128–160kbps).',
+    sourceNeedsSoundcloud:
+      'SoundCloud: 설정할 것도, 계정도 필요 없습니다. 스트림은 보통 128–160kbps입니다.',
+    sourceNeedsCover:
+      '어느 소스든 파일에 넣는 커버는 Downtify가 곡을 위해 가져온 것입니다(설정 → 다운로드 → 커버 크기).',
     deemixTitle: 'Deemix',
     deemixHint:
       'Download from your own Deemix server. Requested quality requires the matching Deezer entitlement.',
@@ -1691,6 +1775,9 @@ export default {
     slskdInPlace: 'slskd 폴더에 파일 그대로 유지',
     slskdInPlaceHint:
       '켜짐: 원래 위치에서 태그를 작성하고 파일을 유지합니다. 꺼짐: 다운로드 폴더로 복사하고 태그를 작성한 뒤 가져오기가 성공해야 원본을 삭제합니다. 실패하면 원본을 유지합니다.',
+    slskdKeepCover: '파일 자체 커버가 더 크면 유지',
+    slskdKeepCoverHint:
+      '공유 파일에는 앨범의 원본 크기 커버가 들어 있는 경우가 많습니다. 켜면: slskd 파일의 자체 커버가 Downtify가 가져온 커버(Spotify, YouTube Music)보다 크면 그대로 둡니다. 끄면: 가져온 커버로 항상 바꿉니다.',
     youtubeTitle: 'YouTube',
     cookies: 'YouTube 쿠키',
     cookiesHint:
@@ -1770,6 +1857,9 @@ export default {
     coverMinHint:
       '이보다 작으면 Spotify, iTunes, YouTube Music에 같은 발매의 더 큰 커버를 요청하고 가장 큰 것을 씁니다. 끄면 곡 출처의 커버를 그대로 씁니다.',
     coverMinOff: '끔',
+    coverLargest: '항상 가장 큰 커버 사용',
+    coverLargestHint:
+      '다운로드할 때마다 Spotify, iTunes, YouTube Music에 해당 앨범 커버를 요청하고 가장 큰 것을 넣습니다(iTunes에서 1200 px인 경우가 많음). 곡마다 조금 느려집니다. 끄면: 최소 크기보다 작지 않은 한 곡 출처의 커버를 씁니다.',
     coverSize: '커버 해상도',
     coverSizeHint:
       'YouTube Music 및 Deezer에서 가져오는 커버에 적용됩니다. Spotify 커버는 항상 사용 가능한 최대 해상도로 저장됩니다.',
@@ -1800,6 +1890,11 @@ export default {
       '커뮤니티 기반 데이터베이스 — 일반 가사 및 싱크 가사 제공',
     lyricsNetease: 'NetEase Cloud Music (왕이윈)',
     lyricsNeteaseHint: '방대한 데이터베이스 보유, 대부분 싱크 가사 지원',
+    lyricsKugou: 'Kugou Music',
+    lyricsKugouHint: '큰 카탈로그, 싱크 가사',
+    lyricsSyncedOnly: '싱크 가사만',
+    lyricsSyncedOnlyHint:
+      '타임스탬프가 없는 가사는 건너뛰고 다음 제공자에게 묻습니다. 라이브러리 업그레이드도 일반 가사만 있는 곡을 가사 없음으로 셉니다. 그런 곡은 동기화 가사로 바뀌며, 파일 자체의 태그에도 들어갑니다.',
     ratingsGroup: 'Deezer 기반 별점',
     ratingsHint:
       'Deezer에서의 인기도에 따라 Navidrome의 곡에 0~5개의 별을 매깁니다. dztnr과 같은 방식입니다. 별점은 위의 Navidrome 계정에 저장됩니다.',

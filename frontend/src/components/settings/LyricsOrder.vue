@@ -27,5 +27,10 @@ const providers = computed(() => [
     title: t('settings.lyricsNetease'),
     description: t('settings.lyricsNeteaseHint'),
   },
+  {
+    id: 'kugou',
+    title: t('settings.lyricsKugou'),
+    description: t('settings.lyricsKugouHint'),
+  },
 ])
 </script>

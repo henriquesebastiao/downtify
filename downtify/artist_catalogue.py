@@ -21,6 +21,9 @@ album listed by two catalogues is one row - with its state:
 ``complete``  every track is in the library
 ``partly``    some are
 ``missing``   it is wanted and none are there yet (the next check tries)
+``upcoming``  it is wanted but announced, not out yet (``release_date`` is
+              in the future): the first check on or after its release
+              day downloads it
 ``skipped``   out before a "new releases only" watch started
 ``not_watched`` a type or kind the watch doesn't download
 ``off``       switched off
@@ -39,7 +42,8 @@ not just "out before the watch".
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+import re
+from datetime import date, datetime, timezone
 from typing import Any, Callable, ContextManager, Iterable, Optional
 
 from . import musicbrainz
@@ -55,6 +59,7 @@ CHOICES = ('', 'on', 'off')
 _STATE_ORDER = (
     'complete',
     'partly',
+    'upcoming',
     'missing',
     'skipped',
     'not_watched',
@@ -112,10 +117,19 @@ class ArtistCatalogue:
             not_own INTEGER NOT NULL DEFAULT 0,
             choice TEXT NOT NULL DEFAULT '',
             listed_at TEXT NOT NULL,
+            release_date TEXT NOT NULL DEFAULT '',
             PRIMARY KEY (playlist_id, album_id),
             FOREIGN KEY (playlist_id) REFERENCES monitored_playlists(id)
                 ON DELETE CASCADE
         )""")
+        columns = {
+            r[1] for r in conn.execute('PRAGMA table_info(artist_catalogue)')
+        }
+        if 'release_date' not in columns:
+            conn.execute(
+                'ALTER TABLE artist_catalogue ADD COLUMN release_date '
+                "TEXT NOT NULL DEFAULT ''"
+            )
         # Each release's tracklist, once a sweep or "Check what I
         # have" read it.
         conn.execute("""CREATE TABLE IF NOT EXISTS artist_catalogue_tracks (
@@ -146,13 +160,15 @@ class ArtistCatalogue:
                 conn.execute(
                     """INSERT INTO artist_catalogue
                        (playlist_id, album_id, name, release_type, kinds,
-                        year, source, cover_url, url, position, listed_at)
-                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        year, source, cover_url, url, position, listed_at,
+                        release_date)
+                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                        ON CONFLICT(playlist_id, album_id) DO UPDATE SET
                          name = excluded.name,
                          release_type = excluded.release_type,
                          kinds = excluded.kinds,
                          year = excluded.year,
+                         release_date = excluded.release_date,
                          source = excluded.source,
                          cover_url = excluded.cover_url,
                          url = excluded.url,
@@ -170,8 +186,34 @@ class ArtistCatalogue:
                         str(album.get('url') or ''),
                         position,
                         now,
+                        release_day(album),
                     ),
                 )
+
+    def release_day_arrived(
+        self, playlist_id: int, last_checked: Optional[str]
+    ) -> bool:
+        """Whether one of the watch's announced releases has come out
+        since its last check: the day it is due, whatever the interval."""
+
+        if not last_checked:
+            return False
+        try:
+            checked = datetime.fromisoformat(last_checked)
+        except ValueError:
+            return False
+        if checked.tzinfo is None:
+            checked = checked.replace(tzinfo=timezone.utc)
+        since = checked.astimezone().date().isoformat()
+        today = date.today().isoformat()
+        with self._connect() as conn:
+            row = conn.execute(
+                'SELECT 1 FROM artist_catalogue WHERE playlist_id = ? '
+                'AND length(release_date) = 10 AND release_date > ? '
+                'AND release_date <= ? LIMIT 1',
+                (playlist_id, since, today),
+            ).fetchone()
+        return row is not None
 
     def store_tracks(
         self, playlist_id: int, album_id: str, songs: list[dict[str, Any]]
@@ -336,6 +378,32 @@ def release_key(name: str) -> str:
     )
 
 
+# ── Announced releases ──────────────────────────────────────────────────
+
+_DATE = re.compile(r'\d{4}(-\d{2}(-\d{2})?)?')
+
+
+def release_day(album: dict[str, Any]) -> str:
+    """A release's date as a catalogue gave it (``YYYY-MM-DD``, or only
+    ``YYYY-MM`` / ``YYYY`` for some MusicBrainz groups), ``''`` without
+    one."""
+
+    text = str(album.get('release_date') or '').strip()[:10]
+    return text if _DATE.fullmatch(text) else ''
+
+
+def upcoming(album: dict[str, Any], today: Optional[date] = None) -> bool:
+    """Whether *album* is announced but not out yet: its date is after
+    *today* (a month or a year alone: after this month or year). Out on
+    its release day itself."""
+
+    day = release_day(album)
+    if not day:
+        return False
+    now = (today or date.today()).isoformat()
+    return day > now[: len(day)]
+
+
 # ── What the watch downloads ────────────────────────────────────────────
 
 
@@ -434,6 +502,7 @@ def _state(  # noqa: PLR0911  # one answer per state
     have: int,
     skipped: Optional[bool],
     follows: bool,
+    today: Optional[date] = None,
 ) -> str:
     total = int(row['track_total'] or 0)
     if row['choice'] == 'off':
@@ -447,12 +516,15 @@ def _state(  # noqa: PLR0911  # one answer per state
     if skipped is False and total == 0:
         # Processed with nothing to download (an empty release).
         return 'complete'
+    coming = not skipped and upcoming(row, today)
     if row['choice'] == 'on':
-        return 'missing'
+        return 'upcoming' if coming else 'missing'
     if not follows:
         # A type the watch doesn't download: the lasting reason, even for
         # one that also came out before a "new releases only" watch.
         return 'not_watched'
+    if coming:
+        return 'upcoming'
     return 'skipped' if skipped else 'missing'
 
 
@@ -490,11 +562,13 @@ def catalogue_view(
     seen: dict[str, bool],
     types: set[str],
     kinds: set[str],
+    today: Optional[date] = None,
 ) -> list[dict[str, Any]]:
     """The watch's releases as the page lists them: one per release (a
     release two catalogues list is merged: same name, same type), each
     ``{id, album_ids, name, release_type, kinds, section, year, sources,
-    cover_url, url, state, have, total, choice, wanted}`` - ``wanted``
+    cover_url, url, release_date, state, have, total, choice, wanted}`` -
+    ``wanted``
     being whether the watch downloads it (its switch), ``state`` what
     the library has of it.
 
@@ -517,6 +591,7 @@ def catalogue_view(
             have.get(row['album_id'], 0),
             seen.get(row['album_id']),
             follows,
+            today,
         )
         downloads = _downloads(row, seen.get(row['album_id']), follows)
         key = (release_key(row['name']) or row['album_id'], release_type)
@@ -530,6 +605,7 @@ def catalogue_view(
                 'kinds': kind_names,
                 'section': section_of(release_type, kind_names),
                 'year': row['year'],
+                'release_date': release_day(row),
                 'sources': [row['source']] if row['source'] else [],
                 'cover_url': row['cover_url'],
                 'url': row['url'],
@@ -548,6 +624,7 @@ def catalogue_view(
         entry['have'] = max(entry['have'], have.get(row['album_id'], 0))
         entry['total'] = max(entry['total'], int(row['track_total'] or 0))
         entry['year'] = entry['year'] or row['year']
+        entry['release_date'] = max(entry['release_date'], release_day(row))
         entry['cover_url'] = entry['cover_url'] or row['cover_url']
         entry['choice'] = entry['choice'] or row['choice']
         entry['wanted'] = entry['wanted'] or downloads
@@ -562,7 +639,10 @@ def missing(releases: list[dict[str, Any]]) -> dict[str, int]:
 
     found = {'tracks': 0, 'releases': 0, 'unread': 0}
     for release in releases:
-        if not release.get('wanted') or release['state'] == 'complete':
+        if not release.get('wanted') or release['state'] in {
+            'complete',
+            'upcoming',
+        }:
             continue
         if not release['total']:
             found['unread'] += 1
@@ -572,6 +652,22 @@ def missing(releases: list[dict[str, Any]]) -> dict[str, int]:
             found['tracks'] += gap
             found['releases'] += 1
     return found
+
+
+def upcoming_releases(
+    releases: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """The announced releases the watch will download on their release
+    day, soonest first."""
+
+    return sorted(
+        (
+            release
+            for release in releases
+            if release.get('wanted') and release['state'] == 'upcoming'
+        ),
+        key=lambda release: release.get('release_date') or '',
+    )
 
 
 def counts(releases: list[dict[str, Any]]) -> dict[str, int]:

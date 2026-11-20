@@ -67,6 +67,11 @@ function getWatchTracks(id) {
   return API.get(`/api/monitor/playlists/${id}/tracks`)
 }
 
+// Forget a watch's failing songs (they are tried again either way).
+function clearWatchFailures(id) {
+  return API.delete(`/api/monitor/playlists/${id}/failures`)
+}
+
 // An artist watch's whole catalogue, with what the library has of each
 // release, and switching releases on, off or back to the watch's rules.
 function getArtistReleases(id) {
@@ -139,6 +144,7 @@ export default {
   getMonitorStats,
   getTrackProvenance,
   getWatchTracks,
+  clearWatchFailures,
   listMonitoredPlaylists,
   addMonitoredPlaylist,
   updateMonitoredPlaylist,

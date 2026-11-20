@@ -501,6 +501,58 @@ export default {
     playCountSpotify: 'Lejátszások a Spotifyon',
     playCountYoutubeMusic: 'Lejátszások a YouTube Musicon (hozzávetőleges)',
   },
+  slskdMisses: {
+    title: 'Miért nem az slskd töltötte le',
+    hint: 'Dalok, amelyeket másik forrás töltött le, vagy sehol sem találtak, miután az slskd-nek nem volt. Kattints egy okra a példákért és a teendőkért.',
+    reset: 'Nullázás',
+    resetTitle: 'Újrakezdjük a számlálást?',
+    resetBody:
+      'Elfelejti az eddig rögzített okokat, így a következő letöltések megmutatják, segített-e egy beállítás. A dalokhoz és fájlokhoz nem nyúl.',
+    empty:
+      'Még semmi: a legutóbbi nullázás óta az slskd minden kért letöltést teljesített.',
+    since: '{count} dal, {when} óta',
+    usedInstead: 'Helyette használt:',
+    nothingFound: 'nem található',
+    reason: {
+      not_configured: 'Az slskd nincs beállítva',
+      unreachable: 'Az slskd nem érhető el',
+      search_failed: 'A keresés nem indult el',
+      search_timeout: 'A keresés kifutott az időből',
+      no_results: 'Senki sem osztotta meg',
+      no_match: 'Egy fájl sem egyezett',
+      low_confidence: 'Egyezés a minimális pontszám alatt',
+      quality_filtered: 'A minőségi szabályok kiszűrték',
+      timeout: 'A letöltés kifutott az időből',
+      transfer_failed: 'Sikertelen átvitelek',
+      tag_mismatch: 'Rossz dal a fájlban',
+      unknown: 'Ismeretlen',
+    },
+    fix: {
+      not_configured:
+        'Add meg a szerver URL-jét és az API-kulcsot a Beállítások → Hangforrások alatt.',
+      unreachable:
+        'Az slskd akkor nem volt elérhető. Ellenőrizd, hogy fut-e és jó-e az URL.',
+      search_failed:
+        'Az slskd elutasította a keresést, gyakran amíg még a Soulseek hálózathoz csatlakozik.',
+      search_timeout:
+        'A keresések túllépték az időkorlátot. Növeld a teljes időkorlátot a Beállítások → Hangforrások alatt.',
+      no_results:
+        'Senkinek sem volt meg a dal szabad feltöltési hellyel. A ritka dalok gyakran hiányoznak a Soulseekről; egy későbbi próbálkozás megtalálhatja.',
+      no_match:
+        'Jöttek fájlok, de egyik sem egyezett elég jól címben, előadóban és hosszban.',
+      low_confidence:
+        'Előkerült egy hasonló fájl, de a rossz dalok (remixek, élő felvételek) ellen védő küszöb alatt.',
+      quality_filtered:
+        'Találtak egyező fájlokat, de egyik sem felelt meg a formátum- és bitrátaszabályoknak. Több formátum, alacsonyabb minimális bitráta vagy a bitráta nélküli fájlok engedése átengedi őket.',
+      timeout:
+        'Kiválasztottak egy fájlt, de nem érkezett meg időben. Növeld a teljes vagy a sorban állási időkorlátot.',
+      transfer_failed:
+        'Minden kiválasztott fájlt elutasítottak, vagy sosem érkezett meg teljesen (offline felhasználók, hosszú sorok). Több jelöltpróbálkozás több fájlt próbál.',
+      tag_mismatch:
+        'A letöltött fájl címkéi másik dalt neveztek meg, ezért félretette az slskd mappájában.',
+      unknown: 'Ok nélkül rögzítve.',
+    },
+  },
   queue: {
     globalPause: 'Letöltések és figyelések szüneteltetése',
     globalResume: 'Letöltések és figyelések folytatása',
@@ -569,6 +621,14 @@ export default {
       'Ez nem tűnik YouTube videó- vagy SoundCloud számlinknek.',
     playlistDownloads: 'Lejátszásilista-letöltések',
     sources: 'Letöltési forrás',
+    fromWatch: 'Innen: {name}',
+    fromWatchTitle:
+      'A Figyelő ezt a(z) {name} miatt tölti le. Megnyitja a figyelést.',
+    watches: 'Letöltések figyelésekhez',
+    watchesHint:
+      'A Figyelő figyelései, amelyekből a sorban lévő dalok jönnek. Nyiss meg egyet a szüneteltetéshez vagy leállításhoz.',
+    watchWaiting: 'még {count}',
+    openWatchOriginal: 'Eredeti megnyitása',
     noSourcesYet: 'A kész letöltések forrása itt jelenik meg.',
     importTitle: 'Könyvtár importálása',
     importHint:
@@ -733,6 +793,14 @@ export default {
     ofBytes: '{total} / {done}',
     longJob:
       'Egy nagy könyvtár sokáig tart. Elhagyhatod ezt az oldalt, és újraindítás után a sor folytatódik.',
+    lyricsQuickTitle: 'Hiányzó dalszövegek',
+    lyricsQuickHint:
+      'Megkeresi a könyvtárban a dalszöveg nélküli számokat, és rögtön szöveget keres hozzájuk, köztes választás nélkül. A többi javítás egy másik futtatásra marad.',
+    lyricsQuickButton: 'Keresés és dalszövegek pótlása',
+    lyricsPlainOnly:
+      'Csak szinkronizálatlan szöveg: {count} — szinkronizáltra cserélődik, ha van',
+    lyricsOutcome:
+      'Hozzáadott dalszöveg: {added} · Nem található: {notFound} · Sikertelen: {failed}',
     completed: 'Feljavítva',
     skipped: 'Nincs tennivaló',
     failed: 'Hibára futott',
@@ -1207,6 +1275,7 @@ export default {
       one: '{count} kiadványban',
       other: '{count} kiadványban',
     },
+    wantedUpcoming: '{count} bejelentett',
     wantedUnchecked: {
       one: '{count} kiadvány még nincs ellenőrizve',
       other: '{count} kiadvány még nincs ellenőrizve',
@@ -1394,6 +1463,7 @@ export default {
     filter: {
       all: 'Mind',
       missing: 'Letöltendő',
+      upcoming: 'Hamarosan',
       partly: 'Részben megvan',
       complete: 'Teljes',
       not_watched: 'Nem figyelt',
@@ -1404,6 +1474,8 @@ export default {
       complete: 'Teljes · {have}/{total}',
       partly: 'Részben · {have}/{total}',
       missing: 'Letöltendő',
+      upcoming: 'Megjelenik: {date}',
+      upcomingNoDate: 'Hamarosan',
       skipped: 'A figyelés előtt jelent meg',
       not_watched: 'Nem figyelt',
       off: 'Kikapcsolva',
@@ -1493,6 +1565,9 @@ export default {
       one: '{count} szám továbbra is sikertelen',
       other: '{count} szám továbbra is sikertelen',
     },
+    failuresClear: 'Törlés',
+    failuresClearHint:
+      'A törlés újrakezdi a listát egy beállítás módosítása után; a továbbra is hibás dalok a következő ellenőrzésnél visszajönnek.',
     attempts: { one: '{count} próbálkozás', other: '{count} próbálkozás' },
     lastTried: 'utoljára {when}',
     songsTitle: 'Számok ebből a figyelésből',
@@ -1642,6 +1717,17 @@ export default {
     sourceSoundcloud: 'SoundCloud',
     sourceSoundcloudHint:
       'Máshol hiányzó feltöltések, és a SoundCloud linkek saját száma',
+    sourceNeedsTitle: 'Mit igényel az egyes források',
+    sourceNeedsSlskd:
+      'slskd: saját slskd szerver, az ingyenes Soulseek hálózathoz kapcsolva. Nincs előfizetés; a minőség az, amit mások megosztanak, gyakran FLAC vagy MP3 320.',
+    sourceNeedsDeemix:
+      'Deemix: saját Deemix szerver és saját Deezer-fiók. Ingyenes fiókkal csak MP3 128 kbps jár; az MP3 320 és a FLAC fizetős Deezer-csomagot igényel. A Downtify nem ad ilyet, és nem is kerüli meg.',
+    sourceNeedsYoutube:
+      'YouTube Music és YouTube: nincs mit beállítani. A hang veszteséges (kb. 128–160 kbps).',
+    sourceNeedsSoundcloud:
+      'SoundCloud: nincs mit beállítani, fiók sem kell. A streamek általában 128–160 kbps-osak.',
+    sourceNeedsCover:
+      'Bármelyik forrás is, a beágyazott borító az, amelyet a Downtify a dalhoz letölt (Beállítások → Letöltések → Borítóméret).',
     deemixTitle: 'Deemix',
     deemixHint:
       'Download from your own Deemix server. Requested quality requires the matching Deezer entitlement.',
@@ -1710,6 +1796,9 @@ export default {
     slskdInPlace: 'Fájlok hagyása az slskd mappában',
     slskdInPlaceHint:
       'Bekapcsolva: címkézés a helyükön, a fájlok megtartásával. Kikapcsolva: másolás és címkézés a Letöltések mappába; a forrás csak sikeres import után törlődik. Hiba esetén megmarad.',
+    slskdKeepCover: 'A fájl saját borítója marad, ha nagyobb',
+    slskdKeepCoverHint:
+      'A megosztott fájlokban gyakran benne van az album teljes méretű borítója. Be: az slskd-fájl megtartja a saját borítóját, ha nagyobb annál, amit a Downtify letölt (Spotify, YouTube Music). Ki: a letöltött borító mindig lecseréli.',
     youtubeTitle: 'YouTube',
     cookies: 'YouTube sütik',
     cookiesHint:
@@ -1789,6 +1878,9 @@ export default {
     coverMinHint:
       'Ez alatt a Spotify, az iTunes és a YouTube Music nagyobb borítót ad ugyanahhoz a kiadáshoz, és a legnagyobb lesz használva. Kikapcsolva a dal forrásának borítója marad.',
     coverMinOff: 'Ki',
+    coverLargest: 'Mindig a legnagyobb borító',
+    coverLargestHint:
+      'Minden letöltésnél a Spotify, az iTunes és a YouTube Music is meg lesz kérdezve a kiadás borítójáról, és a legnagyobb kerül a fájlba (gyakran 1200 px az iTunes-ról). Számonként kicsit lassabb. Ki: a szám forrásának borítója, hacsak nem kisebb a minimumnál.',
     coverSize: 'Borító mérete',
     coverSizeHint:
       'YouTube Music és Deezer borítókhoz. A Spotify borítók mindig a legnagyobb méretűek.',
@@ -1818,6 +1910,11 @@ export default {
     lyricsLrclibHint: 'Közösségi adatbázis — sima és időzített dalszöveg',
     lyricsNetease: 'NetEase Cloud Music',
     lyricsNeteaseHint: 'Nagy katalógus, általában időzített',
+    lyricsKugou: 'Kugou Music',
+    lyricsKugouHint: 'Nagy katalógus, időzített',
+    lyricsSyncedOnly: 'Csak időzített dalszövegek',
+    lyricsSyncedOnlyHint:
+      'Az időbélyeg nélküli dalszövegeket kihagyja, és a következő szolgáltatót kérdezi. A Könyvtár feljavítása ekkor a csak sima szöveggel rendelkező számokat hiányzónak veszi. A szinkronizált szöveg ezután lecseréli, a fájl saját címkéiben is.',
     ratingsGroup: 'Értékelések a Deezerről',
     ratingsHint:
       'A Navidrome-ban lévő daloknak 0–5 csillagot ad aszerint, mennyire népszerűek a Deezeren, mint a dztnr. A csillagok a fenti Navidrome-fiókhoz tartoznak.',

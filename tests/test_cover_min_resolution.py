@@ -64,3 +64,28 @@ def test_cover_min_resolution_is_clamped():
         api.MAX_COVER_MIN_RESOLUTION
     )
     assert api.DEFAULT_SETTINGS['cover_min_resolution'] == 0
+
+
+def test_largest_asks_even_when_the_minimum_is_met(monkeypatch):
+    larger = cover_sources.CoverCandidate('itunes', b'large', 1200)
+    asked = _patch(monkeypatch, fetched=b'medium', better=larger)
+
+    assert (
+        downloader._download_cover_meeting(SONG, 0, largest=True) == b'large'
+    )
+    assert asked == [640]
+
+
+def test_largest_keeps_the_source_cover_when_nothing_is_larger(monkeypatch):
+    _patch(monkeypatch, fetched=b'medium', better=None)
+
+    assert (
+        downloader._download_cover_meeting(SONG, 600, largest=True)
+        == b'medium'
+    )
+
+
+def test_largest_is_off_by_default_and_saved_as_a_bool(monkeypatch):
+    assert api.DEFAULT_SETTINGS['cover_largest'] is False
+    fake = downloader.Downloader.__new__(downloader.Downloader)
+    assert getattr(fake, 'cover_largest', False) is False

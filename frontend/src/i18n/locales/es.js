@@ -508,6 +508,58 @@ export default {
     playCountSpotify: 'Reproducciones en Spotify',
     playCountYoutubeMusic: 'Reproducciones en YouTube Music (aproximado)',
   },
+  slskdMisses: {
+    title: 'Por qué no se usó slskd',
+    hint: 'Canciones que descargó otra fuente, o que no se encontraron, después de que slskd no tuviera nada. Pulsa un motivo para ver ejemplos y qué cambiar.',
+    reset: 'Reiniciar',
+    resetTitle: '¿Empezar la cuenta de nuevo?',
+    resetBody:
+      'Olvida todos los motivos registrados hasta ahora, para que las próximas descargas muestren si un cambio de ajustes ayudó. Las canciones y archivos no se tocan.',
+    empty:
+      'Nada todavía: desde el último reinicio, slskd sirvió todas las descargas que se le pidieron.',
+    since: '{count} canciones desde {when}',
+    usedInstead: 'Usado en su lugar:',
+    nothingFound: 'nada encontrado',
+    reason: {
+      not_configured: 'slskd sin configurar',
+      unreachable: 'No se pudo conectar con slskd',
+      search_failed: 'La búsqueda no empezó',
+      search_timeout: 'La búsqueda se quedó sin tiempo',
+      no_results: 'Nadie la compartía',
+      no_match: 'Ningún archivo coincidía',
+      low_confidence: 'Coincidencia bajo la puntuación mínima',
+      quality_filtered: 'Bloqueado por las reglas de calidad',
+      timeout: 'La descarga se quedó sin tiempo',
+      transfer_failed: 'Fallaron las transferencias',
+      tag_mismatch: 'Canción equivocada en el archivo',
+      unknown: 'Desconocido',
+    },
+    fix: {
+      not_configured:
+        'Rellena la URL del servidor y la clave API en Ajustes → Fuentes de audio.',
+      unreachable:
+        'slskd no estaba disponible en ese momento. Comprueba que funciona y que la URL es correcta.',
+      search_failed:
+        'slskd rechazó la búsqueda, a menudo mientras aún se conecta a la red Soulseek.',
+      search_timeout:
+        'Las búsquedas tardaron más que el límite. Sube el tiempo límite total en Ajustes → Fuentes de audio.',
+      no_results:
+        'Nadie tenía la canción con un hueco de subida libre. Las canciones raras a menudo no están en Soulseek; otro intento más tarde puede encontrarlas.',
+      no_match:
+        'Llegaron archivos, pero ninguno coincidía lo bastante con título, artista y duración.',
+      low_confidence:
+        'Apareció un archivo parecido, pero por debajo del umbral que evita canciones equivocadas (remixes, versiones en directo).',
+      quality_filtered:
+        'Se encontraron archivos que coincidían, pero ninguno pasó las reglas de formato y bitrate. Permitir más formatos, un bitrate mínimo más bajo o archivos sin bitrate indicado los deja pasar.',
+      timeout:
+        'Se eligió un archivo, pero no llegó a tiempo. Sube el tiempo límite total o en cola.',
+      transfer_failed:
+        'Cada archivo elegido fue rechazado o nunca llegó completo (usuarios desconectados, colas largas). Más intentos de candidatos prueban más archivos.',
+      tag_mismatch:
+        'Las etiquetas del archivo descargado nombraban otra canción, así que se apartó y se guardó en la carpeta de slskd.',
+      unknown: 'Registrado sin motivo.',
+    },
+  },
   queue: {
     globalPause: 'Pausar descargas y seguimientos',
     globalResume: 'Reanudar descargas y seguimientos',
@@ -573,6 +625,13 @@ export default {
       'Eso no parece un enlace de vídeo de YouTube ni de canción de SoundCloud.',
     playlistDownloads: 'Descargas de playlists',
     sources: 'Descargado desde',
+    fromWatch: 'De {name}',
+    fromWatchTitle: 'El Monitor lo descarga para {name}. Abre el seguimiento.',
+    watches: 'Descargas de seguimientos',
+    watchesHint:
+      'Los seguimientos del Monitor de los que vienen las canciones de esta cola. Abre uno para pausarlo o dejar de seguirlo.',
+    watchWaiting: 'faltan {count}',
+    openWatchOriginal: 'Abrir el original',
     noSourcesYet: 'Las descargas completadas muestran su origen aquí.',
     importTitle: 'Importar una biblioteca',
     importHint:
@@ -741,6 +800,14 @@ export default {
     ofBytes: '{done} de {total}',
     longJob:
       'Una biblioteca grande tarda. Puedes salir de esta página, y un reinicio retoma la cola.',
+    lyricsQuickTitle: 'Letras que faltan',
+    lyricsQuickHint:
+      'Escanea la biblioteca en busca de pistas sin letra y las busca enseguida, sin elegir nada entre medias. Las demás mejoras quedan para otra vez.',
+    lyricsQuickButton: 'Escanear y buscar letras',
+    lyricsPlainOnly:
+      'Solo letra sin sincronizar: {count} — se cambia por la sincronizada cuando se encuentra',
+    lyricsOutcome:
+      'Letras añadidas: {added} · No encontradas: {notFound} · Fallidas: {failed}',
     completed: 'Mejoradas',
     skipped: 'Nada que hacer',
     failed: 'Fallaron',
@@ -1220,6 +1287,7 @@ export default {
       one: '{count} lanzamiento',
       other: '{count} lanzamientos',
     },
+    wantedUpcoming: '{count} anunciados',
     wantedUnchecked: {
       one: '{count} lanzamiento sin comprobar todavía',
       other: '{count} lanzamientos sin comprobar todavía',
@@ -1408,6 +1476,7 @@ export default {
     filter: {
       all: 'Todos',
       missing: 'Por descargar',
+      upcoming: 'Próximos',
       partly: 'En parte',
       complete: 'Completos',
       not_watched: 'No seguidos',
@@ -1418,6 +1487,8 @@ export default {
       complete: 'Completo · {have}/{total}',
       partly: 'En parte · {have}/{total}',
       missing: 'Por descargar',
+      upcoming: 'Sale el {date}',
+      upcomingNoDate: 'Próximamente',
       skipped: 'Anterior al seguimiento',
       not_watched: 'No seguido',
       off: 'Desactivado',
@@ -1510,6 +1581,9 @@ export default {
       one: '{count} canción sigue fallando',
       other: '{count} canciones siguen fallando',
     },
+    failuresClear: 'Vaciar',
+    failuresClearHint:
+      'Vaciar empieza la lista de nuevo tras cambiar un ajuste; las canciones que sigan fallando vuelven en la próxima comprobación.',
     attempts: { one: '{count} intento', other: '{count} intentos' },
     lastTried: 'último intento {when}',
     songsTitle: 'Canciones de esta vigilancia',
@@ -1660,6 +1734,17 @@ export default {
     sourceSoundcloud: 'SoundCloud',
     sourceSoundcloudHint:
       'Subidas que faltan en otros sitios, y la propia canción de los enlaces de SoundCloud',
+    sourceNeedsTitle: 'Qué necesita cada fuente',
+    sourceNeedsSlskd:
+      'slskd: tu propio servidor slskd, conectado a la red gratuita Soulseek. Sin suscripción; la calidad es lo que comparte la gente, a menudo FLAC o MP3 320.',
+    sourceNeedsDeemix:
+      'Deemix: tu propio servidor Deemix y tu propia cuenta de Deezer. Una cuenta gratuita solo obtiene MP3 128 kbps; MP3 320 y FLAC necesitan un plan de pago de Deezer. Downtify no lo proporciona ni lo evita.',
+    sourceNeedsYoutube:
+      'YouTube Music y YouTube: nada que configurar. El audio es con pérdida (unos 128–160 kbps).',
+    sourceNeedsSoundcloud:
+      'SoundCloud: nada que configurar, sin cuenta. Las transmisiones suelen ser de 128–160 kbps.',
+    sourceNeedsCover:
+      'Sea cual sea la fuente, la portada incrustada es la que Downtify obtiene para la canción (Ajustes → Descargas → Tamaño de portada).',
     deemixTitle: 'Deemix',
     deemixHint:
       'Download from your own Deemix server. Requested quality requires the matching Deezer entitlement.',
@@ -1728,6 +1813,9 @@ export default {
     slskdInPlace: 'Dejar los archivos en la carpeta de slskd',
     slskdInPlaceHint:
       'Activado: etiqueta los archivos en su ubicación y consérvalos. Desactivado: cópialos y etiquétalos en Descargas; elimina el origen solo tras una importación correcta. Si falla, conserva el origen.',
+    slskdKeepCover: 'Conservar la portada del archivo si es más grande',
+    slskdKeepCoverHint:
+      'Los archivos compartidos suelen traer la portada del álbum a tamaño completo. Activado: un archivo de slskd conserva su portada si es más grande que la que obtiene Downtify (Spotify, YouTube Music). Desactivado: la portada obtenida siempre la reemplaza.',
     youtubeTitle: 'YouTube',
     cookies: 'Cookies de YouTube',
     cookiesHint:
@@ -1808,6 +1896,9 @@ export default {
     coverMinHint:
       'Por debajo, se pide a Spotify, iTunes y YouTube Music una portada más grande del mismo lanzamiento y se usa la mayor. Desactivado conserva la portada de la fuente de la pista.',
     coverMinOff: 'Desactivado',
+    coverLargest: 'Usar siempre la portada más grande',
+    coverLargestHint:
+      'En cada descarga se pide la portada del lanzamiento a Spotify, iTunes y YouTube Music y se incrusta la más grande (a menudo 1200 px de iTunes). Algo más lento por pista. Desactivado: la portada de la fuente de la pista, salvo que esté por debajo del mínimo.',
     coverSize: 'Tamaño de portada',
     coverSizeHint:
       'Para portadas de YouTube Music y Deezer. Las de Spotify siempre usan el mayor tamaño disponible.',
@@ -1837,6 +1928,11 @@ export default {
     lyricsLrclibHint: 'Base comunitaria — letras simples y sincronizadas',
     lyricsNetease: 'NetEase Cloud Music',
     lyricsNeteaseHint: 'Catálogo amplio, normalmente sincronizado',
+    lyricsKugou: 'Kugou Music',
+    lyricsKugouHint: 'Catálogo grande, sincronizadas',
+    lyricsSyncedOnly: 'Solo letras sincronizadas',
+    lyricsSyncedOnlyHint:
+      'Omite las letras sin marcas de tiempo y pregunta al siguiente proveedor. Mejorar biblioteca cuenta entonces como faltantes las pistas con solo letra simple. La letra sincronizada la reemplaza, también en las etiquetas del propio archivo.',
     ratingsGroup: 'Valoraciones de Deezer',
     ratingsHint:
       'Da a tus canciones de Navidrome de 0 a 5 estrellas según su popularidad en Deezer, como dztnr. Las estrellas pertenecen a la cuenta de Navidrome indicada arriba.',

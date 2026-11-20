@@ -163,6 +163,62 @@
           </ul>
         </UiPanel>
 
+        <SlskdMisses
+          v-if="auth.isAdmin.value"
+          :finished="counts.done + counts.failed"
+        />
+        <UiPanel
+          v-if="watchRows.length"
+          :title="t('queue.watches')"
+          :description="t('queue.watchesHint')"
+        >
+          <ul class="flex flex-col gap-3">
+            <li
+              v-for="row in watchRows"
+              :key="row.watch.id"
+              class="flex items-center gap-3"
+            >
+              <RouterLink
+                :to="watchRouteFor(row.watch)"
+                class="flex min-w-0 flex-1 items-center gap-3"
+              >
+                <CoverArt
+                  :src="watchCover(row.watch)"
+                  :name="row.watch.name"
+                  :round="row.watch.kind === 'artist'"
+                  :icon="row.watch.kind === 'artist' ? 'user' : 'playlist'"
+                  rounded="rounded-[6px]"
+                  :letter-size="12"
+                  class="size-9 shrink-0"
+                />
+                <span class="min-w-0">
+                  <span
+                    class="block truncate text-sm font-semibold hover:underline"
+                    >{{ row.watch.name }}</span
+                  >
+                  <span class="block text-xs text-muted">
+                    {{ t('common.tracks', { count: row.count }) }}
+                    <template v-if="row.waiting">
+                      · {{ t('queue.watchWaiting', { count: row.waiting }) }}
+                    </template>
+                  </span>
+                </span>
+              </RouterLink>
+              <a
+                v-if="row.watch.url"
+                :href="row.watch.url"
+                target="_blank"
+                rel="noopener"
+                class="flex size-8 shrink-0 items-center justify-center rounded-control text-muted hover:bg-surface-2 hover:text-fg"
+                :title="t('queue.openWatchOriginal')"
+                :aria-label="t('queue.openWatchOriginal')"
+              >
+                <AppIcon name="arrow-up-right" :size="15" />
+              </a>
+            </li>
+          </ul>
+        </UiPanel>
+
         <UiPanel v-if="queue.length" :title="t('queue.sources')">
           <ul class="flex flex-col gap-2.5">
             <li
@@ -201,10 +257,12 @@ import UiPanel from '/src/components/ui/UiPanel.vue'
 import UiProgress from '/src/components/ui/UiProgress.vue'
 import UiTabs from '/src/components/ui/UiTabs.vue'
 import SourceBadge from '/src/components/ui/SourceBadge.vue'
+import CoverArt from '/src/components/ui/CoverArt.vue'
 import PageHeader from '/src/components/library/PageHeader.vue'
 import QueueItem from '/src/components/queue/QueueItem.vue'
 import DownloadExclusions from '/src/components/queue/DownloadExclusions.vue'
 import CsvImport from '/src/components/queue/CsvImport.vue'
+import SlskdMisses from '/src/components/queue/SlskdMisses.vue'
 import {
   useDownloadManager,
   useProgressTracker,
@@ -216,6 +274,8 @@ import { useQueuePause } from '/src/model/queuePause'
 import { useUi } from '/src/model/ui'
 import { queueRowEstimate } from '/src/lib/queueList'
 import { shouldJumpToActive } from '/src/lib/queueTab'
+import { queueWatches, watchCover } from '/src/lib/queueWatches'
+import { watchRouteFor } from '/src/lib/watchStats'
 import { useI18n } from '/src/i18n'
 
 const { t } = useI18n()
@@ -237,6 +297,8 @@ const queue = computed(() => {
   tracker.queueVersion.value
   return tracker.downloadQueue.value
 })
+
+const watchRows = computed(() => queueWatches(queue.value))
 
 const counts = computed(() => {
   const result = { active: 0, queued: 0, done: 0, failed: 0 }

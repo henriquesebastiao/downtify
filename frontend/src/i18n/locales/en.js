@@ -492,6 +492,58 @@ export default {
     playCountSpotify: 'Plays on Spotify',
     playCountYoutubeMusic: 'Plays on YouTube Music (approximate)',
   },
+  slskdMisses: {
+    title: "Why slskd wasn't used",
+    hint: 'Songs another source downloaded, or nothing found, after slskd had nothing. Click a reason for examples and what to change.',
+    reset: 'Reset',
+    resetTitle: 'Start the count over?',
+    resetBody:
+      'Forgets every reason recorded so far, so the next downloads show whether a settings change helped. Songs and files are not touched.',
+    empty:
+      'Nothing yet: since the last reset, slskd served every download it was asked for.',
+    since: '{count} songs, since {when}',
+    usedInstead: 'Used instead:',
+    nothingFound: 'nothing found',
+    reason: {
+      not_configured: 'slskd not set up',
+      unreachable: "Couldn't reach slskd",
+      search_failed: "Search didn't start",
+      search_timeout: 'Search ran out of time',
+      no_results: 'Nobody shared it',
+      no_match: 'No file matched the song',
+      low_confidence: 'Match below the minimum score',
+      quality_filtered: 'Blocked by quality rules',
+      timeout: 'Download ran out of time',
+      transfer_failed: 'Transfers failed',
+      tag_mismatch: 'Wrong song in the file',
+      unknown: 'Unknown',
+    },
+    fix: {
+      not_configured:
+        'Fill in the server URL and API key in Settings → Audio sources.',
+      unreachable:
+        'slskd was down or unreachable at the time. Check that it runs and the server URL is right.',
+      search_failed:
+        'slskd refused the search, often while it is still connecting to the Soulseek network.',
+      search_timeout:
+        'Searches took longer than the timeout. Raise the total timeout in Settings → Audio sources.',
+      no_results:
+        "No user had the song with a free upload slot. Rare songs often aren't on Soulseek; another try later can find them.",
+      no_match:
+        'Files came back, but none matched the title, artist and length closely enough.',
+      low_confidence:
+        'A close file turned up, but scored below the match threshold that protects against wrong songs (remixes, live versions).',
+      quality_filtered:
+        'Matching files were found, but none passed the format and bitrate rules. Allowing more formats, a lower minimum bitrate, or files with no listed bitrate lets them through.',
+      timeout:
+        "A file was picked but didn't arrive in time. Raise the total or queued timeout.",
+      transfer_failed:
+        'Every file picked was refused or never arrived complete (peers going offline, long queues). Raising Candidate attempts tries more files.',
+      tag_mismatch:
+        "The downloaded file's tags named another song, so it was set aside and kept in slskd's folder.",
+      unknown: 'Recorded without a reason.',
+    },
+  },
   queue: {
     globalPause: 'Pause downloads and watches',
     globalResume: 'Resume downloads and watches',
@@ -557,6 +609,13 @@ export default {
       "That doesn't look like a YouTube video or SoundCloud track link.",
     playlistDownloads: 'Playlist downloads',
     sources: 'Downloaded from',
+    fromWatch: 'From {name}',
+    fromWatchTitle: 'Monitor is downloading this for {name}. Open the watch.',
+    watches: 'Downloading for watches',
+    watchesHint:
+      'The Monitor watches the songs in this queue come from. Open one to pause it or stop watching.',
+    watchWaiting: '{count} still to go',
+    openWatchOriginal: 'Open the original',
     noSourcesYet: 'Finished downloads show their source here.',
     importTitle: 'Import a library',
     importHint:
@@ -721,6 +780,14 @@ export default {
     ofBytes: '{done} of {total}',
     longJob:
       'A large library takes a while. You can leave this page, and a restart picks the queue back up.',
+    lyricsQuickTitle: 'Missing lyrics',
+    lyricsQuickHint:
+      'Scan the library for tracks without lyrics and look them up right away, without choosing anything in between. Other upgrades are left for another run.',
+    lyricsQuickButton: 'Scan and find lyrics',
+    lyricsPlainOnly:
+      'Only unsynced lyrics: {count} — swapped for synced ones when found',
+    lyricsOutcome:
+      'Lyrics added: {added} · Not found: {notFound} · Failed: {failed}',
     completed: 'Upgraded',
     skipped: 'Nothing to do',
     failed: 'Failed',
@@ -1182,6 +1249,7 @@ export default {
     wantedSummary: '{songs} missing in {releases}',
     wantedSongs: { one: '{count} song', other: '{count} songs' },
     wantedReleases: { one: '{count} release', other: '{count} releases' },
+    wantedUpcoming: '{count} announced',
     wantedUnchecked: {
       one: '{count} release not checked yet',
       other: '{count} releases not checked yet',
@@ -1366,6 +1434,7 @@ export default {
     filter: {
       all: 'All',
       missing: 'To download',
+      upcoming: 'Coming',
       partly: 'Partly there',
       complete: 'Complete',
       not_watched: 'Not watched',
@@ -1376,6 +1445,8 @@ export default {
       complete: 'Complete · {have}/{total}',
       partly: 'Partly · {have}/{total}',
       missing: 'To download',
+      upcoming: 'Coming {date}',
+      upcomingNoDate: 'Coming soon',
       skipped: 'Out before the watch',
       not_watched: 'Not watched',
       off: 'Off',
@@ -1460,6 +1531,9 @@ export default {
       one: '{count} song keeps failing',
       other: '{count} songs keep failing',
     },
+    failuresClear: 'Clear',
+    failuresClearHint:
+      'Clear starts the list over after you changed a setting; songs that still fail come back on the next check.',
     attempts: { one: '{count} try', other: '{count} tries' },
     lastTried: 'last tried {when}',
     songsTitle: 'Songs from this watch',
@@ -1606,6 +1680,17 @@ export default {
     sourceSoundcloud: 'SoundCloud',
     sourceSoundcloudHint:
       "Uploads missing elsewhere, and SoundCloud links' own tracks",
+    sourceNeedsTitle: 'What each source needs',
+    sourceNeedsSlskd:
+      'slskd: your own slskd server, connected to the free Soulseek network. No subscription; quality is whatever people share, often FLAC or MP3 320.',
+    sourceNeedsDeemix:
+      "Deemix: your own Deemix server and your own Deezer account. A free account only gets MP3 128 kbps; MP3 320 and FLAC need a paid Deezer plan. Downtify doesn't provide or bypass one.",
+    sourceNeedsYoutube:
+      'YouTube Music and YouTube: nothing to set up. The audio is lossy (about 128–160 kbps).',
+    sourceNeedsSoundcloud:
+      'SoundCloud: nothing to set up, no account. Streams are usually 128–160 kbps.',
+    sourceNeedsCover:
+      'Whatever the source, the cover embedded is the one Downtify fetches for the song (Settings → Downloads → Cover size).',
     deemixTitle: 'Deemix',
     deemixHint:
       'Download from your own Deemix server. Requested quality requires the matching Deezer entitlement.',
@@ -1673,6 +1758,9 @@ export default {
     slskdInPlace: 'Leave files in the slskd folder',
     slskdInPlaceHint:
       'On: tag files in place and keep them. Off: copy and tag in Downloads, then remove the source after a successful import. Copy, tagging or verification failures keep the source.',
+    slskdKeepCover: "Keep the file's own cover when it's bigger",
+    slskdKeepCoverHint:
+      "Shared files often carry the album's full-size artwork. On: an slskd file keeps its own cover when it's larger than the one Downtify fetches (Spotify, YouTube Music). Off: the fetched cover always replaces it.",
     youtubeTitle: 'YouTube',
     cookies: 'YouTube cookies',
     cookiesHint:
@@ -1749,6 +1837,9 @@ export default {
     coverMinHint:
       'Below this, Spotify, iTunes and YouTube Music are asked for a larger cover of the same release, and the largest is used. Off keeps the cover the track’s source offers.',
     coverMinOff: 'Off',
+    coverLargest: 'Always use the largest cover',
+    coverLargestHint:
+      'Every download asks Spotify, iTunes and YouTube Music for the release’s cover and embeds the largest (often 1200 px from iTunes). A little slower per track. Off: the track’s own source cover, unless it is below the minimum.',
     coverSize: 'Cover size',
     coverSizeHint:
       'For art from YouTube Music and Deezer. Spotify art is always the largest available.',
@@ -1778,6 +1869,11 @@ export default {
     lyricsLrclibHint: 'Community database — plain and time-synced lyrics',
     lyricsNetease: 'NetEase Cloud Music',
     lyricsNeteaseHint: 'Large catalogue, usually time-synced',
+    lyricsKugou: 'Kugou Music',
+    lyricsKugouHint: 'Large catalogue, time-synced',
+    lyricsSyncedOnly: 'Time-synced lyrics only',
+    lyricsSyncedOnlyHint:
+      'Skip lyrics without timestamps and ask the next provider instead. Upgrade library then counts tracks with only plain lyrics as missing, and synced lyrics it finds replace them, in the file’s own tags too.',
     ratingsGroup: 'Ratings from Deezer',
     ratingsHint:
       'Gives your songs in Navidrome 0–5 stars from how popular they are on Deezer, like dztnr. The stars belong to the Navidrome account above.',
