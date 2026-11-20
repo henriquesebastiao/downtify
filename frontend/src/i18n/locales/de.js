@@ -759,6 +759,8 @@ export default {
     lyricsQuickHint:
       'Durchsucht die Bibliothek nach Titeln ohne Songtext und sucht sie sofort, ohne Zwischenschritt. Andere Verbesserungen bleiben für einen späteren Lauf.',
     lyricsQuickButton: 'Scannen und Songtexte suchen',
+    lyricsPlainOnly:
+      'Nur nicht synchronisierte Texte: {count} — werden durch synchronisierte ersetzt, sobald gefunden',
     lyricsOutcome:
       'Songtexte hinzugefügt: {added} · Nicht gefunden: {notFound} · Fehlgeschlagen: {failed}',
     completed: 'Verbessert',
@@ -1875,7 +1877,7 @@ export default {
     lyricsKugouHint: 'Großer Katalog, zeitsynchron',
     lyricsSyncedOnly: 'Nur zeitsynchrone Songtexte',
     lyricsSyncedOnlyHint:
-      'Songtexte ohne Zeitstempel werden übersprungen, stattdessen wird der nächste Anbieter gefragt. „Bibliothek verbessern“ zählt dann Titel mit nur einfachem Text als fehlend.',
+      'Songtexte ohne Zeitstempel werden übersprungen, stattdessen wird der nächste Anbieter gefragt. „Bibliothek verbessern“ zählt dann Titel mit nur einfachem Text als fehlend. Synchronisierte Texte ersetzen sie dann, auch in den Tags der Datei selbst.',
     ratingsGroup: 'Bewertungen von Deezer',
     ratingsHint:
       'Vergibt an deine Songs in Navidrome 0–5 Sterne danach, wie beliebt sie auf Deezer sind – wie dztnr. Die Sterne gehören zum oben eingetragenen Navidrome-Konto.',

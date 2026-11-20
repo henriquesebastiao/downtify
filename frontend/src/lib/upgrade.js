@@ -66,6 +66,9 @@ export function normalizeStatus(payload) {
       // Tracks the scan didn't read because every category had been
       // looked at recently enough.
       recentlyChecked: Number(data.summary?.recently_checked) || 0,
+      // Of the tracks missing lyrics, those with only unsynced ones
+      // (Time-synced lyrics only).
+      plainLyricsOnly: Number(data.summary?.plain_lyrics_only) || 0,
       libraryTracks: Number(data.summary?.library_tracks) || 0,
       libraryBytes: Number(data.summary?.library_bytes) || 0,
     },

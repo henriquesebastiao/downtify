@@ -24,7 +24,7 @@ In **Settings → Tags & lyrics → Providers** you can drag the providers into 
 
 ### Time-synced lyrics only
 
-**Settings → Tags & lyrics → Time-synced lyrics only** (off by default) keeps only lyrics with timestamps: a provider that only has plain lyrics for a song counts as having nothing, and the next one is asked. [Upgrade library](library-upgrade.md) then also counts a track with only plain lyrics as missing lyrics. Synced lyrics a file already has count either way: a `.lrc` sidecar, lyrics with timestamps embedded in its tags, or an ID3 `SYLT` frame (as files from other apps sometimes have).
+**Settings → Tags & lyrics → Time-synced lyrics only** (off by default) keeps only lyrics with timestamps: a provider that only has plain lyrics for a song counts as having nothing, and the next one is asked. [Upgrade library](library-upgrade.md) then also counts a track with only plain lyrics as missing lyrics. Synced lyrics a file already has count either way: a `.lrc` sidecar, lyrics with timestamps embedded in its tags, or an ID3 `SYLT` frame (as files from other apps sometimes have). With the setting on, synced lyrics Downtify finds for a track replace its plain ones, in the `.lrc` sidecar and in the file's own lyrics tag, so players that only read the tags show them synced too. The scan also says how many of the tracks missing lyrics only had plain ones.
 
 ### Finding lyrics for tracks that have none
 

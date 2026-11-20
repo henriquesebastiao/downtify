@@ -1400,7 +1400,11 @@ class Downloader:
 
         if found.lyrics is not None:
             try:
-                embed_lyrics(final_path, found.lyrics)
+                embed_lyrics(
+                    final_path,
+                    found.lyrics,
+                    embed_synced=self.lyrics_synced_only,
+                )
             except Exception:
                 succeeded = False
                 logger.exception('Failed to embed lyrics into {}', final_path)
@@ -2488,8 +2492,12 @@ def embed_lyrics(
     lyrics: 'lyrics_mod.Lyrics',
     *,
     sidecar: Optional[Path] = None,
+    embed_synced: bool = False,
 ) -> None:
     """Embed plain lyrics into the audio tag and write a .lrc sidecar
-    when synced lyrics are available."""
+    when synced lyrics are available; with *embed_synced*, the tag gets
+    the synced text too."""
 
-    lyrics_mod.write_to_file(path, lyrics, sidecar=sidecar)
+    lyrics_mod.write_to_file(
+        path, lyrics, sidecar=sidecar, embed_synced=embed_synced
+    )

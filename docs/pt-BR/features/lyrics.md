@@ -24,7 +24,7 @@ Em **Configurações → Tags e letras → Provedores** você pode arrastar os p
 
 ### Só letras sincronizadas
 
-**Configurações → Tags e letras → Só letras sincronizadas** (desligado por padrão) mantém só letras com marcação de tempo: um provedor que só tem letra simples para uma música conta como sem nada, e o próximo é consultado. [Melhorar biblioteca](library-upgrade.md) passa a contar como sem letra uma faixa que só tem letra simples. Letras sincronizadas que um arquivo já tem contam sempre: um arquivo `.lrc` ao lado, letras com marcação de tempo nas tags ou um quadro ID3 `SYLT` (como às vezes têm arquivos de outros apps).
+**Configurações → Tags e letras → Só letras sincronizadas** (desligado por padrão) mantém só letras com marcação de tempo: um provedor que só tem letra simples para uma música conta como sem nada, e o próximo é consultado. [Melhorar biblioteca](library-upgrade.md) passa a contar como sem letra uma faixa que só tem letra simples. Letras sincronizadas que um arquivo já tem contam sempre: um arquivo `.lrc` ao lado, letras com marcação de tempo nas tags ou um quadro ID3 `SYLT` (como às vezes têm arquivos de outros apps). Com a opção ligada, a letra sincronizada que o Downtify encontra substitui a simples: no arquivo `.lrc` e na tag de letra do próprio arquivo, assim players que só leem as tags também a mostram sincronizada. A varredura também diz quantas das faixas sem letra só tinham letra simples.
 
 ### Buscar letras para faixas sem letra
 

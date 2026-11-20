@@ -24,7 +24,7 @@ A **Beállítások → Címkék és dalszövegek → Szolgáltatók** alatt a sz
 
 ### Csak időzített dalszövegek
 
-A **Beállítások → Címkék és dalszövegek → Csak időzített dalszövegek** (alapból ki) csak időbélyeges dalszövegeket tart meg: ha egy szolgáltatónak csak sima szövege van egy dalhoz, az semminek számít, és a következőt kérdezi. A [Könyvtár feljavítása](library-upgrade.md) ekkor a csak sima szöveggel rendelkező számot is dalszöveg nélkülinek veszi. A fájlban már meglévő időzített dalszöveg mindig számít: egy mellette lévő `.lrc` fájl, időbélyeges szöveg a címkékben vagy egy ID3 `SYLT` keret (ami más alkalmazások fájljaiban néha van).
+A **Beállítások → Címkék és dalszövegek → Csak időzített dalszövegek** (alapból ki) csak időbélyeges dalszövegeket tart meg: ha egy szolgáltatónak csak sima szövege van egy dalhoz, az semminek számít, és a következőt kérdezi. A [Könyvtár feljavítása](library-upgrade.md) ekkor a csak sima szöveggel rendelkező számot is dalszöveg nélkülinek veszi. A fájlban már meglévő időzített dalszöveg mindig számít: egy mellette lévő `.lrc` fájl, időbélyeges szöveg a címkékben vagy egy ID3 `SYLT` keret (ami más alkalmazások fájljaiban néha van). Bekapcsolt beállításnál a talált időzített szöveg lecseréli a sima szöveget: a `.lrc` fájlban és magának a fájlnak a dalszöveg-címkéjében is, így a csak címkéket olvasó lejátszók is időzítve mutatják. A vizsgálat azt is megmondja, a dalszöveg nélküli számok közül hánynak volt csak sima szövege.
 
 ### Dalszöveg keresése a szöveg nélküli számokhoz
 

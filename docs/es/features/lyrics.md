@@ -24,7 +24,7 @@ En **Ajustes → Etiquetas y letras → Proveedores** puedes arrastrar los prove
 
 ### Solo letras sincronizadas
 
-**Ajustes → Etiquetas y letras → Solo letras sincronizadas** (desactivado por defecto) conserva solo letras con marcas de tiempo: si un proveedor solo tiene letra simple para una canción, cuenta como nada y se pregunta al siguiente. [Mejorar biblioteca](library-upgrade.md) cuenta entonces también como sin letra una pista que solo tiene letra simple. Las letras sincronizadas que ya tenga un archivo cuentan siempre: un archivo `.lrc` al lado, letras con marcas de tiempo en sus etiquetas o un marco ID3 `SYLT` (como a veces traen archivos de otras apps).
+**Ajustes → Etiquetas y letras → Solo letras sincronizadas** (desactivado por defecto) conserva solo letras con marcas de tiempo: si un proveedor solo tiene letra simple para una canción, cuenta como nada y se pregunta al siguiente. [Mejorar biblioteca](library-upgrade.md) cuenta entonces también como sin letra una pista que solo tiene letra simple. Las letras sincronizadas que ya tenga un archivo cuentan siempre: un archivo `.lrc` al lado, letras con marcas de tiempo en sus etiquetas o un marco ID3 `SYLT` (como a veces traen archivos de otras apps). Con el ajuste activado, la letra sincronizada que encuentra Downtify reemplaza la simple: en el archivo `.lrc` y en la etiqueta de letra del propio archivo, así los reproductores que solo leen las etiquetas también la muestran sincronizada. El escaneo indica además cuántas de las pistas sin letra solo tenían letra simple.
 
 ### Buscar letras para pistas que no tienen
 

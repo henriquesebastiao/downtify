@@ -740,6 +740,8 @@ export default {
     lyricsQuickHint:
       'Procura na biblioteca faixas sem letra e já busca as letras, sem escolher nada no meio. As outras melhorias ficam para outra vez.',
     lyricsQuickButton: 'Escanear e buscar letras',
+    lyricsPlainOnly:
+      'Só letra não sincronizada: {count} — trocada pela sincronizada quando encontrada',
     lyricsOutcome:
       'Letras adicionadas: {added} · Não encontradas: {notFound} · Falhas: {failed}',
     completed: 'Melhoradas',
@@ -1830,7 +1832,7 @@ export default {
     lyricsKugouHint: 'Catálogo grande, sincronizadas',
     lyricsSyncedOnly: 'Só letras sincronizadas',
     lyricsSyncedOnlyHint:
-      'Ignora letras sem marcação de tempo e pergunta ao próximo provedor. Melhorar biblioteca passa a contar faixas só com letra simples como sem letra.',
+      'Ignora letras sem marcação de tempo e pergunta ao próximo provedor. Melhorar biblioteca passa a contar faixas só com letra simples como sem letra. A letra sincronizada então a substitui, também nas tags do próprio arquivo.',
     ratingsGroup: 'Avaliações do Deezer',
     ratingsHint:
       'Dá às suas músicas no Navidrome de 0 a 5 estrelas conforme a popularidade no Deezer, como o dztnr. As estrelas pertencem à conta do Navidrome acima.',

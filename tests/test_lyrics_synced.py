@@ -274,3 +274,151 @@ def test_start_after_scan_is_read_from_the_request():
     assert options_from({'start_after_scan': True}).start_after_scan
     assert not options_from({'start_after_scan': 'yes'}).start_after_scan
     assert options_from({}).as_dict().get('start_after_scan') is None
+
+
+# ── Synced lyrics inside the file; swapping plain ones out ───────────
+
+
+def _plain_track(ctx, name='a.mp3', text='words only'):
+    track = _write_track(ctx.download_dir / name, cover_px=1200)
+    tags = ID3(str(track))
+    tags.add(USLT(encoding=3, lang='eng', desc='', text=text))
+    tags.save(str(track), v2_version=4)
+    return track
+
+
+def test_synced_lyrics_in_the_tags_are_read_as_synced(tmp_path):
+    track = _tagged(
+        tmp_path / 'a.mp3', USLT(encoding=3, lang='eng', desc='', text=SYNCED)
+    )
+    assert lyrics.read_track_lyrics(track) == {
+        'synced': SYNCED,
+        'plain': 'Never gonna give you up',
+    }
+    # raw: the sidecar only, and the tag exactly as stored.
+    assert lyrics.read_track_lyrics(track, raw=True) == {
+        'synced': '',
+        'plain': SYNCED,
+    }
+
+
+def test_a_sylt_frame_is_read_as_lrc(tmp_path):
+    track = _tagged(
+        tmp_path / 'a.mp3',
+        SYLT(
+            encoding=3,
+            lang='eng',
+            format=2,
+            type=1,
+            text=[('Never gonna', 1000), ('give you up', 62_340)],
+        ),
+    )
+    assert lyrics.read_track_lyrics(track)['synced'] == (
+        '[00:01.00]Never gonna\n[01:02.34]give you up'
+    )
+
+
+def test_a_sylt_frame_timed_in_mpeg_frames_is_ignored(tmp_path):
+    track = _tagged(
+        tmp_path / 'a.mp3',
+        SYLT(encoding=3, lang='eng', format=1, type=1, text=[('x', 10)]),
+    )
+    assert not lyrics.has_synced_lyrics(track)
+
+
+def test_plain_lyrics_are_shown_without_timestamps_beside_a_sidecar(tmp_path):
+    track = _tagged(
+        tmp_path / 'a.mp3', USLT(encoding=3, lang='eng', desc='', text=SYNCED)
+    )
+    track.with_suffix('.lrc').write_text('[00:02.00]Other', encoding='utf-8')
+    found = lyrics.read_track_lyrics(track)
+    assert found['synced'] == '[00:02.00]Other'
+    assert found['plain'] == 'Never gonna give you up'
+
+
+@pytest.mark.parametrize(
+    ('embed_synced', 'tag'), [(False, 'plain'), (True, SYNCED)]
+)
+def test_embed_synced_puts_the_lrc_text_in_the_tag(
+    tmp_path, embed_synced, tag
+):
+    track = _tagged(
+        tmp_path / 'a.mp3', USLT(encoding=3, lang='eng', desc='', text='old')
+    )
+    lyrics.write_to_file(
+        track, Lyrics(plain='plain', synced=SYNCED), embed_synced=embed_synced
+    )
+    frames = ID3(str(track)).getall('USLT')
+    assert [str(f.text) for f in frames] == [tag]
+    assert track.with_suffix('.lrc').read_text(encoding='utf-8') == SYNCED
+
+
+def _run(runner, options):
+    runner.start_scan(options)
+    for _ in range(2):  # the scan's thread, then the upgrade's
+        worker = runner._worker
+        if worker is not None:
+            worker.join(timeout=30)
+    return runner.status()
+
+
+def test_plain_lyrics_are_swapped_for_synced_ones(tmp_path, monkeypatch):
+    ctx = _context(tmp_path)
+    track = _plain_track(ctx)
+    monkeypatch.setattr(
+        library_upgrade.lyrics_mod,
+        'fetch',
+        lambda *_a, **_k: Lyrics(plain='words only', synced=SYNCED),
+    )
+    runner = LibraryUpgradeRunner(
+        LibraryUpgradeDB(tmp_path / 'lib.db'),
+        _deps(
+            ctx,
+            settings={
+                'lyrics_providers': ['lrclib'],
+                'lyrics_synced_only': True,
+            },
+        ),
+    )
+
+    status = _run(
+        runner,
+        UpgradeOptions(categories=(CATEGORY_LYRICS,), start_after_scan=True),
+    )
+
+    assert status['summary']['plain_lyrics_only'] == 1
+    assert status['lyrics']['added'] == 1
+    assert [str(f.text) for f in ID3(str(track)).getall('USLT')] == [SYNCED]
+    assert lyrics.has_synced_lyrics(track)
+
+
+def test_a_check_made_without_synced_only_does_not_skip_the_track(
+    tmp_path, monkeypatch
+):
+    ctx = _context(tmp_path)
+    _plain_track(ctx)
+    monkeypatch.setattr(
+        library_upgrade.lyrics_mod, 'fetch', lambda *_a, **_k: None
+    )
+    settings = {'lyrics_providers': ['lrclib']}
+    runner = LibraryUpgradeRunner(
+        LibraryUpgradeDB(tmp_path / 'lib.db'), _deps(ctx, settings=settings)
+    )
+    options = UpgradeOptions(categories=(CATEGORY_LYRICS,), recheck_days=30)
+
+    # Plain lyrics count as lyrics: nothing to do, and remembered so.
+    assert _run(runner, options)['summary']['tracks'] == 0
+    assert _run(runner, options)['summary']['recently_checked'] == 1
+
+    settings['lyrics_synced_only'] = True
+    summary = _run(runner, options)['summary']
+    assert summary['tracks'] == 1
+    assert summary['plain_lyrics_only'] == 1
+
+
+def test_plain_text_drops_lrc_header_tags(tmp_path):
+    lrc = "[ti:Snooze]\n[ar:SZA]\n[offset:0]\n[00:13.00]I'll touch"
+    track = _tagged(
+        tmp_path / 'a.mp3', USLT(encoding=3, lang='eng', desc='', text=lrc)
+    )
+    assert lyrics.read_track_lyrics(track)['plain'] == "I'll touch"

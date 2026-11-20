@@ -24,7 +24,7 @@ Kataloglar farklıdır: bir sağlayıcının hiç duymadığı şarkı çoğu za
 
 ### Yalnızca zaman eşlemeli sözler
 
-**Ayarlar → Etiketler ve şarkı sözleri → Yalnızca zaman eşlemeli şarkı sözleri** (varsayılan olarak kapalı) yalnızca zaman damgalı sözleri tutar: bir sağlayıcının şarkı için yalnızca düz sözü varsa hiç yok sayılır ve sonraki sağlayıcıya sorulur. [Kitaplığı yükselt](library-upgrade.md) de yalnızca düz sözü olan bir parçayı sözsüz sayar. Bir dosyanın zaten sahip olduğu zaman eşlemeli sözler her zaman sayılır: yanındaki bir `.lrc` dosyası, etiketlerdeki zaman damgalı sözler veya bir ID3 `SYLT` çerçevesi (diğer uygulamalardan gelen dosyalarda bazen olduğu gibi).
+**Ayarlar → Etiketler ve şarkı sözleri → Yalnızca zaman eşlemeli şarkı sözleri** (varsayılan olarak kapalı) yalnızca zaman damgalı sözleri tutar: bir sağlayıcının şarkı için yalnızca düz sözü varsa hiç yok sayılır ve sonraki sağlayıcıya sorulur. [Kitaplığı yükselt](library-upgrade.md) de yalnızca düz sözü olan bir parçayı sözsüz sayar. Bir dosyanın zaten sahip olduğu zaman eşlemeli sözler her zaman sayılır: yanındaki bir `.lrc` dosyası, etiketlerdeki zaman damgalı sözler veya bir ID3 `SYLT` çerçevesi (diğer uygulamalardan gelen dosyalarda bazen olduğu gibi). Ayar açıkken Downtify'ın bulduğu zaman eşlemeli sözler düz sözlerin yerini alır: `.lrc` dosyasında ve dosyanın kendi söz etiketinde, böylece yalnızca etiketleri okuyan oynatıcılar da sözleri eşlemeli gösterir. Tarama, sözü eksik parçalardan kaçında yalnızca düz söz olduğunu da söyler.
 
 ### Sözü olmayan parçalar için söz bulma
 

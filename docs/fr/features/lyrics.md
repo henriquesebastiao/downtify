@@ -24,7 +24,7 @@ Dans **Paramètres → Tags et paroles → Fournisseurs**, vous pouvez faire gli
 
 ### Paroles synchronisées uniquement
 
-**Paramètres → Tags et paroles → Paroles synchronisées uniquement** (désactivé par défaut) ne garde que les paroles horodatées : un fournisseur qui n’a que des paroles simples pour une chanson compte comme n’ayant rien, et le suivant est interrogé. [Améliorer la bibliothèque](library-upgrade.md) compte alors aussi comme sans paroles un titre qui n’a que des paroles simples. Les paroles synchronisées qu’un fichier a déjà comptent toujours : un fichier `.lrc` à côté, des paroles horodatées dans ses tags ou une trame ID3 `SYLT` (comme en ont parfois les fichiers d’autres applis).
+**Paramètres → Tags et paroles → Paroles synchronisées uniquement** (désactivé par défaut) ne garde que les paroles horodatées : un fournisseur qui n’a que des paroles simples pour une chanson compte comme n’ayant rien, et le suivant est interrogé. [Améliorer la bibliothèque](library-upgrade.md) compte alors aussi comme sans paroles un titre qui n’a que des paroles simples. Les paroles synchronisées qu’un fichier a déjà comptent toujours : un fichier `.lrc` à côté, des paroles horodatées dans ses tags ou une trame ID3 `SYLT` (comme en ont parfois les fichiers d’autres applis). Avec le réglage activé, les paroles synchronisées trouvées remplacent les paroles simples : dans le fichier `.lrc` et dans le tag de paroles du fichier lui-même, pour que les lecteurs qui ne lisent que les tags les affichent aussi synchronisées. L’analyse indique aussi combien de titres sans paroles n’avaient que des paroles simples.
 
 ### Trouver des paroles pour les titres qui n’en ont pas
 

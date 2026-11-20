@@ -141,6 +141,12 @@
         }}
       </p>
       <p
+        v-if="lyricsRan && summary.plainLyricsOnly"
+        class="mt-1 pl-6 text-[13px] text-muted"
+      >
+        {{ t('upgrade.lyricsPlainOnly', { count: summary.plainLyricsOnly }) }}
+      </p>
+      <p
         v-if="isRunning"
         class="mt-4 flex items-start gap-2 text-[13px] text-muted"
       >
@@ -170,7 +176,18 @@
               :description="t(`upgrade.${name}Hint`)"
               class="flex-1"
               @update:model-value="(on) => toggle(name, on)"
-            />
+            >
+              <span
+                v-if="name === 'lyrics' && summary.plainLyricsOnly"
+                class="mt-1 block text-[13px] text-muted"
+              >
+                {{
+                  t('upgrade.lyricsPlainOnly', {
+                    count: summary.plainLyricsOnly,
+                  })
+                }}
+              </span>
+            </UiSwitch>
             <UiBadge tone="accent">
               {{
                 t('upgrade.tracksAffected', {

@@ -734,6 +734,8 @@ export default {
     lyricsQuickHint:
       'Kitaplıkta sözü olmayan parçaları tarar ve arada seçim yapmadan hemen söz arar. Diğer yükseltmeler başka bir çalıştırmaya kalır.',
     lyricsQuickButton: 'Tara ve söz bul',
+    lyricsPlainOnly:
+      'Yalnızca senkronize olmayan sözler: {count} — bulunduğunda senkronize olanlarla değiştirilir',
     lyricsOutcome:
       'Eklenen sözler: {added} · Bulunamayan: {notFound} · Başarısız: {failed}',
     completed: 'İyileştirildi',
@@ -1812,7 +1814,7 @@ export default {
     lyricsKugouHint: 'Geniş katalog, zaman eşlemeli',
     lyricsSyncedOnly: 'Yalnızca zaman eşlemeli şarkı sözleri',
     lyricsSyncedOnlyHint:
-      'Zaman damgası olmayan sözleri atlar ve sonraki sağlayıcıya sorar. Kitaplığı yükselt de yalnızca düz sözü olan parçaları sözsüz sayar.',
+      'Zaman damgası olmayan sözleri atlar ve sonraki sağlayıcıya sorar. Kitaplığı yükselt de yalnızca düz sözü olan parçaları sözsüz sayar. Senkronize sözler bunların yerini alır, dosyanın kendi etiketlerinde de.',
     ratingsGroup: "Deezer'dan puanlar",
     ratingsHint:
       'Navidrome’daki şarkılarına Deezer’daki popülerliğine göre 0–5 yıldız verir, tıpkı dztnr gibi. Yıldızlar yukarıdaki Navidrome hesabına aittir.',

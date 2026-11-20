@@ -24,7 +24,7 @@ Unter **Einstellungen → Tags und Songtexte → Anbieter** kannst du die Anbiet
 
 ### Nur zeitsynchrone Songtexte
 
-**Einstellungen → Tags und Songtexte → Nur zeitsynchrone Songtexte** (standardmäßig aus) behält nur Songtexte mit Zeitstempeln: Hat ein Anbieter für einen Song nur einfachen Text, zählt das als nichts, und der nächste wird gefragt. [Bibliothek verbessern](library-upgrade.md) zählt dann auch einen Titel mit nur einfachem Text als ohne Songtext. Synchrone Songtexte, die eine Datei schon hat, zählen immer: eine `.lrc`-Begleitdatei, Songtexte mit Zeitstempeln in den Tags oder ein ID3-`SYLT`-Frame (wie ihn Dateien aus anderen Apps manchmal haben).
+**Einstellungen → Tags und Songtexte → Nur zeitsynchrone Songtexte** (standardmäßig aus) behält nur Songtexte mit Zeitstempeln: Hat ein Anbieter für einen Song nur einfachen Text, zählt das als nichts, und der nächste wird gefragt. [Bibliothek verbessern](library-upgrade.md) zählt dann auch einen Titel mit nur einfachem Text als ohne Songtext. Synchrone Songtexte, die eine Datei schon hat, zählen immer: eine `.lrc`-Begleitdatei, Songtexte mit Zeitstempeln in den Tags oder ein ID3-`SYLT`-Frame (wie ihn Dateien aus anderen Apps manchmal haben). Ist die Einstellung an, ersetzen gefundene synchrone Songtexte den einfachen Text: in der `.lrc`-Begleitdatei und im Songtext-Tag der Datei selbst, sodass auch Player, die nur die Tags lesen, sie synchron zeigen. Der Scan nennt außerdem, wie viele der Titel ohne Songtext nur einfachen Text hatten.
 
 ### Songtexte für Titel ohne finden
 

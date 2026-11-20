@@ -725,6 +725,8 @@ export default {
     lyricsQuickHint:
       'Scan the library for tracks without lyrics and look them up right away, without choosing anything in between. Other upgrades are left for another run.',
     lyricsQuickButton: 'Scan and find lyrics',
+    lyricsPlainOnly:
+      'Only unsynced lyrics: {count} — swapped for synced ones when found',
     lyricsOutcome:
       'Lyrics added: {added} · Not found: {notFound} · Failed: {failed}',
     completed: 'Upgraded',
@@ -1788,7 +1790,7 @@ export default {
     lyricsKugouHint: 'Large catalogue, time-synced',
     lyricsSyncedOnly: 'Time-synced lyrics only',
     lyricsSyncedOnlyHint:
-      'Skip lyrics without timestamps and ask the next provider instead. Upgrade library then counts tracks with only plain lyrics as missing.',
+      'Skip lyrics without timestamps and ask the next provider instead. Upgrade library then counts tracks with only plain lyrics as missing, and synced lyrics it finds replace them, in the file’s own tags too.',
     ratingsGroup: 'Ratings from Deezer',
     ratingsHint:
       'Gives your songs in Navidrome 0–5 stars from how popular they are on Deezer, like dztnr. The stars belong to the Navidrome account above.',

@@ -779,22 +779,48 @@ def _embedded_lyrics(path: Path) -> str:
     return ''
 
 
-def _embedded_synced(path: Path) -> bool:
-    """Whether the file's tags carry time-synced lyrics: an ID3 ``SYLT``
-    frame, or lyrics text with LRC timestamps (as some downloads from
-    other apps embed them)."""
+def _sylt_lrc(frame: Any) -> str:
+    """An ID3 ``SYLT`` frame as LRC text; empty when its times aren't in
+    milliseconds (format 2) or it holds no lines."""
 
+    if not isinstance(frame, SYLT) or frame.format != 2:
+        return ''
+    entries = [(str(text).strip(), int(time)) for text, time in frame.text]
+    if not any(text for text, _time in entries):
+        return ''
+    lines = []
+    for text, time in entries:
+        ms = max(0, time)
+        minutes, seconds = ms // 60000, ms // 1000 % 60
+        lines.append(
+            f'[{minutes:02d}:{seconds:02d}.{ms % 1000 // 10:02d}]{text}'
+        )
+    return '\n'.join(lines)
+
+
+def embedded_synced_text(path: Path, embedded: Optional[str] = None) -> str:
+    """Time-synced lyrics in the file's own tags, as LRC text: lyrics
+    text with LRC timestamps (as files shared over Soulseek or tagged by
+    other apps often carry), or an ID3 ``SYLT`` frame. Empty when the
+    tags have none, or only plain lyrics. *embedded* is the tag's lyrics
+    text when already read."""
+
+    if embedded is None:
+        embedded = _embedded_lyrics(path)
+    if looks_like_lrc(embedded):
+        return embedded
     try:
         tags = _file_tags(path)
         if tags and hasattr(tags, 'getall'):
             for frame in tags.getall('SYLT'):
-                if isinstance(frame, SYLT) and frame.text:
-                    return True
+                text = _sylt_lrc(frame)
+                if text:
+                    return text
     except Exception:
         logger.opt(exception=True).debug(
             'Could not read synced lyrics from {}', path
         )
-    return looks_like_lrc(_embedded_lyrics(path))
+    return ''
 
 
 def has_synced_lyrics(path: Path) -> bool:
@@ -803,15 +829,19 @@ def has_synced_lyrics(path: Path) -> bool:
 
     if any(_read_lrc_text(sidecar) for sidecar in lrc_candidates(path)):
         return True
-    return _embedded_synced(path)
+    return bool(embedded_synced_text(path))
 
 
-def read_track_lyrics(path: Path) -> dict[str, str]:
+def read_track_lyrics(path: Path, *, raw: bool = False) -> dict[str, str]:
     """Lyrics saved with a downloaded track.
 
-    ``synced`` is the LRC text of the ``.lrc`` sidecar (empty when there
-    is none); ``plain`` is the text embedded in the file's tags. Either
-    can be empty. Unreadable files count as having no lyrics.
+    ``synced`` is the LRC text of the ``.lrc`` sidecar or, without one,
+    the time-synced lyrics in the file's tags; ``plain`` is the text
+    embedded in the file's tags, timestamps removed. Either can be empty.
+    Unreadable files count as having no lyrics.
+
+    With *raw*, ``synced`` is the sidecar only and ``plain`` the tag's
+    text exactly as stored.
     """
 
     synced = ''
@@ -819,7 +849,14 @@ def read_track_lyrics(path: Path) -> dict[str, str]:
         synced = _read_lrc_text(sidecar)
         if synced:
             break
-    return {'synced': synced, 'plain': _embedded_lyrics(path)}
+    plain = _embedded_lyrics(path)
+    if raw:
+        return {'synced': synced, 'plain': plain}
+    if not synced:
+        synced = embedded_synced_text(path, plain)
+    if looks_like_lrc(plain):
+        plain = _strip_lrc_timestamps(plain) or plain
+    return {'synced': synced, 'plain': plain}
 
 
 def _read_lrc_text(sidecar: Path) -> str:
@@ -836,8 +873,11 @@ def _read_lrc_text(sidecar: Path) -> str:
 
 def _strip_lrc_timestamps(synced: str) -> str:
     cleaned = re.sub(r'\[\d{1,2}:\d{2}(?:\.\d{1,3})?\]', '', synced)
+    # Header tags (``[ti:Title]``, ``[offset:0]``) aren't lyrics either.
     return '\n'.join(
-        line.strip() for line in cleaned.splitlines() if line.strip()
+        line.strip()
+        for line in cleaned.splitlines()
+        if line.strip() and not _LRC_TAG.match(line.strip())
     )
 
 
@@ -846,8 +886,13 @@ def write_to_file(
     lyrics: Lyrics,
     *,
     sidecar: Optional[Path] = None,
+    embed_synced: bool = False,
 ) -> None:
     """Embed plain lyrics and write a ``.lrc`` sidecar when they are synced.
+
+    With *embed_synced* (the ``lyrics_synced_only`` setting), the tag gets
+    the time-synced LRC text instead, so players that only read the
+    file's own tags show synced lyrics too.
 
     Same write a download uses (see ``downloader.embed_lyrics``).
     """
@@ -867,7 +912,10 @@ def write_to_file(
         else:
             _unlink_other_lrc(path, dest)
 
-    text = lyrics.plain or _strip_lrc_timestamps(lyrics.synced or '')
+    if embed_synced and lyrics.synced:
+        text = lyrics.synced
+    else:
+        text = lyrics.plain or _strip_lrc_timestamps(lyrics.synced or '')
     if not text:
         return
     if not can_mutate_audio(path):

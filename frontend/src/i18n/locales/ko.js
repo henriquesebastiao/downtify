@@ -733,6 +733,8 @@ export default {
     lyricsQuickHint:
       '가사가 없는 곡을 찾아 바로 가사를 검색합니다. 중간에 고를 필요가 없으며, 다른 업그레이드는 다음 실행으로 남깁니다.',
     lyricsQuickButton: '스캔하고 가사 찾기',
+    lyricsPlainOnly:
+      '동기화되지 않은 가사만 있음: {count} — 동기화 가사를 찾으면 바뀝니다',
     lyricsOutcome:
       '가사 추가: {added} · 찾지 못함: {notFound} · 실패: {failed}',
     completed: '업그레이드 완료',
@@ -1810,7 +1812,7 @@ export default {
     lyricsKugouHint: '큰 카탈로그, 싱크 가사',
     lyricsSyncedOnly: '싱크 가사만',
     lyricsSyncedOnlyHint:
-      '타임스탬프가 없는 가사는 건너뛰고 다음 제공자에게 묻습니다. 라이브러리 업그레이드도 일반 가사만 있는 곡을 가사 없음으로 셉니다.',
+      '타임스탬프가 없는 가사는 건너뛰고 다음 제공자에게 묻습니다. 라이브러리 업그레이드도 일반 가사만 있는 곡을 가사 없음으로 셉니다. 그런 곡은 동기화 가사로 바뀌며, 파일 자체의 태그에도 들어갑니다.',
     ratingsGroup: 'Deezer 기반 별점',
     ratingsHint:
       'Deezer에서의 인기도에 따라 Navidrome의 곡에 0~5개의 별을 매깁니다. dztnr과 같은 방식입니다. 별점은 위의 Navidrome 계정에 저장됩니다.',
