@@ -1885,6 +1885,9 @@ export default {
     overwrite: 'Descargar de nuevo si el archivo existe',
     overwriteHint:
       'Desactívalo para omitir canciones que ya tienes y ahorrar ancho de banda.',
+    completeAlbums: 'Mantener cada álbum completo',
+    completeAlbumsHint:
+      'La vigilancia de artistas descarga una canción de nuevo para cada lanzamiento en el que aparece (un álbum, un grandes éxitos, una edición deluxe) en lugar de enlazar la copia que ya tienes. Ocupa más espacio en disco.',
     m3u: 'Generar playlists M3U',
     m3uHint:
       'Guarda un .m3u por cada playlist descargada, para Jellyfin, Plex, Navidrome y otros.',

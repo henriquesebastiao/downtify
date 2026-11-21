@@ -101,7 +101,7 @@ def _patch(monkeypatch, albums, tracks):
     )
 
 
-def _run(tmp_path, downloader, rows):
+def _run(tmp_path, downloader, rows, settings=None):
     db = monitor.PlaylistMonitorDB(tmp_path / 'monitor.db')
     watch = db.add_playlist(
         CHANNEL_ID, 'Drake', 'url', 60, monitor.KIND_ARTIST
@@ -120,7 +120,7 @@ def _run(tmp_path, downloader, rows):
             downloader,
             broadcast,
             asyncio.get_running_loop(),
-            settings={},
+            settings=settings or {},
             library=library,
         )
 
@@ -424,3 +424,61 @@ def test_library_songs_folds_the_film_a_song_is_from():
     # Another recording of it is still another song.
     assert songs.find({**song, 'name': 'Tum Hi Ho (Unplugged)'}) is None
     assert songs.find({**song, 'name': 'Tum Hi Ho', 'duration': 320}) is None
+
+
+COMPLETE_ALBUMS = {'artist_watch_complete_albums': True}
+
+
+def test_complete_albums_downloads_a_song_each_release_shares(
+    monkeypatch, tmp_path
+):
+    """Issue #546: with "Keep every album complete" a greatest hits gets
+    its own copy of a song the library already has from the album."""
+
+    rows = [
+        {
+            'file': _library_file(tmp_path, 'Drake/Views/Hotline Bling.mp3'),
+            'artist': 'Drake',
+            'title': 'Hotline Bling',
+            'duration': 267,
+        }
+    ]
+    _patch(
+        monkeypatch,
+        [_album('GH', 'Greatest Hits')],
+        {
+            'GH': [
+                _track('hb', 'Hotline Bling', 'Greatest Hits', 1, duration=267)
+            ]
+        },
+    )
+    dl = _FakeDownloader(tmp_path)
+
+    downloaded, db, watch = _run(tmp_path, dl, rows, COMPLETE_ALBUMS)
+
+    assert dl.calls == ['hb']
+    assert downloaded == 1
+    assert db.get_track_filenames(watch.id)['hb'] == 'Drake/hb.mp3'
+
+
+def test_complete_albums_keeps_both_when_the_name_is_taken(
+    monkeypatch, tmp_path
+):
+    """Files organized by artist only: the album's copy holds the name, so
+    the greatest hits' copy gets the release added to its name instead of
+    being linked."""
+
+    song = _track('hb', 'Hotline Bling', 'Greatest Hits', 1, duration=267)
+    taken = 'Drake/Hotline Bling.mp3'
+    _write_track(tmp_path / taken, {**song, 'album_name': 'Views'})
+    _patch(monkeypatch, [_album('GH', 'Greatest Hits')], {'GH': [song]})
+    dl = _FakeDownloader(tmp_path, taken=taken)
+
+    downloaded, db, watch = _run(tmp_path, dl, [], COMPLETE_ALBUMS)
+
+    assert dl.calls == ['hb']
+    assert downloaded == 1
+    assert (
+        db.get_track_filenames(watch.id)['hb']
+        == 'Drake/hb (Greatest Hits).mp3'
+    )

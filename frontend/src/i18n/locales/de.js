@@ -1912,6 +1912,9 @@ export default {
     overwrite: 'Bei vorhandener Datei erneut herunterladen',
     overwriteHint:
       'Deaktiviere die Option, um Titel in deiner Bibliothek zu überspringen und Datenvolumen zu sparen.',
+    completeAlbums: 'Jedes Album vollständig halten',
+    completeAlbumsHint:
+      'Die Künstlerbeobachtung lädt einen Song für jede Veröffentlichung, auf der er ist (ein Album, ein Best-of, eine Deluxe-Edition), erneut herunter, statt die vorhandene Kopie zu verknüpfen. Braucht mehr Speicherplatz.',
     m3u: 'M3U-Playlists erstellen',
     m3uHint:
       'Speichere für jede heruntergeladene Playlist eine .m3u-Datei für Jellyfin, Plex, Navidrome und andere.',

@@ -593,6 +593,15 @@
                 />
               </SettingRow>
               <SettingRow
+                :label="t('settings.completeAlbums')"
+                :description="t('settings.completeAlbumsHint')"
+              >
+                <UiSwitch
+                  v-model="s.artist_watch_complete_albums"
+                  :aria-label="t('settings.completeAlbums')"
+                />
+              </SettingRow>
+              <SettingRow
                 :label="t('settings.m3u')"
                 :description="t('settings.m3uHint')"
               >

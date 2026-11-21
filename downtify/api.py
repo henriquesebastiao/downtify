@@ -740,6 +740,10 @@ DEFAULT_SETTINGS: dict[str, Any] = {
     # ``artist_watch_musicbrainz_kinds`` (``musicbrainz.KINDS`` names).
     'artist_watch_musicbrainz': True,
     'artist_watch_musicbrainz_kinds': ['mixtape', 'soundtrack'],
+    # Artist Watch gives every release its own copy of a song it shares
+    # with another (a greatest hits, a deluxe edition) instead of linking
+    # the copy the library already has (issue #546).
+    'artist_watch_complete_albums': False,
     'max_parallel_downloads': 3,
     'download_delay_seconds': 0,
     'download_retry_budget_minutes': 0,
@@ -9147,7 +9151,7 @@ async def update_settings_endpoint(
                 state.settings[key] = _clamp_cover_min_resolution(raw_value)
             elif key == 'backup_interval_hours':
                 state.settings[key] = backup.clamp_interval(raw_value)
-            elif key == 'cover_largest':
+            elif key in {'cover_largest', 'artist_watch_complete_albums'}:
                 state.settings[key] = raw_value is True
             elif key == 'ui_language':
                 # Not a language code: the saved one stays.

@@ -114,6 +114,8 @@ A release is only recorded as processed once every one of its tracks is accounte
 
 A song the library already has is linked instead of downloaded again, even under another name. That covers a song downloaded from a playlist (named from Spotify, where YouTube Music writes `(feat. …)` for Spotify's `(with …)`), a single that is also on the album, and an album's deluxe edition. Two songs count as the same when their first artist and their title match, with `(feat. …)`, `(with …)`, remaster tags and Deezer's `(Album Version)` / `(Explicit Version)` ignored, and their lengths are within 3 seconds, so a live version or a remix is still downloaded. When a *different* song already has the file name a track would get (two albums' `Intro`, with files organized by artist but not by album), the track is saved with the album's name added, as `Intro (Album)`.
 
+To give every release its own copy instead — so a greatest hits or a deluxe edition is complete on its own, in its own folder — turn on **Keep every album complete** in Settings → Downloads. A song the library has from another release is then downloaded again for each release it's on (saved as `Song (Album)` when its file name is taken), which uses more disk space.
+
 Artist watches don't generate M3U files — the tracks are laid out by your [file organization](file-organization.md) settings rather than as a playlist.
 
 ### Suggested artists
