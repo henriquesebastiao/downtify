@@ -236,6 +236,16 @@ export default {
     noMatch: '這裡沒有符合的項目',
     noMatchHint: '試試其他關鍵字或篩選條件。',
   },
+  whatsNew: {
+    title: 'Downtify {version} 新功能',
+    intro: 'Downtify 已更新至 {version}。以下是變更內容：',
+    noHighlights: 'Downtify 已更新至 {version}。完整的變更清單在 GitHub 上。',
+    changelog: '完整更新日誌',
+    gotIt: '知道了',
+    star: '喜歡 Downtify 嗎？在 GitHub 上給它一顆星',
+    reopen: '新功能',
+    reopenHint: '此版本的重點及其完整更新日誌的連結。',
+  },
   common: {
     cancel: '取消',
     confirm: '確認',

@@ -23,43 +23,17 @@
 <script setup>
 // Signed in with the default password (admin / downtify): suggest
 // changing it, once per browser session, until it's changed.
-import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import UiButton from '../ui/UiButton.vue'
 import UiModal from '../ui/UiModal.vue'
 import { useAuth } from '/src/model/auth'
+import { useDefaultPasswordPrompt } from '/src/model/defaultPassword'
 import { useI18n } from '/src/i18n'
-
-const KEY = 'downtify-default-password-seen'
 
 const { t } = useI18n()
 const auth = useAuth()
 const router = useRouter()
-
-function seen() {
-  try {
-    return sessionStorage.getItem(KEY) === '1'
-  } catch {
-    return false
-  }
-}
-
-const dismissed = ref(seen())
-const open = computed(
-  () =>
-    Boolean(auth.user.value?.default_password) &&
-    !auth.authDisabled.value &&
-    !dismissed.value
-)
-
-function dismiss() {
-  dismissed.value = true
-  try {
-    sessionStorage.setItem(KEY, '1')
-  } catch {
-    // Shown again next time; harmless.
-  }
-}
+const { open, dismiss } = useDefaultPasswordPrompt()
 
 function change() {
   dismiss()

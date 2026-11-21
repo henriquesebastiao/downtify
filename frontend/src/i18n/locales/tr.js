@@ -253,6 +253,18 @@ export default {
     noMatch: 'Eşleşen bir şey yok',
     noMatchHint: 'Başka kelimeler ya da başka bir filtre dene.',
   },
+  whatsNew: {
+    title: 'Downtify {version} sürümündeki yenilikler',
+    intro: 'Downtify {version} sürümüne güncellendi. Değişenler:',
+    noHighlights:
+      "Downtify {version} sürümüne güncellendi. Değişikliklerin tam listesi GitHub'da.",
+    changelog: 'Tüm değişiklik günlüğü',
+    gotIt: 'Anladım',
+    star: "Downtify'ı beğendin mi? GitHub'da bir yıldız ver",
+    reopen: 'Yenilikler',
+    reopenHint:
+      'Bu sürümün öne çıkanları ve tüm değişiklik günlüğüne bağlantı.',
+  },
   common: {
     cancel: 'İptal',
     confirm: 'Onayla',

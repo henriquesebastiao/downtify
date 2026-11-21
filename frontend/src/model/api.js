@@ -6,6 +6,7 @@ import { v4 as uuidv4 } from 'uuid'
 
 import { restoreParams } from '/src/lib/backups'
 import { coverURL, fileURL, saveName } from '/src/lib/paths'
+import { seedSeenVersion } from '/src/lib/whatsNew'
 
 const API = axios.create({
   baseURL: `${config.PROTOCOL}//${config.BACKEND}:${config.PORT}${config.BASEURL}`,
@@ -48,7 +49,15 @@ function onForbidden(fn) {
   return () => forbiddenListeners.delete(fn)
 }
 
-getVersion()
+// "What's new" starts from the version this browser last ran, before
+// getVersion() overwrites it (lib/whatsNew.js).
+try {
+  seedSeenVersion(localStorage)
+} catch {
+  // No storage: the dialog just never shows.
+}
+// The running version, once known ('0.0.0' when it couldn't be read).
+const versionReady = getVersion()
 
 // ── WebSocket: progress events, reconnecting with backoff ────────────
 const listeners = new Set()
@@ -1367,4 +1376,5 @@ export default {
   ws_onmessage,
   ws_onerror,
   getVersion,
+  versionReady,
 }

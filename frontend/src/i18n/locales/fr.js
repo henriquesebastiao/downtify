@@ -266,6 +266,18 @@ export default {
     noMatch: 'Aucun résultat',
     noMatchHint: 'Essayez d’autres mots ou un autre filtre.',
   },
+  whatsNew: {
+    title: 'Nouveautés de Downtify {version}',
+    intro: 'Downtify a été mis à jour en {version}. Voici ce qui a changé :',
+    noHighlights:
+      'Downtify a été mis à jour en {version}. La liste complète des changements est sur GitHub.',
+    changelog: 'Journal des modifications complet',
+    gotIt: 'Compris',
+    star: 'Vous aimez Downtify ? Donnez-lui une étoile sur GitHub',
+    reopen: 'Nouveautés',
+    reopenHint:
+      'Les points forts de cette version et un lien vers son journal des modifications complet.',
+  },
   common: {
     cancel: 'Annuler',
     confirm: 'Confirmer',

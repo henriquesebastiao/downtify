@@ -10,6 +10,14 @@ Downtify checks its own [GitHub Releases page](https://github.com/henriquesebast
 
 Click it to open that release on GitHub.
 
+## What's new after an update
+
+The first time the web app opens after Downtify was updated, a **What's new in Downtify 3.12.0** dialog lists the release's highlights, with a **Full changelog** button that opens the release on GitHub and a quiet line to star the repository. **Got it** (or closing it) hides it until the next update. **Settings → About → What's new** opens it again.
+
+- It's remembered per browser: each browser (and each signed-in person using it) sees it once per update. A browser that never opened Downtify before — a fresh install — isn't shown it.
+- The highlights are bundled with the app, so the dialog works without internet access; only the two links go to GitHub. A release without written highlights shows just the link to its changelog.
+- It waits for sign-in, and doesn't open over the prompt to change the default password.
+
 ## How it works
 
 - A background task in the backend (`downtify/update_check.py`) fetches the latest release from GitHub's API once immediately at startup, then every hour. It's fire-and-forget: nothing in the UI waits on it.

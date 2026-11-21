@@ -250,6 +250,18 @@ export default {
     noMatch: 'Nothing here matches',
     noMatchHint: 'Try other words, or another filter.',
   },
+  whatsNew: {
+    title: "What's new in Downtify {version}",
+    intro: "Downtify was updated to {version}. Here's what changed:",
+    noHighlights:
+      'Downtify was updated to {version}. The full list of changes is on GitHub.',
+    changelog: 'Full changelog',
+    gotIt: 'Got it',
+    star: 'Enjoying Downtify? Give it a star on GitHub',
+    reopen: "What's new",
+    reopenHint:
+      'The highlights of this version, and a link to its full changelog.',
+  },
   common: {
     cancel: 'Cancel',
     confirm: 'Confirm',
