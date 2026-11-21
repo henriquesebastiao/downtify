@@ -47,6 +47,7 @@ from loguru import logger
 from mutagen import File as MutagenFile
 
 from . import cover_sources, providers, spotify
+from . import isrc as isrc_mod
 from . import lyrics as lyrics_mod
 from .download_queue import queue_pause
 from .downloader import embed_lyrics, embed_metadata
@@ -82,6 +83,14 @@ STAGING_TEMPLATE = '{stem}' + UPGRADE_STAGING_MARKER + '{suffix}'
 CATEGORY_ARTWORK = 'artwork'
 CATEGORY_LYRICS = 'lyrics'
 CATEGORY_METADATA = 'metadata'
+#: Add the recording's ISRC to files without one (:mod:`downtify.isrc`).
+#: Opt-in, like ``audio``: a normal scan never looks for it; a scan
+#: asked for ``isrc`` looks for nothing else.
+CATEGORY_ISRC = 'isrc'
+#: Sent with ``isrc``: look the ISRCs up and list them, write nothing.
+#: A category, so a paused or restarted run stays look-up only.
+ISRC_LOOKUP_ONLY = 'isrc_lookup'
+_ISRC_MODE = frozenset({CATEGORY_ISRC, ISRC_LOOKUP_ONLY})
 
 #: Every category a scan reports on, in the order the UI shows them.
 CATEGORIES = (CATEGORY_ARTWORK, CATEGORY_LYRICS, CATEGORY_METADATA)
@@ -98,7 +107,7 @@ def check_key(category: str, synced_only: bool = False) -> str:
     return category
 
 
-SUPPORTED_CATEGORIES = (*CATEGORIES, 'audio')
+SUPPORTED_CATEGORIES = (*CATEGORIES, CATEGORY_ISRC, ISRC_LOOKUP_ONLY, 'audio')
 
 #: How far a rewritten file's duration may drift from the original
 #: before it is rejected. Tag writes don't touch audio, so this only
@@ -156,6 +165,13 @@ def normalize_categories(raw: Any) -> tuple[str, ...]:
     if not isinstance(raw, (list, tuple)):
         return CATEGORIES
     wanted = {str(item) for item in raw}
+    if CATEGORY_ISRC in wanted or ISRC_LOOKUP_ONLY in wanted:
+        # ISRCs are a run of their own: nothing else is looked at.
+        return (
+            (CATEGORY_ISRC, ISRC_LOOKUP_ONLY)
+            if (ISRC_LOOKUP_ONLY in wanted)
+            else (CATEGORY_ISRC,)
+        )
     picked = tuple(name for name in SUPPORTED_CATEGORIES if name in wanted)
     return picked or CATEGORIES
 
@@ -226,9 +242,10 @@ def _summarize(
 
     counts = {name: 0 for name in CATEGORIES}
     sizes = {name: 0 for name in CATEGORIES}
-    if any('audio' in job.get('categories', []) for job in jobs):
-        counts['audio'] = 0
-        sizes['audio'] = 0
+    for extra in ('audio', CATEGORY_ISRC):
+        if any(extra in job.get('categories', []) for job in jobs):
+            counts[extra] = 0
+            sizes[extra] = 0
     for job in jobs:
         for name in job.get('categories') or []:
             if name in counts:
@@ -632,6 +649,91 @@ def _write_upgrade(
     return None
 
 
+def _write_isrc(full: Path, code: str) -> Optional[str]:
+    """Add *code* as *full*'s ISRC through a verified working copy (only
+    that tag changes); error text or ``None``."""
+
+    try:
+        stage = _stage(full)
+    except OSError as exc:
+        if exc.errno == errno.EROFS:
+            return _READ_ONLY_DETAIL
+        return f'Could not stage a copy: {exc}'
+    if not isrc_mod.write(stage.staged, code):
+        _discard(stage)
+        return 'Could not write the ISRC tag'
+    if not _commit(stage):
+        return 'The rewritten file did not verify; kept the original'
+    return None
+
+
+def _add_isrc(
+    stored_path: str,
+    full: Path,
+    song: dict[str, Any],
+    *,
+    deps: 'UpgradeDeps',
+    ctx: LibraryContext,
+    lookup_only: bool,
+    stage_now: Callable[[str], None],
+) -> UpgradeOutcome:
+    """The ISRC run for one track: confident or nothing.
+
+    The same rules as for a new download (:func:`downtify.isrc.for_song`:
+    same first artist and title, length within 3 s, every match agreeing).
+    An unmatched file is left exactly as it is. *lookup_only* writes
+    nothing and doesn't mark the track as checked, so the real run looks
+    it up again.
+    """
+
+    if isrc_mod.read(full):
+        return UpgradeOutcome(JOB_SKIPPED, 'Already has an ISRC')
+    stage_now('isrc')
+    code = isrc_mod.lookup(song) or ''
+    if lookup_only:
+        if code:
+            return UpgradeOutcome(
+                JOB_DONE, f'Would add ISRC {code}', checked=False
+            )
+        return UpgradeOutcome(
+            JOB_SKIPPED,
+            'No ISRC found for sure; would be left as it is',
+            checked=False,
+        )
+    if not code:
+        return UpgradeOutcome(
+            JOB_SKIPPED, 'No ISRC found for sure; left as it is'
+        )
+    stage_now('writing')
+    try:
+        old_key = file_content_key(full) or ''
+    except Exception:
+        old_key = ''
+    error = _write_isrc(full, code)
+    if error == _READ_ONLY_DETAIL:
+        return UpgradeOutcome(JOB_SKIPPED, error, checked=False)
+    if error:
+        return UpgradeOutcome(JOB_FAILED, error)
+    # A tag changes the file's size, so its content key moves: owners,
+    # likes and the rest follow it, as after any other upgrade.
+    if old_key and deps.rekey_owners is not None:
+        try:
+            new_key = file_content_key(full) or ''
+            if new_key:
+                deps.rekey_owners(old_key, new_key, stored_path)
+        except Exception:
+            logger.opt(exception=True).debug(
+                'Library upgrade: could not rekey owners for {}',
+                stored_path,
+            )
+    if ctx.metadata_cache is not None:
+        try:
+            ctx.metadata_cache.refresh(stored_path, full)
+        except Exception:
+            logger.debug('Library upgrade: metadata cache refresh failed')
+    return UpgradeOutcome(JOB_DONE, f'ISRC {code}', changed=[CATEGORY_ISRC])
+
+
 def _outcome_detail(changed: list[str], artwork: _Artwork) -> str:
     parts: list[str] = []
     for name in changed:
@@ -674,6 +776,16 @@ def upgrade_track(
         spotify_id=spotify_id,
         refresh_metadata=CATEGORY_METADATA in options.categories,
     )
+    if CATEGORY_ISRC in options.categories:
+        return _add_isrc(
+            stored_path,
+            full,
+            song,
+            deps=deps,
+            ctx=ctx,
+            lookup_only=ISRC_LOOKUP_ONLY in options.categories,
+            stage_now=stage_now,
+        )
 
     stage_now('artwork')
     artwork = _pick_artwork(song, full, entry, options=options)
@@ -880,6 +992,9 @@ class LibraryUpgradeRunner:
                         'artist': str(entry.get('artist') or ''),
                     })
                     continue
+                if CATEGORY_ISRC in options.categories:
+                    jobs.extend(self._isrc_jobs(entry, checks, options, tally))
+                    continue
                 due = self._categories_due(
                     checks.get(stored) or {},
                     options.recheck_days,
@@ -941,6 +1056,37 @@ class LibraryUpgradeRunner:
             self.db.set_state(run_id, STATE_CANCELLED)
         self._publish()
 
+    def _isrc_jobs(
+        self,
+        entry: dict[str, Any],
+        checks: dict[str, Any],
+        options: UpgradeOptions,
+        tally: dict[str, int],
+    ) -> list[dict[str, Any]]:
+        """An ISRC scan's job for *entry* (none or one). Only the tag the
+        listing already read: no file is opened, nothing else looked for."""
+
+        if isrc_mod.normalize(entry.get('isrc')):
+            return []
+        stored = str(entry['file'])
+        if check_is_fresh(
+            (checks.get(stored) or {}).get(CATEGORY_ISRC),
+            app_version=self.deps.version,
+            max_age_days=options.recheck_days,
+        ):
+            # Looked up recently and nothing sure was found.
+            tally['skipped'] += 1
+            return []
+        return [
+            {
+                'file': stored,
+                'categories': [CATEGORY_ISRC],
+                'size': int(entry.get('size') or 0),
+                'title': str(entry.get('title') or ''),
+                'artist': str(entry.get('artist') or ''),
+            }
+        ]
+
     def _categories_due(
         self,
         track_checks: dict[str, Any],
@@ -1001,12 +1147,17 @@ class LibraryUpgradeRunner:
             }:
                 raise RuntimeError('Scan the library before upgrading it')
             run_id = int(run['id'])
+            scanned = options_from(run['options'])
+            if (
+                ISRC_LOOKUP_ONLY in scanned.categories
+                and CATEGORY_ISRC in categories
+            ):
+                # A "look up only" scan never turns into a writing run.
+                categories = (CATEGORY_ISRC, ISRC_LOOKUP_ONLY)
             # Remembered so a resume after a restart runs the same
             # categories the user picked, not everything the scan found.
             self.db.set_categories(run_id, list(categories))
-            options = replace(
-                options_from(run['options']), categories=categories
-            )
+            options = replace(scanned, categories=categories)
             self._begin(run_id, options)
         return self.status()
 
@@ -1137,7 +1288,14 @@ class LibraryUpgradeRunner:
                     stored,
                     deps=self.deps,
                     options=UpgradeOptions(
-                        categories=tuple(todo),
+                        # The look-up-only marker rides along: it is no
+                        # job's category, so *todo* never has it.
+                        categories=tuple(todo)
+                        + tuple(
+                            name
+                            for name in options.categories
+                            if name == ISRC_LOOKUP_ONLY
+                        ),
                         artwork_min_px=options.artwork_min_px,
                         artwork_source=options.artwork_source,
                         recheck_days=options.recheck_days,

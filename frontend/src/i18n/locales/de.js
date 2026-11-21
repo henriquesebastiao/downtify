@@ -831,6 +831,14 @@ export default {
     lyricsQuickHint:
       'Durchsucht die Bibliothek nach Titeln ohne Songtext und sucht sie sofort, ohne Zwischenschritt. Andere Verbesserungen bleiben für einen späteren Lauf.',
     lyricsQuickButton: 'Scannen und Songtexte suchen',
+    isrc: 'ISRCs ergänzen',
+    isrcHint:
+      'Ergänzt den ISRC der Aufnahme in Dateien ohne einen, nur wenn Deezer ihn zweifelsfrei bestätigt.',
+    isrcQuickTitle: 'ISRCs für ältere Songs',
+    isrcQuickHint:
+      'Songs, die geladen wurden, bevor Downtify ISRCs schrieb, haben keinen. Ein ISRC ist der eigene Code der Aufnahme: Damit erkennt Downtify Duplikate und der Musik-Papierkorb eine Datei. Nur Codes, die Deezer zweifelsfrei bestätigt, werden ergänzt (gleicher Künstler und Titel, Länge auf 3 Sekunden genau); alle anderen Dateien bleiben genau, wie sie sind. Schlag sie zuerst nach, um die Liste zu sehen.',
+    isrcLookupButton: 'ISRCs nachschlagen (schreibt nichts)',
+    isrcAddButton: 'ISRCs ergänzen',
     lyricsPlainOnly:
       'Nur nicht synchronisierte Texte: {count} — werden durch synchronisierte ersetzt, sobald gefunden',
     lyricsOutcome:

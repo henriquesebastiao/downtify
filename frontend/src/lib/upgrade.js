@@ -3,7 +3,9 @@
 
 /** Categories the backend scans for, in the order they're shown. */
 export const CATEGORIES = ['artwork', 'lyrics', 'metadata']
-const SUPPORTED_CATEGORIES = [...CATEGORIES, 'audio']
+// Opt-in kinds a scan only looks for when asked: ISRCs for older
+// files, and Deemix's replacement audio.
+const SUPPORTED_CATEGORIES = [...CATEGORIES, 'isrc', 'audio']
 
 /** Only explicit catalog tracks can override an old album label. */
 export function deezerRecordingId(value) {

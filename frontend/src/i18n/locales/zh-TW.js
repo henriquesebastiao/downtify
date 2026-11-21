@@ -757,6 +757,13 @@ export default {
     lyricsQuickHint:
       '掃描音樂庫中沒有歌詞的歌曲，並立即查找歌詞，中間無需選擇。其他升級留待下次執行。',
     lyricsQuickButton: '掃描並查找歌詞',
+    isrc: '加入 ISRC',
+    isrcHint: '為沒有 ISRC 的檔案加入錄音的 ISRC，只在 Deezer 確認無誤時加入。',
+    isrcQuickTitle: '舊歌曲的 ISRC',
+    isrcQuickHint:
+      '在 Downtify 開始寫入 ISRC 之前下載的歌曲沒有 ISRC。ISRC 是錄音自己的代碼：Downtify 用它找出重複項，音樂回收桶也用它辨識檔案。只加入 Deezer 確認無誤的代碼（演出者和標題相同，長度相差不超過 3 秒）；其他檔案保持原樣。先查詢一下，查看清單。',
+    isrcLookupButton: '查詢 ISRC（不寫入任何內容）',
+    isrcAddButton: '加入 ISRC',
     lyricsPlainOnly: '只有非同步歌詞：{count} — 找到同步歌詞後取代',
     lyricsOutcome: '已新增歌詞：{added} · 未找到：{notFound} · 失敗：{failed}',
     completed: '已升級',

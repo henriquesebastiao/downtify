@@ -796,6 +796,14 @@ export default {
     lyricsQuickHint:
       'Scan the library for tracks without lyrics and look them up right away, without choosing anything in between. Other upgrades are left for another run.',
     lyricsQuickButton: 'Scan and find lyrics',
+    isrc: 'Add ISRCs',
+    isrcHint:
+      'Adds the recording’s ISRC to files that have none, only when Deezer confirms it beyond doubt.',
+    isrcQuickTitle: 'ISRCs for older songs',
+    isrcQuickHint:
+      'Songs downloaded before Downtify wrote ISRCs have none. An ISRC is the recording’s own code: it lets Downtify spot duplicates and the music trash recognise a file. Only codes Deezer confirms beyond doubt are added (same artist and title, length within 3 seconds); every other file is left exactly as it is. Look them up first to see the list.',
+    isrcLookupButton: 'Look up ISRCs (writes nothing)',
+    isrcAddButton: 'Add ISRCs',
     lyricsPlainOnly:
       'Only unsynced lyrics: {count} — swapped for synced ones when found',
     lyricsOutcome:
