@@ -1336,6 +1336,11 @@ export default {
     pause: 'Пауза',
     resume: 'Продължи',
     stop: 'Спри наблюдението',
+    personalMixTitle: 'Spotify микс, направен за един слушател',
+    personalMixBody:
+      'Daily Mix, Discover Weekly, Release Radar и другите плейлисти „направено за теб“ в Spotify показват песните ви само на вас, когато сте влезли в профила си. Downtify чете Spotify без профил, затова получава версията, която Spotify показва на невлезли потребители, често с напълно различни песни. За да запазите своята версия, копирайте песните в свой плейлист в Spotify и използвайте него.',
+    personalMixWatch: 'Наблюдавай въпреки това',
+    personalMixBadge: 'Личен микс',
     openSource: 'Отвори оригинала',
     everyMinutes: { one: 'Всяка минута', other: 'На всеки {count} минути' },
     everyHours: { one: 'Всеки час', other: 'На всеки {count} часа' },

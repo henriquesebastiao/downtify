@@ -1352,6 +1352,11 @@ export default {
     pause: 'Szüneteltetés',
     resume: 'Folytatás',
     stop: 'Figyelés leállítása',
+    personalMixTitle: 'Egyetlen hallgatónak készült Spotify-mix',
+    personalMixBody:
+      'A Daily Mixek, a Heti felfedezések, a Friss Radar és a Spotify többi „neked készült” lejátszási listája csak neked mutatja a dalaidat, bejelentkezve. A Downtify fiók nélkül olvassa a Spotifyt, így azt a változatot kapja, amelyet a Spotify a be nem jelentkezett felhasználóknak mutat, gyakran teljesen más dalokkal. Ha a saját változatodat szeretnéd megtartani, másold a dalokat egy saját lejátszási listába a Spotifyon, és azt használd.',
+    personalMixWatch: 'Figyelés mégis',
+    personalMixBadge: 'Személyes mix',
     openSource: 'Eredeti megnyitása',
     everyMinutes: { one: 'Percenként', other: '{count} percenként' },
     everyHours: { one: 'Óránként', other: '{count} óránként' },

@@ -52,6 +52,20 @@ A figyelést egy lejátszási lista oldaláról is elindíthatod: illeszd be a h
 
 A nyilvános Deezer-lejátszási listák ugyanúgy figyelhetők, mint a többi: illeszd be a linket a **Lejátszási listák** fülön, használd az **Új számok figyelése** gombot a lista oldalán, vagy válaszd az **Új számok figyelése** pontot egy lejátszásilista-kártya **⋯** menüjében a [Toplisták](charts.md) oldalon. Nem kell Deezer-fiók, és a lista minden száma lekérődik, bármilyen hosszú is. A számok a [hangforrásaidból](download-settings.md) töltődnek le, mint bármely más Deezer-link esetén, és a lista megkapja az M3U-fájlját, a borítóját és a könyvtárbeli bejegyzését, ahogy egy Spotify-lista is — a Könyvtár akkor is számon tartja, mely számok tartoznak hozzá, ha az M3U-fájlok ki vannak kapcsolva. Csak nyilvános listák figyelhetők, és egy Deezer-**előadó** linkje letölthető, de nem figyelhető.
 
+## Neked készült Spotify-mixek
+
+A Daily Mixeket, a Heti felfedezéseket, a Friss Radart, a hangulat-, műfaj-, évtized- és előadómixeket, a rádiókat és az On Repeatet a Spotify egyetlen hallgatónak állítja össze. A linkjük csak akkor nyitja meg az ő változatát, ha be van jelentkezve a Spotifyba. A Downtify fiók nélkül olvassa a Spotifyt (soha nem kéri a Spotify-bejelentkezésedet), így ezeknél a linkeknél azt a változatot kapja, amelyet a Spotify a be nem jelentkezett felhasználóknak mutat – gyakran teljesen más dalokkal. Egy ilyen mix figyelése ezeket a dalokat tölti le, nem a tieidet.
+
+A Downtify az azonosítójuk alapján ismeri fel ezeket a listákat, és:
+
+- figyelés előtt rákérdez (a **Figyelés mégis** a bejelentkezés nélküli változattal folytatja);
+- megjegyzést mutat a link oldalán, a dalok fölött;
+- az ilyen figyelést **Személyes mix** jelvénnyel jelöli a **Spotify** mellett a Monitor oldalon és a figyelés oldalán.
+
+Ha a saját változatodat szeretnéd, másold a dalokat egy saját lejátszási listába a Spotifyon (jelöld ki mindet, **Hozzáadás lejátszási listához**), és azt figyeld: a saját készítésű lista mindenkinek ugyanaz. A szerkesztői listák, például a Today's Top Hits vagy a „This Is …”, szintén mindenkinek ugyanazok, ezeket nem jelöli.
+
+Ha egy mixet már figyeltél, az **Aktivitás és számok** oldala (lásd [lent](#activity-and-storage-per-watch)) felsorolja, milyen dalokat hozott, így megtalálhatod és törölheted azokat, amelyek nem oda valók.
+
 ## YouTube Music-lejátszási listák
 
 Használj YouTube Music-lejátszási listát olyan dalokhoz, amelyek nincsenek a Spotifyon: remixek, élő szettek, feldolgozások, promóciós csatornák feltöltései. Minden szám **a lejátszási listában lévő pontos videóról** töltődik le. A Downtify nem keresi meg újra, így azt kapod, amit a listához adtál.

@@ -77,6 +77,10 @@ Downtify enregistre chaque titre téléchargé automatiquement dans sa base de d
 
 Si des fichiers disparaissent à chaque redémarrage, le volume `/downloads` n’est pas persistant — même solution que ci-dessus.
 
+## Un mix Spotify télécharge des titres absents de mon mix
+
+Les Daily Mix, Découvertes de la semaine, Radar des sorties et les autres playlists « conçues pour vous » de Spotify ne montrent vos titres qu'à vous, une fois connecté. Downtify lit Spotify sans compte : il reçoit la version que Spotify montre à quelqu'un qui n'est pas connecté, qui peut contenir des titres complètement différents. Copiez les titres du mix dans une playlist à vous sur Spotify et surveillez celle-ci. Voir [Mix Spotify conçus pour vous](features/playlist-monitor.md#spotify-mixes-made-for-you).
+
 ## « Could not find a YouTube match for '…' »
 
 Ni YouTube Music ni YouTube standard n’ont renvoyé de résultat passant les vérifications du comparateur — titre ressemblant à la source, au moins un artiste en commun, pas une version karaoké/reprise/live/dans une autre langue, et durée à 30 secondes ou moins de celle de Spotify. Voir [Comment ça marche](how-it-works.md#fallback-to-standard-youtube).

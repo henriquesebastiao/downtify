@@ -143,6 +143,22 @@
       <div
         class="mx-auto flex max-w-[1680px] flex-col gap-6 px-4 sm:px-6 lg:px-10"
       >
+        <!-- A Spotify mix made for one listener: what Downtify reads is
+             the signed-out version, not the listener's own. -->
+        <p
+          v-if="personalMix"
+          class="flex items-start gap-3 rounded-[12px] border border-line-2 bg-surface px-4 py-3 text-[13px] text-pretty text-fg-3"
+          role="note"
+        >
+          <AppIcon name="alert" :size="18" class="mt-0.5 shrink-0 text-warn" />
+          <span>
+            <span class="font-semibold text-fg">{{
+              t('monitor.personalMixTitle')
+            }}</span>
+            {{ t('monitor.personalMixBody') }}
+          </span>
+        </p>
+
         <!-- Tracks -->
         <template v-if="details.tracks.length">
           <div class="flex flex-wrap items-center gap-3">
@@ -288,6 +304,7 @@ import { usePlaylistActions } from '/src/model/playlistActions'
 import { songDownloadState } from '/src/lib/downloadState'
 import { useUi } from '/src/model/ui'
 import { classifyInput } from '/src/lib/input'
+import { confirmWatchMix, isPersonalMix } from '/src/lib/spotifyMix'
 import { playableQueue } from '/src/lib/topSongs'
 import { formatDuration, splitLength } from '/src/lib/format'
 import { useI18n } from '/src/i18n'
@@ -390,6 +407,10 @@ const watchable = computed(
   () =>
     (details.value?.kind === 'playlist' || details.value?.kind === 'artist') &&
     (kind.value.source !== 'deezer' || details.value?.kind === 'playlist')
+)
+
+const personalMix = computed(
+  () => details.value?.kind === 'playlist' && isPersonalMix(url.value)
 )
 
 const mosaic = computed(() =>
@@ -537,6 +558,7 @@ async function download(songs) {
 }
 
 async function watch() {
+  if (!(await confirmWatchMix(url.value, { ui, t }))) return
   watching.value = true
   try {
     await monitorAPI.addMonitoredPlaylist(url.value, 360)

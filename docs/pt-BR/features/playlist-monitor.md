@@ -52,6 +52,20 @@ Você também pode começar a monitorar pela página de uma playlist: cole o lin
 
 Playlists públicas do Deezer são monitoradas como qualquer outra: cole o link na aba **Playlists**, use **Monitorar novas faixas** na página da playlist, ou escolha **Monitorar novas faixas** no menu **⋯** do card de uma playlist nas [Paradas de sucesso](charts.md). Não precisa de conta no Deezer, e todas as faixas são buscadas, por maior que seja a playlist. As músicas são baixadas pelas suas [fontes de áudio](download-settings.md) como qualquer outro link do Deezer, e a playlist ganha o arquivo M3U, a capa e a entrada na Biblioteca como uma do Spotify — mesmo com os arquivos M3U desligados, a Biblioteca guarda quais músicas pertencem a ela. Só playlists públicas podem ser monitoradas, e um link de **artista** do Deezer pode ser baixado, mas não monitorado.
 
+## Mixes do Spotify feitos para você
+
+Daily Mix, Descobertas da Semana, Radar de Novidades, os mixes de humor, gênero, década e artista, as rádios e o No Repeat são montados pelo Spotify para uma única pessoa. O link abre a versão dessa pessoa só enquanto ela está conectada ao Spotify. O Downtify lê o Spotify sem conta (ele nunca pede o seu login do Spotify), então para esses links recebe a versão que o Spotify mostra para quem não entrou — muitas vezes com músicas completamente diferentes. Monitorar um deles baixa essas músicas, não as suas.
+
+O Downtify reconhece essas playlists pelo id e:
+
+- pergunta antes de monitorar uma (**Monitorar mesmo assim** segue com a versão sem login);
+- mostra um aviso na página do link, acima das músicas;
+- marca o monitoramento de uma com o selo **Mix pessoal** ao lado de **Spotify** na página Monitor e na página do monitoramento.
+
+Para ficar com a sua versão, copie as músicas para uma playlist sua no Spotify (selecione todas, **Adicionar à playlist**) e monitore essa playlist: uma playlist criada por você é igual para todo mundo. Playlists editoriais como Today's Top Hits ou "This Is …" também são iguais para todos e não são marcadas.
+
+Se um mix já foi monitorado, a página **Atividade e músicas** dele (veja [abaixo](#activity-and-storage-per-watch)) lista as músicas que ele trouxe, para você achar e apagar as que não deveriam estar lá.
+
 ## Playlists do YouTube Music
 
 Use uma playlist do YouTube Music para músicas que não estão no Spotify: remixes, sets ao vivo, covers, uploads de canais promocionais. Cada faixa é baixada do **vídeo exato da playlist**. O Downtify não procura de novo, então o que você recebe é o que você pôs na playlist.

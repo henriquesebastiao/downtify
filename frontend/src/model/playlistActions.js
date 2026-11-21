@@ -16,6 +16,7 @@ import { useAccount } from '/src/model/account'
 import { useI18n } from '/src/i18n'
 import { itemTrackCount } from '/src/lib/library'
 import { useTrashCapability } from '/src/lib/trash'
+import { confirmWatchMix } from '/src/lib/spotifyMix'
 
 const createOpen = ref(false)
 const createFiles = ref([])
@@ -432,7 +433,7 @@ export function usePlaylistActions() {
 
   async function watch(playlist) {
     const url = playlist.batch?.playlist_url
-    if (!url) return
+    if (!url || !(await confirmWatchMix(url, { ui, t }))) return
     try {
       await monitorAPI.addMonitoredPlaylist(url, 360)
       ui.toast(t('toast.watching', { name: playlist.name }), {

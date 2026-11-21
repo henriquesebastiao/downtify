@@ -1339,6 +1339,11 @@ export default {
     pause: '일시정지',
     resume: '재개',
     stop: '모니터링 중지',
+    personalMixTitle: '한 사람을 위해 만든 Spotify 믹스',
+    personalMixBody:
+      '데일리 믹스, 위클리 디스커버리, 릴리즈 레이더 등 Spotify의 ‘회원님을 위한’ 플레이리스트는 로그인한 본인에게만 그 곡들을 보여 줍니다. Downtify는 계정 없이 Spotify를 읽기 때문에 로그인하지 않은 사람에게 보이는 버전을 받으며, 곡이 완전히 다른 경우가 많습니다. 내 버전을 유지하려면 Spotify에서 곡들을 내 플레이리스트로 복사한 뒤 그 플레이리스트를 사용하세요.',
+    personalMixWatch: '그래도 모니터링',
+    personalMixBadge: '개인 믹스',
     openSource: '원본 링크 열기',
     everyMinutes: { one: '매분', other: '{count}분마다' },
     everyHours: { one: '매시간', other: '{count}시간마다' },

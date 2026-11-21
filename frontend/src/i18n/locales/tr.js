@@ -1344,6 +1344,11 @@ export default {
     pause: 'Duraklat',
     resume: 'Sürdür',
     stop: 'İzlemeyi bırak',
+    personalMixTitle: "Tek bir dinleyici için yapılmış bir Spotify mix'i",
+    personalMixBody:
+      "Daily Mix'ler, Haftalık Keşif, Yeni Çıkanlar Radarı ve Spotify'ın diğer “senin için” çalma listeleri şarkılarını yalnızca oturum açmış olarak sana gösterir. Downtify Spotify'ı hesapsız okur, bu yüzden Spotify'ın oturum açmamış birine gösterdiği sürümü alır; bu sürümde çoğu zaman tamamen farklı şarkılar olur. Kendi sürümünü korumak için şarkıları Spotify'da kendi çalma listene kopyala ve onu kullan.",
+    personalMixWatch: 'Yine de izle',
+    personalMixBadge: 'Kişisel mix',
     openSource: 'Orijinali aç',
     everyMinutes: { one: 'Her dakika', other: 'Her {count} dakikada' },
     everyHours: { one: 'Her saat', other: 'Her {count} saatte' },

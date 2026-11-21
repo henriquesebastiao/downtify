@@ -52,6 +52,20 @@ Her sekmenin kendi kutusu vardır. Çalma listeleri sekmesine bir sanatçı bağ
 
 Herkese açık Deezer çalma listeleri diğerleri gibi izlenir: bağlantıyı **Çalma listeleri** sekmesine yapıştırın, çalma listesinin sayfasında **Yeni parçaları izle**’yi kullanın ya da [Müzik listeleri](charts.md) sayfasındaki bir çalma listesi kartının **⋯** menüsünden **Yeni parçaları izle**’yi seçin. Deezer hesabı gerekmez ve çalma listesi ne kadar uzun olursa olsun her parça getirilir. Şarkılar diğer Deezer bağlantıları gibi [ses kaynaklarınızdan](download-settings.md) indirilir; çalma listesi de bir Spotify listesi gibi M3U dosyasını, kapak görselini ve Kitaplık’taki yerini alır — M3U dosyaları kapalıyken bile Kitaplık hangi şarkıların ona ait olduğunu bilir. Yalnızca herkese açık çalma listeleri izlenebilir; bir Deezer **sanatçı** bağlantısı indirilebilir ama izlenemez.
 
+## Senin için yapılmış Spotify mix'leri
+
+Daily Mix'ler, Haftalık Keşif, Yeni Çıkanlar Radarı, ruh hâli, tür, on yıl ve sanatçı mix'leri, radyolar ve On Repeat, Spotify tarafından tek bir dinleyici için hazırlanır. Bağlantıları, o dinleyicinin sürümünü yalnızca Spotify'da oturum açıkken gösterir. Downtify Spotify'ı hesapsız okur (Spotify girişini asla istemez); bu yüzden bu bağlantılarda Spotify'ın oturum açmamış birine gösterdiği sürümü alır ve bu sürümde çoğu zaman tamamen farklı şarkılar olur. Böyle bir mix'i izlemek seninkileri değil, o şarkıları indirir.
+
+Downtify bu çalma listelerini kimliklerinden tanır ve:
+
+- birini izlemeden önce sorar (**Yine de izle** oturumsuz sürümle devam eder);
+- bağlantının sayfasında, şarkıların üstünde bir not gösterir;
+- böyle bir izlemeyi Monitor sayfasında ve izlemenin sayfasında **Spotify** yanında **Kişisel mix** rozetiyle işaretler.
+
+Kendi sürümünü korumak için şarkıları Spotify'da kendi çalma listene kopyala (hepsini seç, **Çalma listesine ekle**) ve onu izle: senin oluşturduğun bir çalma listesi herkes için aynıdır. Today's Top Hits veya "This Is …" gibi editoryal listeler de herkes için aynıdır ve işaretlenmez.
+
+Bir mix daha önce izlendiyse, **Etkinlik ve şarkılar** sayfası ([aşağıya](#activity-and-storage-per-watch) bak) getirdiği şarkıları listeler; yerinde olmayanları bulup silebilirsin.
+
 ## YouTube Music çalma listeleri
 
 Spotify’da olmayan şarkılar için bir YouTube Music çalma listesi kullanın: remiksler, canlı setler, cover’lar, tanıtım kanallarının yüklemeleri. Her parça **çalma listesindeki tam o videodan** indirilir. Downtify onu yeniden aramaz; yani eline geçen, çalma listesine eklediğindir.

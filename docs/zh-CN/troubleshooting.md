@@ -77,6 +77,10 @@ Downtify 会在数据库中记录所有自动下载的歌曲，因此将文件�
 
 如果每次重启后文件都会消失，说明 `/downloads` 卷没有持久化，请按上文的方法配置。
 
+## Spotify 混音歌单下载了不在我歌单里的歌曲
+
+每日推荐（Daily Mix）、每周新发现、新歌雷达以及 Spotify 其他“为你推荐”的歌单，只在你登录时向你本人显示你的歌曲。Downtify 不使用账号读取 Spotify，因此拿到的是 Spotify 向未登录用户显示的版本，其中的歌曲可能完全不同。请在 Spotify 上把混音歌单里的歌曲复制到你自己的歌单，然后监控那个歌单。参见 [为你生成的 Spotify 混音歌单](features/playlist-monitor.md#spotify-mixes-made-for-you)。
+
 ## 提示“找不到与‘…’匹配的 YouTube 视频”
 
 YouTube Music 和普通 YouTube 都没有返回通过匹配检查的结果。检查条件包括标题与原曲相似、至少有一位艺人相同、不是卡拉 OK/翻唱/现场/其他语言版本，且时长与 Spotify 版本相差不超过 30 秒。详见[工作原理](how-it-works.md#fallback-to-standard-youtube)。

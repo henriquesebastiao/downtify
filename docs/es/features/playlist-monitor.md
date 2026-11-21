@@ -52,6 +52,20 @@ También puedes empezar a vigilar desde la página de una playlist: pega su enla
 
 Las playlists públicas de Deezer se vigilan como cualquier otra: pega el enlace en la pestaña **Playlists**, usa **Vigilar canciones nuevas** en la página de la playlist, o elige **Vigilar canciones nuevas** en el menú **⋯** de la tarjeta de una playlist en [Listas de éxitos](charts.md). No hace falta una cuenta de Deezer, y se obtienen todas las canciones, por larga que sea la playlist. Las canciones se descargan con tus [fuentes de audio](download-settings.md) como cualquier otro enlace de Deezer, y la playlist recibe su archivo M3U, su portada y su entrada en la Biblioteca como una de Spotify — incluso con los archivos M3U desactivados, la Biblioteca recuerda qué canciones le pertenecen. Solo se pueden vigilar playlists públicas, y el enlace de un **artista** de Deezer se puede descargar pero no vigilar.
 
+## Mixes de Spotify hechos para ti
+
+Los Daily Mix, Descubrimiento semanal, Radar de Novedades, los mixes de estado de ánimo, género, década y artista, las radios y En bucle los crea Spotify para una sola persona. Su enlace abre la versión de esa persona solo mientras tiene la sesión iniciada en Spotify. Downtify lee Spotify sin cuenta (nunca pide tu inicio de sesión de Spotify), así que con estos enlaces recibe la versión que Spotify muestra a quien no ha iniciado sesión, a menudo con canciones completamente distintas. Vigilar uno descarga esas canciones, no las tuyas.
+
+Downtify reconoce estas listas por su id y:
+
+- pregunta antes de vigilar una (**Vigilar de todos modos** sigue con la versión sin sesión);
+- muestra un aviso en la página del enlace, encima de sus canciones;
+- marca la vigilancia de una con la insignia **Mix personal** junto a **Spotify** en la página Monitor y en la página de la vigilancia.
+
+Para quedarte con tu versión, copia sus canciones a una lista tuya en Spotify (selecciona todas, **Añadir a playlist**) y vigila esa lista: una lista creada por ti es igual para todos. Las listas editoriales como Today's Top Hits o "This Is …" también son iguales para todos y no se marcan.
+
+Si ya vigilabas un mix, su página **Actividad y canciones** (ver [abajo](#activity-and-storage-per-watch)) lista las canciones que trajo, para que encuentres y borres las que no corresponden.
+
 ## Playlists de YouTube Music
 
 Usa una playlist de YouTube Music para canciones que no están en Spotify: remixes, directos, versiones, subidas de canales promocionales. Cada canción se descarga del **vídeo exacto de la playlist**. Downtify no vuelve a buscarlo, así que lo que obtienes es lo que añadiste a la playlist.

@@ -47,7 +47,7 @@
         </UiButton>
       </PageHeader>
       <div class="-mt-3 flex min-w-0 flex-wrap items-center gap-2">
-        <WatchSourceBadge :source="watch.source" />
+        <WatchSourceBadge :source="watch.source" :url="watch.url" />
         <UiBadge>#{{ watch.id }}</UiBadge>
         <UiBadge v-if="!watch.enabled" tone="warn">{{
           t('monitor.activeOff')
