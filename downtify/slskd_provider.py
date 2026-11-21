@@ -28,6 +28,8 @@ from .track_tag_match import (
     strip_mix_suffix,
     verify_downloaded_file_matches_spotify,
 )
+from .track_tag_match import fold_accents as _fold_accents
+from .track_tag_match import plain_name as _plain_name
 
 ProgressCallback = Callable[[float, str], None]
 
@@ -238,6 +240,8 @@ _PATH_PENALTY_KEYWORDS = (
     'discography',
 )
 _AMBIGUOUS_TITLE_ALNUM_LEN = 5
+# Share of the minimum bitrate a variable-bitrate file's average must reach.
+_VBR_FLOOR_SHARE = 0.85
 _DEFAULT_MATCH_MIN_SCORE = 5
 _STRICT_DURATION_SECONDS = 3
 
@@ -518,20 +522,40 @@ def _normalize_search_text(text: str) -> str:
     return re.sub(r'\s+', ' ', folded).strip()
 
 
-def _fold_accents(text: str) -> str:
-    """*text* without accents: ``Tití Me Preguntó`` -> ``Titi Me Pregunto``
-    (a file name often drops them)."""
+# "&", "+" and "and" join names the same way ("Earth, Wind & Fire" is
+# often filed as "Earth Wind and Fire"), so a comparison leaves them out.
+_JOINER = re.compile(r'(?<!\w)(?:and|&|\+)(?!\w)', re.IGNORECASE)
+# "Pt. II" / "Part 2" / "pt 2" are one spelling to a comparison.
+_PART_NUMBER = re.compile(
+    r'\b(?:pt|part|vol|volume|chapter)\b\.?\s*([ivx]+|\d+)\b', re.IGNORECASE
+)
+_ROMAN = {
+    'i': '1',
+    'ii': '2',
+    'iii': '3',
+    'iv': '4',
+    'v': '5',
+    'vi': '6',
+    'vii': '7',
+    'viii': '8',
+    'ix': '9',
+    'x': '10',
+}
 
-    decomposed = unicodedata.normalize('NFKD', text)
-    return ''.join(ch for ch in decomposed if not unicodedata.combining(ch))
+
+def _part_number(match: re.Match) -> str:
+    number = match.group(1).casefold()
+    return f' pt {_ROMAN.get(number, number)} '
 
 
 def _alnum_only(text: str) -> str:
-    return re.sub(
-        r'[^a-z0-9]+',
-        '',
-        _fold_accents(_normalize_search_text(text)).casefold(),
-    )
+    """*text* as names are compared: letters and digits only (any script,
+    so ``夜に駆ける`` is still a title), no accents, no case, without
+    ``&``/``+``/``and``, and ``Part II`` spelled ``pt 2``."""
+
+    folded = _fold_accents(_normalize_search_text(text)).casefold()
+    folded = _PART_NUMBER.sub(_part_number, _JOINER.sub(' ', folded))
+    return re.sub(r'[\W_]+', '', folded)
 
 
 def _primary_title(title: str) -> str:
@@ -565,6 +589,86 @@ def _core_title(title: str) -> str:
     return core or primary
 
 
+# Words that make a recording a different version of the song. One that
+# is in Spotify's title must be in the file's path too, so "Despacito -
+# Remix" never gets the original and "Jóga - Live" never the studio take.
+_VERSION_WORDS = (
+    'remix',
+    'live',
+    'acoustic',
+    'instrumental',
+    'demo',
+    'unplugged',
+    'karaoke',
+    'acapella',
+    'a cappella',
+    'sped up',
+    'slowed',
+    'nightcore',
+    'reprise',
+    'orchestral',
+)
+
+
+def _version_words(text: str) -> list[str]:
+    folded = ' '.join(re.split(r'[\W_]+', _fold_accents(text).casefold()))
+    return [
+        word for word in _VERSION_WORDS if re.search(rf'\b{word}\b', folded)
+    ]
+
+
+def _missing_version_word(song: dict[str, Any], filename: str) -> bool:
+    title = str(song.get('name') or '')
+    album = str(song.get('album_name') or '')
+    wanted = [
+        w for w in _version_words(title) if w not in _version_words(album)
+    ] + [w for w in _version_words(album) if w in _version_words(title)]
+    if not wanted:
+        return False
+    path = ' '.join(re.split(r'[\W_]+', _fold_accents(filename).casefold()))
+    return any(word not in path for word in wanted)
+
+
+_BRACKETED = re.compile(r'\s*[\(\[][^\)\]]*[\)\]]')
+
+
+def _bare_title(title: str) -> str:
+    """:func:`_core_title` without bracketed extras that don't make it a
+    different version - ``Gangnam Style (강남스타일)`` -> ``Gangnam Style``,
+    ``Superhero (Heroes & Villains)`` -> ``Superhero`` - or ``""`` when
+    there are none, or one names a version (``(Taylor's Version)``,
+    ``(Remix)``)."""
+
+    core = _core_title(title)
+    parts = _BRACKETED.findall(core)
+    if not parts:
+        return ''
+    if any(
+        _version_words(part) or re.search(r'version|mix|edit', part, re.I)
+        for part in parts
+    ):
+        return ''
+    return _BRACKETED.sub('', core).strip()
+
+
+def _duo_surnames_in(artist: str, path_alnum: str) -> str:
+    """For a duo or group credited by full names (``Daryl Hall & John
+    Oates``), the first surname when every member's surname is in
+    *path_alnum* - files often say ``Hall & Oates`` - else ``""``."""
+
+    parts = [
+        p
+        for p in re.split(r'\s*(?:,|&|\+|\band\b)\s*', artist, flags=re.I)
+        if p.strip()
+    ]
+    if len(parts) < 2:
+        return ''
+    surnames = [_alnum_only(part.split()[-1]) for part in parts]
+    if all(len(name) >= 3 and name in path_alnum for name in surnames):
+        return surnames[0]
+    return ''
+
+
 def _artist_key(artist: str) -> str:
     """*artist* as a file name is compared with it: :func:`_alnum_only`,
     without a leading "The" (``The Killers`` is often filed as ``Killers``)."""
@@ -581,8 +685,24 @@ def _soulseek_words(text: str, *, join_apostrophes: bool = False) -> str:
     ``Thats It`` spelling instead, for files named without the apostrophe."""
 
     folded = unicodedata.normalize('NFKC', str(text or ''))
+    # A censored word ("F**kin'") matches no file ("Fuckin"): left out.
+    folded = re.sub(r'\S*[^\W\d_]\*+\S*', ' ', folded)
     folded = re.sub(r"['`\u2019]", '' if join_apostrophes else ' ', folded)
     return re.sub(r'[\W_]+', ' ', folded).strip()
+
+
+def _censored_title_in(title: str, base_alnum: str) -> bool:
+    """Whether *title*, censored by Spotify (``F**kin' Problems``), is in a
+    file name that spells it out (``Fuckin Problems``): each ``*`` run
+    stands for up to four letters, or none (``Fkin``)."""
+
+    if not re.search(r'[^\W\d_]\*', title):
+        return False
+    pieces = [_alnum_only(piece) for piece in re.split(r'\*+', title)]
+    if not any(pieces):
+        return False
+    pattern = r'\w{0,4}'.join(re.escape(piece) for piece in pieces)
+    return re.search(pattern, base_alnum) is not None
 
 
 def _title_in_basename(filename: str, title_alnum: str) -> bool:
@@ -597,13 +717,26 @@ def _title_in_basename(filename: str, title_alnum: str) -> bool:
     folded = _fold_accents(_normalize_search_text(base)).casefold()
     tokens = [
         _alnum_only(part)
-        for part in re.split(r'[^a-z0-9]+', folded)
+        for part in re.split(r'[\W_]+', folded)
         if _alnum_only(part)
     ]
     if title_alnum in tokens:
         return True
     if len(title_alnum) >= 6 and title_alnum in base_alnum:
         return True
+    # A short title of several words ("Hey Ya!") is in "OutKast - Hey Ya!"
+    # when it covers whole words there, not part of one ("Theyyard").
+    joined = ''.join(tokens)
+    starts, ends, position = set(), set(), 0
+    for token in tokens:
+        starts.add(position)
+        position += len(token)
+        ends.add(position)
+    at = joined.find(title_alnum)
+    while at >= 0:
+        if at in starts and at + len(title_alnum) in ends:
+            return True
+        at = joined.find(title_alnum, at + 1)
     return False
 
 
@@ -642,6 +775,12 @@ def _slskd_search_queries(song: dict[str, Any]) -> list[str]:
         add(f'{artist} {_CREDIT_PART.sub("", title)}')
         if short_title != core:
             add(f'{artist} {short_title}')
+    plain_artist = _plain_name(artist)
+    if artist and core and plain_artist != _soulseek_words(artist):
+        add(f'{plain_artist} {core}')
+    bare = _bare_title(title)
+    if artist and bare:
+        add(f'{artist} {bare}')
     if core:
         add(core)
     if artist and core:
@@ -674,17 +813,21 @@ _FILLER_WORDS = frozenset({
     'your',
 })
 _BLOCKED_PHRASE_TRIES = 3
+_BLOCKED_PAIR_TRIES = 2
 
 
 def _blocked_phrase_queries(
     song: dict[str, Any], tried: list[str]
 ) -> list[str]:
-    """Searches with one word left out, for when nobody answered any of
+    """Searches with words left out, for when nobody answered any of
     *tried*. The Soulseek server silently answers nothing to some word
-    combinations (measured: "Starting From Zero" and "Frank Ocean" get no
-    answer, in any order, while "Justice Starting Zero" and "Ocean Nights"
-    find the files). Filler words (``From``) go first, then the shortest
-    word; a word is only dropped when at least two remain."""
+    combinations - artist names such as "Frank Ocean" or "Lady Gaga", and
+    some titles such as "Starting From Zero" or "Hold My Hand" - in any
+    order, while "Ocean Nights", "Justice Starting Zero" and "Gaga Hold
+    Hand" find the files (all measured). Up to three searches leave one
+    word out - filler words (``From``) first, then the shortest - then up
+    to two leave out two, for when the artist and the title are both
+    blocked. At least two words always remain."""
 
     queries = _slskd_search_queries(song)
     if not queries:
@@ -701,13 +844,23 @@ def _blocked_phrase_queries(
     )
     seen = {q.casefold() for q in tried}
     out: list[str] = []
-    for index in order:
-        query = ' '.join(w for i, w in enumerate(words) if i != index)
-        if query.casefold() not in seen:
+
+    def add(dropped: set[int], limit: int) -> None:
+        query = ' '.join(w for i, w in enumerate(words) if i not in dropped)
+        if (
+            len(out) < limit
+            and len(words) - len(dropped) >= 2
+            and query.casefold() not in seen
+        ):
             seen.add(query.casefold())
             out.append(query)
-        if len(out) >= _BLOCKED_PHRASE_TRIES:
-            break
+
+    for index in order:
+        add({index}, _BLOCKED_PHRASE_TRIES)
+    if len(words) >= 4:
+        pairs = [(order[0], order[1]), (order[0], order[2])]
+        for pair in pairs:
+            add(set(pair), _BLOCKED_PHRASE_TRIES + _BLOCKED_PAIR_TRIES)
     return out
 
 
@@ -730,7 +883,8 @@ def _contains_keyword(
     allow_mix_variants: bool = False,
 ) -> bool:
     """Filter remix/live/etc. on the file name, not parent folder names."""
-    title = str(song.get('name') or '')
+    # The album counts too: a track of "Homogenic (Live)" is a live take.
+    title = f'{song.get("name") or ""} {song.get("album_name") or ""}'
     artists = [str(a) for a in (song.get('artists') or []) if str(a).strip()]
     basename = _file_basename(filename)
     haystacks = [basename]
@@ -807,6 +961,18 @@ def _filter_slskd_responses(
     return [r for r in responses if _response_has_free_slot(r)]
 
 
+def _busy_responses(responses: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Peers whose upload slots are all taken. A download from one waits in
+    its queue (``queued_timeout_seconds``), which still beats YouTube when
+    no peer with a free slot has the song."""
+
+    return [
+        r
+        for r in responses
+        if not _response_has_free_slot(r) and int(r.get('fileCount') or 0) > 0
+    ]
+
+
 def _song_duration_seconds(song: dict[str, Any]) -> int:
     target_duration = int(song.get('duration') or 0)
     if target_duration > 1000:
@@ -851,13 +1017,22 @@ def _score_slskd_candidate(  # noqa: PLR0914
     # the path ("Metro Boomin - …" for a Yung Lean song featuring him).
     artist_keys = [
         key
-        for key in (
-            _artist_key(str(a)) for a in (song.get('artists') or [])[:3]
-        )
+        for a in (song.get('artists') or [])[:3]
+        for key in dict.fromkeys((
+            _artist_key(str(a)),
+            _artist_key(_plain_name(str(a))),
+        ))
         if key
     ]
     artist = next(
         (key for key in artist_keys if key in sanitized_name),
+        '',
+    ) or next(
+        (
+            key
+            for a in (song.get('artists') or [])[:3]
+            if (key := _duo_surnames_in(str(a), sanitized_name))
+        ),
         artist_keys[0] if artist_keys else '',
     )
 
@@ -867,6 +1042,7 @@ def _score_slskd_candidate(  # noqa: PLR0914
     # Soulseek paths often include the requested album/title in folders while
     # the leaf file is a different track — require title on the filename itself.
     title_ok = False
+    bare = _alnum_only(_bare_title(raw_name))
     if title and _title_in_basename(filename, title):
         title_ok = True
     elif (
@@ -875,7 +1051,15 @@ def _score_slskd_candidate(  # noqa: PLR0914
         and _title_in_basename(filename, full_title)
     ):
         title_ok = True
+    elif bare and _title_in_basename(filename, bare):
+        title_ok = True
+        title = bare
+    elif _censored_title_in(_core_title(raw_name), base_alnum):
+        title_ok = True
+        title = ''
     if (title or full_title) and not title_ok:
+        return None
+    if _missing_version_word(song, filename):
         return None
 
     artist_in_leaf = bool(artist and artist in base_alnum)
@@ -1005,12 +1189,16 @@ def _rank_slskd_candidates(
     settings: Optional[dict[str, Any]] = None,
     *,
     allow_mix_variants: bool = False,
+    include_busy: bool = False,
 ) -> list[dict[str, Any]]:
-    """Score and sort all viable files (highest confidence first)."""
+    """Score and sort all viable files (highest confidence first); peers
+    without a free upload slot only with *include_busy*."""
     target_duration = _song_duration_seconds(song)
     ranked: list[dict[str, Any]] = []
 
-    for resp in _filter_slskd_responses(responses):
+    for resp in (
+        responses if include_busy else _filter_slskd_responses(responses)
+    ):
         if int(resp.get('fileCount') or 0) <= 0:
             continue
         username = str(resp.get('username') or '').strip()
@@ -1126,6 +1314,10 @@ def _select_download_candidates(
             if quality['unknown_bitrate'] == 'reject':
                 return False
             return not (strict_priority and floor)
+        if file_row.get('isVariableBitRate') and floor:
+            # A VBR file reports its average: LAME V0, as good as 320 CBR,
+            # averages ~220-260 kbps, so it passes at 85 % of the floor.
+            return bitrate >= floor * _VBR_FLOOR_SHARE
         return bitrate >= floor
 
     if strict_priority:
@@ -1734,7 +1926,7 @@ def download_from_slskd(  # noqa: PLR0914  # search, rank, enqueue, poll, finali
             if raw_responses:
                 answered = True
             responses = _filter_slskd_responses(raw_responses)
-            if not responses:
+            if not responses and not _busy_responses(raw_responses):
                 _missed(
                     'no_results',
                     f'{len(raw_responses)} users answered, none with a free '
@@ -1747,6 +1939,15 @@ def download_from_slskd(  # noqa: PLR0914  # search, rank, enqueue, poll, finali
                 continue
 
             ranked = _rank_slskd_candidates(song, responses, settings)
+            if not ranked and (busy := _busy_responses(raw_responses)):
+                ranked = _rank_slskd_candidates(
+                    song, busy, settings, include_busy=True
+                )
+                if ranked:
+                    logger.info(
+                        'slskd: only busy peers have {!r}; queueing',
+                        song.get('name'),
+                    )
             if not ranked:
                 ranked = _rank_slskd_candidates(
                     song,
@@ -1769,7 +1970,7 @@ def download_from_slskd(  # noqa: PLR0914  # search, rank, enqueue, poll, finali
                     song.get('name'),
                     len(responses),
                 )
-                _missed('no_match', f'{len(responses)} users answered')
+                _missed('no_match', f'{len(raw_responses)} users answered')
                 client.delete_search(search_id)
                 search_id = ''
                 continue
