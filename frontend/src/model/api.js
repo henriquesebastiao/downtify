@@ -1054,6 +1054,35 @@ function doctorNavidromeRepair(payload) {
   return API.post('/api/doctor/navidrome/repair', payload)
 }
 
+// The Doctor's AI helper (downtify/doctor_ai_routes.py).
+function doctorAiStatus() {
+  return API.get('/api/doctor/ai')
+}
+
+function doctorAiStart() {
+  return API.post('/api/doctor/ai/start')
+}
+
+function doctorAiStop() {
+  return API.post('/api/doctor/ai/stop')
+}
+
+function doctorAiSettings(payload) {
+  return API.put('/api/doctor/ai/settings', payload)
+}
+
+function doctorAiApply(ids) {
+  return API.post('/api/doctor/ai/apply', { ids })
+}
+
+function doctorAiDismiss(ids) {
+  return API.post('/api/doctor/ai/dismiss', { ids })
+}
+
+function doctorAiClear() {
+  return API.post('/api/doctor/ai/clear')
+}
+
 function writePlaylistM3u(payload) {
   return API.post('/api/playlist/m3u', payload)
 }
@@ -1343,6 +1372,13 @@ export default {
   doctorDuplicatesKeep,
   doctorDuplicatesKeepReset,
   doctorNavidromeRepair,
+  doctorAiStatus,
+  doctorAiStart,
+  doctorAiStop,
+  doctorAiSettings,
+  doctorAiApply,
+  doctorAiDismiss,
+  doctorAiClear,
   scanLibraryUsage,
   writePlaylistM3u,
   getQueue,

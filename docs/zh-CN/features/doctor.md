@@ -16,6 +16,37 @@ icon: lucide/stethoscope
 
 一次修复可能改变其他部分的结果：合并重复歌曲会改写播放列表，还可能移除 slskd 遗留文件所匹配的音乐库文件；删除 slskd 遗留文件会改变歌曲数量；合并播放列表会改变 Navidrome 的结果。修复之后，可能受影响的每个部分都会标为**已过期**，在你点击**重新检查**之前无法在其中修复，这样就不会根据已不成立的结果进行操作。服务器同样会拒绝这些修复，而不只是页面。
 
+## AI 助手
+
+逐个查看每一组重复项需要读很多内容。**AI 助手**可以让 Claude 等 AI 助手和你一起阅读。用平常的话告诉它你想要什么（“这些都是同一个自驾游歌单，留一个就行”）。它会逐首比较播放列表、解释每一组，并给出建议。决定权始终在你手里。目前它只处理[重复的播放列表](#duplicate-playlists)。
+
+它适合偶尔整理一次，而不是一直开着：
+
+- **启动 AI 助手**会开启它并显示一个新密钥。**停止**会关闭它，密钥随即失效。
+- 助手 2 小时内没有收到请求，或 Downtify 重启时，它也会自动停止。重启后，它的建议会被清空。
+
+### 连接助手
+
+AI 助手是一个 [MCP](https://modelcontextprotocol.io) 服务器，地址为 `/api/doctor/ai/mcp`，与 Downtify 使用同一个地址。运行期间，这个部分会为每个应用显示可直接复制的设置，密钥已经填好：
+
+| 应用 | 连接方式 |
+|---|---|
+| Claude Code | 在能访问服务器的电脑上（家庭网络或 Tailscale 即可），于终端运行一条 `claude mcp add` 命令 |
+| Claude Desktop | 在 `claude_desktop_config.json` 中加入几行，通过小型桥接程序 `mcp-remote` 连接（那台电脑需要 Node.js），然后重启 Claude Desktop |
+| 网页版或手机上的 Claude、ChatGPT | 仅当服务器能通过 HTTPS 从互联网访问时可用，例如使用 Tailscale Funnel 或 Cloudflare Tunnel。ChatGPT 需要开发者模式，并非所有套餐都有 |
+
+下面还有一条可以粘贴到聊天中的第一条消息，用来开始。请妥善保管密钥：助手运行期间，持有密钥的人可以更改你的播放列表。
+
+### 助手能做什么
+
+- 读取上一次健康检查的结果，或重新检查。
+- 列出所有播放列表、读取某个播放列表的歌曲，并逐首比较 2 到 20 个播放列表（哪些歌都有、哪些只在其中一个里）。
+- **建议**合并，或建议某一组是**不同的播放列表**，并附上写给你的理由。合并仍然遵循原来的规则（较小播放列表中 80% 的歌曲在较大的那个里），你在音乐库中创建的播放列表永远不会被合并。
+
+建议显示在**助手的建议**下，使用与医生其他部分相同的卡片：每个播放列表都有封面和歌曲数量，标明保留哪一个，并附上助手的理由。**应用**执行一条，**全部应用**作为一个任务一起执行，**忽略**移除一条。应用的效果与你在页面上自己决定完全相同：同样的备份、同样只重新扫描一次 Navidrome，之后播放列表部分会标为**已过期**，直到重新检查。
+
+**允许助手应用你在聊天中同意的内容**让助手在你于聊天中同意后替你点击应用。每次启动助手时它都是关闭的。关闭时，助手只能提出建议。
+
 ## slskd 遗留文件
 
 旧版本将每个已完成的 Soulseek 下载复制到音乐库后，会将原文件留在 slskd 文件夹中，导致每首歌曲占用双倍空间。**暂停下载并检查**会：
@@ -79,3 +110,5 @@ Spotify 有时会将播放列表中的曲目替换为同一首歌的新 ID，例
 ## API
 
 接口均仅限管理员，位于 `/api/doctor` 下：`GET /api/doctor`（运行中或最近一次任务，以及每类检查的最近结果）、`POST /scan`、`POST /cancel`、`POST /slskd/scan`、`GET /slskd/files`、`POST /slskd/clean`、`POST /slskd/release`、`POST /playlists/preview`、`POST /playlists/merge` 和 `POST /navidrome/repair`。同一时间只运行一个医生任务。`GET /api/doctor` 还会列出已过期的部分（`stale`）；在重新检查之前，这些部分的修复会返回 `409` 和 `rescan_first`。
+
+[AI 助手](#ai-helper)的接口同样仅限管理员：`GET /api/doctor/ai`（是否在运行、密钥和建议）、`POST /ai/start`、`POST /ai/stop`、`PUT /ai/settings`（`can_apply`）、`POST /ai/apply` 和 `POST /ai/dismiss`（`ids`），以及 `POST /ai/clear`。助手本身连接 `/api/doctor/ai/mcp`（基于 HTTP 的 MCP，每个 `POST` 返回一个 JSON 应答），它用助手的密钥（`Authorization: Bearer`）代替登录。

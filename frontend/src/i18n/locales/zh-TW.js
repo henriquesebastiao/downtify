@@ -2548,10 +2548,70 @@ export default {
       name: '名稱相同',
       songs: '歌曲相同',
       manual: '你的選擇',
+      assistant: '助理選擇',
     },
     songsCount: '歌曲：{count}',
     hasCover: '有封面',
     keeps: '保留',
+    ai: {
+      title: 'AI 助手',
+      hint: '讓 Claude 等 AI 助理和你一起檢視 Doctor 發現的問題。用平常的話告訴它你想要什麼：它會說明每一組並提出建議，由你決定。',
+      helper: 'AI 助手',
+      offHint:
+        '已關閉。需要幫忙時再啟動。2 小時沒人使用或 Downtify 重新啟動時會自動停止。',
+      connected: '已開啟 · {client} 已連線 · {minutes} 分鐘沒人使用後停止',
+      waitingForAi: '已開啟 · 正在等待助理連線 · {minutes} 分鐘沒人使用後停止',
+      start: '啟動 AI 助手',
+      stop: '停止',
+      on: '已開啟',
+      waitingBadge: '{count} 項待檢視',
+      whoTitle: '哪些 AI 應用程式可以連線',
+      whoCode:
+        'Claude Code（終端機或 Claude 桌面應用程式中），所在電腦能連到這台伺服器，例如在家用網路或 Tailscale 中。',
+      whoDesktop:
+        'Claude Desktop，透過一個小型橋接程式（那台電腦需要 Node.js）。',
+      whoWeb:
+        '網頁版或手機上的 Claude：只有在這台伺服器能透過 HTTPS 從網際網路連到時（例如使用 Tailscale Funnel 或 Cloudflare Tunnel）。',
+      whoChatgpt:
+        'ChatGPT：需要它的開發者模式（不是每個方案都有）以及同樣的網際網路連線。',
+      scope: '目前助手只處理重複的播放清單。它只檢視和建議，從不刪除歌曲。',
+      connectTitle: '連線你的助理',
+      clientCode: 'Claude Code',
+      clientDesktop: 'Claude Desktop',
+      clientOther: '其他應用程式',
+      codeHint:
+        '在終端機中執行一次，然後啟動 Claude Code，貼上下方的第一則訊息。',
+      desktopHint:
+        '把它加到 claude_desktop_config.json（Settings › Developer › Edit Config），儲存後重新啟動 Claude Desktop。',
+      otherHint: '任何支援 HTTP 方式 MCP 的應用程式：把這個網址和標頭告訴它。',
+      keyHint:
+        '每次啟動助手都會產生新金鑰，停止後即失效。請勿分享：助手執行期間，持有金鑰的人可以變更你的播放清單。',
+      copy: '複製',
+      copied: '已複製',
+      copyFailed: '無法複製。請選取文字後手動複製。',
+      firstTitle: '給助理的第一則訊息',
+      firstHint: '先貼上這段開始，再用自己的話說你想要什麼。',
+      firstMessage:
+        '請用 downtify-doctor 工具幫我整理 Downtify 音樂庫。先呼叫 get_overview（如果檢查已經過時就重新檢查），然後檢視重複的播放清單。對每一組，用簡單的話告訴我裡面有什麼、會保留哪個播放清單、哪些歌只在其中一個裡，以及你的建議。先不要套用任何變更：提出建議，我會在 Downtify 中檢視。',
+      canApply: '允許助理套用你在聊天中同意的內容',
+      canApplyHint:
+        '關閉：在這裡由你按「套用」。開啟：你在聊天中同意後，助理可以自己套用這些建議。每次啟動助手時都會重新關閉。',
+      suggestionsTitle: '助理的建議',
+      none: '還沒有建議。',
+      decisionMerge: '合併',
+      decisionApart: '不同的播放清單',
+      why: '理由：',
+      apply: '套用',
+      dismiss: '略過',
+      applyAll: '全部套用（{count}）',
+      clear: '清除已完成',
+      state: {
+        waiting: '等待你確認',
+        applying: '正在套用…',
+        applied: '已完成',
+        failed: '失敗',
+      },
+    },
     outOfDate: '已過期',
     staleHint: '其他部分的修復可能改變了這裡的結果。修改這裡之前請重新檢查。',
     checkAgain: '重新檢查',
@@ -2687,6 +2747,7 @@ export default {
     relinkedLabel: '同一首歌，多個 ID',
     relinkedCounts: '歌曲：{songs} · 多餘檔案：{extra}',
     error: {
+      ai_not_running: 'AI 助手未開啟，請先啟動。',
       doctor_busy: '醫生正在工作。',
       rescan_first: '其他地方的修復改變了這一部分，請先重新檢查。',
       m3u_twice: '有一個播放清單同時屬於兩個待合併的組。請重新執行健康檢查。',

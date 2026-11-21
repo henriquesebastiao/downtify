@@ -997,6 +997,9 @@ RULES: list[tuple[frozenset[str], re.Pattern[str], str]] = [
         (_m('POST'), r'^/api/auth/logout$', PUBLIC),
         (_m('POST'), r'^/api/auth/pair$', PUBLIC),
         (_m('POST'), r'^/api/auth/token$', PUBLIC),
+        # The Doctor's AI helper: an assistant has no account; the
+        # endpoint checks the helper's own key (downtify/doctor_ai.py).
+        (_m('GET', 'POST', 'DELETE'), r'^/api/doctor/ai/mcp$', PUBLIC),
         # Any signed-in user: their own account, devices and pairing
         # (the routes check whose), and a WebSocket ticket.
         (_m('POST'), r'^/api/auth/ws-ticket$', CLIENT),

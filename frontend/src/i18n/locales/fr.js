@@ -2744,10 +2744,77 @@ export default {
       name: 'Même nom',
       songs: 'Mêmes chansons',
       manual: 'Votre choix',
+      assistant: 'Choisi par l’assistant',
     },
     songsCount: 'Chansons : {count}',
     hasCover: 'A une pochette',
     keeps: 'Gardé',
+    ai: {
+      title: 'Assistant IA',
+      hint: 'Laissez un assistant IA comme Claude passer en revue avec vous ce que le Docteur a trouvé. Dites-lui simplement ce que vous voulez : il explique chaque groupe et propose quoi faire, et c’est vous qui décidez.',
+      helper: 'Assistant IA',
+      offHint:
+        'Désactivé. Lancez-le quand vous voulez de l’aide. Il s’arrête tout seul après 2 heures sans utilisation et au redémarrage de Downtify.',
+      connected:
+        'Activé · {client} est connecté · s’arrête après {minutes} min sans utilisation',
+      waitingForAi:
+        'Activé · en attente d’un assistant · s’arrête après {minutes} min sans utilisation',
+      start: 'Lancer l’assistant IA',
+      stop: 'Arrêter',
+      on: 'Activé',
+      waitingBadge: '{count} à examiner',
+      whoTitle: 'Quelles applis IA peuvent se connecter',
+      whoCode:
+        'Claude Code (dans un terminal ou l’appli de bureau Claude) sur un ordinateur qui atteint ce serveur, sur votre réseau local ou via Tailscale.',
+      whoDesktop:
+        'Claude Desktop, via une petite passerelle (Node.js requis sur cet ordinateur).',
+      whoWeb:
+        'Claude sur le web ou le téléphone : seulement si ce serveur est joignable depuis Internet en HTTPS (par exemple avec Tailscale Funnel ou Cloudflare Tunnel).',
+      whoChatgpt:
+        'ChatGPT : nécessite son mode développeur (pas dans toutes les offres) et le même accès Internet.',
+      scope:
+        'Pour l’instant, l’assistant s’occupe des playlists en double. Il regarde et propose ; aucun morceau n’est jamais supprimé.',
+      connectTitle: 'Connecter votre assistant',
+      clientCode: 'Claude Code',
+      clientDesktop: 'Claude Desktop',
+      clientOther: 'Autres applis',
+      codeHint:
+        'Lancez ceci une fois dans un terminal, puis ouvrez Claude Code et collez le premier message ci-dessous.',
+      desktopHint:
+        'Ajoutez ceci à claude_desktop_config.json (Paramètres › Développeur › Modifier la configuration), enregistrez et redémarrez Claude Desktop.',
+      otherHint:
+        'Toute appli qui parle MCP en HTTP : donnez-lui cette adresse et cet en-tête.',
+      keyHint:
+        'La clé change à chaque lancement de l’assistant et ne marche plus quand vous l’arrêtez. Gardez-la pour vous : tant que l’assistant tourne, quiconque l’a peut modifier vos playlists.',
+      copy: 'Copier',
+      copied: 'Copié',
+      copyFailed:
+        'Copie impossible. Sélectionnez le texte et copiez-le à la main.',
+      firstTitle: 'Premier message pour votre assistant',
+      firstHint:
+        'Collez ceci pour commencer, puis dites ce que vous voulez avec vos mots.',
+      firstMessage:
+        'Utilise les outils downtify-doctor pour m’aider à ranger ma bibliothèque Downtify. Commence par get_overview (lance une vérification si elle est ancienne), puis passe en revue les playlists en double. Pour chaque groupe, dis-moi simplement ce qu’il contient, quelle playlist serait gardée, ce qui n’est que dans l’une d’elles et ce que tu recommandes. N’applique rien : fais des suggestions pour que je les examine dans Downtify.',
+      canApply:
+        'Laisser l’assistant appliquer ce que vous acceptez dans le chat',
+      canApplyHint:
+        'Désactivé : vous appuyez sur Appliquer ici. Activé : une fois que vous dites oui dans le chat, l’assistant peut appliquer lui-même ces suggestions. Se désactive à chaque lancement de l’assistant.',
+      suggestionsTitle: 'Suggestions de l’assistant',
+      none: 'Pas encore de suggestion.',
+      decisionMerge: 'Fusionner',
+      decisionApart: 'Playlists différentes',
+      why: 'Pourquoi :',
+      apply: 'Appliquer',
+      dismiss: 'Écarter',
+      applyAll: 'Tout appliquer ({count})',
+      clear: 'Retirer les terminées',
+      state: {
+        waiting: 'En attente de vous',
+        applying: 'Application…',
+        applied: 'Fait',
+        failed: 'Échec',
+      },
+    },
     outOfDate: 'Périmé',
     staleHint:
       'Une réparation dans une autre section a pu changer ce qui a été trouvé ici. Vérifiez à nouveau avant de modifier quoi que ce soit ici.',
@@ -2896,6 +2963,7 @@ export default {
     relinkedLabel: 'Même chanson, plusieurs ID',
     relinkedCounts: 'Chansons : {songs} · fichiers en trop : {extra}',
     error: {
+      ai_not_running: 'L’assistant IA est désactivé. Lancez-le d’abord.',
       doctor_busy: 'Le Docteur est déjà au travail.',
       rescan_first:
         'Une réparation ailleurs a modifié cette section. Vérifiez-la d’abord à nouveau.',

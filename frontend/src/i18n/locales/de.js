@@ -2764,10 +2764,76 @@ export default {
       name: 'Gleicher Name',
       songs: 'Gleiche Songs',
       manual: 'Deine Auswahl',
+      assistant: 'Vom Assistenten gewählt',
     },
     songsCount: 'Songs: {count}',
     hasCover: 'Hat ein Cover',
     keeps: 'Bleibt',
+    ai: {
+      title: 'KI-Helfer',
+      hint: 'Lass einen KI-Assistenten wie Claude die Funde des Doctors mit dir durchgehen. Sag ihm in einfachen Worten, was du willst: Er erklärt jede Gruppe und schlägt vor, was zu tun ist, und du entscheidest.',
+      helper: 'KI-Helfer',
+      offHint:
+        'Aus. Starte ihn, wenn du Hilfe möchtest. Er stoppt von selbst nach 2 Stunden ohne Nutzung und wenn Downtify neu startet.',
+      connected:
+        'An · {client} ist verbunden · stoppt nach {minutes} Min. ohne Nutzung',
+      waitingForAi:
+        'An · wartet auf einen Assistenten · stoppt nach {minutes} Min. ohne Nutzung',
+      start: 'KI-Helfer starten',
+      stop: 'Stoppen',
+      on: 'An',
+      waitingBadge: '{count} zu prüfen',
+      whoTitle: 'Welche KI-Apps sich verbinden können',
+      whoCode:
+        'Claude Code (im Terminal oder in der Claude-Desktop-App) auf einem Computer, der diesen Server erreicht, im Heimnetz oder über Tailscale.',
+      whoDesktop:
+        'Claude Desktop, über eine kleine Brücke (braucht Node.js auf diesem Computer).',
+      whoWeb:
+        'Claude im Web oder auf dem Handy: nur, wenn dieser Server aus dem Internet per HTTPS erreichbar ist (zum Beispiel mit Tailscale Funnel oder Cloudflare Tunnel).',
+      whoChatgpt:
+        'ChatGPT: braucht den Entwicklermodus (nicht in jedem Abo) und denselben Internetzugang.',
+      scope:
+        'Vorerst hilft der Helfer bei doppelten Playlists. Er schaut und schlägt vor; kein Song wird je gelöscht.',
+      connectTitle: 'Assistenten verbinden',
+      clientCode: 'Claude Code',
+      clientDesktop: 'Claude Desktop',
+      clientOther: 'Andere Apps',
+      codeHint:
+        'Führe das einmal in einem Terminal aus, starte dann Claude Code und füge die erste Nachricht unten ein.',
+      desktopHint:
+        'Füge das in claude_desktop_config.json ein (Einstellungen › Entwickler › Konfiguration bearbeiten), speichere und starte Claude Desktop neu.',
+      otherHint:
+        'Jede App, die MCP über HTTP spricht: Gib ihr diese Adresse und diesen Header.',
+      keyHint:
+        'Der Schlüssel ändert sich bei jedem Start des Helfers und gilt nicht mehr, sobald du ihn stoppst. Behalte ihn für dich: Solange der Helfer läuft, kann jeder damit deine Playlists ändern.',
+      copy: 'Kopieren',
+      copied: 'Kopiert',
+      copyFailed:
+        'Kopieren ging nicht. Markiere den Text und kopiere ihn von Hand.',
+      firstTitle: 'Erste Nachricht an deinen Assistenten',
+      firstHint:
+        'Füge das zum Start ein und sag dann in deinen eigenen Worten, was du willst.',
+      firstMessage:
+        'Nutze die downtify-doctor-Werkzeuge, um mir beim Aufräumen meiner Downtify-Bibliothek zu helfen. Beginne mit get_overview (führe eine Prüfung durch, wenn sie alt ist), dann geh die doppelten Playlists durch. Sag mir zu jeder Gruppe in einfachen Worten, was drin ist, welche Playlist behalten würde, was nur in einer davon ist und was du empfiehlst. Wende nichts an: Mach Vorschläge, damit ich sie in Downtify prüfen kann.',
+      canApply: 'Assistent darf anwenden, was du im Chat bestätigst',
+      canApplyHint:
+        'Aus: Du drückst hier auf Anwenden. An: Sobald du im Chat zustimmst, darf der Assistent diese Vorschläge selbst anwenden. Schaltet sich bei jedem Start des Helfers wieder aus.',
+      suggestionsTitle: 'Vorschläge des Assistenten',
+      none: 'Noch keine Vorschläge.',
+      decisionMerge: 'Zusammenführen',
+      decisionApart: 'Verschiedene Playlists',
+      why: 'Warum:',
+      apply: 'Anwenden',
+      dismiss: 'Verwerfen',
+      applyAll: 'Alle anwenden ({count})',
+      clear: 'Erledigte entfernen',
+      state: {
+        waiting: 'Wartet auf dich',
+        applying: 'Wird angewendet…',
+        applied: 'Erledigt',
+        failed: 'Fehlgeschlagen',
+      },
+    },
     outOfDate: 'Veraltet',
     staleHint:
       'Eine Reparatur in einem anderen Bereich kann geändert haben, was hier gefunden wurde. Prüfe erneut, bevor du hier etwas änderst.',
@@ -2913,6 +2979,7 @@ export default {
     relinkedLabel: 'Gleicher Song, mehrere IDs',
     relinkedCounts: 'Songs: {songs} · zusätzliche Dateien: {extra}',
     error: {
+      ai_not_running: 'Der KI-Helfer ist aus. Starte ihn zuerst.',
       doctor_busy: 'Der Doktor arbeitet bereits.',
       rescan_first:
         'Eine Reparatur an anderer Stelle hat diesen Bereich verändert. Prüfe ihn zuerst erneut.',

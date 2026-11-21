@@ -2676,10 +2676,74 @@ export default {
       name: '같은 이름',
       songs: '같은 노래',
       manual: '직접 선택',
+      assistant: '어시스턴트가 고름',
     },
     songsCount: '노래: {count}',
     hasCover: '커버 있음',
     keeps: '유지',
+    ai: {
+      title: 'AI 도우미',
+      hint: 'Claude 같은 AI 어시스턴트가 Doctor가 찾은 내용을 함께 살펴보게 하세요. 원하는 것을 쉬운 말로 알려 주면 각 그룹을 설명하고 할 일을 제안하며, 결정은 직접 합니다.',
+      helper: 'AI 도우미',
+      offHint:
+        '꺼짐. 도움이 필요할 때 시작하세요. 2시간 동안 사용하지 않거나 Downtify가 다시 시작되면 저절로 멈춥니다.',
+      connected:
+        '켜짐 · {client} 연결됨 · {minutes}분 동안 사용하지 않으면 멈춤',
+      waitingForAi:
+        '켜짐 · 어시스턴트 연결을 기다리는 중 · {minutes}분 동안 사용하지 않으면 멈춤',
+      start: 'AI 도우미 시작',
+      stop: '멈추기',
+      on: '켜짐',
+      waitingBadge: '검토할 항목 {count}개',
+      whoTitle: '연결할 수 있는 AI 앱',
+      whoCode:
+        '이 서버에 접근할 수 있는 컴퓨터(홈 네트워크 또는 Tailscale)의 Claude Code(터미널 또는 Claude 데스크톱 앱).',
+      whoDesktop:
+        'Claude Desktop, 작은 브리지를 통해 연결(그 컴퓨터에 Node.js 필요).',
+      whoWeb:
+        '웹이나 휴대폰의 Claude: 이 서버가 인터넷에서 HTTPS로 접근 가능한 경우에만(예: Tailscale Funnel, Cloudflare Tunnel).',
+      whoChatgpt:
+        'ChatGPT: 개발자 모드(모든 요금제에 있지는 않음)와 같은 인터넷 접근이 필요합니다.',
+      scope:
+        '지금은 중복 재생목록만 다룹니다. 살펴보고 제안할 뿐, 노래는 절대 삭제하지 않습니다.',
+      connectTitle: '어시스턴트 연결',
+      clientCode: 'Claude Code',
+      clientDesktop: 'Claude Desktop',
+      clientOther: '다른 앱',
+      codeHint:
+        '터미널에서 한 번 실행한 뒤 Claude Code를 시작하고 아래 첫 메시지를 붙여 넣으세요.',
+      desktopHint:
+        'claude_desktop_config.json(Settings › Developer › Edit Config)에 추가하고 저장한 뒤 Claude Desktop을 다시 시작하세요.',
+      otherHint: 'HTTP로 MCP를 지원하는 앱이라면 이 주소와 헤더를 알려 주세요.',
+      keyHint:
+        '키는 도우미를 시작할 때마다 바뀌고, 멈추면 더 이상 쓸 수 없습니다. 다른 사람과 공유하지 마세요. 도우미가 켜져 있는 동안 키를 가진 사람은 재생목록을 바꿀 수 있습니다.',
+      copy: '복사',
+      copied: '복사됨',
+      copyFailed: '복사하지 못했습니다. 텍스트를 선택해 직접 복사하세요.',
+      firstTitle: '어시스턴트에게 보낼 첫 메시지',
+      firstHint:
+        '시작할 때 이것을 붙여 넣고, 원하는 것을 자신의 말로 알려 주세요.',
+      firstMessage:
+        'downtify-doctor 도구를 사용해서 내 Downtify 라이브러리 정리를 도와줘. get_overview부터 시작하고(검사가 오래됐으면 다시 실행), 중복 재생목록을 살펴봐. 각 그룹마다 무엇이 들어 있는지, 어떤 재생목록이 남는지, 한쪽에만 있는 곡은 무엇인지, 무엇을 추천하는지 쉬운 말로 알려 줘. 아무것도 적용하지 말고 제안만 해 줘. Downtify에서 검토할게.',
+      canApply: '채팅에서 동의한 내용을 어시스턴트가 적용하도록 허용',
+      canApplyHint:
+        '꺼짐: 여기서 적용을 누릅니다. 켜짐: 채팅에서 동의하면 어시스턴트가 그 제안을 직접 적용할 수 있습니다. 도우미를 시작할 때마다 다시 꺼집니다.',
+      suggestionsTitle: '어시스턴트의 제안',
+      none: '아직 제안이 없습니다.',
+      decisionMerge: '합치기',
+      decisionApart: '다른 재생목록',
+      why: '이유:',
+      apply: '적용',
+      dismiss: '버리기',
+      applyAll: '모두 적용 ({count})',
+      clear: '끝난 항목 지우기',
+      state: {
+        waiting: '확인 대기',
+        applying: '적용 중…',
+        applied: '완료',
+        failed: '실패',
+      },
+    },
     outOfDate: '오래됨',
     staleHint:
       '다른 섹션의 복구로 여기서 찾은 내용이 바뀌었을 수 있습니다. 여기서 변경하기 전에 다시 확인하세요.',
@@ -2822,6 +2886,7 @@ export default {
     relinkedLabel: '같은 노래, 여러 ID',
     relinkedCounts: '노래: {songs} · 여분 파일: {extra}',
     error: {
+      ai_not_running: 'AI 도우미가 꺼져 있습니다. 먼저 시작하세요.',
       doctor_busy: '닥터가 이미 작업 중입니다.',
       rescan_first:
         '다른 곳의 복구로 이 섹션이 바뀌었습니다. 먼저 다시 확인하세요.',

@@ -2648,10 +2648,75 @@ export default {
       name: 'Same name',
       songs: 'Same songs',
       manual: 'Your choice',
+      assistant: 'Picked by the assistant',
     },
     songsCount: 'Songs: {count}',
     hasCover: 'Has a cover',
     keeps: 'Kept',
+    ai: {
+      title: 'AI helper',
+      hint: 'Let an AI assistant such as Claude go through the Doctor’s findings with you. Tell it in plain words what you want: it explains each group and suggests what to do, and you decide.',
+      helper: 'AI helper',
+      offHint:
+        'Off. Start it when you want help. It stops by itself after 2 hours without use, and when Downtify restarts.',
+      connected:
+        'On · {client} is connected · stops after {minutes} min without use',
+      waitingForAi:
+        'On · waiting for an assistant to connect · stops after {minutes} min without use',
+      start: 'Start AI helper',
+      stop: 'Stop',
+      on: 'On',
+      waitingBadge: '{count} to review',
+      whoTitle: 'Which AI apps can connect',
+      whoCode:
+        'Claude Code (in a terminal or the Claude desktop app) on a computer that can reach this server, on your home network or Tailscale.',
+      whoDesktop:
+        'Claude Desktop, through a small bridge (needs Node.js on that computer).',
+      whoWeb:
+        'Claude on the web or your phone: only if this server can be reached from the internet over HTTPS (for example with Tailscale Funnel or Cloudflare Tunnel).',
+      whoChatgpt:
+        'ChatGPT: needs its developer mode (not on every plan) and the same internet access.',
+      scope:
+        'For now the helper works on duplicate playlists. It looks and suggests; no song is ever deleted.',
+      connectTitle: 'Connect your assistant',
+      clientCode: 'Claude Code',
+      clientDesktop: 'Claude Desktop',
+      clientOther: 'Other apps',
+      codeHint:
+        'Run this once in a terminal, then start Claude Code and paste the first message below.',
+      desktopHint:
+        'Add this to claude_desktop_config.json (Settings › Developer › Edit Config), save it and restart Claude Desktop.',
+      otherHint:
+        'Any app that speaks MCP over HTTP: give it this address and header.',
+      keyHint:
+        'The key changes every time you start the helper and stops working when you stop it. Keep it to yourself: while the helper runs, whoever has it can change your playlists.',
+      copy: 'Copy',
+      copied: 'Copied',
+      copyFailed: 'Couldn’t copy. Select the text and copy it by hand.',
+      firstTitle: 'First message for your assistant',
+      firstHint:
+        'Paste this to get started, then say what you want in your own words.',
+      firstMessage:
+        'Use the downtify-doctor tools to help me clean up my Downtify library. Start with get_overview (run a health check if it is old), then go through the duplicate playlists. For each group, tell me in plain words what is in it, which playlist would be kept, what is only in one of them, and what you recommend. Do not apply anything: make suggestions so I can review them in Downtify.',
+      canApply: 'Let the assistant apply what you agree to in the chat',
+      canApplyHint:
+        'Off: you press Apply here. On: once you say yes in the chat, the assistant may apply those suggestions itself. Turns off again whenever the helper starts.',
+      suggestionsTitle: 'The assistant’s suggestions',
+      none: 'No suggestions yet.',
+      decisionMerge: 'Merge',
+      decisionApart: 'Different playlists',
+      why: 'Why:',
+      apply: 'Apply',
+      dismiss: 'Dismiss',
+      applyAll: 'Apply all ({count})',
+      clear: 'Clear finished',
+      state: {
+        waiting: 'Waiting for you',
+        applying: 'Applying…',
+        applied: 'Done',
+        failed: 'Failed',
+      },
+    },
     outOfDate: 'Out of date',
     staleHint:
       'A repair in another section may have changed what was found here. Check again before changing anything here.',
@@ -2793,6 +2858,7 @@ export default {
     relinkedLabel: 'Same song, several IDs',
     relinkedCounts: 'Songs: {songs} · extra files: {extra}',
     error: {
+      ai_not_running: 'The AI helper is off. Start it first.',
       doctor_busy: 'The Doctor is already working.',
       rescan_first:
         'A repair elsewhere changed this section. Check it again first.',

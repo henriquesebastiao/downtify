@@ -41,8 +41,11 @@
       </p>
     </SettingGroup>
 
-    <!-- slskd leftovers -->
     <div class="flex flex-col gap-3">
+      <!-- An AI assistant that looks at the findings with you -->
+      <AiHelper :busy="busy" @applied="refresh" />
+
+      <!-- slskd leftovers -->
       <DoctorSection
         id="slskd"
         :title="t('doctor.slskdTitle')"
@@ -676,6 +679,7 @@ import SettingGroup from '/src/components/settings/SettingGroup.vue'
 import SettingRow from '/src/components/settings/SettingRow.vue'
 import CheckLine from '/src/components/settings/doctor/CheckLine.vue'
 import DoctorSection from '/src/components/settings/doctor/DoctorSection.vue'
+import AiHelper from '/src/components/settings/doctor/AiHelper.vue'
 import SlskdFolderBreakdown from '/src/components/settings/doctor/SlskdFolderBreakdown.vue'
 import { playlistCoverOf } from '/src/components/settings/doctor/covers'
 import PlaylistGroupCard from '/src/components/settings/doctor/PlaylistGroupCard.vue'
