@@ -1,8 +1,8 @@
 ---
 layout: home
 title: Downtify
-titleTemplate: Téléchargeur de musique auto-hébergé
-description: Un téléchargeur de musique auto-hébergé avec un lecteur intégré. Collez un lien Spotify, YouTube Music, Deezer ou SoundCloud et obtenez une bibliothèque parfaitement étiquetée — sans compte Spotify, sans clé d’API, sans Premium.
+titleTemplate: "Téléchargeur Spotify et lecteur de musique auto-hébergé"
+description: "Téléchargeur Spotify auto-hébergé avec lecteur. Collez un lien Spotify, YouTube Music, Deezer ou SoundCloud, obtenez des MP3 ou FLAC étiquetés. Sans clé d’API."
 icon: lucide/house
 hero:
   eyebrow: Téléchargeur de musique auto-hébergé

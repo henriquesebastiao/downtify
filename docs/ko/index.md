@@ -1,8 +1,8 @@
 ---
 layout: home
 title: Downtify
-titleTemplate: 직접 호스팅하는 음악 다운로더
-description: 플레이어가 내장된, 직접 호스팅하는 음악 다운로더. Spotify, YouTube Music, Deezer, SoundCloud 링크를 붙여넣으면 태그가 완벽하게 정리된 라이브러리가 생깁니다 — Spotify 계정도, API 키도, Premium도 필요 없습니다.
+titleTemplate: "직접 호스팅하는 Spotify 다운로더 겸 음악 플레이어"
+description: "플레이어가 내장된 셀프 호스팅 Spotify 다운로더. Spotify, YouTube Music, Deezer, SoundCloud 링크를 붙여넣으면 태그가 정리된 MP3나 FLAC 파일을 받을 수 있습니다. API 키가 필요 없습니다."
 icon: lucide/house
 hero:
   eyebrow: 직접 호스팅하는 음악 다운로더

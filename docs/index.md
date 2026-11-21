@@ -1,8 +1,8 @@
 ---
 layout: home
 title: Downtify
-titleTemplate: Self-hosted music downloader
-description: A self-hosted music downloader with a player built in. Paste a Spotify, YouTube Music, Deezer or SoundCloud link and get a perfectly tagged library — no Spotify account, no API keys, no Premium.
+titleTemplate: "Self-hosted Spotify downloader and music player"
+description: "Self-hosted Spotify downloader with a built-in player. Paste a Spotify, YouTube Music, Deezer or SoundCloud link and get tagged MP3 or FLAC files. No API keys."
 icon: lucide/house
 hero:
   eyebrow: Self-hosted music downloader

@@ -1,8 +1,8 @@
 ---
 layout: home
 title: Downtify
-titleTemplate: Λήψη μουσικής που φιλοξενείς μόνος σου
-description: Ένα πρόγραμμα λήψης μουσικής που φιλοξενείς μόνος σου, με ενσωματωμένο player. Επικόλλησε έναν σύνδεσμο από Spotify, YouTube Music, Deezer ή SoundCloud και πάρε μια τέλεια επισημασμένη βιβλιοθήκη — χωρίς λογαριασμό Spotify, χωρίς κλειδιά API, χωρίς Premium.
+titleTemplate: "Πρόγραμμα λήψης Spotify και player που φιλοξενείς εσύ"
+description: "Λήψη από Spotify στον δικό σου διακομιστή, με player. Επικόλλησε σύνδεσμο Spotify, YouTube Music, Deezer ή SoundCloud, πάρε MP3 ή FLAC με ετικέτες. Χωρίς κλειδιά API."
 icon: lucide/house
 hero:
   eyebrow: Λήψη μουσικής που φιλοξενείς μόνος σου

@@ -1,8 +1,8 @@
 ---
 layout: home
 title: Downtify
-titleTemplate: Baixador de músicas auto-hospedado
-description: Um baixador de músicas auto-hospedado com player integrado. Cole um link do Spotify, YouTube Music, Deezer ou SoundCloud e receba uma biblioteca perfeitamente etiquetada — sem conta do Spotify, sem chaves de API, sem Premium.
+titleTemplate: "Baixador do Spotify e player de música auto-hospedado"
+description: "Baixador do Spotify auto-hospedado com player. Cole um link do Spotify, YouTube Music, Deezer ou SoundCloud e receba MP3 ou FLAC com tags. Sem chave de API."
 icon: lucide/house
 hero:
   eyebrow: Baixador de músicas auto-hospedado

@@ -1,8 +1,8 @@
 ---
 layout: home
 title: Downtify
-titleTemplate: Kendi sunucunuzda barındırılan müzik indirici
-description: Yerleşik oynatıcılı, kendi sunucunuzda barındırılan bir müzik indirici. Bir Spotify, YouTube Music, Deezer veya SoundCloud bağlantısı yapıştırın, kusursuz etiketlenmiş bir kitaplık alın — Spotify hesabı yok, API anahtarı yok, Premium yok.
+titleTemplate: "Kendi sunucunuzda Spotify indirici ve müzik çalar"
+description: "Oynatıcılı, kendi sunucunuzda Spotify indirici. Spotify, YouTube Music, Deezer veya SoundCloud bağlantısı yapıştırın, etiketli MP3 ya da FLAC alın. API anahtarı yok."
 icon: lucide/house
 hero:
   eyebrow: Kendi sunucunuzda barındırılan müzik indirici

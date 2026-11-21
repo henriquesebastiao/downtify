@@ -1,8 +1,8 @@
 ---
 layout: home
 title: Downtify
-titleTemplate: Saját szerveren futtatható zeneletöltő
-description: Saját szerveren futtatható zeneletöltő beépített lejátszóval. Illessz be egy Spotify-, YouTube Music-, Deezer- vagy SoundCloud-hivatkozást, és kapj egy tökéletesen címkézett könyvtárat — Spotify-fiók, API-kulcs és Premium nélkül.
+titleTemplate: "Saját szerveren futó Spotify-letöltő és zenelejátszó"
+description: "Saját szerveres Spotify-letöltő lejátszóval. Spotify-, YouTube Music-, Deezer- vagy SoundCloud-linkből címkézett MP3 vagy FLAC lesz. API-kulcs nélkül."
 icon: lucide/house
 hero:
   eyebrow: Saját szerveren futtatható zeneletöltő

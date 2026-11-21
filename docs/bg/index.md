@@ -1,8 +1,8 @@
 ---
 layout: home
 title: Downtify
-titleTemplate: Самостоятелно хостван инструмент за сваляне на музика
-description: Самостоятелно хостван инструмент за сваляне на музика с вграден плейър. Поставете линк от Spotify, YouTube Music, Deezer или SoundCloud и получете перфектно етикетирана библиотека — без акаунт в Spotify, без API ключове, без Premium.
+titleTemplate: "Сваляне от Spotify и музикален плейър на ваш сървър"
+description: "Сваляне от Spotify на ваш сървър, с вграден плейър. Поставете линк от Spotify, YouTube Music, Deezer или SoundCloud и вземете MP3 или FLAC с тагове. Без API ключове."
 icon: lucide/house
 hero:
   eyebrow: Самостоятелно хостван инструмент за сваляне на музика

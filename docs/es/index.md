@@ -1,8 +1,8 @@
 ---
 layout: home
 title: Downtify
-titleTemplate: Descargador de música autoalojado
-description: Un descargador de música autoalojado con reproductor integrado. Pega un enlace de Spotify, YouTube Music, Deezer o SoundCloud y obtén una biblioteca perfectamente etiquetada — sin cuenta de Spotify, sin claves de API, sin Premium.
+titleTemplate: "Descargador de Spotify y reproductor de música autoalojado"
+description: "Descargador de Spotify autoalojado con reproductor. Pega un enlace de Spotify, YouTube Music, Deezer o SoundCloud y obtén MP3 o FLAC etiquetados. Sin claves de API."
 icon: lucide/house
 hero:
   eyebrow: Descargador de música autoalojado

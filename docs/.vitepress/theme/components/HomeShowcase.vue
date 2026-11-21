@@ -40,8 +40,10 @@
         <img
           :src="SHOTS[item.shot].dark"
           :alt="item.alt"
+          :width="SHOTS[item.shot].size[0]"
+          :height="SHOTS[item.shot].size[1]"
           :class="SHOTS[item.shot].light ? 'theme-dark' : ''"
-          class="w-full"
+          class="h-auto w-full"
           :style="{ maxWidth: SHOTS[item.shot].width }"
           loading="lazy"
           decoding="async"
@@ -50,7 +52,9 @@
           v-if="SHOTS[item.shot].light"
           :src="SHOTS[item.shot].light"
           :alt="item.alt"
-          class="theme-light w-full"
+          :width="SHOTS[item.shot].size[0]"
+          :height="SHOTS[item.shot].size[1]"
+          class="theme-light h-auto w-full"
           :style="{ maxWidth: SHOTS[item.shot].width }"
           loading="lazy"
           decoding="async"
@@ -80,13 +84,16 @@ import phones from '../../../../assets/readme/phones.png'
 import playlistDark from '../../../../assets/readme/playlist-dark.png'
 import playlistLight from '../../../../assets/readme/playlist-light.png'
 
+// `size`: the image's own pixels, so the page keeps its place while the
+// image loads.
+const WINDOW = [1748, 1181]
 const SHOTS = {
-  'now-playing': { dark: nowPlaying },
-  karaoke: { dark: karaoke },
-  home: { dark: homeDark, light: homeLight },
-  library: { dark: libraryDark, light: libraryLight },
-  playlist: { dark: playlistDark, light: playlistLight },
-  phones: { dark: phones, width: '860px' },
+  'now-playing': { dark: nowPlaying, size: WINDOW },
+  karaoke: { dark: karaoke, size: WINDOW },
+  home: { dark: homeDark, light: homeLight, size: WINDOW },
+  library: { dark: libraryDark, light: libraryLight, size: WINDOW },
+  playlist: { dark: playlistDark, light: playlistLight, size: WINDOW },
+  phones: { dark: phones, size: [1662, 1198], width: '860px' },
 }
 
 // items: [{ shot, label, caption, alt }], `shot` a key of SHOTS.

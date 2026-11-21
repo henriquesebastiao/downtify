@@ -17,7 +17,7 @@ import path from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import matter from 'gray-matter'
 import { LOCALES, TRANSLATED } from '../locales/index.mjs'
-import { NAV } from '../nav.mjs'
+import { isStub, PAGES } from '../lib/translations.mjs'
 
 const docsDir = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -25,11 +25,7 @@ const docsDir = path.resolve(
   '..'
 )
 
-export const PAGES = NAV.flatMap((entry) =>
-  entry.items ? entry.items.map((item) => item.page) : [entry.page]
-)
-
-const INCLUDE = /<!--@include: [^>]+-->/
+export { PAGES, isStub }
 
 /** The Markdown of a page "only available in English". */
 export function stubFor(page) {
@@ -39,10 +35,6 @@ export function stubFor(page) {
   const icon = data.icon ? `icon: ${data.icon}\n` : ''
   return `---\n${icon}---\n\n<EnglishOnly />\n\n<!--@include: ${up}${page}-->\n`
 }
-
-export const isStub = (file) =>
-  INCLUDE.test(fs.readFileSync(file, 'utf8')) &&
-  fs.readFileSync(file, 'utf8').includes('<EnglishOnly />')
 
 function commitTime(file) {
   try {

@@ -1,8 +1,8 @@
 ---
 layout: home
 title: Downtify
-titleTemplate: 自托管音乐下载器
-description: 内置播放器的自托管音乐下载器。粘贴 Spotify、YouTube Music、Deezer 或 SoundCloud 链接，即可获得标签完整的音乐库——无需 Spotify 账号、API 密钥或 Premium。
+titleTemplate: "自托管的 Spotify 下载器与音乐播放器"
+description: "内置播放器的自托管 Spotify 下载器。粘贴 Spotify、YouTube Music、Deezer 或 SoundCloud 链接，即可获得带完整标签的 MP3 或 FLAC 文件，无需 API 密钥。"
 icon: lucide/house
 hero:
   eyebrow: 自托管音乐下载器
