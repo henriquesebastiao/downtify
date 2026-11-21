@@ -9,7 +9,7 @@ anyio==4.16.0
     #   fastapi
     #   httpx
     #   starlette
-certifi==2026.10.23
+certifi==2026.11.20
     # via
     #   httpcore
     #   httpx
