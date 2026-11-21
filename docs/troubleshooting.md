@@ -75,6 +75,8 @@ Use a browser extension that exports the Netscape format (see [YouTube Cookies](
 
 Downtify records every auto-downloaded track in its database, so moving files elsewhere on disk does not trigger a re-download. A track is only re-downloaded after an hourly check finds its file genuinely missing from the downloads directory. See [Playlist Monitor](features/playlist-monitor.md#how-it-works).
 
+With **Download again if the file exists** off, a song the library already holds under another Spotify id (a remaster or re-release swapped into the playlist) is linked rather than downloaded again; with it on, every new id is downloaded. A file that a playlist refresh deletes because its tags don't match the playlist's song is re-downloaded from a different upload, not the same one again (for files downloaded since 3.12, which record the upload they came from).
+
 If files vanish on every restart, the `/downloads` volume isn't persisted — same fix as above.
 
 ## A Spotify mix downloads songs that aren't in my mix

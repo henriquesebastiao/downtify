@@ -8,6 +8,7 @@ from typing import Any, Optional
 
 from loguru import logger
 
+from .download_sources import track_keys
 from .library_catalog import (
     AUDIO_EXTENSIONS,
     PODCASTS_DIRNAME,
@@ -40,6 +41,40 @@ class TagMismatchDeleteContext:
     playlist_catalog: Any = None
     track_index: Any = None
     navidrome_index: Any = None
+    # Where each file's audio came from (downtify.download_sources): the
+    # upload of a wrong file is rejected for its song, so the next
+    # download of it picks another one.
+    download_sources: Any = None
+
+
+def _reject_wrong_upload(
+    filename: str, song: dict[str, Any], sources: Any
+) -> None:
+    """Never pick the upload *filename* came from again for *song*.
+
+    Without it, a playlist refresh deletes the wrong file, the monitor
+    forgets the track, the next sweep fetches the very same upload, and
+    the cycle repeats on every sweep (issue #573)."""
+
+    if sources is None:
+        return
+    spotify_song = {
+        'song_id': song.get('song_id'),
+        'source': song.get('source'),
+        'isrc': song.get('isrc'),
+        'name': song.get('spotify_name') or song.get('name'),
+        'artists': song.get('spotify_artists') or song.get('artists'),
+    }
+    try:
+        sources.reject_file_source(
+            filename,
+            track_keys(spotify_song),
+            why='its tags do not match the playlist track',
+        )
+    except Exception:
+        logger.opt(exception=True).debug(
+            'Could not reject the upload of {}', filename
+        )
 
 
 def delete_if_spotify_tag_mismatch(
@@ -64,6 +99,7 @@ def delete_if_spotify_tag_mismatch(
 
     label = spotify_file_tag_mismatch_label(song)
     pl_note = f' playlist={playlist_name!r}' if playlist_name else ''
+    _reject_wrong_upload(filename, song, del_ctx.download_sources)
     result = delete_library_file(
         filename,
         del_ctx.ctx,
@@ -124,6 +160,7 @@ def tag_mismatch_delete_context_from_state(
         playlist_catalog=getattr(state, 'playlist_catalog', None),
         track_index=getattr(state, 'track_index', None),
         navidrome_index=getattr(state, 'navidrome_index', None),
+        download_sources=getattr(state, 'download_sources', None),
     )
 
 
