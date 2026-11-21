@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 import unicodedata
+from functools import lru_cache
 from pathlib import Path
 from typing import Any, Optional
 
@@ -76,11 +77,20 @@ _UNWANTED_REMOTE_VARIANT_KEYWORDS = (
 )
 
 
+_NON_WORD = re.compile(r'[\W_]+')
+
+
 def _spaced_words(text: str) -> str:
     """*text* as its words between single spaces, padded (`` a b ``)."""
 
-    words = ' '.join(part for part in re.split(r'[\W_]+', text) if part)
+    words = ' '.join(part for part in _NON_WORD.split(text) if part)
     return f' {words} '
+
+
+# Each modifier as its words, worked out once (`` remix ``, `` live at ``).
+_VARIANT_KEYWORD_WORDS = {
+    kw: _spaced_words(kw) for kw in _UNWANTED_REMOTE_VARIANT_KEYWORDS
+}
 
 
 def remote_adds_unwanted_variant(
@@ -96,19 +106,19 @@ def remote_adds_unwanted_variant(
         str(a).strip() for a in (spotify_artists or []) if str(a).strip()
     )
     spotify_blob = f'{spotify_title or ""} {artists}'.casefold()
-    # Spotify's own words, so "Song - Remix" allows a "Song (Remix)" file:
-    # a modifier counts as Spotify's when its words are, whatever the
-    # punctuation around them.
-    spotify_words = _spaced_words(spotify_blob)
     remote_l = str(remote_text or '').casefold()
     skip = skip_keywords or frozenset()
-    return any(
-        kw not in skip
-        and kw in remote_l
-        and kw not in spotify_blob
-        and _spaced_words(kw) not in spotify_words
-        for kw in _UNWANTED_REMOTE_VARIANT_KEYWORDS
-    )
+    spotify_words = ''
+    for kw in _UNWANTED_REMOTE_VARIANT_KEYWORDS:
+        if kw in skip or kw not in remote_l or kw in spotify_blob:
+            continue
+        # Spotify's own words, so "Song - Remix" allows a "Song (Remix)"
+        # file: a modifier counts as Spotify's when its words are, whatever
+        # the punctuation around them. Only worked out when needed.
+        spotify_words = spotify_words or _spaced_words(spotify_blob)
+        if _VARIANT_KEYWORD_WORDS[kw] not in spotify_words:
+            return True
+    return False
 
 
 def _remote_adds_spam_keyword(spotify_title: str, remote_text: str) -> bool:
@@ -237,6 +247,8 @@ def fold_accents(text: str) -> str:
     """*text* without accents: ``Tití Me Preguntó`` -> ``Titi Me Pregunto``
     (a file name often drops them)."""
 
+    if text.isascii():
+        return text
     decomposed = unicodedata.normalize('NFKD', text)
     return ''.join(ch for ch in decomposed if not unicodedata.combining(ch))
 
@@ -333,11 +345,17 @@ _TAG_ROMAN = {
 }
 
 
-def _title_words(text: str, *, core: bool = False) -> list[str]:
+_CENSORED_RUN = re.compile(r'(?<=[^\W\d_])\*+')
+_TITLE_SPLIT = re.compile(r'(?:[^\w\x00]|_)+')
+
+
+@lru_cache(maxsize=4096)
+def _title_words(text: str, *, core: bool = False) -> tuple[str, ...]:
     """*text*'s words for comparing titles: no accents, case, apostrophes,
     ``&``/``and``, censored words (``F**kin'``), and ``Part II`` as
     ``pt 2``. With *core*, only the song's own name: no ``(feat. …)``,
-    ``(from …)`` or `` - …`` part."""
+    ``(from …)`` or `` - …`` part. Remembered per title: a playlist
+    compares the same titles over and over."""
 
     value = fold_accents(str(text or ''))
     if core:
@@ -346,13 +364,13 @@ def _title_words(text: str, *, core: bool = False) -> list[str]:
     value = value.casefold().replace("'", '').replace('\u2019', '')
     # A censored word ("F**kin'") stays one word, its hidden letters one
     # "*", matched against the spelled-out word (_words_within).
-    value = re.sub(r'(?<=[^\W\d_])\*+', '\x00', value)
+    value = _CENSORED_RUN.sub('\x00', value)
     value = _TAG_PART.sub(
         lambda m: f' pt {_TAG_ROMAN.get(m.group(1).casefold(), m.group(1))} ',
         value,
     )
-    words = re.split(r'(?:[^\w\x00]|_)+', value)
-    return [w.replace('\x00', '*') for w in words if w and w != 'and']
+    words = _TITLE_SPLIT.split(value)
+    return tuple(w.replace('\x00', '*') for w in words if w and w != 'and')
 
 
 def _artist_key(text: str) -> str:
