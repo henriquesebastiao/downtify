@@ -1352,6 +1352,11 @@ export default {
     pause: 'Pausar',
     resume: 'Retomar',
     stop: 'Parar de monitorar',
+    personalMixTitle: 'Um mix do Spotify feito para uma pessoa',
+    personalMixBody:
+      'Daily Mix, Descobertas da Semana, Radar de Novidades e as outras playlists “feitas para você” do Spotify mostram as suas músicas só para você, com sua conta conectada. O Downtify lê o Spotify sem conta, então recebe a versão que o Spotify mostra para quem não entrou, muitas vezes com músicas completamente diferentes. Para ficar com a sua versão, copie as músicas para uma playlist sua no Spotify e use essa.',
+    personalMixWatch: 'Monitorar mesmo assim',
+    personalMixBadge: 'Mix pessoal',
     openSource: 'Abrir original',
     everyMinutes: { one: 'A cada minuto', other: 'A cada {count} minutos' },
     everyHours: { one: 'A cada hora', other: 'A cada {count} horas' },

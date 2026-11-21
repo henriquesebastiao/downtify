@@ -77,6 +77,10 @@ Downtify는 자동으로 내려받은 모든 트랙을 데이터베이스에 기
 
 재시작할 때마다 파일이 사라진다면 `/downloads` 볼륨이 영구 저장되지 않는 것입니다. 위와 같은 해결책을 적용하세요.
 
+## Spotify 믹스가 내 믹스에 없는 곡을 다운로드함
+
+데일리 믹스, 위클리 디스커버리, 릴리즈 레이더 등 Spotify의 '회원님을 위한' 플레이리스트는 로그인한 본인에게만 그 곡들을 보여 줍니다. Downtify는 계정 없이 Spotify를 읽기 때문에 로그인하지 않은 사람에게 보이는 버전을 받으며, 곡이 완전히 다를 수 있습니다. 믹스의 곡들을 Spotify에서 내 플레이리스트로 복사한 뒤 그 플레이리스트를 모니터링하세요. [나를 위해 만든 Spotify 믹스](features/playlist-monitor.md#spotify-mixes-made-for-you)를 참고하세요.
+
 ## "Could not find a YouTube match for '…'"
 
 YouTube Music도 일반 YouTube도 매처의 검사를 통과하는 결과를 돌려주지 못했습니다. 원본과 비슷한 제목, 하나 이상의 공통 아티스트, 노래방/커버/라이브/다른 언어 버전이 아닐 것, Spotify 길이와 30초 이내인 길이가 조건입니다. [작동 방식](how-it-works.md#fallback-to-standard-youtube)을 참고하세요.

@@ -52,6 +52,20 @@ Vous pouvez aussi commencer à surveiller depuis la page d’une playlist : coll
 
 Les playlists Deezer publiques se surveillent comme les autres : collez le lien dans l’onglet **Playlists**, utilisez **Surveiller les nouveaux titres** sur la page de la playlist, ou choisissez **Surveiller les nouveaux titres** dans le menu **⋯** d’une carte de playlist des [Classements](charts.md). Aucun compte Deezer n’est nécessaire, et tous les morceaux sont récupérés, quelle que soit la longueur de la playlist. Les morceaux se téléchargent via vos [sources audio](download-settings.md) comme tout autre lien Deezer, et la playlist obtient son fichier M3U, sa pochette et son entrée dans la Bibliothèque comme une playlist Spotify — même avec les fichiers M3U désactivés, la Bibliothèque retient quels morceaux en font partie. Seules les playlists publiques peuvent être surveillées, et un lien d’**artiste** Deezer peut être téléchargé mais pas surveillé.
 
+## Mix Spotify conçus pour vous
+
+Les Daily Mix, Découvertes de la semaine, Radar des sorties, les mix d'humeur, de genre, de décennie et d'artiste, les radios et En boucle sont construits par Spotify pour une seule personne. Leur lien n'ouvre la version de cette personne que lorsqu'elle est connectée à Spotify. Downtify lit Spotify sans compte (il ne demande jamais vos identifiants Spotify) : pour ces liens, il reçoit la version que Spotify montre à quelqu'un qui n'est pas connecté, souvent avec des titres complètement différents. Surveiller un de ces mix télécharge ces titres, pas les vôtres.
+
+Downtify reconnaît ces playlists à leur identifiant et :
+
+- demande avant d'en surveiller une (**Surveiller quand même** continue avec la version non connectée) ;
+- affiche une note sur la page du lien, au-dessus des titres ;
+- marque la surveillance d'une de ces playlists d'un badge **Mix personnel** à côté de **Spotify**, sur la page Monitor et sur la page de la surveillance.
+
+Pour garder votre version, copiez ses titres dans une playlist à vous sur Spotify (tout sélectionner, **Ajouter à la playlist**) et surveillez celle-ci : une playlist que vous avez créée est la même pour tout le monde. Les playlists éditoriales comme Today's Top Hits ou « This Is … » sont aussi les mêmes pour tous et ne sont pas signalées.
+
+Si un mix était déjà surveillé, sa page **Activité et titres** (voir [plus bas](#activity-and-storage-per-watch)) liste les titres qu'il a ajoutés, pour retrouver et supprimer ceux qui n'ont rien à y faire.
+
 ## Playlists YouTube Music
 
 Utilisez une playlist YouTube Music pour des morceaux qui ne sont pas sur Spotify : remixes, lives, reprises, uploads de chaînes promotionnelles. Chaque morceau est téléchargé depuis **la vidéo exacte de la playlist**. Downtify ne le recherche pas de nouveau, donc ce que vous obtenez est ce que vous avez ajouté à la playlist.

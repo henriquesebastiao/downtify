@@ -77,6 +77,10 @@ Downtify registra cada canción descargada automáticamente en su base de datos,
 
 Si los archivos desaparecen en cada reinicio, el volumen `/downloads` no es persistente — misma solución que arriba.
 
+## Un mix de Spotify descarga canciones que no están en mi mix
+
+Los Daily Mix, Descubrimiento semanal, Radar de Novedades y las demás listas "hechas para ti" de Spotify muestran tus canciones solo a ti, con tu sesión iniciada. Downtify lee Spotify sin cuenta, así que recibe la versión que Spotify muestra a quien no ha iniciado sesión, que puede tener canciones completamente distintas. Copia las canciones del mix a una lista tuya en Spotify y vigila esa. Consulta [Mixes de Spotify hechos para ti](features/playlist-monitor.md#spotify-mixes-made-for-you).
+
 ## «Could not find a YouTube match for '…'»
 
 Ni YouTube Music ni YouTube estándar devolvieron un resultado que pasara las comprobaciones del comparador — título parecido al original, al menos un artista en común, no ser versión de karaoke/cover/en directo/en otro idioma y duración a 30 segundos como máximo de la de Spotify. Consulta [Cómo funciona](how-it-works.md#fallback-to-standard-youtube).

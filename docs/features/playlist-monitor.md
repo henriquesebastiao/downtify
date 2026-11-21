@@ -54,6 +54,20 @@ You can also start watching from a playlist's page: paste its link in the search
 
 Public Deezer playlists are watched like any other: paste the link on the **Playlists** tab, use **Watch for new tracks** on the playlist's page, or pick **Watch for new tracks** in the **⋯** menu of a playlist card in [Charts](charts.md). No Deezer account is needed, and every track is fetched, however long the playlist is. The songs download through your [audio sources](download-settings.md) like any other Deezer link, and the playlist gets its M3U file, cover art and Library entry as a Spotify one does — even with M3U files turned off, the Library keeps track of which songs belong to it. Only public playlists can be watched, and a Deezer **artist** link can be downloaded but not watched.
 
+## Spotify mixes made for you
+
+Daily Mixes, Discover Weekly, Release Radar, the mood, genre, decade and artist mixes, the radios and On Repeat are built by Spotify for one listener. Their link opens that listener's version only while they are signed in to Spotify. Downtify reads Spotify without an account (it never asks for your Spotify login), so for these links it gets the version Spotify shows someone who isn't signed in — often a completely different set of songs. Watching one downloads those songs, not yours.
+
+Downtify recognises these playlists by their id and:
+
+- asks before watching one (**Watch anyway** goes ahead with the signed-out version);
+- shows a note on the link's page, above its songs;
+- marks a watch of one with a **Personal mix** badge next to **Spotify** on the Monitor page and on the watch's page.
+
+To keep your own version, copy its songs into a playlist you own on Spotify (select all, **Add to playlist**) and watch that playlist instead: a playlist you made is the same for everyone. Editorial playlists such as Today's Top Hits or "This Is …" are the same for everyone too and aren't flagged.
+
+If a mix was watched before, its **Activity and songs** page (see [below](#activity-and-storage-per-watch)) lists the songs it brought in, so you can find and delete the ones that don't belong.
+
 ## YouTube Music playlists
 
 Use a YouTube Music playlist for songs that aren't on Spotify: remixes, live sets, covers, uploads by promo channels. Each track is downloaded from **the exact video in the playlist**. Downtify doesn't search for it again, so what you get is what you added to the playlist.

@@ -77,6 +77,10 @@ Downtify records every auto-downloaded track in its database, so moving files el
 
 If files vanish on every restart, the `/downloads` volume isn't persisted — same fix as above.
 
+## A Spotify mix downloads songs that aren't in my mix
+
+Daily Mixes, Discover Weekly, Release Radar and Spotify's other "made for you" playlists show your songs only to you, signed in. Downtify reads Spotify without an account, so it gets the version Spotify shows someone who isn't signed in, which can hold completely different songs. Copy the mix's songs into a playlist of your own on Spotify and watch that one instead. See [Spotify mixes made for you](features/playlist-monitor.md#spotify-mixes-made-for-you).
+
 ## "Could not find a YouTube match for '…'"
 
 Neither YouTube Music nor standard YouTube returned a result that passed the matcher's checks — title resembling the source, at least one shared artist, not a karaoke/cover/live/other-language version, and a duration within 30 seconds of Spotify's. See [How it works](how-it-works.md#fallback-to-standard-youtube).
