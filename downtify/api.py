@@ -1067,9 +1067,11 @@ def _effective_deemix_settings(settings: dict[str, Any]) -> dict[str, Any]:
 def _effective_audio_providers(settings: dict[str, Any]) -> list[str]:
     """Enabled audio providers in the configured order.
 
-    slskd is dropped while it's disabled. When slskd is the only provider
-    left, YouTube Music and YouTube are appended as fallbacks so a track
-    slskd can't find still downloads.
+    slskd (and Deemix) is dropped while it's disabled; with nothing left,
+    YouTube Music is used. Otherwise the list is exactly what was chosen:
+    slskd on its own stays on its own (issue #471), so a track slskd
+    can't find fails rather than coming from YouTube behind the user's
+    back.
     """
 
     slskd_enabled = bool(_effective_slskd_settings(settings).get('enabled'))
@@ -1085,11 +1087,7 @@ def _effective_audio_providers(settings: dict[str, Any]) -> list[str]:
             continue
         if name in AUDIO_PROVIDERS and name not in out:
             out.append(name)
-    if not out:
-        return ['youtube-music']
-    if out == ['slskd']:
-        out += ['youtube-music', 'youtube']
-    return out
+    return out or ['youtube-music']
 
 
 def _validate_integration_settings(

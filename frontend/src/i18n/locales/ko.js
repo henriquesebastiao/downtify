@@ -1705,6 +1705,8 @@ export default {
     sourcesTitle: '음원 출처 우선순위',
     sourcesHint:
       '각 트랙은 일치하는 음원을 찾을 때까지 활성화된 출처를 위에서부터 순서대로 시도합니다.',
+    sourcesOwnServersOnly:
+      '내 서버만 켜져 있습니다. 거기에 없는 곡은 YouTube에서 받지 않고 실패합니다. 대체 소스로 쓰려면 YouTube Music을 다시 켜세요.',
     moveUp: '위로 이동',
     moveDown: '아래로 이동',
     sourceSlskd: 'Soulseek (slskd)',

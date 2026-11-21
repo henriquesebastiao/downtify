@@ -1712,6 +1712,8 @@ export default {
     sourcesTitle: 'Sesin geldiği yer',
     sourcesHint:
       'Her parça, biri eşleşme bulana kadar etkin kaynakları bu sırayla dener.',
+    sourcesOwnServersOnly:
+      "Yalnızca kendi sunucuların açık: onlarda olmayan bir şarkı YouTube'dan gelmek yerine başarısız olur. Yedek olarak kullanmak için YouTube Music'i yeniden aç.",
     moveUp: 'Yukarı taşı',
     moveDown: 'Aşağı taşı',
     sourceSlskd: 'Soulseek (slskd)',

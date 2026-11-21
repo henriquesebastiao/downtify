@@ -1762,6 +1762,8 @@ export default {
     sourcesTitle: 'Provenance de l’audio',
     sourcesHint:
       'Chaque titre essaie les sources activées dans cet ordre jusqu’à trouver une correspondance.',
+    sourcesOwnServersOnly:
+      "Seuls vos propres serveurs sont activés : un titre qu'ils n'ont pas échoue au lieu de venir de YouTube. Réactivez YouTube Music pour vous en servir en secours.",
     moveUp: 'Monter',
     moveDown: 'Descendre',
     sourceSlskd: 'Soulseek (slskd)',

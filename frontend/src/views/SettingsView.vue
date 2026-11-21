@@ -168,6 +168,13 @@
                 @enable-slskd="s.slskd.enabled = true"
                 @enable-deemix="s.deemix.enabled = true"
               />
+              <p
+                v-if="onlyOwnServers"
+                class="px-4 pt-3 text-[13px] text-pretty text-warn"
+                role="status"
+              >
+                {{ t('settings.sourcesOwnServersOnly') }}
+              </p>
               <div class="px-4 pt-4 pb-1 text-[13px] text-pretty text-muted">
                 <p class="font-semibold text-fg">
                   {{ t('settings.sourceNeedsTitle') }}
@@ -1246,6 +1253,7 @@ import UsersSettings from '/src/components/settings/UsersSettings.vue'
 import SettingGroup from '/src/components/settings/SettingGroup.vue'
 import SettingRow from '/src/components/settings/SettingRow.vue'
 import SourceOrder from '/src/components/settings/SourceOrder.vue'
+import { onlyOwnServers as onlyOwnServersEnabled } from '/src/lib/providerOrder'
 import LyricsOrder from '/src/components/settings/LyricsOrder.vue'
 import API from '/src/model/api'
 import {
@@ -1350,6 +1358,10 @@ function applySlskdProfile(name) {
   s.value.slskd.extensions = [...profile.extensions]
   s.value.slskd.extensions_whitelist = profile.extensions_whitelist
 }
+// slskd / Deemix alone: a song they don't have fails (issue #471).
+const onlyOwnServers = computed(() =>
+  onlyOwnServersEnabled(s.value.audio_providers)
+)
 const slskdLossyFormats = computed(() =>
   (s.value.slskd.extensions || []).filter((ext) => !SLSKD_LOSSLESS.has(ext))
 )

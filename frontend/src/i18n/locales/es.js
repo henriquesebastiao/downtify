@@ -1743,6 +1743,8 @@ export default {
     sourcesTitle: 'De dónde viene el audio',
     sourcesHint:
       'Cada canción prueba las fuentes activadas en este orden hasta que una encuentra coincidencia.',
+    sourcesOwnServersOnly:
+      'Solo están activados tus propios servidores: una canción que no tengan fallará en lugar de venir de YouTube. Vuelve a activar YouTube Music para usarlo como respaldo.',
     moveUp: 'Subir',
     moveDown: 'Bajar',
     sourceSlskd: 'Soulseek (slskd)',
