@@ -747,6 +747,13 @@ export default {
     lyricsQuickHint:
       '扫描音乐库中没有歌词的歌曲，并立即查找歌词，中间无需选择。其他升级留待下次运行。',
     lyricsQuickButton: '扫描并查找歌词',
+    isrc: '添加 ISRC',
+    isrcHint: '为没有 ISRC 的文件添加录音的 ISRC，仅在 Deezer 确认无疑时添加。',
+    isrcQuickTitle: '旧歌曲的 ISRC',
+    isrcQuickHint:
+      '在 Downtify 开始写入 ISRC 之前下载的歌曲没有 ISRC。ISRC 是录音自己的编码：Downtify 用它识别重复项，音乐回收站也用它识别文件。只添加 Deezer 确认无疑的编码（艺术家和标题相同，时长相差不超过 3 秒）；其他文件保持原样。先查询一下，查看列表。',
+    isrcLookupButton: '查询 ISRC（不写入任何内容）',
+    isrcAddButton: '添加 ISRC',
     lyricsPlainOnly: '只有非同步歌词：{count} — 找到同步歌词后替换',
     lyricsOutcome: '已添加歌词：{added} · 未找到：{notFound} · 失败：{failed}',
     completed: '已升级',

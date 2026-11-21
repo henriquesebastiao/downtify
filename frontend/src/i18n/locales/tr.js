@@ -805,6 +805,14 @@ export default {
     lyricsQuickHint:
       'Kitaplıkta sözü olmayan parçaları tarar ve arada seçim yapmadan hemen söz arar. Diğer yükseltmeler başka bir çalıştırmaya kalır.',
     lyricsQuickButton: 'Tara ve söz bul',
+    isrc: 'ISRC ekle',
+    isrcHint:
+      'ISRC’si olmayan dosyalara kaydın ISRC’sini ekler; yalnızca Deezer şüphesiz doğruladığında.',
+    isrcQuickTitle: 'Eski şarkılar için ISRC',
+    isrcQuickHint:
+      'Downtify ISRC yazmaya başlamadan önce indirilen şarkılarda ISRC yoktur. ISRC, kaydın kendi kodudur: Downtify yinelenenleri, müzik çöp kutusu da dosyayı onunla tanır. Yalnızca Deezer’ın şüphesiz doğruladığı kodlar eklenir (aynı sanatçı ve başlık, süre farkı en fazla 3 saniye); diğer tüm dosyalar olduğu gibi kalır. Listeyi görmek için önce arayın.',
+    isrcLookupButton: 'ISRC ara (hiçbir şey yazmaz)',
+    isrcAddButton: 'ISRC ekle',
     lyricsPlainOnly:
       'Yalnızca senkronize olmayan sözler: {count} — bulunduğunda senkronize olanlarla değiştirilir',
     lyricsOutcome:

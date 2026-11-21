@@ -80,6 +80,14 @@ Findet ein Scan nichts mehr zu tun, _weil_ alles kürzlich geprüft wurde, sagt 
 
 **Scannen und Songtexte suchen** durchsucht die Bibliothek und beginnt, sobald der Scan endet, Songtexte für die Titel ohne zu suchen, ohne Auswahl dazwischen. In diesem Lauf werden nur Songtexte gesucht; Cover und Tags bleiben für einen anderen.
 
+### ISRCs für ältere Songs
+
+Songs, die geladen wurden, bevor Downtify ISRCs schrieb, haben keinen. Ein ISRC ist der eigene Code der Aufnahme: Downtify erkennt damit, ob ein Song schon in der Bibliothek ist, und der Musik-Papierkorb erkennt damit eine Datei, die er später wiederherstellen kann. Eine Datei ohne ISRC, ohne Anbieter-ID und ohne Album-Tag kann nicht in den Papierkorb.
+
+**ISRCs nachschlagen (schreibt nichts)** sucht Dateien ohne ISRC, schlägt jede nach und zeigt in der Trackliste, was es ergänzen würde (`Would add ISRC …`), ohne eine Datei zu ändern. **ISRCs ergänzen** macht dasselbe und schreibt sie. Nur der ISRC-Tag kommt hinzu, über dieselbe geprüfte Kopie wie bei jedem Upgrade, und alles, was auf die Datei zeigt (Playlists, Likes, Besitzer), zieht mit.
+
+Ein Code wird nur ergänzt, wenn Deezer ihn zweifelsfrei bestätigt, nach denselben Regeln wie bei neuen Downloads: gleicher erster Künstler und Titel, eine Länge auf 3 Sekunden genau und alle passenden Treffer einig über einen Code. Jede andere Datei bleibt genau, wie sie ist, und wird erst wieder gefragt, wenn **Titel nicht erneut prüfen für** abgelaufen ist. Keiner der beiden Scans schaut auf Cover, Songtexte oder Tags, und ein normaler Scan sucht nie nach ISRCs.
+
 ## Während es läuft
 
 Das Fortschrittspanel zeigt erledigte Titel aus der Warteschlange, eine ungefähre Datenmenge (`8.4 GB of 51.3 GB`) und wie viele verbessert wurden, nichts zu tun hatten oder fehlschlugen. Jeder Titel zeigt, was er gerade tut — _Zuordnung_, _Cover werden gesucht_, _Songtexte werden gesucht_, _Datei wird geschrieben_ — und endet mit dem, was sich änderte, z. B. `artwork 1200px (itunes)`. Sucht der Lauf Songtexte, zählt eine Zeile darunter die Titel, die Songtexte bekommen haben, die, für die kein Anbieter welche hatte, und die fehlgeschlagenen.

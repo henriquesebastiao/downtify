@@ -61,6 +61,30 @@
         {{ t('upgrade.lyricsQuickButton') }}
       </UiButton>
     </UiPanel>
+    <UiPanel
+      v-if="canScan"
+      :title="t('upgrade.isrcQuickTitle')"
+      :description="t('upgrade.isrcQuickHint')"
+    >
+      <div class="flex flex-wrap gap-2">
+        <UiButton
+          variant="secondary"
+          icon="search"
+          :loading="loading"
+          @click="scanForIsrcs(true)"
+        >
+          {{ t('upgrade.isrcLookupButton') }}
+        </UiButton>
+        <UiButton
+          variant="secondary"
+          icon="tag"
+          :loading="loading"
+          @click="scanForIsrcs(false)"
+        >
+          {{ t('upgrade.isrcAddButton') }}
+        </UiButton>
+      </div>
+    </UiPanel>
     <p v-if="status.finalizationError" role="alert" class="text-sm text-danger">
       {{ status.finalizationError }}
     </p>
@@ -454,6 +478,15 @@ const scanForLyrics = () =>
     artwork_source: artworkSource.value,
     recheck_days: recheckDays.value,
     categories: ['lyrics'],
+    start_after_scan: true,
+  })
+
+// ISRCs for older files: a scan of the ISRC tag alone, then at once the
+// lookups. *lookupOnly* lists the codes it would add and writes nothing.
+const scanForIsrcs = (lookupOnly) =>
+  startScan({
+    recheck_days: recheckDays.value,
+    categories: lookupOnly ? ['isrc', 'isrc_lookup'] : ['isrc'],
     start_after_scan: true,
   })
 

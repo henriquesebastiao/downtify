@@ -80,6 +80,14 @@ When a scan finds nothing left to do _because_ everything was checked recently, 
 
 **Scan and find lyrics** scans the library and, as soon as the scan ends, starts looking lyrics up for the tracks without them, with nothing to choose in between. Only lyrics are looked for in that run; artwork and tags are left for another one.
 
+### ISRCs for older songs
+
+Songs downloaded before Downtify wrote ISRCs have none. An ISRC is the recording's own code: Downtify uses it to tell whether a song is already in the library, and the music trash uses it to recognise a file it may restore later. A file with no ISRC, no provider ID and no album tag can't go to the trash.
+
+**Look up ISRCs (writes nothing)** scans for files without an ISRC and looks each one up, then lists what it would add in the track list (`Would add ISRC …`) without changing any file. **Add ISRCs** does the same and writes them. Only the ISRC tag is added, through the same verified copy as every upgrade, and whatever pointed at the file (playlists, likes, owners) follows it.
+
+A code is only added when Deezer confirms it beyond doubt, by the same rules as for new downloads: the same first artist and title, a length within 3 seconds, and every matching result agreeing on one code. Any other file is left exactly as it is, and isn't asked about again until **Don't check a track again for** has passed. Neither scan looks at artwork, lyrics or tags, and a normal scan never looks for ISRCs.
+
 ## While it runs
 
 The progress panel shows tracks done out of the queue, an approximate data figure (`8.4 GB of 51.3 GB`) and how many were upgraded, had nothing to do, or failed. When the run looks for lyrics, a line below counts the tracks that got lyrics, the ones no provider had lyrics for, and the ones that failed. Each track shows what it is doing — _Matching_, _Looking for artwork_, _Looking for lyrics_, _Writing the file_ — and ends with what changed, e.g. `artwork 1200px (itunes)`.

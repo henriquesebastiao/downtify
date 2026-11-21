@@ -812,6 +812,14 @@ export default {
     lyricsQuickHint:
       'Procura na biblioteca faixas sem letra e já busca as letras, sem escolher nada no meio. As outras melhorias ficam para outra vez.',
     lyricsQuickButton: 'Escanear e buscar letras',
+    isrc: 'Adicionar ISRC',
+    isrcHint:
+      'Adiciona o ISRC da gravação aos arquivos que não têm, só quando o Deezer confirma sem dúvida.',
+    isrcQuickTitle: 'ISRC para músicas antigas',
+    isrcQuickHint:
+      'Músicas baixadas antes de o Downtify gravar ISRC não têm nenhum. O ISRC é o código da própria gravação: com ele o Downtify encontra duplicatas e a lixeira de músicas reconhece um arquivo. Só entram códigos que o Deezer confirma sem dúvida (mesmo artista e título, duração com até 3 segundos de diferença); todos os outros arquivos ficam exatamente como estão. Pesquise primeiro para ver a lista.',
+    isrcLookupButton: 'Pesquisar ISRC (não grava nada)',
+    isrcAddButton: 'Adicionar ISRC',
     lyricsPlainOnly:
       'Só letra não sincronizada: {count} — trocada pela sincronizada quando encontrada',
     lyricsOutcome:

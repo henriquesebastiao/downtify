@@ -80,6 +80,14 @@ Amikor egy beolvasás azért nem talál tennivalót, _mert_ mindent nemrég elle
 
 A **Keresés és dalszövegek pótlása** átnézi a könyvtárat, és amint a keresés véget ér, dalszöveget kezd keresni a szöveg nélküli számokhoz, köztes választás nélkül. Ez a futtatás csak dalszöveget keres; a borítók és címkék egy másikra maradnak.
 
+### ISRC-k régebbi dalokhoz
+
+Azok a dalok, amelyeket azelőtt töltöttél le, hogy a Downtify ISRC-t írt volna, nem tartalmaznak ilyet. Az ISRC a felvétel saját kódja: a Downtify ebből tudja, hogy egy dal megvan-e már a könyvtárban, a zenei kuka pedig ebből ismeri fel a fájlt, amelyet később visszaállíthat. ISRC, szolgáltatói azonosító és album címke nélküli fájl nem kerülhet a kukába.
+
+Az **ISRC-k kikeresése (semmit sem ír)** megkeresi az ISRC nélküli fájlokat, mindegyiket kikeresi, és a dallistában megmutatja, mit adna hozzá (`Would add ISRC …`), anélkül hogy bármelyik fájlt módosítaná. Az **ISRC-k hozzáadása** ugyanezt teszi, és be is írja őket. Csak az ISRC címke kerül be, ugyanazon az ellenőrzött másolaton keresztül, mint minden frissítésnél, és minden, ami a fájlra mutatott (listák, kedvelések, tulajdonosok), követi.
+
+Egy kód csak akkor kerül be, ha a Deezer kétséget kizáróan megerősíti, ugyanazokkal a szabályokkal, mint az új letöltéseknél: azonos első előadó és cím, legfeljebb 3 másodperc hosszeltérés, és minden egyező találat ugyanazt a kódot adja. Minden más fájl pontosan úgy marad, ahogy van, és addig nem keresi újra, amíg le nem telik a **Egy szám ne legyen újra ellenőrizve ennyi ideig**. Egyik vizsgálat sem nézi a borítókat, dalszövegeket vagy címkéket, és a normál vizsgálat sosem keres ISRC-t.
+
 ## Futás közben
 
 Az előrehaladás panel a sorból elkészült számokat, egy hozzávetőleges adatmennyiséget (`8.4 GB of 51.3 GB`) és azt mutatja, hány lett feljavítva, hánynál nem volt tennivaló, vagy hány hibázott. Minden szám megmutatja, mit csinál — _Azonosítás_, _Borító keresése_, _Dalszöveg keresése_, _Fájl írása_ — és azzal zárul, ami változott, pl. `artwork 1200px (itunes)`. Ha a futtatás dalszöveget keres, alatta egy sor megszámolja a dalszöveget kapott számokat, azokat, amelyekhez egyik szolgáltatónak sem volt, és a sikerteleneket.

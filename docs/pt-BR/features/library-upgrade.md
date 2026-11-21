@@ -80,6 +80,14 @@ Quando uma análise não acha mais nada a fazer _porque_ tudo foi verificado rec
 
 **Escanear e buscar letras** escaneia a biblioteca e, assim que o escaneamento termina, começa a buscar letras para as faixas sem letra, sem nada para escolher no meio. Essa execução só busca letras; capas e tags ficam para outra.
 
+### ISRC para músicas antigas
+
+Músicas baixadas antes de o Downtify gravar ISRC não têm nenhum. O ISRC é o código da própria gravação: o Downtify o usa para saber se uma música já está na biblioteca, e a lixeira de músicas para reconhecer um arquivo que poderá restaurar depois. Um arquivo sem ISRC, sem ID de provedor e sem tag de álbum não pode ir para a lixeira.
+
+**Pesquisar ISRC (não grava nada)** procura arquivos sem ISRC, pesquisa cada um e mostra na lista de faixas o que adicionaria (`Would add ISRC …`) sem mudar nenhum arquivo. **Adicionar ISRC** faz o mesmo e grava. Só a tag ISRC é adicionada, pela mesma cópia verificada de qualquer atualização, e tudo o que apontava para o arquivo (playlists, curtidas, donos) o acompanha.
+
+Um código só entra quando o Deezer o confirma sem dúvida, pelas mesmas regras dos downloads novos: o mesmo primeiro artista e título, duração com até 3 segundos de diferença e todos os resultados correspondentes concordando em um código. Qualquer outro arquivo fica exatamente como está e não é pesquisado de novo até passar o **Não verificar uma música de novo por**. Nenhuma das duas varreduras olha capas, letras ou tags, e uma varredura normal nunca procura ISRC.
+
 ## Enquanto roda
 
 O painel de progresso mostra as faixas concluídas da fila, um valor aproximado de dados (`8.4 GB of 51.3 GB`) e quantas foram melhoradas, não tinham nada a fazer ou falharam. Cada faixa mostra o que está fazendo — _Identificando_, _Procurando capa_, _Procurando letra_, _Gravando o arquivo_ — e termina com o que mudou, por exemplo `artwork 1200px (itunes)`. Quando a execução busca letras, uma linha abaixo conta as faixas que ganharam letra, as que nenhum provedor tinha e as que falharam.

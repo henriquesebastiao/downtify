@@ -802,6 +802,14 @@ export default {
     lyricsQuickHint:
       '가사가 없는 곡을 찾아 바로 가사를 검색합니다. 중간에 고를 필요가 없으며, 다른 업그레이드는 다음 실행으로 남깁니다.',
     lyricsQuickButton: '스캔하고 가사 찾기',
+    isrc: 'ISRC 추가',
+    isrcHint:
+      'ISRC가 없는 파일에 녹음의 ISRC를 추가합니다. Deezer가 확실히 확인한 경우에만 추가합니다.',
+    isrcQuickTitle: '오래된 노래의 ISRC',
+    isrcQuickHint:
+      'Downtify가 ISRC를 기록하기 전에 받은 노래에는 ISRC가 없습니다. ISRC는 녹음 고유의 코드로, Downtify가 중복을 찾고 음악 휴지통이 파일을 알아보는 데 쓰입니다. Deezer가 확실히 확인한 코드만 추가하며(같은 아티스트와 제목, 길이 차이 3초 이내), 나머지 파일은 그대로 둡니다. 먼저 조회해서 목록을 확인하세요.',
+    isrcLookupButton: 'ISRC 조회 (아무것도 기록하지 않음)',
+    isrcAddButton: 'ISRC 추가',
     lyricsPlainOnly:
       '동기화되지 않은 가사만 있음: {count} — 동기화 가사를 찾으면 바뀝니다',
     lyricsOutcome:

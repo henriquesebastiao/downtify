@@ -809,6 +809,14 @@ export default {
     lyricsQuickHint:
       'Megkeresi a könyvtárban a dalszöveg nélküli számokat, és rögtön szöveget keres hozzájuk, köztes választás nélkül. A többi javítás egy másik futtatásra marad.',
     lyricsQuickButton: 'Keresés és dalszövegek pótlása',
+    isrc: 'ISRC-k hozzáadása',
+    isrcHint:
+      'Hozzáadja a felvétel ISRC-kódját a kód nélküli fájlokhoz, csak ha a Deezer kétséget kizáróan megerősíti.',
+    isrcQuickTitle: 'ISRC-k régebbi dalokhoz',
+    isrcQuickHint:
+      'A dalok, amelyeket azelőtt töltöttél le, hogy a Downtify ISRC-t írt volna, nem tartalmaznak ilyet. Az ISRC a felvétel saját kódja: ezzel ismeri fel a Downtify a duplikátumokat, a zenei kuka pedig a fájlt. Csak a Deezer által kétséget kizáróan megerősített kódok kerülnek be (azonos előadó és cím, legfeljebb 3 másodperc hosszeltérés); minden más fájl pontosan úgy marad, ahogy van. Előbb keresd ki őket, hogy lásd a listát.',
+    isrcLookupButton: 'ISRC-k kikeresése (semmit sem ír)',
+    isrcAddButton: 'ISRC-k hozzáadása',
     lyricsPlainOnly:
       'Csak szinkronizálatlan szöveg: {count} — szinkronizáltra cserélődik, ha van',
     lyricsOutcome:

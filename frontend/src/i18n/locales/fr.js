@@ -830,6 +830,14 @@ export default {
     lyricsQuickHint:
       'Analyse la bibliothèque à la recherche de titres sans paroles et les cherche aussitôt, sans étape de choix. Les autres améliorations attendent un autre passage.',
     lyricsQuickButton: 'Analyser et trouver les paroles',
+    isrc: 'Ajouter les ISRC',
+    isrcHint:
+      'Ajoute l’ISRC de l’enregistrement aux fichiers qui n’en ont pas, seulement quand Deezer le confirme sans aucun doute.',
+    isrcQuickTitle: 'ISRC pour les anciens morceaux',
+    isrcQuickHint:
+      'Les morceaux téléchargés avant que Downtify n’écrive les ISRC n’en ont pas. L’ISRC est le code propre à l’enregistrement : il permet à Downtify de repérer les doublons et à la corbeille musicale de reconnaître un fichier. Seuls les codes que Deezer confirme sans aucun doute sont ajoutés (même artiste et titre, durée à 3 secondes près) ; tous les autres fichiers restent exactement tels quels. Recherchez-les d’abord pour voir la liste.',
+    isrcLookupButton: 'Rechercher les ISRC (n’écrit rien)',
+    isrcAddButton: 'Ajouter les ISRC',
     lyricsPlainOnly:
       'Paroles non synchronisées seulement : {count} — remplacées par des synchronisées si trouvées',
     lyricsOutcome:

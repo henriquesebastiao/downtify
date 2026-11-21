@@ -80,6 +80,14 @@ Quand une analyse ne trouve plus rien à faire _parce que_ tout a été vérifi�
 
 **Analyser et trouver les paroles** analyse la bibliothèque et, dès la fin de l’analyse, commence à chercher des paroles pour les titres qui n’en ont pas, sans rien à choisir entre-temps. Ce passage ne cherche que des paroles ; pochettes et tags attendent un autre passage.
 
+### ISRC pour les anciens morceaux
+
+Les morceaux téléchargés avant que Downtify n'écrive les ISRC n'en ont pas. L'ISRC est le code propre à l'enregistrement : Downtify s'en sert pour savoir si un morceau est déjà dans la bibliothèque, et la corbeille musicale pour reconnaître un fichier qu'elle pourra restaurer. Un fichier sans ISRC, sans identifiant de fournisseur et sans tag d'album ne peut pas aller à la corbeille.
+
+**Rechercher les ISRC (n'écrit rien)** cherche les fichiers sans ISRC, interroge chacun et affiche dans la liste des pistes ce qu'il ajouterait (`Would add ISRC …`) sans modifier aucun fichier. **Ajouter les ISRC** fait de même et les écrit. Seul le tag ISRC est ajouté, par la même copie vérifiée que toute mise à niveau, et tout ce qui pointait vers le fichier (playlists, favoris, propriétaires) le suit.
+
+Un code n'est ajouté que si Deezer le confirme sans aucun doute, selon les mêmes règles que pour les nouveaux téléchargements : même premier artiste et titre, durée à 3 secondes près, et tous les résultats correspondants d'accord sur un seul code. Tout autre fichier reste exactement tel quel et n'est pas réinterrogé avant que **Ne pas revérifier un morceau pendant** soit écoulé. Aucune des deux analyses ne regarde les pochettes, les paroles ni les tags, et une analyse normale ne cherche jamais d'ISRC.
+
 ## Pendant l’exécution
 
 Le panneau de progression montre les morceaux traités sur la file, un chiffre approximatif de données (`8.4 GB of 51.3 GB`) et combien ont été améliorés, n’avaient rien à faire ou ont échoué. Chaque morceau indique ce qu’il fait — _Identification_, _Recherche de la pochette_, _Recherche des paroles_, _Écriture du fichier_ — et se termine par ce qui a changé, par ex. `artwork 1200px (itunes)`. Quand le passage cherche des paroles, une ligne en dessous compte les titres qui ont reçu des paroles, ceux pour lesquels aucun fournisseur n’en avait et ceux qui ont échoué.
