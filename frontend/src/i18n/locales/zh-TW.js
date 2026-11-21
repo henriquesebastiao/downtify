@@ -1622,6 +1622,8 @@ export default {
     showShortcuts: '顯示快速鍵',
     sourcesTitle: '音訊來源',
     sourcesHint: '每首歌曲會依此順序嘗試已啟用的來源，直到找到符合的結果。',
+    sourcesOwnServersOnly:
+      '只啟用了你自己的伺服器：它們沒有的歌曲會直接失敗，而不會改從 YouTube 下載。重新啟用 YouTube Music 即可把它當作備用來源。',
     moveUp: '上移',
     moveDown: '下移',
     sourceSlskd: 'Soulseek（slskd）',

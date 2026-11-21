@@ -1689,6 +1689,8 @@ export default {
     sourcesTitle: 'Where audio comes from',
     sourcesHint:
       'Each track tries the enabled sources in this order until one has a match.',
+    sourcesOwnServersOnly:
+      "Only your own servers are on: a song they don't have fails instead of coming from YouTube. Switch YouTube Music back on to use it as a fallback.",
     moveUp: 'Move up',
     moveDown: 'Move down',
     sourceSlskd: 'Soulseek (slskd)',

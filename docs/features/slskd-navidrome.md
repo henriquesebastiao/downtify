@@ -24,7 +24,7 @@ Both are off by default and configured in **Settings**.
 
 What each needs: **slskd** your own slskd server on the free Soulseek network (no subscription; quality is whatever people share, often FLAC or MP3 320). **Deemix** your own Deemix server and your own Deezer account: a free account only gets MP3 128 kbps, MP3 320 and FLAC need a paid Deezer plan. **YouTube Music**, **YouTube** and **SoundCloud** need nothing set up and stream lossy audio, about 128–160 kbps. Whatever the source, the embedded cover is the one Downtify fetches for the song, at the cover size from the download settings.
 
-Enabling slskd puts it first in the list. If slskd ends up being the only source, YouTube Music and YouTube are still tried after it, so a track slskd can't find still downloads. The download queue shows which source served each track.
+Enabling slskd puts it first in the list. To download from Soulseek only, switch YouTube Music and YouTube off and leave slskd on: the list is saved exactly as you set it, so a track slskd can't find fails (the queue says why) instead of coming from YouTube. The page warns about this while only your own servers (slskd, Deemix) are on; switch YouTube Music back on to have it as a fallback again. The download queue shows which source served each track.
 
 Songs downloaded from the search bar use the result's title, artist and duration to try each source in this same order. The selected YouTube Music video is not pinned, so slskd can supply a different version or a lossless file before YouTube is used as a fallback.
 

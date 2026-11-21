@@ -1726,6 +1726,8 @@ export default {
     sourcesTitle: 'Honnan jön a hang',
     sourcesHint:
       'Minden szám ebben a sorrendben próbálja az engedélyezett forrásokat, amíg egyezést nem talál.',
+    sourcesOwnServersOnly:
+      'Csak a saját szervereid vannak bekapcsolva: az a dal, amely nincs meg rajtuk, sikertelen lesz, és nem a YouTube-ról érkezik. Kapcsold vissza a YouTube Musicot, ha tartaléknak szeretnéd használni.',
     moveUp: 'Feljebb',
     moveDown: 'Lejjebb',
     sourceSlskd: 'Soulseek (slskd)',

@@ -54,3 +54,16 @@ export function dropProvider(enabled, id, targetId) {
   next.splice(to, 0, id)
   return next
 }
+
+// Audio sources that are your own server (slskd, Deemix), not a public
+// service anyone can stream from.
+const OWN_SERVERS = new Set(['slskd', 'deemix'])
+
+/**
+ * True when every enabled audio source is your own server: a song none of
+ * them has then fails, as chosen, instead of coming from YouTube.
+ */
+export function onlyOwnServers(enabled) {
+  const on = Array.isArray(enabled) ? enabled : []
+  return on.length > 0 && on.every((id) => OWN_SERVERS.has(id))
+}
