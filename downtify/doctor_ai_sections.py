@@ -26,8 +26,9 @@ from pathlib import Path
 from typing import Any, Optional
 
 from fastapi import HTTPException
+from loguru import logger
 
-from . import api, doctor_ai, isrc, musicbrainz
+from . import api, doctor_ai, isrc, musicbrainz, trash_routes
 from .doctor import STATUS_VERIFIED, norm, relinked_tracks
 from .doctor_ai import (
     ToolError,
@@ -40,6 +41,7 @@ from .doctor_ai import (
 )
 from .duplicate_merge import MergeError, plan_merge
 from .library_catalog import resolve_library_file
+from .library_trash import TrashError, identity_keys
 from .library_upgrade import has_lyrics
 from .library_usage import provider_of
 
@@ -169,6 +171,55 @@ def _add(suggestion: dict[str, Any]) -> dict[str, Any]:
         raise ToolError('Too many waiting suggestions.') from None
 
 
+#: Why the music trash would refuse a copy, in words for the assistant.
+TRASH_REASONS = {
+    'identity_uncertain': (
+        'it has no Spotify, Deezer or YouTube id, no ISRC, and its title, '
+        'artist and album tags are not all filled in, so the trash could '
+        'not be sure to restore the right song'
+    ),
+    'unsupported_collection': "its folder isn't covered by the music trash",
+    'item_not_found': 'it is not in the library any more',
+    'track_is_playing': 'it is playing right now (try again after)',
+    'library_task_active': (
+        'a library upgrade is running (try again when it is done)'
+    ),
+}
+
+
+def trash_check(files: list[str]) -> dict[str, str]:
+    """``{file: reason}`` for each copy the music trash would refuse
+    (empty when it takes them all, or is off: then nothing is checked).
+
+    The same lookup as the trash's own preview, file by file and without
+    reserving anything: a merge whose copy the trash refuses stops
+    before anything changes, so this says so before the user applies.
+    """
+
+    if api.state.library_trash is None:
+        return {}
+    refused: dict[str, str] = {}
+    for name in files:
+        try:
+            tracks = trash_routes._selection(
+                trash_routes.Selection(files=[name])
+            )
+        except TrashError as exc:
+            refused[name] = str(exc) or 'unknown'
+            continue
+        except Exception:
+            # Only a heads-up: the trash checks again when applying.
+            logger.opt(exception=True).debug('doctor ai: trash check')
+            continue
+        if not any(identity_keys(t.get('metadata') or {}) for t in tracks):
+            refused[name] = 'identity_uncertain'
+    return refused
+
+
+def _trash_words(reason: str) -> str:
+    return TRASH_REASONS.get(reason, reason)
+
+
 # ---------------------------------------------------------------------------
 # Duplicate songs
 # ---------------------------------------------------------------------------
@@ -295,6 +346,8 @@ async def tool_song_details(args: dict[str, Any]) -> dict[str, Any]:
         raise ToolError('At most 10 files at a time.')
     rows = await asyncio.to_thread(_rows_for, files)
     extra = await asyncio.to_thread(lambda: [_file_details(f) for f in files])
+    trash_on = api.state.library_trash is not None
+    refused = await asyncio.to_thread(trash_check, files) if trash_on else {}
     return {
         'files': [
             {
@@ -306,6 +359,15 @@ async def tool_song_details(args: dict[str, Any]) -> dict[str, Any]:
                 'source': row['provider'],
                 'playlists': row['playlists'],
                 **{k: v for k, v in more.items() if k != 'file'},
+                'music_trash': (
+                    'off'
+                    if not trash_on
+                    else (
+                        'refuses: ' + _trash_words(refused[row['file']])
+                        if row['file'] in refused
+                        else 'can take it'
+                    )
+                ),
             }
             for row, more in zip(rows, extra)
         ]
@@ -431,6 +493,22 @@ async def tool_suggest_keep_song(args: dict[str, Any]) -> dict[str, Any]:
         raise ToolError(
             f'{text}{": " + exc.file if exc.file else ""}.'
         ) from None
+    refused = await asyncio.to_thread(trash_check, remove)
+    if refused:
+        name, reason = next(iter(refused.items()))
+        hint = (
+            ' Ways out: keep that copy instead (if it is the one to keep), '
+            'leave this song as it is, have the user fill in its tags '
+            '(Library > Upgrade library can add ISRCs to older files), or '
+            'have the user turn the music trash off (copies are then '
+            'deleted for good).'
+            if reason == 'identity_uncertain'
+            else ''
+        )
+        raise ToolError(
+            f'The music trash would refuse {name!r}: {_trash_words(reason)}. '
+            'Applying would stop before changing anything.' + hint
+        )
     rows = await asyncio.to_thread(_rows_for, [keep, *remove])
     grouped = _grouped([keep, *remove])
     trash = api.state.library_trash is not None

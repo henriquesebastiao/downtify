@@ -252,7 +252,10 @@ suggest repairs that the user approves. Its sections:
   and length; use search_library to find remixes, live, sped-up or
   other versions, and song_details, compare_audio and
   lookup_musicbrainz (official releases, lengths, ISRCs) to tell the
-  original from the rest.
+  original from the rest. With the music trash on, a copy it can't
+  identify (no id or ISRC, and no full title/artist/album tags) can't
+  be removed: song_details says so per copy, and suggest_keep_song
+  refuses it up front.
 - NEW SPOTIFY ID REPEATS: songs a watch downloaded again because Spotify
   gave them a new id; fix them with "keep this copy".
 - SLSKD LEFTOVERS: files left in slskd's folder after import. Only

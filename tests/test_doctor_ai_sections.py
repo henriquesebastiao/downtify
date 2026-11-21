@@ -223,6 +223,16 @@ def doctor(monkeypatch, tmp_path):
         return start_job('navidrome')
 
     monkeypatch.setattr(doctor_routes, 'start_dedupe', start_dedupe)
+    # The music trash knows every file (by its ISRC) unless a test says
+    # otherwise.
+    monkeypatch.setattr(
+        doctor_ai_sections.trash_routes,
+        '_selection',
+        lambda payload: [
+            {'stored': f, 'metadata': {'isrc': 'USUG11904206'}}
+            for f in payload.files
+        ],
+    )
     monkeypatch.setattr(doctor_routes, 'duplicates_keep', duplicates_keep)
     monkeypatch.setattr(doctor_routes, 'slskd_clean', slskd_clean)
     monkeypatch.setattr(doctor_routes, 'navidrome_repair', navidrome_repair)
@@ -594,3 +604,93 @@ def test_navidrome_cleanup_only_flagged_playlists(doctor):
     ids = [s['id'] for s in doctor_ai.helper.waiting()]
     asyncio.run(doctor_ai.apply(ids, by='page'))
     assert doctor['nd'] == [(['api1', 'gone1'], True)]
+
+
+def _trash_lookup(monkeypatch, metadata_by_file):
+    """The trash's per-file lookup, faked: each file's library metadata."""
+
+    def selection(payload):
+        name = payload.files[0]
+        if name not in metadata_by_file:
+            raise doctor_ai_sections.TrashError('unsupported_collection')
+        return [{'stored': name, 'metadata': metadata_by_file[name]}]
+
+    monkeypatch.setattr(
+        doctor_ai_sections.trash_routes, '_selection', selection
+    )
+
+
+def test_a_copy_the_trash_would_refuse_is_caught_before_apply(
+    doctor, monkeypatch
+):
+    _trash_lookup(
+        monkeypatch,
+        {
+            # An old download: no ids, and no album tag.
+            COPY: {'title': 'Blinding Lights', 'artist': 'The Weeknd'},
+            REMIX: {'isrc': 'USUG12000433'},
+        },
+    )
+    text = _text(
+        _call('suggest_keep_song', keep=ORIGINAL, remove=[COPY], reason='x')
+    )
+    assert 'would refuse' in text
+    assert 'album' in text
+    assert 'Upgrade library' in text
+    assert doctor_ai.helper.status()['suggestions'] == []
+    # A copy with an ISRC is fine.
+    _data(
+        _call('suggest_keep_song', keep=ORIGINAL, remove=[REMIX], reason='x')
+    )
+
+
+def test_title_artist_and_album_are_enough_without_ids(doctor, monkeypatch):
+    _trash_lookup(
+        monkeypatch,
+        {
+            COPY: {
+                'title': 'Blinding Lights',
+                'artist': 'The Weeknd',
+                'album': 'Singles',
+            }
+        },
+    )
+    _data(_call('suggest_keep_song', keep=ORIGINAL, remove=[COPY], reason='x'))
+
+
+def test_song_details_says_whether_the_trash_takes_each_copy(
+    doctor, monkeypatch
+):
+    _trash_lookup(
+        monkeypatch,
+        {ORIGINAL: {'spotify_id': '4uLU6hMCjMI75M1A2tKUQC'}, COPY: {}},
+    )
+    files = _data(_call('song_details', files=[ORIGINAL, COPY, REMIX]))[
+        'files'
+    ]
+    verdicts = [f['music_trash'] for f in files]
+    assert verdicts[0] == 'can take it'
+    assert verdicts[1].startswith('refuses: it has no Spotify')
+    assert "isn't covered" in verdicts[2]
+
+
+def test_with_the_trash_off_nothing_is_checked(doctor, monkeypatch):
+    monkeypatch.setattr(api.state, 'library_trash', None)
+
+    def boom(_payload):
+        raise AssertionError('no trash lookup with the trash off')
+
+    monkeypatch.setattr(doctor_ai_sections.trash_routes, '_selection', boom)
+    files = _data(_call('song_details', files=[ORIGINAL]))['files']
+    assert files[0]['music_trash'] == 'off'
+    _data(_call('suggest_keep_song', keep=ORIGINAL, remove=[COPY], reason='x'))
+
+
+def test_an_unexpected_lookup_error_does_not_block_a_suggestion(
+    doctor, monkeypatch
+):
+    def broken(_payload):
+        raise RuntimeError('library listing failed')
+
+    monkeypatch.setattr(doctor_ai_sections.trash_routes, '_selection', broken)
+    _data(_call('suggest_keep_song', keep=ORIGINAL, remove=[COPY], reason='x'))
