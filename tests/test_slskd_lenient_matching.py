@@ -116,3 +116,95 @@ def test_core_title() -> None:
     assert sp._core_title('Dreams - 2004 Remaster') == 'Dreams'
     assert sp._core_title('Song (Remix)') == 'Song (Remix)'
     assert sp._core_title('(feat. Nobody)') == '(feat. Nobody)'
+
+
+# ── searches the server answers nothing to ─────────────────────────
+def test_loosened_searches_drop_one_word_filler_first() -> None:
+    song = {
+        'name': 'Starting From Zero (feat. Michael McDonald)',
+        'artists': ['Justice'],
+    }
+    tried = sp._slskd_search_queries(song)
+    loosened = sp._blocked_phrase_queries(song, tried)
+    assert loosened[0] == 'Justice Starting Zero'
+    assert len(loosened) == sp._BLOCKED_PHRASE_TRIES
+    assert not set(loosened) & set(tried)
+
+
+def test_loosened_searches_get_past_a_blocked_artist_name() -> None:
+    song = {'name': 'Nights', 'artists': ['Frank Ocean']}
+    loosened = sp._blocked_phrase_queries(song, sp._slskd_search_queries(song))
+    assert 'Ocean Nights' in loosened
+    assert 'Frank Nights' in loosened
+
+
+def test_two_word_searches_are_not_loosened() -> None:
+    song = {'name': 'Light', 'artists': ['Tom']}
+    assert not sp._blocked_phrase_queries(song, ['Tom Light'])
+
+
+class _Searches:
+    """A slskd that answers only the searches in *answers*."""
+
+    base_url = 'https://slskd.example'
+
+    def __init__(self, answers: dict[str, list[dict[str, Any]]]):
+        self.answers = answers
+        self.asked: list[str] = []
+        self._last = ''
+
+    @staticmethod
+    def configured() -> bool:
+        return True
+
+    @staticmethod
+    def can_connect() -> bool:
+        return True
+
+    def start_search(self, query: str) -> str:
+        self.asked.append(query)
+        self._last = query
+        return 'id'
+
+    @staticmethod
+    def wait_search_complete(*args: Any, **kwargs: Any) -> bool:
+        return True
+
+    def search_responses(self, search_id: str) -> list[dict[str, Any]]:
+        return self.answers.get(self._last, [])
+
+    @staticmethod
+    def delete_search(search_id: str) -> None:
+        return None
+
+
+ZERO = {
+    'name': 'Starting From Zero (feat. Michael McDonald)',
+    'artists': ['Justice'],
+    'duration': 189,
+}
+
+
+def _run(monkeypatch, answers: dict[str, list[dict[str, Any]]]) -> list[str]:
+    fake = _Searches(answers)
+    monkeypatch.setattr(sp, 'SlskdClient', lambda settings: fake)
+    sp.download_from_slskd(ZERO, {'enabled': True, 'base_url': 'x'})
+    return fake.asked
+
+
+def test_nobody_answering_any_search_adds_loosened_ones(monkeypatch) -> None:
+    asked = _run(monkeypatch, {})
+    normal = sp._slskd_search_queries(ZERO)
+    assert asked[: len(normal)] == normal
+    assert asked[len(normal) :] == sp._blocked_phrase_queries(ZERO, normal)
+
+
+def test_an_answered_search_is_not_loosened(monkeypatch) -> None:
+    peer = {
+        'username': 'peer',
+        'hasFreeUploadSlot': True,
+        'fileCount': 1,
+        'files': [{'filename': r'x\Other - Song.mp3', 'length': 100}],
+    }
+    asked = _run(monkeypatch, {'Starting From Zero': [peer]})
+    assert asked == sp._slskd_search_queries(ZERO)

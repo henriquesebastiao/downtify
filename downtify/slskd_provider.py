@@ -649,6 +649,68 @@ def _slskd_search_queries(song: dict[str, Any]) -> list[str]:
     return queries
 
 
+# Words that carry little meaning in a search, dropped first when a search
+# has to be loosened (see _blocked_phrase_queries).
+_FILLER_WORDS = frozenset({
+    'a',
+    'an',
+    'and',
+    'at',
+    'by',
+    'for',
+    'from',
+    'in',
+    'is',
+    'it',
+    'me',
+    'my',
+    'of',
+    'on',
+    'or',
+    'the',
+    'to',
+    'with',
+    'you',
+    'your',
+})
+_BLOCKED_PHRASE_TRIES = 3
+
+
+def _blocked_phrase_queries(
+    song: dict[str, Any], tried: list[str]
+) -> list[str]:
+    """Searches with one word left out, for when nobody answered any of
+    *tried*. The Soulseek server silently answers nothing to some word
+    combinations (measured: "Starting From Zero" and "Frank Ocean" get no
+    answer, in any order, while "Justice Starting Zero" and "Ocean Nights"
+    find the files). Filler words (``From``) go first, then the shortest
+    word; a word is only dropped when at least two remain."""
+
+    queries = _slskd_search_queries(song)
+    if not queries:
+        return []
+    words = queries[0].split()
+    if len(words) < 3:
+        return []
+    order = sorted(
+        range(len(words)),
+        key=lambda i: (
+            words[i].casefold() not in _FILLER_WORDS,
+            len(words[i]),
+        ),
+    )
+    seen = {q.casefold() for q in tried}
+    out: list[str] = []
+    for index in order:
+        query = ' '.join(w for i, w in enumerate(words) if i != index)
+        if query.casefold() not in seen:
+            seen.add(query.casefold())
+            out.append(query)
+        if len(out) >= _BLOCKED_PHRASE_TRIES:
+            break
+    return out
+
+
 def _file_extension(filename: str) -> str:
     ext = Path(filename.replace('\\', '/')).suffix.lower().lstrip('.')
     return re.sub(r'[^a-z0-9]+', '', ext)
@@ -1626,7 +1688,24 @@ def download_from_slskd(  # noqa: PLR0914  # search, rank, enqueue, poll, finali
         files: list[dict[str, Any]] = []
         min_score = _match_min_score(settings)
 
-        for query in queries:
+        # Nobody answering any search may mean the server blocks one of
+        # its word combinations: then a few looser searches are added.
+        answered = False
+        loosened_from: Optional[int] = None
+        for index, query in enumerate(queries):
+            if (
+                loosened_from is not None
+                and index >= loosened_from
+                and answered
+            ):
+                break
+            if (
+                loosened_from is None
+                and index == len(queries) - 1
+                and not answered
+            ):
+                loosened_from = len(queries)
+                queries.extend(_blocked_phrase_queries(spotify_row, queries))
             if cancel_check:
                 cancel_check()
             if _past_deadline(deadline):
@@ -1652,6 +1731,8 @@ def download_from_slskd(  # noqa: PLR0914  # search, rank, enqueue, poll, finali
                 search_id = ''
                 continue
             raw_responses = client.search_responses(search_id)
+            if raw_responses:
+                answered = True
             responses = _filter_slskd_responses(raw_responses)
             if not responses:
                 _missed(
