@@ -101,11 +101,18 @@
               <li
                 v-for="file in verifiedFiles"
                 :key="file.file"
-                class="flex flex-col rounded-control bg-surface-2 px-3 py-2"
+                class="flex items-center gap-3 rounded-control bg-surface-2 px-3 py-2"
               >
-                <span class="truncate text-fg">{{ file.file }}</span>
-                <span class="truncate text-muted">
-                  = {{ file.match }} · {{ formatBytes(file.bytes) }}
+                <DoctorCover
+                  :file="file.match || file.file"
+                  :name="file.title"
+                  size="sm"
+                />
+                <span class="flex min-w-0 flex-1 flex-col">
+                  <span class="truncate text-fg">{{ file.file }}</span>
+                  <span class="truncate text-muted">
+                    = {{ file.match }} · {{ formatBytes(file.bytes) }}
+                  </span>
                 </span>
               </li>
             </ul>
@@ -435,8 +442,14 @@
                 <p
                   v-for="member in dup.members"
                   :key="member.id"
-                  class="mt-1 flex flex-wrap gap-x-2 text-muted"
+                  class="mt-1 flex flex-wrap items-center gap-x-2 text-muted"
                 >
+                  <DoctorCover
+                    :m3u="member.m3u_exists ? member.m3u : ''"
+                    :name="member.name"
+                    :version="health.scanned_at"
+                    size="sm"
+                  />
                   <span>{{ t(`doctor.kind.${member.kind}`) }}</span>
                   <span class="tabular">· {{ member.songs }}</span>
                   <span v-if="member.owner">· {{ member.owner }}</span>
@@ -642,19 +655,22 @@
             <li
               v-for="item in health.relinked.examples.slice(0, 10)"
               :key="item.playlist + item.files[0]"
-              class="rounded-control bg-surface-2 px-3 py-2"
+              class="flex items-start gap-3 rounded-control bg-surface-2 px-3 py-2"
             >
-              <p class="text-fg">
-                {{ item.artist }} — {{ item.title }}
-                <span class="text-muted">· {{ item.playlist }}</span>
-              </p>
-              <p
-                v-for="file in item.files"
-                :key="file"
-                class="truncate text-muted"
-              >
-                {{ file }}
-              </p>
+              <DoctorCover :file="item.files[0]" :name="item.title" size="sm" />
+              <span class="flex min-w-0 flex-1 flex-col">
+                <span class="text-fg">
+                  {{ item.artist }} — {{ item.title }}
+                  <span class="text-muted">· {{ item.playlist }}</span>
+                </span>
+                <span
+                  v-for="file in item.files"
+                  :key="file"
+                  class="truncate text-muted"
+                >
+                  {{ file }}
+                </span>
+              </span>
             </li>
           </ul>
         </DoctorSection>
@@ -679,6 +695,7 @@ import SettingGroup from '/src/components/settings/SettingGroup.vue'
 import SettingRow from '/src/components/settings/SettingRow.vue'
 import CheckLine from '/src/components/settings/doctor/CheckLine.vue'
 import DoctorSection from '/src/components/settings/doctor/DoctorSection.vue'
+import DoctorCover from '/src/components/settings/doctor/DoctorCover.vue'
 import AiHelper from '/src/components/settings/doctor/AiHelper.vue'
 import SlskdFolderBreakdown from '/src/components/settings/doctor/SlskdFolderBreakdown.vue'
 import { playlistCoverOf } from '/src/components/settings/doctor/covers'
