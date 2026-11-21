@@ -1,5 +1,7 @@
 <template>
-  <div class="not-doc my-6 columns-1 gap-3 sm:columns-2 lg:columns-3 xl:columns-4">
+  <div
+    class="not-doc my-6 columns-1 gap-3 sm:columns-2 lg:columns-3 xl:columns-4"
+  >
     <section
       v-for="group in groups"
       :key="group.title"
