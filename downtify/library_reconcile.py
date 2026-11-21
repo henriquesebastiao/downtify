@@ -303,6 +303,7 @@ def refresh_playlists_after_moves(  # noqa: PLR0914
             playlist_catalog=playlist_catalog,
             track_index=track_index,
             navidrome_index=navidrome_index,
+            download_sources=getattr(downloader, 'download_sources', None),
         )
 
     for name in sorted(playlist_names):
