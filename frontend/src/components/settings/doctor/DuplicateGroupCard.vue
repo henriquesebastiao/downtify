@@ -8,7 +8,9 @@
         {{
           group.kind === 'exact'
             ? t('doctor.duplicatesExact')
-            : t('doctor.duplicatesLikely')
+            : group.kind === 'assistant'
+              ? t('doctor.groupReason.assistant')
+              : t('doctor.duplicatesLikely')
         }}
       </UiBadge>
     </div>
@@ -30,7 +32,7 @@
             class="mt-0.5 accent-[var(--color-accent)]"
             :name="radioName"
             :value="file.file"
-            :disabled="busy"
+            :disabled="busy || readonly"
           />
           <span class="flex min-w-0 flex-1 flex-col">
             <span class="text-fg [overflow-wrap:anywhere]">
@@ -63,7 +65,7 @@
         />
       </li>
     </ul>
-    <div class="flex flex-wrap gap-2">
+    <div v-if="!readonly" class="flex flex-wrap gap-2">
       <UiButton
         size="sm"
         variant="primary"
@@ -103,6 +105,10 @@ import UiButton from '/src/components/ui/UiButton.vue'
 const props = defineProps({
   group: { type: Object, required: true },
   busy: { type: Boolean, default: false },
+  // Shown, not decided here (the AI helper's suggestions): the copy the
+  // assistant keeps (none for "different songs"), and no buttons.
+  readonly: { type: Boolean, default: false },
+  keepFile: { type: String, default: '' },
 })
 defineEmits(['merge', 'keep-all'])
 
@@ -114,7 +120,7 @@ const player = usePlayer()
 const suggested = [...props.group.files].sort(
   (a, b) => (b.playlists?.length || 0) - (a.playlists?.length || 0)
 )[0]
-const keep = ref(suggested?.file || '')
+const keep = ref(props.readonly ? props.keepFile : suggested?.file || '')
 const radioName = `keep-${Math.random().toString(36).slice(2)}`
 const others = computed(() =>
   props.group.files.map((f) => f.file).filter((f) => f !== keep.value)

@@ -15,7 +15,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel, Field
 
-from . import doctor_ai
+from . import doctor_ai, doctor_ai_sections  # noqa: F401  # registers tools
 from .admin_access import admin_user
 from .doctor_ai import ToolError, helper
 
@@ -39,10 +39,10 @@ def ai_status() -> dict[str, Any]:
 
 
 @router.post('/start')
-def ai_start() -> dict[str, Any]:
+def ai_start(user_id: int = Depends(admin_user)) -> dict[str, Any]:
     """Start the helper with a new key (a running one gets a new key)."""
 
-    helper.start()
+    helper.start(user_id)
     return _status()
 
 
@@ -71,11 +71,13 @@ class SuggestionIds(BaseModel):
 
 
 @router.post('/apply')
-async def ai_apply(payload: SuggestionIds) -> dict[str, Any]:
+async def ai_apply(
+    payload: SuggestionIds, user_id: int = Depends(admin_user)
+) -> dict[str, Any]:
     """Apply waiting suggestions as one Doctor job."""
 
     try:
-        result = await doctor_ai.apply(payload.ids, by='page')
+        result = await doctor_ai.apply(payload.ids, by='page', user_id=user_id)
     except ToolError as exc:
         raise HTTPException(
             409, detail={'code': 'ai_apply_failed', 'message': str(exc)}

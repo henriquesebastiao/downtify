@@ -2689,7 +2689,7 @@ export default {
       whoChatgpt:
         'ChatGPT: needs its developer mode (not on every plan) and the same internet access.',
       scope:
-        'For now the helper works on duplicate playlists. It looks and suggests; no song is ever deleted.',
+        'It works on every Doctor section: duplicate playlists, duplicate songs (also remixes and other versions the check doesn’t group), songs downloaded again under a new Spotify ID, slskd leftovers and Navidrome. It looks and suggests; nothing changes until a suggestion is applied.',
       connectTitle: 'Connect your assistant',
       clientCode: 'Claude Code',
       clientDesktop: 'Claude Desktop',
@@ -2709,7 +2709,7 @@ export default {
       firstHint:
         'Paste this to get started, then say what you want in your own words.',
       firstMessage:
-        'Use the downtify-doctor tools to help me clean up my Downtify library. Start with get_overview (run a health check if it is old), then go through the duplicate playlists. For each group, tell me in plain words what is in it, which playlist would be kept, what is only in one of them, and what you recommend. Do not apply anything: make suggestions so I can review them in Downtify.',
+        'Use the downtify-doctor tools to help me clean up my Downtify library. Start with get_overview (run a health check if it is old), then tell me in plain words what the Doctor found in each section. Go through one section at a time: for each finding, explain what is in it, what differs, and what you recommend. Do not apply anything: make suggestions so I can review them in Downtify.',
       canApply: 'Let the assistant apply what you agree to in the chat',
       canApplyHint:
         'Off: you press Apply here. On: once you say yes in the chat, the assistant may apply those suggestions itself. Turns off again whenever the helper starts.',
@@ -2723,10 +2723,38 @@ export default {
       applyAll: 'Apply all ({count})',
       clear: 'Clear finished',
       state: {
+        queued: 'Queued',
         waiting: 'Waiting for you',
         applying: 'Applying…',
         applied: 'Done',
         failed: 'Failed',
+      },
+      decisionKeep: 'Keep one copy',
+      decisionSongsApart: 'Different songs',
+      decisionClean: 'Delete leftovers',
+      decisionNavidrome: 'Clean up Navidrome',
+      songsTrash:
+        'The other copies go to the music trash, where they can be restored for 30 days. Their playlists, likes and watches move to the kept copy first.',
+      songsForGood:
+        'The music trash is off: the other copies are deleted for good. Their playlists, likes and watches move to the kept copy first.',
+      slskdSummary:
+        '{count} files · {size}, each the same audio as a library file',
+      andMore: 'and {count} more',
+      ndRemoved: 'Removed',
+      ndImport:
+        'Also turns on “Let Navidrome import the M3U playlists”, so Downtify stops creating a second copy.',
+      lockedHint:
+        'A repair changed this section. Run the health check again before applying these.',
+      section: {
+        playlists: 'Duplicate playlists',
+        songs: 'Duplicate songs',
+        slskd: 'slskd leftovers',
+        navidrome: 'Navidrome',
+      },
+      ndKind: {
+        import: 'Imported from an M3U',
+        downtify: 'Downtify’s copy',
+        other: 'Other',
       },
     },
     outOfDate: 'Out of date',

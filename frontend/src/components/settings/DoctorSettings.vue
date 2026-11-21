@@ -43,7 +43,7 @@
 
     <div class="flex flex-col gap-3">
       <!-- An AI assistant that looks at the findings with you -->
-      <AiHelper :busy="busy" @applied="refresh" />
+      <AiHelper :busy="busy" :stale="stale" @applied="refresh" />
 
       <!-- slskd leftovers -->
       <DoctorSection

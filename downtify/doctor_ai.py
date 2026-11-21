@@ -32,9 +32,10 @@ import json
 import secrets
 import threading
 import time
+from collections.abc import Awaitable, Callable
 from datetime import datetime, timezone
 from pathlib import PurePosixPath
-from typing import Any, Awaitable, Callable, Optional
+from typing import Any, Optional
 
 from fastapi import HTTPException
 from loguru import logger
@@ -79,6 +80,7 @@ class Helper:
         self.last_used_at = ''
         self.client = ''
         self.can_apply = False
+        self.user_id = 0
         self.suggestions: list[dict[str, Any]] = []
 
     # -- running ---------------------------------------------------------
@@ -97,10 +99,12 @@ class Helper:
             return False
         return True
 
-    def start(self) -> str:
-        """Start (or restart) with a new key; old suggestions are kept."""
+    def start(self, user_id: int = 0) -> str:
+        """Start (or restart) with a new key; old suggestions are kept.
+        *user_id* (the admin who started it) owns what the helper does."""
 
         with self._lock:
+            self.user_id = int(user_id or 0)
             self.token = 'dtai_' + secrets.token_urlsafe(32)
             self.started_at = _now_iso()
             self.last_used = self._clock()
@@ -232,39 +236,54 @@ You are connected to the Doctor of a Downtify server: a self-hosted
 music library (Spotify playlists downloaded as files, with M3U playlist
 files that Navidrome and other players read). The Doctor finds leftover
 problems; this helper lets you look at them, reason about them, and
-suggest repairs. For now it covers DUPLICATE PLAYLISTS only.
+suggest repairs that the user approves. Its sections:
 
-How a merge works: the playlist files of one group become one. The file
-Downtify writes today is kept (shown as "keeper"), every song of all of
-them goes into it once (the largest playlist's order first), its cover
-is kept (or copied from another member), and the other files are
-removed after a backup in /data/doctor/backups/<date>/. No song file is
-deleted. "Different playlists" only tells the Doctor to stop listing
-that group. A merge is only possible when at least 80% of the smaller
-playlist's songs are in the larger one.
+- DUPLICATE PLAYLISTS: M3U files that hold one playlist. A merge keeps
+  the file Downtify writes today ("keeper"), puts every song of all of
+  them in it once, keeps a cover, backs the others up to
+  /data/doctor/backups/<date>/ and removes them. Allowed only when 80%
+  of the smaller playlist's songs are in the larger one. "Different
+  playlists" just stops the Doctor listing a group.
+- DUPLICATE SONGS: copies of one song. "Keep this copy" moves
+  everything that used the others (playlists, likes, watches, the
+  Spotify id index) onto the kept file, then removes the others: to the
+  music trash (restorable for 30 days) when it is on, for good
+  otherwise. The Doctor only groups copies with the same artist, title
+  and length; use search_library to find remixes, live, sped-up or
+  other versions, and song_details, compare_audio and
+  lookup_musicbrainz (official releases, lengths, ISRCs) to tell the
+  original from the rest. With the music trash on, a copy it can't
+  identify (no id or ISRC, and no full title/artist/album tags) can't
+  be removed: song_details says so per copy, and suggest_keep_song
+  refuses it up front.
+- NEW SPOTIFY ID REPEATS: songs a watch downloaded again because Spotify
+  gave them a new id; fix them with "keep this copy".
+- SLSKD LEFTOVERS: files left in slskd's folder after import. Only
+  leftovers verified to hold the same audio as a library file can be
+  deleted. run_slskd_check holds new downloads until they are cleaned;
+  call resume_downloads when nothing will be cleaned now.
+- NAVIDROME: playlists Navidrome shows twice (an imported M3U and
+  Downtify's API copy), imports whose M3U is gone, and more. Only
+  playlists the health check flagged can be deleted.
 
 Work like this:
-1. Call get_overview. If there is no health check yet, it is old, or
-   "playlists" is listed as out of date, call run_health_check.
-2. Call list_duplicate_playlists, then compare_playlists on groups that
-   need a closer look (or any playlists the user names).
-3. Explain each group to the user in plain words: the names, song
-   counts, which file is kept, what is only in one of them, and what you
-   recommend and why. Ask before suggesting when the user's wishes are
-   unclear. Groups found by "same name" can still be different
-   playlists, and the reverse.
-4. Record each decision with suggest_merge or suggest_different and a
-   short reason written for the user. Suggestions show in Downtify
-   under Settings > Doctor > AI helper, as cards with covers and song
-   counts, where the user presses Apply.
-5. Only call apply_suggestions when get_overview says you may
+1. Call get_overview. If there is no health check, it is old, or a
+   section you need is out of date, call run_health_check.
+2. Look at the section the user cares about. Explain each finding in
+   plain words (names, counts, lengths, what differs) and what you
+   recommend and why. Ask when the user's wishes are unclear: what
+   "official" or "the one to keep" means can depend on them.
+3. Record each decision with a suggest_* tool and a short reason
+   written for the user. Suggestions show in Downtify under Settings >
+   Doctor > AI helper as the Doctor's usual cards (covers, players,
+   counts), where the user presses Apply.
+4. Only call apply_suggestions when get_overview says you may
    (ai_can_apply) AND the user clearly agreed in this chat to exactly
-   those suggestions. Otherwise tell the user to press Apply in
-   Downtify. After applying, the playlists section needs a new health
-   check before further merges.
+   those suggestions. Apply one section at a time: a repair puts other
+   sections out of date until the next health check.
 
 Paths are relative to the downloads folder. Keep answers short and
-readable: names and counts, not raw JSON.
+readable: names, counts and lengths, not raw JSON.
 """
 
 
@@ -625,6 +644,7 @@ def _suggestion_view(s: dict[str, Any]) -> dict[str, Any]:
     group = s.get('group') or {}
     return {
         'id': s['id'],
+        'section': s.get('kind'),
         'state': s['state'],
         'decision': s['decision'],
         'paths': s['paths'],
@@ -895,55 +915,166 @@ TOOLS: list[dict[str, Any]] = [
 _BY_NAME: dict[str, dict[str, Any]] = {t['name']: t for t in TOOLS}
 
 
+def register(tools: list[dict[str, Any]]) -> None:
+    """Add more tools (:mod:`downtify.doctor_ai_sections`)."""
+
+    for tool in tools:
+        if tool['name'] not in _BY_NAME:
+            TOOLS.append(tool)
+            _BY_NAME[tool['name']] = tool
+
+
 # ---------------------------------------------------------------------------
 # Applying (from the page, or by the assistant when allowed)
 # ---------------------------------------------------------------------------
 
 
-async def apply(ids: list[str], *, by: str) -> dict[str, Any]:
-    """Run the waiting suggestions *ids* as one Doctor playlists job."""
+#: One Doctor job to run for some suggestions: their ids, and a function
+#: that starts the job (returns the job, or ``None`` when it is done at
+#: once, like "different playlists").
+Step = tuple[list[str], Callable[[], Awaitable[Optional[dict[str, Any]]]]]
 
+#: How each kind of suggestion becomes Doctor jobs: ``kind`` ->
+#: ``steps(chosen, user_id)``. :mod:`downtify.doctor_ai_sections` adds
+#: the other Doctor sections.
+APPLIERS: dict[str, Callable[[list[dict[str, Any]], int], list[Step]]] = {}
+
+#: How long a queued step waits for another Doctor job to end.
+WAIT_IDLE = 30 * 60
+
+_runs: set[asyncio.Task[Any]] = set()
+
+
+def _playlist_steps(chosen: list[dict[str, Any]], _user_id: int) -> list[Step]:
     dr = _doctor()
-    chosen = helper.waiting(ids)
-    if not chosen:
-        raise ToolError('None of these suggestions is waiting.')
     payload = dr.PlaylistDecisions(
         merge=[s['paths'] for s in chosen if s['decision'] == 'merge'],
         apart=[s['paths'] for s in chosen if s['decision'] == 'apart'],
     )
-    picked = [s['id'] for s in chosen]
+
+    async def start() -> Optional[dict[str, Any]]:
+        return (await dr.playlists_apply(payload)).get('job')
+
+    return [([s['id'] for s in chosen], start)]
+
+
+APPLIERS['playlists'] = _playlist_steps
+
+
+async def _wait_idle() -> None:
+    dr = _doctor()
+    deadline = time.monotonic() + WAIT_IDLE
+    while dr._busy() and time.monotonic() < deadline:
+        await asyncio.sleep(1)
+
+
+async def _wait_job(job_id: str) -> None:
+    dr = _doctor()
+    while dr._job.get('id') == job_id and dr._job.get('state') == 'running':
+        await asyncio.sleep(1)
+
+
+async def _start_step(step: Step, by: str) -> Optional[str]:
+    """Start one step; mark its suggestions. Returns the job's id."""
+
+    ids, start = step
     try:
-        result = await dr.playlists_apply(payload)
+        job = await start()
     except HTTPException as exc:
         error = _http_error(exc)
-        helper.update(picked, state='failed', error=str(error))
+        helper.update(
+            ids, state='failed', error=str(error), error_code=_code(exc.detail)
+        )
         raise error from None
-    job = result.get('job') or {}
-    merging = [s['id'] for s in chosen if s['decision'] == 'merge']
-    apart = [s['id'] for s in chosen if s['decision'] == 'apart']
-    helper.update(apart, state='applied', applied_by=by)
-    helper.update(
-        merging, state='applying', job=job.get('id', ''), applied_by=by
-    )
+    if not job:
+        helper.update(ids, state='applied', applied_by=by)
+        return None
+    helper.update(ids, state='applying', job=job.get('id', ''), applied_by=by)
+    return job.get('id')
+
+
+async def _run_rest(steps: list[Step], first_job: Optional[str], by: str):
+    """The steps after the first, one Doctor job after the other."""
+
+    if first_job:
+        await _wait_job(first_job)
+        refresh_states()
+    for step in steps:
+        await _wait_idle()
+        try:
+            job_id = await _start_step(step, by)
+        except ToolError:
+            continue
+        if job_id:
+            await _wait_job(job_id)
+            refresh_states()
+
+
+async def apply(
+    ids: list[str], *, by: str, user_id: int = 0
+) -> dict[str, Any]:
+    """Apply the waiting suggestions *ids*, all from one Doctor section.
+
+    The first job starts now (so a refusal, such as "check again first",
+    comes back at once); any further jobs (one per merged song) follow
+    one after the other in the background.
+    """
+
+    chosen = helper.waiting(ids)
+    if not chosen:
+        raise ToolError('None of these suggestions is waiting.')
+    kinds = {s['kind'] for s in chosen}
+    if len(kinds) > 1:
+        raise ToolError(
+            'Apply one Doctor section at a time: a repair puts other '
+            'sections out of date until they are checked again.'
+        )
+    kind = kinds.pop()
+    steps = APPLIERS[kind](chosen, user_id or helper.user_id)
+    picked = [s['id'] for s in chosen]
+    helper.update(picked, state='queued', error=None)
+    try:
+        first_job = await _start_step(steps[0], by)
+    except ToolError:
+        later = [i for _ids, _start in steps[1:] for i in _ids]
+        helper.update(later, state='waiting')
+        raise
+    if len(steps) > 1 or first_job:
+        task = asyncio.get_running_loop().create_task(
+            _run_rest(steps[1:], first_job, by)
+        )
+        _runs.add(task)
+        task.add_done_callback(_runs.discard)
     logger.info(
-        'doctor ai: {} applied {} suggestion(s) ({} merge, {} apart)',
+        'doctor ai: {} applied {} {} suggestion(s) in {} job(s)',
         by,
         len(picked),
-        len(merging),
-        len(apart),
+        kind,
+        len(steps),
     )
     return {
         'applied': len(picked),
-        'merging': len(merging),
-        'kept_apart': len(apart),
-        'job': job.get('id'),
+        'section': kind,
+        'merging': sum(
+            1 for s in chosen if s['decision'] in {'merge', 'keep'}
+        ),
+        'kept_apart': sum(1 for s in chosen if s['decision'] == 'apart'),
+        'jobs': len(steps),
+        'job': first_job,
         'note': (
-            'Merging runs as a Doctor job (get_job). Afterwards the '
-            'playlists section needs a new health check.'
-            if merging
+            'Running as Doctor job(s): see list_suggestions or get_job. '
+            'Afterwards the sections this changed need a new health '
+            'check before more repairs there.'
+            if first_job or len(steps) > 1
             else 'Done.'
         ),
     }
+
+
+def _code(detail: Any) -> str:
+    """The Doctor's error code (the page has a message for each)."""
+
+    return str(detail.get('code') or '') if isinstance(detail, dict) else ''
 
 
 def refresh_states() -> None:
@@ -958,10 +1089,19 @@ def refresh_states() -> None:
             if job.get('state') == 'done':
                 helper.update([s['id']], state='applied')
             else:
+                error = job.get('error') or 'failed'
+                text = error
+                if isinstance(error, dict):
+                    text = ' '.join(
+                        str(error.get(k))
+                        for k in ('message', 'code', 'reason')
+                        if error.get(k)
+                    )
                 helper.update(
                     [s['id']],
                     state='failed',
-                    error=str(job.get('error') or 'failed'),
+                    error=str(text),
+                    error_code=_code(error),
                 )
 
 

@@ -2768,7 +2768,7 @@ export default {
       whoChatgpt:
         'ChatGPT: necesita su modo desarrollador (no en todos los planes) y el mismo acceso a internet.',
       scope:
-        'Por ahora el asistente trabaja con listas duplicadas. Mira y sugiere; nunca se borra ninguna canción.',
+        'Funciona en todas las secciones del Doctor: listas duplicadas, canciones duplicadas (también remixes y otras versiones que la revisión no agrupa), canciones descargadas otra vez con un nuevo ID de Spotify, restos de slskd y Navidrome. Mira y sugiere; nada cambia hasta que se aplica una sugerencia.',
       connectTitle: 'Conecta tu asistente',
       clientCode: 'Claude Code',
       clientDesktop: 'Claude Desktop',
@@ -2788,7 +2788,7 @@ export default {
       firstHint:
         'Pega esto para empezar y luego di lo que quieres con tus palabras.',
       firstMessage:
-        'Usa las herramientas de downtify-doctor para ayudarme a ordenar mi biblioteca de Downtify. Empieza con get_overview (haz una revisión si es antigua) y luego repasa las listas duplicadas. De cada grupo, dime con palabras sencillas qué contiene, qué lista se conservaría, qué está solo en una de ellas y qué recomiendas. No apliques nada: haz sugerencias para que las revise en Downtify.',
+        'Usa las herramientas de downtify-doctor para ayudarme a ordenar mi biblioteca de Downtify. Empieza con get_overview (haz una revisión si es antigua) y luego dime con palabras sencillas qué encontró el Doctor en cada sección. Ve sección por sección: de cada hallazgo, explica qué contiene, qué cambia y qué recomiendas. No apliques nada: haz sugerencias para que las revise en Downtify.',
       canApply: 'Dejar que el asistente aplique lo que aceptes en el chat',
       canApplyHint:
         'Apagado: pulsas Aplicar aquí. Encendido: cuando digas que sí en el chat, el asistente puede aplicar esas sugerencias él mismo. Se apaga de nuevo cada vez que se inicia el asistente.',
@@ -2802,10 +2802,38 @@ export default {
       applyAll: 'Aplicar todas ({count})',
       clear: 'Quitar las terminadas',
       state: {
+        queued: 'En cola',
         waiting: 'Esperándote',
         applying: 'Aplicando…',
         applied: 'Hecho',
         failed: 'Falló',
+      },
+      decisionKeep: 'Conservar una copia',
+      decisionSongsApart: 'Canciones distintas',
+      decisionClean: 'Borrar restos',
+      decisionNavidrome: 'Ordenar Navidrome',
+      songsTrash:
+        'Las otras copias van a la papelera de música, donde se pueden recuperar durante 30 días. Antes, sus listas, me gusta y seguimientos pasan a la copia conservada.',
+      songsForGood:
+        'La papelera de música está apagada: las otras copias se borran para siempre. Antes, sus listas, me gusta y seguimientos pasan a la copia conservada.',
+      slskdSummary:
+        '{count} archivos · {size}, cada uno con el mismo audio que un archivo de la biblioteca',
+      andMore: 'y {count} más',
+      ndRemoved: 'Se borra',
+      ndImport:
+        'También activa «Dejar que Navidrome importe las listas M3U», para que Downtify deje de crear una segunda copia.',
+      lockedHint:
+        'Una reparación cambió esta sección. Vuelve a hacer la revisión antes de aplicar estas.',
+      section: {
+        playlists: 'Listas duplicadas',
+        songs: 'Canciones duplicadas',
+        slskd: 'Restos de slskd',
+        navidrome: 'Navidrome',
+      },
+      ndKind: {
+        import: 'Importada de un M3U',
+        downtify: 'Copia de Downtify',
+        other: 'Otra',
       },
     },
     outOfDate: 'Desactualizado',

@@ -2528,7 +2528,8 @@ export default {
         '网页版或手机上的 Claude：仅当本服务器能通过 HTTPS 从互联网访问时（例如使用 Tailscale Funnel 或 Cloudflare Tunnel）。',
       whoChatgpt:
         'ChatGPT：需要它的开发者模式（并非所有套餐都有）以及同样的互联网访问。',
-      scope: '目前助手只处理重复的播放列表。它只查看和建议，从不删除歌曲。',
+      scope:
+        '它覆盖医生的每个部分：重复的播放列表、重复歌曲（包括检查不会归组的混音和其他版本）、以新的 Spotify ID 再次下载的歌曲、slskd 遗留文件和 Navidrome。它只查看和建议；在应用建议之前，什么都不会改变。',
       connectTitle: '连接你的助手',
       clientCode: 'Claude Code',
       clientDesktop: 'Claude Desktop',
@@ -2546,7 +2547,7 @@ export default {
       firstTitle: '发给助手的第一条消息',
       firstHint: '先粘贴这段开始，再用自己的话说你想要什么。',
       firstMessage:
-        '请用 downtify-doctor 工具帮我整理 Downtify 音乐库。先调用 get_overview（如果检查已经过时就重新检查），然后查看重复的播放列表。对每一组，用简单的话告诉我里面有什么、会保留哪个播放列表、哪些歌只在其中一个里，以及你的建议。先不要应用任何更改：给出建议，我会在 Downtify 中查看。',
+        '请用 downtify-doctor 工具帮我整理 Downtify 音乐库。先调用 get_overview（如果检查已经过时就重新检查），然后用简单的话告诉我医生在每个部分发现了什么。一次处理一个部分：对每一项发现，说明里面有什么、有什么不同，以及你的建议。先不要应用任何更改：给出建议，我会在 Downtify 中查看。',
       canApply: '允许助手应用你在聊天中同意的内容',
       canApplyHint:
         '关闭：在这里由你点“应用”。开启：你在聊天中同意后，助手可以自己应用这些建议。每次启动助手时都会重新关闭。',
@@ -2560,10 +2561,37 @@ export default {
       applyAll: '全部应用（{count}）',
       clear: '清除已完成',
       state: {
+        queued: '排队中',
         waiting: '等待你确认',
         applying: '正在应用…',
         applied: '已完成',
         failed: '失败',
+      },
+      decisionKeep: '保留一份',
+      decisionSongsApart: '不同的歌曲',
+      decisionClean: '删除遗留文件',
+      decisionNavidrome: '整理 Navidrome',
+      songsTrash:
+        '其他副本会进入音乐回收站，30 天内可以恢复。在此之前，它们的播放列表、喜欢和关注会先转到保留的副本。',
+      songsForGood:
+        '音乐回收站已关闭：其他副本会被永久删除。在此之前，它们的播放列表、喜欢和关注会先转到保留的副本。',
+      slskdSummary:
+        '{count} 个文件 · {size}，每个都与音乐库中的某个文件音频相同',
+      andMore: '还有 {count} 个',
+      ndRemoved: '将删除',
+      ndImport:
+        '同时开启“让 Navidrome 导入 M3U 播放列表”，这样 Downtify 不再创建第二份。',
+      lockedHint: '一次修复改变了这个部分。应用之前请重新运行健康检查。',
+      section: {
+        playlists: '重复的播放列表',
+        songs: '重复歌曲',
+        slskd: 'slskd 遗留文件',
+        navidrome: 'Navidrome',
+      },
+      ndKind: {
+        import: '从 M3U 导入',
+        downtify: 'Downtify 的副本',
+        other: '其他',
       },
     },
     outOfDate: '已过期',

@@ -2726,7 +2726,7 @@ export default {
       whoChatgpt:
         'ChatGPT: geliştirici modu (her planda yok) ve aynı internet erişimi gerekir.',
       scope:
-        'Şimdilik yardımcı yinelenen çalma listeleriyle ilgilenir. Bakar ve önerir; hiçbir şarkı silinmez.',
+        'Doctor’ın her bölümünde çalışır: yinelenen çalma listeleri, yinelenen şarkılar (kontrolün gruplamadığı remix ve diğer sürümler dahil), yeni Spotify kimliğiyle yeniden indirilen şarkılar, slskd artıkları ve Navidrome. Bakar ve önerir; bir öneri uygulanana kadar hiçbir şey değişmez.',
       connectTitle: 'Asistanını bağla',
       clientCode: 'Claude Code',
       clientDesktop: 'Claude Desktop',
@@ -2746,7 +2746,7 @@ export default {
       firstHint:
         'Başlamak için bunu yapıştır, sonra ne istediğini kendi sözlerinle söyle.',
       firstMessage:
-        'Downtify kitaplığımı düzenlememe yardım etmek için downtify-doctor araçlarını kullan. get_overview ile başla (eskiyse bir kontrol çalıştır), sonra yinelenen çalma listelerine bak. Her grup için içinde ne olduğunu, hangi listenin kalacağını, hangi şarkıların yalnızca birinde olduğunu ve ne önerdiğini sade sözlerle söyle. Hiçbir şeyi uygulama: önerilerde bulun ki Downtify’da gözden geçireyim.',
+        'Downtify kitaplığımı düzenlememe yardım etmek için downtify-doctor araçlarını kullan. get_overview ile başla (eskiyse bir kontrol çalıştır), sonra Doctor’ın her bölümde ne bulduğunu sade sözlerle anlat. Bölümleri tek tek ele al: her bulgu için içinde ne olduğunu, neyin farklı olduğunu ve ne önerdiğini açıkla. Hiçbir şeyi uygulama: önerilerde bulun ki Downtify’da gözden geçireyim.',
       canApply: 'Sohbette onayladıklarını asistan uygulayabilsin',
       canApplyHint:
         'Kapalı: Uygula’ya burada sen basarsın. Açık: sohbette evet dediğinde asistan bu önerileri kendisi uygulayabilir. Yardımcı her başladığında yeniden kapanır.',
@@ -2760,10 +2760,38 @@ export default {
       applyAll: 'Tümünü uygula ({count})',
       clear: 'Bitenleri temizle',
       state: {
+        queued: 'Sırada',
         waiting: 'Seni bekliyor',
         applying: 'Uygulanıyor…',
         applied: 'Tamam',
         failed: 'Başarısız',
+      },
+      decisionKeep: 'Bir kopyayı tut',
+      decisionSongsApart: 'Farklı şarkılar',
+      decisionClean: 'Artıkları sil',
+      decisionNavidrome: 'Navidrome’u düzenle',
+      songsTrash:
+        'Diğer kopyalar müzik çöp kutusuna gider ve 30 gün boyunca geri yüklenebilir. Önce listeleri, beğenileri ve takipleri tutulan kopyaya taşınır.',
+      songsForGood:
+        'Müzik çöp kutusu kapalı: diğer kopyalar kalıcı olarak silinir. Önce listeleri, beğenileri ve takipleri tutulan kopyaya taşınır.',
+      slskdSummary:
+        '{count} dosya · {size}, her biri kitaplıktaki bir dosyayla aynı ses',
+      andMore: 've {count} tane daha',
+      ndRemoved: 'Kaldırılır',
+      ndImport:
+        'Ayrıca “Navidrome M3U çalma listelerini içe aktarsın” ayarını açar; böylece Downtify ikinci bir kopya oluşturmaz.',
+      lockedHint:
+        'Bir onarım bu bölümü değiştirdi. Bunları uygulamadan önce kontrolü yeniden çalıştır.',
+      section: {
+        playlists: 'Yinelenen listeler',
+        songs: 'Yinelenen şarkılar',
+        slskd: 'slskd artıkları',
+        navidrome: 'Navidrome',
+      },
+      ndKind: {
+        import: 'M3U’dan içe aktarıldı',
+        downtify: 'Downtify’ın kopyası',
+        other: 'Diğer',
       },
     },
     outOfDate: 'Güncel değil',
