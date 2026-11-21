@@ -975,6 +975,20 @@ export default {
     },
     missingHint:
       '这些歌曲在播放列表中，但不在音乐库中，可能下载失败或是在之后添加的。',
+    heldHint: {
+      one: '其中 {count} 首已在你的音乐库中，名称不同或位于其他文件夹。',
+      other: '其中 {count} 首已在你的音乐库中，名称不同或位于其他文件夹。',
+    },
+    addFromLibrary: {
+      one: '从音乐库添加 {count} 首',
+      other: '从音乐库添加 {count} 首',
+    },
+    addedFromLibrary: {
+      one: '已从你的音乐库添加 {count} 首歌曲',
+      other: '已从你的音乐库添加 {count} 首歌曲',
+    },
+    addedFromLibraryNone:
+      '没有匹配得足够准确的歌曲可添加：时长或版本与歌单中的不同。',
     showMissing: '显示歌曲',
     downloadMissing: {
       one: '下载 {count} 首缺失歌曲',

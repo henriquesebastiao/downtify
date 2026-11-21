@@ -276,6 +276,27 @@
             <p class="text-[13px] text-muted">
               {{ t('playlists.missingHint') }}
             </p>
+            <!-- Missing from the playlist, but the library has the song
+                 (another name, another folder): add it, no download. -->
+            <div
+              v-if="view === 'missing' && heldSongs.length"
+              class="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-[12px] border border-line-2 bg-surface px-4 py-3"
+            >
+              <p
+                class="min-w-0 flex-1 basis-60 text-[13px] text-pretty text-fg-3"
+              >
+                {{ t('playlists.heldHint', { count: heldSongs.length }) }}
+              </p>
+              <UiButton
+                size="sm"
+                variant="primary"
+                icon="plus"
+                :loading="linkingHeld"
+                @click="addHeldSongs"
+              >
+                {{ t('playlists.addFromLibrary', { count: heldSongs.length }) }}
+              </UiButton>
+            </div>
             <ul v-if="loadingMissing" class="flex flex-col gap-2">
               <li
                 v-for="n in 4"
@@ -496,6 +517,43 @@ const PROVIDER_LABELS = {
 
 function providerLabel(id) {
   return PROVIDER_LABELS[id] !== undefined ? t(PROVIDER_LABELS[id]) : id
+}
+
+// Missing songs the library already has under another name or in
+// another folder (issue #550), which "Add from library" links in.
+const heldSongs = computed(() =>
+  missing.value.filter((song) =>
+    library.hasSong((song.artists || [])[0] || song.artist, song.name)
+  )
+)
+const linkingHeld = ref(false)
+
+async function addHeldSongs() {
+  const current = batch.value
+  if (!current || linkingHeld.value) return
+  linkingHeld.value = true
+  try {
+    const res = await API.linkExistingPlaylistTracks(
+      current.spotify_playlist_id
+    )
+    const linked = res.data?.linked || 0
+    if (linked) {
+      ui.toast(t('playlists.addedFromLibrary', { count: linked }), {
+        kind: 'success',
+      })
+    } else {
+      ui.toast(t('playlists.addedFromLibraryNone'), { kind: 'info' })
+    }
+    await library.load({ force: true })
+    missingLoaded.value = false
+    await loadMissing()
+  } catch (err) {
+    ui.toast(err?.response?.data?.detail || t('toast.actionFailed'), {
+      kind: 'error',
+    })
+  } finally {
+    linkingHeld.value = false
+  }
 }
 
 // Missing songs whose download failed (the queue says so).

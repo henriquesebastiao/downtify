@@ -84,6 +84,8 @@ Ao lado, filtros estreitam a lista. Cada um mostra quantas músicas tem e só ap
 | **YouTube Music**, **Soulseek (slskd)**, **Deemix**… | As músicas que essa origem baixou. O Downtify passa a lembrar disso para as músicas baixadas a partir de agora; as mais antigas contam como **Origem desconhecida**, exceto arquivos do slskd deixados no lugar e músicas das suas próprias pastas |
 | **Fora do Navidrome** | Com a [sincronização com o Navidrome](slskd-navidrome.md) ligada, as músicas que o Downtify ainda não associou a uma música do Navidrome |
 
+Uma música pode faltar na playlist enquanto a sua biblioteca já a tem: um download antigo salvo com outro nome, ou um arquivo de uma das suas [pastas de música existentes](external-library.md). **Faltando** então diz quantas das músicas já estão na sua biblioteca e oferece **Adicionar … da biblioteca** (com a contagem), que as adiciona à playlist (e ao M3U e à playlist do Navidrome) sem baixar nada. Uma música é adicionada quando um arquivo da biblioteca tem o mesmo ISRC, ou o mesmo artista principal e título e uma duração com até 3 segundos de diferença, então uma versão ao vivo ou um remix dela não conta. Com **Baixar de novo se o arquivo existir** desligado, **Baixar … faltantes** faz o mesmo antes e só baixa o resto, e o download de uma playlist do Spotify adiciona as músicas que você já tinha ao terminar.
+
 A busca e um filtro funcionam juntos, e o número de músicas exibidas aparece logo abaixo. Cada música mantém seu número na playlist, e ordenar, tocar e o menu de cada música valem para o que está sendo exibido.
 
 ### Desvincular uma playlist importada

@@ -1000,6 +1000,20 @@ export default {
     },
     missingHint:
       '這些歌曲在播放清單中但不在媒體庫，可能是下載失敗或之後才加入。',
+    heldHint: {
+      one: '其中 {count} 首已在你的音樂庫中，名稱不同或位於其他資料夾。',
+      other: '其中 {count} 首已在你的音樂庫中，名稱不同或位於其他資料夾。',
+    },
+    addFromLibrary: {
+      one: '從音樂庫加入 {count} 首',
+      other: '從音樂庫加入 {count} 首',
+    },
+    addedFromLibrary: {
+      one: '已從你的音樂庫加入 {count} 首歌曲',
+      other: '已從你的音樂庫加入 {count} 首歌曲',
+    },
+    addedFromLibraryNone:
+      '沒有比對得夠準確的歌曲可加入：長度或版本與歌單中的不同。',
     showMissing: '顯示歌曲',
     downloadMissing: {
       one: '下載缺少的 {count} 首',

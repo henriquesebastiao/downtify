@@ -1088,6 +1088,21 @@ export default {
     },
     missingHint:
       'Diese Titel sind in der Playlist, aber nicht in deiner Bibliothek - entweder ist der Download fehlgeschlagen oder sie wurden später hinzugefügt.',
+    heldHint: {
+      one: '{count} davon ist schon in deiner Bibliothek, unter anderem Namen oder in einem anderen Ordner.',
+      other:
+        '{count} davon sind schon in deiner Bibliothek, unter anderem Namen oder in einem anderen Ordner.',
+    },
+    addFromLibrary: {
+      one: '{count} aus der Bibliothek hinzufügen',
+      other: '{count} aus der Bibliothek hinzufügen',
+    },
+    addedFromLibrary: {
+      one: '{count} Song aus deiner Bibliothek hinzugefügt',
+      other: '{count} Songs aus deiner Bibliothek hinzugefügt',
+    },
+    addedFromLibraryNone:
+      'Keiner passte genau genug, um ihn hinzuzufügen: Länge oder Version weichen von der Playlist ab.',
     showMissing: 'Titel anzeigen',
     downloadMissing: {
       one: '{count} fehlenden Titel herunterladen',

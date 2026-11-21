@@ -1065,6 +1065,21 @@ export default {
     },
     missingHint:
       'Ezek a listán vannak, de a könyvtáradban nem — mert sikertelenek voltak, vagy később kerültek fel.',
+    heldHint: {
+      one: 'Közülük {count} már megvan a könyvtáradban, más néven vagy másik mappában.',
+      other:
+        'Közülük {count} már megvan a könyvtáradban, más néven vagy másik mappában.',
+    },
+    addFromLibrary: {
+      one: '{count} hozzáadása a könyvtárból',
+      other: '{count} hozzáadása a könyvtárból',
+    },
+    addedFromLibrary: {
+      one: '{count} dal hozzáadva a könyvtáradból',
+      other: '{count} dal hozzáadva a könyvtáradból',
+    },
+    addedFromLibraryNone:
+      'Egyik sem egyezett elég pontosan a hozzáadáshoz: a hossza vagy a változata eltér a lejátszási listáétól.',
     showMissing: 'Számok megjelenítése',
     downloadMissing: {
       one: '{count} hiányzó letöltése',

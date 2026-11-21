@@ -1062,6 +1062,21 @@ export default {
     },
     missingHint:
       'Bunlar çalma listesinde var ama kitaplığında yok — başarısız oldukları ya da sonradan eklendikleri için.',
+    heldHint: {
+      one: 'Bunlardan {count} tanesi zaten kitaplığında, başka bir adla ya da başka bir klasörde.',
+      other:
+        'Bunlardan {count} tanesi zaten kitaplığında, başka bir adla ya da başka bir klasörde.',
+    },
+    addFromLibrary: {
+      one: 'Kitaplıktan {count} ekle',
+      other: 'Kitaplıktan {count} ekle',
+    },
+    addedFromLibrary: {
+      one: 'Kitaplığından {count} şarkı eklendi',
+      other: 'Kitaplığından {count} şarkı eklendi',
+    },
+    addedFromLibraryNone:
+      'Hiçbiri eklenecek kadar yakın eşleşmedi: süresi ya da sürümü çalma listesindekinden farklı.',
     showMissing: 'Parçaları göster',
     downloadMissing: {
       one: '{count} eksik parçayı indir',

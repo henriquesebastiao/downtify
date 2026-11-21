@@ -1073,6 +1073,21 @@ export default {
     },
     missingHint:
       'Están en la playlist pero no en tu biblioteca — porque fallaron o se añadieron después.',
+    heldHint: {
+      one: '{count} de ellas ya está en tu biblioteca, con otro nombre o en otra carpeta.',
+      other:
+        '{count} de ellas ya están en tu biblioteca, con otro nombre o en otra carpeta.',
+    },
+    addFromLibrary: {
+      one: 'Añadir {count} de la biblioteca',
+      other: 'Añadir {count} de la biblioteca',
+    },
+    addedFromLibrary: {
+      one: 'Se añadió {count} canción de tu biblioteca',
+      other: 'Se añadieron {count} canciones de tu biblioteca',
+    },
+    addedFromLibraryNone:
+      'Ninguna coincidió lo suficiente para añadirla: su duración o versión difiere de la de la lista.',
     showMissing: 'Mostrar canciones',
     downloadMissing: {
       one: 'Descargar {count} faltante',
