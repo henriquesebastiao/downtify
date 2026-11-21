@@ -1253,6 +1253,7 @@ export default {
     pause: '暂停',
     resume: '恢复',
     stop: '停止监控',
+    watched: '监控中',
     personalMixTitle: '为单个听众生成的 Spotify 混音歌单',
     personalMixBody:
       '每日推荐（Daily Mix）、每周新发现、新歌雷达以及 Spotify 其他“为你推荐”的歌单，只在你登录时向你本人显示你的歌曲。Downtify 不使用账号读取 Spotify，因此拿到的是 Spotify 向未登录用户显示的版本，歌曲往往完全不同。要保留你的版本，请在 Spotify 上把这些歌曲复制到你自己的歌单，然后使用那个歌单。',

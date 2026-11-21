@@ -1281,6 +1281,7 @@ export default {
     pause: '暫停',
     resume: '繼續',
     stop: '停止監看',
+    watched: '監看中',
     personalMixTitle: '為單一聽眾產生的 Spotify 混音歌單',
     personalMixBody:
       '每日精選（Daily Mix）、每週新發現、新歌雷達以及 Spotify 其他「為你打造」的歌單，只在你登入時向你本人顯示你的歌曲。Downtify 不使用帳號讀取 Spotify，因此拿到的是 Spotify 向未登入使用者顯示的版本，歌曲往往完全不同。要保留你的版本，請在 Spotify 上把這些歌曲複製到你自己的歌單，然後使用那個歌單。',

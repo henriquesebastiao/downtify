@@ -111,8 +111,21 @@
           >
             {{ t('link.addPlaylist') }}
           </UiButton>
+          <!-- Already watched: say so, with its page and Stop watching. -->
+          <UiMenu v-if="watchable && existingWatch" :items="watchedMenu">
+            <template #trigger>
+              <UiButton
+                variant="ghost"
+                size="lg"
+                icon="check"
+                :loading="watching"
+              >
+                {{ t('monitor.watched') }}
+              </UiButton>
+            </template>
+          </UiMenu>
           <UiButton
-            v-if="watchable"
+            v-else-if="watchable"
             variant="ghost"
             size="lg"
             icon="radar"
@@ -285,6 +298,7 @@ import UiButton from '/src/components/ui/UiButton.vue'
 import UiChips from '/src/components/ui/UiChips.vue'
 import UiEmpty from '/src/components/ui/UiEmpty.vue'
 import UiIconButton from '/src/components/ui/UiIconButton.vue'
+import UiMenu from '/src/components/ui/UiMenu.vue'
 import UiSkeleton from '/src/components/ui/UiSkeleton.vue'
 import CollectionHero from '/src/components/library/CollectionHero.vue'
 import { knownArtistPhoto } from '/src/lib/artistPhotoProxy'
@@ -303,7 +317,10 @@ import { useLibrary } from '/src/model/library'
 import { usePlaylistActions } from '/src/model/playlistActions'
 import { songDownloadState } from '/src/lib/downloadState'
 import { useUi } from '/src/model/ui'
+import { useAuth } from '/src/model/auth'
 import { classifyInput } from '/src/lib/input'
+import { findWatch } from '/src/lib/watchMatch'
+import { watchRouteFor } from '/src/lib/watchStats'
 import { confirmWatchMix, isPersonalMix } from '/src/lib/spotifyMix'
 import { playableQueue } from '/src/lib/topSongs'
 import { formatDuration, splitLength } from '/src/lib/format'
@@ -317,6 +334,7 @@ const tracker = useProgressTracker()
 const library = useLibrary()
 const playlistActions = usePlaylistActions()
 const ui = useUi()
+const auth = useAuth()
 
 const details = ref(null)
 // An artist link's photo: the one saved in the library when there is one,
@@ -332,6 +350,8 @@ const loading = ref(false)
 const error = ref('')
 const submitting = ref(false)
 const watching = ref(false)
+// This user's watch of the link (or, for an artist, of their name).
+const existingWatch = ref(null)
 const savingPlaylist = ref(false)
 const filter = ref('all')
 const selected = ref(new Set())
@@ -344,12 +364,14 @@ async function resolve() {
   loading.value = true
   error.value = ''
   details.value = null
+  existingWatch.value = null
   selected.value = new Set()
   filter.value = 'all'
   try {
     const res = await API.resolveUrl(url.value)
     details.value = res.data
     library.lookupSongs(res.data?.tracks || [])
+    lookupWatch()
   } catch (err) {
     error.value = err?.response?.data?.detail || err?.message || ''
   } finally {
@@ -565,11 +587,67 @@ async function download(songs) {
   }
 }
 
+// Whether this user already watches the link; a failed lookup leaves the
+// Watch button (the server refuses a second watch anyway).
+async function lookupWatch() {
+  const shown = details.value
+  if (!watchable.value) return
+  try {
+    const { data } = await monitorAPI.listMonitoredPlaylists()
+    if (details.value !== shown) return
+    existingWatch.value = findWatch(data, {
+      kind: shown.kind,
+      url: url.value,
+      name: shown.kind === 'artist' ? shown.name : '',
+      userId: auth.user.value?.id ?? null,
+    })
+  } catch {
+    /* keep offering to watch */
+  }
+}
+
+const watchedMenu = computed(() => [
+  {
+    label: t('watchStats.details'),
+    icon: 'activity',
+    action: () => router.push(watchRouteFor(existingWatch.value)),
+  },
+  { divider: true },
+  {
+    label: t('monitor.stop'),
+    icon: 'trash',
+    danger: true,
+    action: stopWatching,
+  },
+])
+
+async function stopWatching() {
+  const target = existingWatch.value
+  if (!target?.id) return
+  const ok = await ui.confirm({
+    title: t('confirm.stopWatchingTitle', { name: target.name }),
+    body: t('confirm.stopWatchingBody'),
+    confirmLabel: t('monitor.stop'),
+    danger: true,
+  })
+  if (!ok) return
+  watching.value = true
+  try {
+    await monitorAPI.deleteMonitoredPlaylist(target.id)
+    if (existingWatch.value === target) existingWatch.value = null
+  } catch {
+    ui.toast(t('toast.actionFailed'), { kind: 'error' })
+  } finally {
+    watching.value = false
+  }
+}
+
 async function watch() {
   if (!(await confirmWatchMix(url.value, { ui, t }))) return
   watching.value = true
   try {
-    await monitorAPI.addMonitoredPlaylist(url.value, 360)
+    const res = await monitorAPI.addMonitoredPlaylist(url.value, 360)
+    if (res?.data?.id) existingWatch.value = res.data
     ui.toast(t('toast.watching', { name: details.value.name }), {
       kind: 'success',
       action: {
@@ -587,6 +665,8 @@ async function watch() {
     ui.toast(err?.response?.data?.detail || t('toast.actionFailed'), {
       kind: 'error',
     })
+    // Watched already (another tab, or under another link): show it.
+    if (err?.response?.status === 409) lookupWatch()
   } finally {
     watching.value = false
   }
