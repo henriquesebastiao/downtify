@@ -1,5 +1,18 @@
 # Changelog
 
+## [3.13.0](https://github.com/henriquesebastiao/downtify/tree/3.13.0) (2026-11-21)
+
+[Full Changelog](https://github.com/henriquesebastiao/downtify/compare/3.12.0...3.13.0)
+
+**Merged pull requests:**
+
+- feat\(upgrade\): ISRCs for older songs \(look up first, confident only\) [\#641](https://github.com/henriquesebastiao/downtify/pull/641) ([BigBrownMF69](https://github.com/BigBrownMF69))
+- feat\(doctor\): the AI helper covers every Doctor section \(stacked on \#635\) [\#640](https://github.com/henriquesebastiao/downtify/pull/640) ([BigBrownMF69](https://github.com/BigBrownMF69))
+- fix\(doctor\): Keep the selected copy sometimes fails with UNIQUE constraint on sync\_tracks.path [\#639](https://github.com/henriquesebastiao/downtify/pull/639) ([BigBrownMF69](https://github.com/BigBrownMF69))
+- feat\(doctor\): AI helper for duplicate playlists, over MCP [\#635](https://github.com/henriquesebastiao/downtify/pull/635) ([BigBrownMF69](https://github.com/BigBrownMF69))
+- feat\(ui\): show a "What's new" dialog on the first visit after an update [\#634](https://github.com/henriquesebastiao/downtify/pull/634) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- perf\(startup\): write the watch-history backfills in short batches \(45 min → seconds on big libraries\) [\#633](https://github.com/henriquesebastiao/downtify/pull/633) ([BigBrownMF69](https://github.com/BigBrownMF69))
+
 ## [3.12.0](https://github.com/henriquesebastiao/downtify/tree/3.12.0) (2026-11-20)
 
 [Full Changelog](https://github.com/henriquesebastiao/downtify/compare/3.11.0...3.12.0)
