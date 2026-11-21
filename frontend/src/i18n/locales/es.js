@@ -2739,10 +2739,75 @@ export default {
       name: 'Mismo nombre',
       songs: 'Mismas canciones',
       manual: 'Elegidas por ti',
+      assistant: 'Elegido por el asistente',
     },
     songsCount: 'Canciones: {count}',
     hasCover: 'Tiene portada',
     keeps: 'Se conserva',
+    ai: {
+      title: 'Asistente de IA',
+      hint: 'Deja que un asistente de IA como Claude revise contigo lo que encontró el Doctor. Dile con palabras sencillas lo que quieres: explica cada grupo y sugiere qué hacer, y tú decides.',
+      helper: 'Asistente de IA',
+      offHint:
+        'Apagado. Inícialo cuando quieras ayuda. Se detiene solo tras 2 horas sin uso y cuando Downtify se reinicia.',
+      connected:
+        'Encendido · {client} está conectado · se detiene tras {minutes} min sin uso',
+      waitingForAi:
+        'Encendido · esperando a que se conecte un asistente · se detiene tras {minutes} min sin uso',
+      start: 'Iniciar asistente de IA',
+      stop: 'Detener',
+      on: 'Encendido',
+      waitingBadge: '{count} por revisar',
+      whoTitle: 'Qué apps de IA pueden conectarse',
+      whoCode:
+        'Claude Code (en una terminal o en la app de escritorio de Claude) en un ordenador que llegue a este servidor, en tu red de casa o por Tailscale.',
+      whoDesktop:
+        'Claude Desktop, a través de un pequeño puente (necesita Node.js en ese ordenador).',
+      whoWeb:
+        'Claude en la web o el móvil: solo si este servidor es accesible desde internet por HTTPS (por ejemplo con Tailscale Funnel o Cloudflare Tunnel).',
+      whoChatgpt:
+        'ChatGPT: necesita su modo desarrollador (no en todos los planes) y el mismo acceso a internet.',
+      scope:
+        'Por ahora el asistente trabaja con listas duplicadas. Mira y sugiere; nunca se borra ninguna canción.',
+      connectTitle: 'Conecta tu asistente',
+      clientCode: 'Claude Code',
+      clientDesktop: 'Claude Desktop',
+      clientOther: 'Otras apps',
+      codeHint:
+        'Ejecuta esto una vez en una terminal, luego abre Claude Code y pega el primer mensaje de abajo.',
+      desktopHint:
+        'Añade esto a claude_desktop_config.json (Configuración › Desarrollador › Editar configuración), guarda y reinicia Claude Desktop.',
+      otherHint:
+        'Cualquier app que hable MCP por HTTP: dale esta dirección y esta cabecera.',
+      keyHint:
+        'La clave cambia cada vez que inicias el asistente y deja de funcionar al detenerlo. No la compartas: mientras el asistente funcione, quien la tenga puede cambiar tus listas.',
+      copy: 'Copiar',
+      copied: 'Copiado',
+      copyFailed: 'No se pudo copiar. Selecciona el texto y cópialo a mano.',
+      firstTitle: 'Primer mensaje para tu asistente',
+      firstHint:
+        'Pega esto para empezar y luego di lo que quieres con tus palabras.',
+      firstMessage:
+        'Usa las herramientas de downtify-doctor para ayudarme a ordenar mi biblioteca de Downtify. Empieza con get_overview (haz una revisión si es antigua) y luego repasa las listas duplicadas. De cada grupo, dime con palabras sencillas qué contiene, qué lista se conservaría, qué está solo en una de ellas y qué recomiendas. No apliques nada: haz sugerencias para que las revise en Downtify.',
+      canApply: 'Dejar que el asistente aplique lo que aceptes en el chat',
+      canApplyHint:
+        'Apagado: pulsas Aplicar aquí. Encendido: cuando digas que sí en el chat, el asistente puede aplicar esas sugerencias él mismo. Se apaga de nuevo cada vez que se inicia el asistente.',
+      suggestionsTitle: 'Sugerencias del asistente',
+      none: 'Aún no hay sugerencias.',
+      decisionMerge: 'Unir',
+      decisionApart: 'Listas distintas',
+      why: 'Por qué:',
+      apply: 'Aplicar',
+      dismiss: 'Descartar',
+      applyAll: 'Aplicar todas ({count})',
+      clear: 'Quitar las terminadas',
+      state: {
+        waiting: 'Esperándote',
+        applying: 'Aplicando…',
+        applied: 'Hecho',
+        failed: 'Falló',
+      },
+    },
     outOfDate: 'Desactualizado',
     staleHint:
       'Una reparación en otra sección puede haber cambiado lo encontrado aquí. Vuelve a comprobar antes de cambiar algo aquí.',
@@ -2891,6 +2956,7 @@ export default {
     relinkedLabel: 'Misma canción, varios ID',
     relinkedCounts: 'Canciones: {songs} · archivos de más: {extra}',
     error: {
+      ai_not_running: 'El asistente de IA está apagado. Inícialo primero.',
       doctor_busy: 'El Doctor ya está trabajando.',
       rescan_first:
         'Una reparación en otra parte cambió esta sección. Compruébala de nuevo primero.',

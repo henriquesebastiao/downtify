@@ -2721,10 +2721,76 @@ export default {
       name: 'Azonos név',
       songs: 'Azonos dalok',
       manual: 'Saját választás',
+      assistant: 'Az asszisztens választotta',
     },
     songsCount: 'Dalok: {count}',
     hasCover: 'Van borítója',
     keeps: 'Megmarad',
+    ai: {
+      title: 'MI-segéd',
+      hint: 'Egy MI-asszisztens, például Claude, átnézheti veled, amit a Doctor talált. Mondd el egyszerűen, mit szeretnél: elmagyarázza az egyes csoportokat és javasol, a döntés a tiéd.',
+      helper: 'MI-segéd',
+      offHint:
+        'Kikapcsolva. Indítsd el, ha segítség kell. Magától leáll 2 óra használaton kívüli idő után, és amikor a Downtify újraindul.',
+      connected:
+        'Bekapcsolva · {client} csatlakozott · {minutes} perc használaton kívüli idő után leáll',
+      waitingForAi:
+        'Bekapcsolva · asszisztens csatlakozására vár · {minutes} perc használaton kívüli idő után leáll',
+      start: 'MI-segéd indítása',
+      stop: 'Leállítás',
+      on: 'Bekapcsolva',
+      waitingBadge: '{count} átnézendő',
+      whoTitle: 'Mely MI-alkalmazások csatlakozhatnak',
+      whoCode:
+        'A Claude Code (terminálban vagy a Claude asztali alkalmazásban) olyan gépen, amely eléri ezt a szervert, az otthoni hálózaton vagy Tailscale-en.',
+      whoDesktop:
+        'A Claude Desktop, egy kis hídon át (ehhez Node.js kell azon a gépen).',
+      whoWeb:
+        'A Claude a weben vagy telefonon: csak ha a szerver HTTPS-en elérhető az internetről (például Tailscale Funnel vagy Cloudflare Tunnel segítségével).',
+      whoChatgpt:
+        'A ChatGPT: a fejlesztői mód kell hozzá (nem minden csomagban), és ugyanilyen internetes elérés.',
+      scope:
+        'Egyelőre a segéd a duplikált lejátszási listákkal foglalkozik. Megnéz és javasol; dalt soha nem töröl.',
+      connectTitle: 'Asszisztens csatlakoztatása',
+      clientCode: 'Claude Code',
+      clientDesktop: 'Claude Desktop',
+      clientOther: 'Más alkalmazások',
+      codeHint:
+        'Futtasd ezt egyszer egy terminálban, aztán indítsd el a Claude Code-ot, és illeszd be az alábbi első üzenetet.',
+      desktopHint:
+        'Add hozzá ezt a claude_desktop_config.json fájlhoz (Settings › Developer › Edit Config), mentsd, és indítsd újra a Claude Desktopot.',
+      otherHint:
+        'Bármely alkalmazás, amely HTTP-n beszél MCP-t: add meg neki ezt a címet és fejlécet.',
+      keyHint:
+        'A kulcs a segéd minden indításakor megváltozik, és leállításkor érvényét veszti. Tartsd meg magadnak: amíg a segéd fut, akinél megvan, módosíthatja a listáidat.',
+      copy: 'Másolás',
+      copied: 'Kimásolva',
+      copyFailed:
+        'Nem sikerült másolni. Jelöld ki a szöveget, és másold kézzel.',
+      firstTitle: 'Első üzenet az asszisztensnek',
+      firstHint:
+        'Kezdésnek illeszd be ezt, aztán mondd el a saját szavaiddal, mit szeretnél.',
+      firstMessage:
+        'Használd a downtify-doctor eszközöket, hogy segíts rendet rakni a Downtify-könyvtáramban. Kezdd a get_overview hívással (futtass ellenőrzést, ha régi), aztán nézd át a duplikált lejátszási listákat. Minden csoportról mondd el egyszerűen, mi van benne, melyik lista maradna meg, mi van csak az egyikben, és mit javasolsz. Ne alkalmazz semmit: tegyél javaslatokat, hogy átnézhessem őket a Downtifyban.',
+      canApply: 'Az asszisztens alkalmazhatja, amit a csevegésben jóváhagysz',
+      canApplyHint:
+        'Ki: itt nyomod meg az Alkalmazás gombot. Be: ha a csevegésben igent mondasz, az asszisztens maga alkalmazhatja ezeket a javaslatokat. A segéd minden indításakor újra kikapcsol.',
+      suggestionsTitle: 'Az asszisztens javaslatai',
+      none: 'Még nincs javaslat.',
+      decisionMerge: 'Összevonás',
+      decisionApart: 'Különböző listák',
+      why: 'Miért:',
+      apply: 'Alkalmazás',
+      dismiss: 'Elvetés',
+      applyAll: 'Mind alkalmazása ({count})',
+      clear: 'Befejezettek törlése',
+      state: {
+        waiting: 'Rád vár',
+        applying: 'Alkalmazás…',
+        applied: 'Kész',
+        failed: 'Sikertelen',
+      },
+    },
     outOfDate: 'Elavult',
     staleHint:
       'Egy másik szakaszban végzett javítás megváltoztathatta az itt találtakat. Ellenőrizd újra, mielőtt itt bármit módosítasz.',
@@ -2871,6 +2937,7 @@ export default {
     relinkedLabel: 'Ugyanaz a dal, több azonosító',
     relinkedCounts: 'Dalok: {songs} · felesleges fájlok: {extra}',
     error: {
+      ai_not_running: 'Az MI-segéd ki van kapcsolva. Előbb indítsd el.',
       doctor_busy: 'A Doktor már dolgozik.',
       rescan_first:
         'Egy máshol végzett javítás megváltoztatta ezt a szakaszt. Előbb ellenőrizd újra.',

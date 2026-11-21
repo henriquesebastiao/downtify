@@ -16,6 +16,37 @@ Each section below folds open on its own; its header says what it found (**All g
 
 A repair can change what another section found: merging duplicate songs rewrites playlists and may remove the library file a slskd leftover was matched to, deleting slskd leftovers changes the song counts, merging playlists changes Navidrome's. After a repair, every section it may have changed is marked **Out of date** and its repairs are locked until you **Check again**, so nothing acts on findings that are no longer true. The server refuses those repairs too, not only the page.
 
+## AI helper
+
+Going through every duplicate group by hand is a lot of reading. The **AI helper** lets an AI assistant such as Claude do that reading with you. Tell it in plain words what you want ("these are all the same road-trip mix, keep one"). It compares the playlists song by song, explains each group, and suggests what to do. The decisions stay yours. For now it covers [duplicate playlists](#duplicate-playlists).
+
+It is meant for the occasional clean-up, not to run all the time:
+
+- **Start AI helper** turns it on and shows a new key. **Stop** turns it off, and the key stops working.
+- It also stops by itself after 2 hours without a request from the assistant, and whenever Downtify restarts. Its suggestions are forgotten on a restart.
+
+### Connecting an assistant
+
+The helper is an [MCP](https://modelcontextprotocol.io) server at `/api/doctor/ai/mcp`, on the same address as Downtify. While it runs, the section shows a ready-to-copy setup for each app, with the key already filled in:
+
+| App | How it connects |
+|---|---|
+| Claude Code | One `claude mcp add` command in a terminal, on a computer that can reach the server (your home network or Tailscale is enough) |
+| Claude Desktop | A few lines for `claude_desktop_config.json`, using the small `mcp-remote` bridge (needs Node.js on that computer); restart Claude Desktop afterwards |
+| Claude on the web or phone, ChatGPT | Only when the server can be reached from the internet over HTTPS, for example with Tailscale Funnel or Cloudflare Tunnel. ChatGPT needs its developer mode, which isn't on every plan |
+
+Below that is a first message to paste into the chat to get started. Keep the key to yourself: while the helper runs, whoever has it can change your playlists.
+
+### What the assistant can do
+
+- Read what the last health check found and run a new one.
+- List every playlist, read one's songs, and compare 2 to 20 playlists song by song (what's in all of them, what's only in one).
+- **Suggest** a merge, or that a group is **Different playlists**, with a reason written for you. A merge is still only possible under the usual rule (80% of the smaller playlist's songs in the larger one), and playlists you made in the Library are never merged.
+
+Suggestions appear under **The assistant's suggestions** as the same cards as the rest of the Doctor: each playlist with its cover and song count, the one that is kept, and the assistant's reason. **Apply** runs one, **Apply all** runs them together as one job, and **Dismiss** drops one. Applying works exactly like deciding on the page yourself: the same backups, the same single Navidrome rescan, and afterwards the playlists section is **Out of date** until it is checked again.
+
+**Let the assistant apply what you agree to in the chat** lets the assistant press Apply for you, once you said yes in the chat. It is off every time the helper starts. While it is off, the assistant can only suggest.
+
 ## slskd leftovers
 
 Older versions copied each finished Soulseek download into the library and left the original in slskd's folder, so every song took twice the space. **Pause downloads and check**:
@@ -79,3 +110,5 @@ Spotify sometimes replaces a playlist's track with the same song under a new ID 
 ## API
 
 All admin-only, under `/api/doctor`: `GET /api/doctor` (the running or last job and the last result of each kind), `POST /scan`, `POST /cancel`, `POST /slskd/scan`, `GET /slskd/files`, `POST /slskd/clean`, `POST /slskd/release`, `POST /playlists/preview`, `POST /playlists/merge`, `POST /navidrome/repair`, `POST /duplicates/merge` (`keep`, `remove`), `POST /duplicates/keep` (`files`) and `POST /duplicates/keep/reset`. One Doctor job runs at a time. `GET /api/doctor` also lists the sections that are out of date (`stale`); their repairs answer `409` with `rescan_first` until they are checked again.
+
+The [AI helper](#ai-helper), also admin-only: `GET /api/doctor/ai` (whether it runs, its key and its suggestions), `POST /ai/start`, `POST /ai/stop`, `PUT /ai/settings` (`can_apply`), `POST /ai/apply` and `POST /ai/dismiss` (`ids`), and `POST /ai/clear`. The assistant itself talks to `/api/doctor/ai/mcp` (MCP over HTTP, one JSON answer per `POST`), which takes the helper's key as `Authorization: Bearer` instead of a sign-in.

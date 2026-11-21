@@ -37,7 +37,7 @@
         <span class="tabular text-muted">
           {{ t('doctor.songsCount', { count: member.songs }) }}
         </span>
-        <UiBadge v-if="member.path === group.keeper" tone="accent">
+        <UiBadge v-if="!apart && member.path === group.keeper" tone="accent">
           {{ t('doctor.keeps') }}
         </UiBadge>
       </li>
@@ -58,7 +58,7 @@
         </UiButton>
       </figcaption>
     </figure>
-    <p class="text-muted">
+    <p v-if="!apart" class="text-muted">
       {{
         group.safe
           ? t('doctor.mergePlan', {
@@ -70,7 +70,7 @@
             })
       }}
     </p>
-    <div v-if="decidable" class="flex flex-wrap gap-2">
+    <div v-if="decidable && !readonly" class="flex flex-wrap gap-2">
       <UiButton
         size="sm"
         icon="check"
@@ -92,7 +92,7 @@
         {{ t('doctor.decideApart') }}
       </UiButton>
     </div>
-    <div v-else>
+    <div v-else-if="!readonly">
       <UiButton
         size="sm"
         icon="check"
@@ -123,6 +123,10 @@ const props = defineProps({
   // shows Merge / Different playlists toggles instead of merging.
   decidable: { type: Boolean, default: false },
   decision: { type: String, default: '' },
+  // Shown, not decided here (the AI helper's suggestions): no buttons.
+  readonly: { type: Boolean, default: false },
+  // Suggested as different playlists: nothing is kept or merged.
+  apart: { type: Boolean, default: false },
 })
 const emit = defineEmits(['merge', 'decide'])
 

@@ -2698,10 +2698,74 @@ export default {
       name: 'Aynı ad',
       songs: 'Aynı şarkılar',
       manual: 'Sizin seçiminiz',
+      assistant: 'Asistanın seçimi',
     },
     songsCount: 'Şarkılar: {count}',
     hasCover: 'Kapağı var',
     keeps: 'Korunur',
+    ai: {
+      title: 'Yapay zekâ yardımcısı',
+      hint: 'Claude gibi bir yapay zekâ asistanı, Doctor’ın bulduklarını seninle birlikte gözden geçirsin. Ne istediğini sade sözlerle söyle: her grubu açıklar ve ne yapılacağını önerir, kararı sen verirsin.',
+      helper: 'Yapay zekâ yardımcısı',
+      offHint:
+        'Kapalı. Yardım istediğinde başlat. 2 saat kullanılmazsa ve Downtify yeniden başladığında kendiliğinden durur.',
+      connected: 'Açık · {client} bağlı · {minutes} dk kullanılmazsa durur',
+      waitingForAi:
+        'Açık · bir asistanın bağlanması bekleniyor · {minutes} dk kullanılmazsa durur',
+      start: 'Yapay zekâ yardımcısını başlat',
+      stop: 'Durdur',
+      on: 'Açık',
+      waitingBadge: 'İncelenecek {count}',
+      whoTitle: 'Hangi yapay zekâ uygulamaları bağlanabilir',
+      whoCode:
+        'Bu sunucuya ulaşabilen bir bilgisayardaki Claude Code (terminalde veya Claude masaüstü uygulamasında): ev ağında ya da Tailscale ile.',
+      whoDesktop:
+        'Claude Desktop, küçük bir köprüyle (o bilgisayarda Node.js gerekir).',
+      whoWeb:
+        'Web’de veya telefonda Claude: yalnızca sunucu internetten HTTPS ile erişilebilirse (örneğin Tailscale Funnel veya Cloudflare Tunnel ile).',
+      whoChatgpt:
+        'ChatGPT: geliştirici modu (her planda yok) ve aynı internet erişimi gerekir.',
+      scope:
+        'Şimdilik yardımcı yinelenen çalma listeleriyle ilgilenir. Bakar ve önerir; hiçbir şarkı silinmez.',
+      connectTitle: 'Asistanını bağla',
+      clientCode: 'Claude Code',
+      clientDesktop: 'Claude Desktop',
+      clientOther: 'Diğer uygulamalar',
+      codeHint:
+        'Bunu bir terminalde bir kez çalıştır, sonra Claude Code’u başlat ve aşağıdaki ilk mesajı yapıştır.',
+      desktopHint:
+        'Bunu claude_desktop_config.json dosyasına ekle (Settings › Developer › Edit Config), kaydet ve Claude Desktop’u yeniden başlat.',
+      otherHint:
+        'HTTP üzerinden MCP konuşan her uygulama: ona bu adresi ve başlığı ver.',
+      keyHint:
+        'Anahtar, yardımcıyı her başlattığında değişir ve durdurduğunda geçersiz olur. Kimseyle paylaşma: yardımcı çalışırken anahtara sahip olan, çalma listelerini değiştirebilir.',
+      copy: 'Kopyala',
+      copied: 'Kopyalandı',
+      copyFailed: 'Kopyalanamadı. Metni seç ve elle kopyala.',
+      firstTitle: 'Asistanına ilk mesaj',
+      firstHint:
+        'Başlamak için bunu yapıştır, sonra ne istediğini kendi sözlerinle söyle.',
+      firstMessage:
+        'Downtify kitaplığımı düzenlememe yardım etmek için downtify-doctor araçlarını kullan. get_overview ile başla (eskiyse bir kontrol çalıştır), sonra yinelenen çalma listelerine bak. Her grup için içinde ne olduğunu, hangi listenin kalacağını, hangi şarkıların yalnızca birinde olduğunu ve ne önerdiğini sade sözlerle söyle. Hiçbir şeyi uygulama: önerilerde bulun ki Downtify’da gözden geçireyim.',
+      canApply: 'Sohbette onayladıklarını asistan uygulayabilsin',
+      canApplyHint:
+        'Kapalı: Uygula’ya burada sen basarsın. Açık: sohbette evet dediğinde asistan bu önerileri kendisi uygulayabilir. Yardımcı her başladığında yeniden kapanır.',
+      suggestionsTitle: 'Asistanın önerileri',
+      none: 'Henüz öneri yok.',
+      decisionMerge: 'Birleştir',
+      decisionApart: 'Farklı listeler',
+      why: 'Neden:',
+      apply: 'Uygula',
+      dismiss: 'Vazgeç',
+      applyAll: 'Tümünü uygula ({count})',
+      clear: 'Bitenleri temizle',
+      state: {
+        waiting: 'Seni bekliyor',
+        applying: 'Uygulanıyor…',
+        applied: 'Tamam',
+        failed: 'Başarısız',
+      },
+    },
     outOfDate: 'Güncel değil',
     staleHint:
       'Başka bir bölümdeki onarım burada bulunanları değiştirmiş olabilir. Burada bir şey değiştirmeden önce yeniden kontrol edin.',
@@ -2848,6 +2912,7 @@ export default {
     relinkedLabel: 'Aynı şarkı, birkaç kimlik',
     relinkedCounts: 'Şarkılar: {songs} · fazla dosyalar: {extra}',
     error: {
+      ai_not_running: 'Yapay zekâ yardımcısı kapalı. Önce başlat.',
       doctor_busy: 'Doktor zaten çalışıyor.',
       rescan_first:
         'Başka yerdeki bir onarım bu bölümü değiştirdi. Önce yeniden kontrol edin.',
