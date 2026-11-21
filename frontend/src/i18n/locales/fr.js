@@ -2773,7 +2773,7 @@ export default {
       whoChatgpt:
         'ChatGPT : nécessite son mode développeur (pas dans toutes les offres) et le même accès Internet.',
       scope:
-        'Pour l’instant, l’assistant s’occupe des playlists en double. Il regarde et propose ; aucun morceau n’est jamais supprimé.',
+        'Il couvre toutes les sections du Docteur : playlists en double, morceaux en double (y compris les remix et autres versions que la vérification ne regroupe pas), morceaux retéléchargés sous un nouvel identifiant Spotify, restes slskd et Navidrome. Il regarde et propose ; rien ne change tant qu’une suggestion n’est pas appliquée.',
       connectTitle: 'Connecter votre assistant',
       clientCode: 'Claude Code',
       clientDesktop: 'Claude Desktop',
@@ -2794,7 +2794,7 @@ export default {
       firstHint:
         'Collez ceci pour commencer, puis dites ce que vous voulez avec vos mots.',
       firstMessage:
-        'Utilise les outils downtify-doctor pour m’aider à ranger ma bibliothèque Downtify. Commence par get_overview (lance une vérification si elle est ancienne), puis passe en revue les playlists en double. Pour chaque groupe, dis-moi simplement ce qu’il contient, quelle playlist serait gardée, ce qui n’est que dans l’une d’elles et ce que tu recommandes. N’applique rien : fais des suggestions pour que je les examine dans Downtify.',
+        'Utilise les outils downtify-doctor pour m’aider à ranger ma bibliothèque Downtify. Commence par get_overview (lance une vérification si elle est ancienne), puis dis-moi simplement ce que le Docteur a trouvé dans chaque section. Avance une section à la fois : pour chaque résultat, explique ce qu’il contient, ce qui diffère et ce que tu recommandes. N’applique rien : fais des suggestions pour que je les examine dans Downtify.',
       canApply:
         'Laisser l’assistant appliquer ce que vous acceptez dans le chat',
       canApplyHint:
@@ -2809,10 +2809,38 @@ export default {
       applyAll: 'Tout appliquer ({count})',
       clear: 'Retirer les terminées',
       state: {
+        queued: 'En attente',
         waiting: 'En attente de vous',
         applying: 'Application…',
         applied: 'Fait',
         failed: 'Échec',
+      },
+      decisionKeep: 'Garder une copie',
+      decisionSongsApart: 'Morceaux différents',
+      decisionClean: 'Supprimer les restes',
+      decisionNavidrome: 'Ranger Navidrome',
+      songsTrash:
+        'Les autres copies vont dans la corbeille musicale, où elles restent récupérables 30 jours. Leurs playlists, favoris et suivis passent d’abord sur la copie gardée.',
+      songsForGood:
+        'La corbeille musicale est désactivée : les autres copies sont supprimées définitivement. Leurs playlists, favoris et suivis passent d’abord sur la copie gardée.',
+      slskdSummary:
+        '{count} fichiers · {size}, chacun avec le même son qu’un fichier de la bibliothèque',
+      andMore: 'et {count} de plus',
+      ndRemoved: 'Supprimée',
+      ndImport:
+        'Active aussi « Laisser Navidrome importer les playlists M3U », pour que Downtify cesse de créer une seconde copie.',
+      lockedHint:
+        'Une réparation a modifié cette section. Relancez la vérification avant de les appliquer.',
+      section: {
+        playlists: 'Playlists en double',
+        songs: 'Morceaux en double',
+        slskd: 'Restes slskd',
+        navidrome: 'Navidrome',
+      },
+      ndKind: {
+        import: 'Importée d’un M3U',
+        downtify: 'Copie de Downtify',
+        other: 'Autre',
       },
     },
     outOfDate: 'Périmé',

@@ -2738,7 +2738,7 @@ export default {
       whoChatgpt:
         'A ChatGPT: a fejlesztői mód kell hozzá (nem minden csomagban), és ugyanilyen internetes elérés.',
       scope:
-        'Egyelőre a segéd a duplikált lejátszási listákkal foglalkozik. Megnéz és javasol; dalt soha nem töröl.',
+        'A Doctor minden részén segít: duplikált listák, duplikált dalok (a remixek és más változatok is, amelyeket az ellenőrzés nem csoportosít), új Spotify-azonosítóval újra letöltött dalok, slskd-maradékok és Navidrome. Megnéz és javasol; semmi sem változik, amíg egy javaslatot nem alkalmaznak.',
       connectTitle: 'Asszisztens csatlakoztatása',
       clientCode: 'Claude Code',
       clientDesktop: 'Claude Desktop',
@@ -2759,7 +2759,7 @@ export default {
       firstHint:
         'Kezdésnek illeszd be ezt, aztán mondd el a saját szavaiddal, mit szeretnél.',
       firstMessage:
-        'Használd a downtify-doctor eszközöket, hogy segíts rendet rakni a Downtify-könyvtáramban. Kezdd a get_overview hívással (futtass ellenőrzést, ha régi), aztán nézd át a duplikált lejátszási listákat. Minden csoportról mondd el egyszerűen, mi van benne, melyik lista maradna meg, mi van csak az egyikben, és mit javasolsz. Ne alkalmazz semmit: tegyél javaslatokat, hogy átnézhessem őket a Downtifyban.',
+        'Használd a downtify-doctor eszközöket, hogy segíts rendet rakni a Downtify-könyvtáramban. Kezdd a get_overview hívással (futtass ellenőrzést, ha régi), aztán mondd el egyszerűen, mit talált a Doctor az egyes részekben. Egyszerre egy részt nézz át: minden találatnál magyarázd el, mi van benne, mi a különbség, és mit javasolsz. Ne alkalmazz semmit: tegyél javaslatokat, hogy átnézhessem őket a Downtifyban.',
       canApply: 'Az asszisztens alkalmazhatja, amit a csevegésben jóváhagysz',
       canApplyHint:
         'Ki: itt nyomod meg az Alkalmazás gombot. Be: ha a csevegésben igent mondasz, az asszisztens maga alkalmazhatja ezeket a javaslatokat. A segéd minden indításakor újra kikapcsol.',
@@ -2773,10 +2773,38 @@ export default {
       applyAll: 'Mind alkalmazása ({count})',
       clear: 'Befejezettek törlése',
       state: {
+        queued: 'Sorban áll',
         waiting: 'Rád vár',
         applying: 'Alkalmazás…',
         applied: 'Kész',
         failed: 'Sikertelen',
+      },
+      decisionKeep: 'Egy példány megtartása',
+      decisionSongsApart: 'Különböző dalok',
+      decisionClean: 'Maradékok törlése',
+      decisionNavidrome: 'Navidrome rendbetétele',
+      songsTrash:
+        'A többi példány a zenei kukába kerül, ahonnan 30 napig visszaállítható. Előtte a listáik, kedveléseik és figyeléseik a megtartott példányra kerülnek.',
+      songsForGood:
+        'A zenei kuka ki van kapcsolva: a többi példány végleg törlődik. Előtte a listáik, kedveléseik és figyeléseik a megtartott példányra kerülnek.',
+      slskdSummary:
+        '{count} fájl · {size}, mindegyik ugyanazzal a hanggal, mint egy könyvtári fájl',
+      andMore: 'és még {count}',
+      ndRemoved: 'Törlődik',
+      ndImport:
+        'Bekapcsolja a „Navidrome importálja az M3U-listákat” beállítást is, hogy a Downtify ne hozzon létre második példányt.',
+      lockedHint:
+        'Egy javítás megváltoztatta ezt a részt. Futtasd újra az ellenőrzést, mielőtt ezeket alkalmazod.',
+      section: {
+        playlists: 'Duplikált listák',
+        songs: 'Duplikált dalok',
+        slskd: 'slskd-maradékok',
+        navidrome: 'Navidrome',
+      },
+      ndKind: {
+        import: 'M3U-ból importálva',
+        downtify: 'A Downtify példánya',
+        other: 'Egyéb',
       },
     },
     outOfDate: 'Elavult',

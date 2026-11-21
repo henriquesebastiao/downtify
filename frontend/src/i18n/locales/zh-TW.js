@@ -2574,7 +2574,8 @@ export default {
         '網頁版或手機上的 Claude：只有在這台伺服器能透過 HTTPS 從網際網路連到時（例如使用 Tailscale Funnel 或 Cloudflare Tunnel）。',
       whoChatgpt:
         'ChatGPT：需要它的開發者模式（不是每個方案都有）以及同樣的網際網路連線。',
-      scope: '目前助手只處理重複的播放清單。它只檢視和建議，從不刪除歌曲。',
+      scope:
+        '它涵蓋醫生的每個部分：重複的播放清單、重複歌曲（包括檢查不會歸組的混音和其他版本）、以新的 Spotify ID 再次下載的歌曲、slskd 遺留檔案和 Navidrome。它只檢視和建議；在套用建議之前，什麼都不會改變。',
       connectTitle: '連線你的助理',
       clientCode: 'Claude Code',
       clientDesktop: 'Claude Desktop',
@@ -2592,7 +2593,7 @@ export default {
       firstTitle: '給助理的第一則訊息',
       firstHint: '先貼上這段開始，再用自己的話說你想要什麼。',
       firstMessage:
-        '請用 downtify-doctor 工具幫我整理 Downtify 音樂庫。先呼叫 get_overview（如果檢查已經過時就重新檢查），然後檢視重複的播放清單。對每一組，用簡單的話告訴我裡面有什麼、會保留哪個播放清單、哪些歌只在其中一個裡，以及你的建議。先不要套用任何變更：提出建議，我會在 Downtify 中檢視。',
+        '請用 downtify-doctor 工具幫我整理 Downtify 音樂庫。先呼叫 get_overview（如果檢查已經過時就重新檢查），然後用簡單的話告訴我醫生在每個部分發現了什麼。一次處理一個部分：對每一項發現，說明裡面有什麼、有什麼不同，以及你的建議。先不要套用任何變更：提出建議，我會在 Downtify 中檢視。',
       canApply: '允許助理套用你在聊天中同意的內容',
       canApplyHint:
         '關閉：在這裡由你按「套用」。開啟：你在聊天中同意後，助理可以自己套用這些建議。每次啟動助手時都會重新關閉。',
@@ -2606,10 +2607,37 @@ export default {
       applyAll: '全部套用（{count}）',
       clear: '清除已完成',
       state: {
+        queued: '排隊中',
         waiting: '等待你確認',
         applying: '正在套用…',
         applied: '已完成',
         failed: '失敗',
+      },
+      decisionKeep: '保留一份',
+      decisionSongsApart: '不同的歌曲',
+      decisionClean: '刪除遺留檔案',
+      decisionNavidrome: '整理 Navidrome',
+      songsTrash:
+        '其他副本會進入音樂回收桶，30 天內可以還原。在此之前，它們的播放清單、喜歡和追蹤會先轉到保留的副本。',
+      songsForGood:
+        '音樂回收桶已關閉：其他副本會被永久刪除。在此之前，它們的播放清單、喜歡和追蹤會先轉到保留的副本。',
+      slskdSummary:
+        '{count} 個檔案 · {size}，每個都與音樂庫中的某個檔案音訊相同',
+      andMore: '還有 {count} 個',
+      ndRemoved: '將刪除',
+      ndImport:
+        '同時開啟「讓 Navidrome 匯入 M3U 播放清單」，這樣 Downtify 不再建立第二份。',
+      lockedHint: '一次修復改變了這個部分。套用之前請重新執行健康檢查。',
+      section: {
+        playlists: '重複的播放清單',
+        songs: '重複歌曲',
+        slskd: 'slskd 遺留檔案',
+        navidrome: 'Navidrome',
+      },
+      ndKind: {
+        import: '從 M3U 匯入',
+        downtify: 'Downtify 的副本',
+        other: '其他',
       },
     },
     outOfDate: '已過期',

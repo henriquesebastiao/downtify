@@ -2728,7 +2728,7 @@ export default {
       whoChatgpt:
         'ChatGPT: precisa do modo desenvolvedor (não está em todos os planos) e do mesmo acesso pela internet.',
       scope:
-        'Por enquanto o assistente trabalha com playlists duplicadas. Ele olha e sugere; nenhuma música é apagada.',
+        'Ele atua em todas as seções do Doctor: playlists duplicadas, músicas duplicadas (inclusive remixes e outras versões que a verificação não agrupa), músicas baixadas de novo com um novo ID do Spotify, sobras do slskd e Navidrome. Ele olha e sugere; nada muda até uma sugestão ser aplicada.',
       connectTitle: 'Conecte seu assistente',
       clientCode: 'Claude Code',
       clientDesktop: 'Claude Desktop',
@@ -2748,7 +2748,7 @@ export default {
       firstHint:
         'Cole isto para começar e depois diga o que quer com suas palavras.',
       firstMessage:
-        'Use as ferramentas do downtify-doctor para me ajudar a organizar minha biblioteca do Downtify. Comece com get_overview (rode uma verificação se ela for antiga) e depois passe pelas playlists duplicadas. Para cada grupo, me diga com palavras simples o que tem nele, qual playlist seria mantida, o que está só em uma delas e o que você recomenda. Não aplique nada: faça sugestões para eu revisar no Downtify.',
+        'Use as ferramentas do downtify-doctor para me ajudar a organizar minha biblioteca do Downtify. Comece com get_overview (rode uma verificação se ela for antiga) e depois me diga com palavras simples o que o Doctor encontrou em cada seção. Vá uma seção por vez: para cada achado, explique o que tem nele, o que muda e o que você recomenda. Não aplique nada: faça sugestões para eu revisar no Downtify.',
       canApply: 'Deixar o assistente aplicar o que você aprovar no chat',
       canApplyHint:
         'Desligado: você clica em Aplicar aqui. Ligado: depois que você disser sim no chat, o assistente pode aplicar essas sugestões sozinho. Desliga de novo sempre que o assistente é ligado.',
@@ -2762,10 +2762,38 @@ export default {
       applyAll: 'Aplicar todas ({count})',
       clear: 'Limpar concluídas',
       state: {
+        queued: 'Na fila',
         waiting: 'Aguardando você',
         applying: 'Aplicando…',
         applied: 'Feito',
         failed: 'Falhou',
+      },
+      decisionKeep: 'Manter uma cópia',
+      decisionSongsApart: 'Músicas diferentes',
+      decisionClean: 'Apagar sobras',
+      decisionNavidrome: 'Arrumar o Navidrome',
+      songsTrash:
+        'As outras cópias vão para a lixeira de músicas, onde podem ser restauradas por 30 dias. Antes, suas playlists, curtidas e acompanhamentos passam para a cópia mantida.',
+      songsForGood:
+        'A lixeira de músicas está desligada: as outras cópias são apagadas de vez. Antes, suas playlists, curtidas e acompanhamentos passam para a cópia mantida.',
+      slskdSummary:
+        '{count} arquivos · {size}, cada um com o mesmo áudio de um arquivo da biblioteca',
+      andMore: 'e mais {count}',
+      ndRemoved: 'Removida',
+      ndImport:
+        'Também liga “Deixar o Navidrome importar as playlists M3U”, para o Downtify parar de criar uma segunda cópia.',
+      lockedHint:
+        'Um reparo mudou esta seção. Rode a verificação de novo antes de aplicar estas.',
+      section: {
+        playlists: 'Playlists duplicadas',
+        songs: 'Músicas duplicadas',
+        slskd: 'Sobras do slskd',
+        navidrome: 'Navidrome',
+      },
+      ndKind: {
+        import: 'Importada de um M3U',
+        downtify: 'Cópia do Downtify',
+        other: 'Outra',
       },
     },
     outOfDate: 'Desatualizado',

@@ -2705,7 +2705,7 @@ export default {
       whoChatgpt:
         'ChatGPT: 개발자 모드(모든 요금제에 있지는 않음)와 같은 인터넷 접근이 필요합니다.',
       scope:
-        '지금은 중복 재생목록만 다룹니다. 살펴보고 제안할 뿐, 노래는 절대 삭제하지 않습니다.',
+        'Doctor의 모든 항목에서 도와줍니다: 중복 재생목록, 중복 노래(검사가 묶지 않는 리믹스와 다른 버전 포함), 새 Spotify ID로 다시 받은 노래, slskd 잔여 파일, Navidrome. 살펴보고 제안만 하며, 제안을 적용하기 전에는 아무것도 바뀌지 않습니다.',
       connectTitle: '어시스턴트 연결',
       clientCode: 'Claude Code',
       clientDesktop: 'Claude Desktop',
@@ -2724,7 +2724,7 @@ export default {
       firstHint:
         '시작할 때 이것을 붙여 넣고, 원하는 것을 자신의 말로 알려 주세요.',
       firstMessage:
-        'downtify-doctor 도구를 사용해서 내 Downtify 라이브러리 정리를 도와줘. get_overview부터 시작하고(검사가 오래됐으면 다시 실행), 중복 재생목록을 살펴봐. 각 그룹마다 무엇이 들어 있는지, 어떤 재생목록이 남는지, 한쪽에만 있는 곡은 무엇인지, 무엇을 추천하는지 쉬운 말로 알려 줘. 아무것도 적용하지 말고 제안만 해 줘. Downtify에서 검토할게.',
+        'downtify-doctor 도구를 사용해서 내 Downtify 라이브러리 정리를 도와줘. get_overview부터 시작하고(검사가 오래됐으면 다시 실행), Doctor가 각 항목에서 무엇을 찾았는지 쉬운 말로 알려 줘. 한 번에 한 항목씩 살펴보면서, 찾은 것마다 무엇이 들어 있는지, 무엇이 다른지, 무엇을 추천하는지 설명해 줘. 아무것도 적용하지 말고 제안만 해 줘. Downtify에서 검토할게.',
       canApply: '채팅에서 동의한 내용을 어시스턴트가 적용하도록 허용',
       canApplyHint:
         '꺼짐: 여기서 적용을 누릅니다. 켜짐: 채팅에서 동의하면 어시스턴트가 그 제안을 직접 적용할 수 있습니다. 도우미를 시작할 때마다 다시 꺼집니다.',
@@ -2738,10 +2738,38 @@ export default {
       applyAll: '모두 적용 ({count})',
       clear: '끝난 항목 지우기',
       state: {
+        queued: '대기 중',
         waiting: '확인 대기',
         applying: '적용 중…',
         applied: '완료',
         failed: '실패',
+      },
+      decisionKeep: '한 개만 유지',
+      decisionSongsApart: '서로 다른 노래',
+      decisionClean: '잔여 파일 삭제',
+      decisionNavidrome: 'Navidrome 정리',
+      songsTrash:
+        '나머지 사본은 음악 휴지통으로 가며 30일 동안 복원할 수 있습니다. 그 전에 재생목록, 좋아요, 지켜보기가 남기는 사본으로 옮겨집니다.',
+      songsForGood:
+        '음악 휴지통이 꺼져 있어 나머지 사본은 영구 삭제됩니다. 그 전에 재생목록, 좋아요, 지켜보기가 남기는 사본으로 옮겨집니다.',
+      slskdSummary:
+        '파일 {count}개 · {size}, 모두 라이브러리 파일과 같은 오디오',
+      andMore: '외 {count}개',
+      ndRemoved: '삭제됨',
+      ndImport:
+        '“Navidrome이 M3U 재생목록을 가져오게 하기”도 켜서 Downtify가 두 번째 사본을 만들지 않게 합니다.',
+      lockedHint:
+        '수리로 이 항목이 바뀌었습니다. 적용하기 전에 검사를 다시 실행하세요.',
+      section: {
+        playlists: '중복 재생목록',
+        songs: '중복 노래',
+        slskd: 'slskd 잔여 파일',
+        navidrome: 'Navidrome',
+      },
+      ndKind: {
+        import: 'M3U에서 가져옴',
+        downtify: 'Downtify 사본',
+        other: '기타',
       },
     },
     outOfDate: '오래됨',

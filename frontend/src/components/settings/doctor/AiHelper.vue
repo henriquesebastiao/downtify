@@ -90,78 +90,52 @@
         {{ t('doctor.ai.none') }}
       </p>
     </div>
-    <div
-      v-for="item in suggestions"
-      :key="item.id"
+    <section
+      v-for="part in sections"
+      :key="part.kind"
       class="flex flex-col"
-      :data-suggestion="item.id"
+      :data-section-kind="part.kind"
     >
-      <div class="flex flex-wrap items-center gap-2 px-5 pt-4 text-[13px]">
-        <UiBadge :tone="item.decision === 'merge' ? 'accent' : 'neutral'">
-          {{
-            item.decision === 'merge'
-              ? t('doctor.ai.decisionMerge')
-              : t('doctor.ai.decisionApart')
-          }}
-        </UiBadge>
-        <UiBadge :tone="stateTone(item.state)">
-          {{ t(`doctor.ai.state.${item.state}`) }}
-        </UiBadge>
-      </div>
-      <PlaylistGroupCard
-        :group="item.group"
-        :cover-version="item.created_at"
-        readonly
-        :apart="item.decision === 'apart'"
-      />
-      <div class="flex flex-col gap-2 px-5 pb-4 text-[13px]">
-        <p class="rounded-control bg-accent/6 px-3 py-2 text-fg">
-          <span class="font-semibold">{{ t('doctor.ai.why') }}</span>
-          {{ item.reason }}
+      <div
+        class="flex flex-wrap items-center justify-between gap-3 bg-surface-2/60 px-5 py-2 text-[13px]"
+      >
+        <p class="font-semibold text-fg">
+          {{ t(`doctor.ai.section.${part.kind}`) }}
         </p>
-        <p v-if="item.error" class="text-danger">{{ item.error }}</p>
-        <div v-if="item.state === 'waiting'" class="flex flex-wrap gap-2">
-          <UiButton
-            size="sm"
-            variant="primary"
-            icon="check"
-            :disabled="busy || applying"
-            @click="apply([item.id])"
-          >
-            {{ t('doctor.ai.apply') }}
-          </UiButton>
-          <UiButton
-            size="sm"
-            variant="ghost"
-            icon="x"
-            :disabled="applying"
-            @click="dismiss([item.id])"
-          >
-            {{ t('doctor.ai.dismiss') }}
-          </UiButton>
-        </div>
+        <UiButton
+          v-if="part.waiting.length > 1"
+          size="sm"
+          variant="primary"
+          icon="check"
+          :disabled="busy || applying || part.locked"
+          @click="apply(part.waiting.map((s) => s.id))"
+        >
+          {{ t('doctor.ai.applyAll', { count: part.waiting.length }) }}
+        </UiButton>
       </div>
-    </div>
+      <p
+        v-if="part.locked && part.waiting.length"
+        class="bg-warn/8 px-5 py-2 text-[13px] text-warn"
+        role="status"
+      >
+        {{ t('doctor.ai.lockedHint') }}
+      </p>
+      <AiSuggestionCard
+        v-for="item in part.items"
+        :key="item.id"
+        :item="item"
+        :busy="busy || applying"
+        :locked="part.locked"
+        @apply="apply"
+        @dismiss="dismiss"
+      />
+    </section>
     <div
-      v-if="waiting.length > 1 || finished.length"
-      class="sticky bottom-0 z-10 flex flex-wrap items-center justify-between gap-3 border-t border-line-2 bg-surface/95 px-5 py-3 backdrop-blur"
+      v-if="finished.length"
+      class="flex flex-wrap items-center justify-end gap-3 px-5 py-3"
     >
-      <UiButton
-        v-if="finished.length"
-        size="sm"
-        variant="ghost"
-        @click="clearFinished"
-      >
+      <UiButton size="sm" variant="ghost" @click="clearFinished">
         {{ t('doctor.ai.clear') }}
-      </UiButton>
-      <UiButton
-        v-if="waiting.length > 1"
-        variant="primary"
-        icon="check"
-        :disabled="busy || applying"
-        @click="apply(waiting.map((s) => s.id))"
-      >
-        {{ t('doctor.ai.applyAll', { count: waiting.length }) }}
       </UiButton>
     </div>
   </DoctorSection>
@@ -180,11 +154,13 @@ import UiSegmented from '/src/components/ui/UiSegmented.vue'
 import UiSwitch from '/src/components/ui/UiSwitch.vue'
 import SettingRow from '/src/components/settings/SettingRow.vue'
 import DoctorSection from './DoctorSection.vue'
-import PlaylistGroupCard from './PlaylistGroupCard.vue'
+import AiSuggestionCard from './AiSuggestionCard.vue'
 
-defineProps({
+const props = defineProps({
   /** A Doctor job is running: applying waits for it. */
   busy: { type: Boolean, default: false },
+  /** The Doctor sections out of date after a repair. */
+  stale: { type: Array, default: () => [] },
 })
 const emit = defineEmits(['applied'])
 
@@ -201,6 +177,27 @@ const suggestions = computed(() => status.value.suggestions || [])
 const waiting = computed(() =>
   suggestions.value.filter((s) => s.state === 'waiting')
 )
+// Each kind of suggestion and the Doctor section whose findings it
+// acts on (a repair elsewhere can put that section out of date).
+const SECTIONS = [
+  ['playlists', 'playlists'],
+  ['songs', 'duplicates'],
+  ['slskd', 'slskd'],
+  ['navidrome', 'navidrome'],
+]
+
+const sections = computed(() =>
+  SECTIONS.map(([kind, section]) => {
+    const items = suggestions.value.filter((s) => s.kind === kind)
+    return {
+      kind,
+      items,
+      waiting: items.filter((s) => s.state === 'waiting'),
+      locked: props.stale.includes(section),
+    }
+  }).filter((part) => part.items.length)
+)
+
 const finished = computed(() =>
   suggestions.value.filter((s) => ['applied', 'failed'].includes(s.state))
 )

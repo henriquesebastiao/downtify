@@ -444,6 +444,8 @@ def test_a_refused_apply_marks_the_suggestion_failed(doctor, monkeypatch):
     assert 'run_health_check' in text
     state = doctor_ai.helper.status()['suggestions'][0]
     assert state['state'] == 'failed'
+    # The page shows the Doctor's own message for the code.
+    assert state['error_code'] == 'rescan_first'
 
 
 def test_the_switch_needs_a_running_helper(client, doctor):
@@ -453,3 +455,20 @@ def test_the_switch_needs_a_running_helper(client, doctor):
     client.post('/api/doctor/ai/start')
     on = client.put('/api/doctor/ai/settings', json={'can_apply': True})
     assert on.json()['can_apply'] is True
+
+
+def test_a_failed_job_leaves_its_code_for_the_page(client, doctor):
+    _admin(client).post('/api/doctor/ai/start')
+    merge = _data(
+        _call('suggest_merge', paths=[OLD.path, NEW.path], reason='same')
+    )['suggestion']
+    client.post('/api/doctor/ai/apply', json={'ids': [merge]})
+    doctor_routes._job.update(
+        id='job1',
+        state='failed',
+        error={'code': 'dedupe_trash', 'reason': 'identity_uncertain'},
+    )
+    entry = client.get('/api/doctor/ai').json()['suggestions'][0]
+    assert entry['state'] == 'failed'
+    assert entry['error_code'] == 'dedupe_trash'
+    assert 'identity_uncertain' in entry['error']

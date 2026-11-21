@@ -2793,7 +2793,7 @@ export default {
       whoChatgpt:
         'ChatGPT: braucht den Entwicklermodus (nicht in jedem Abo) und denselben Internetzugang.',
       scope:
-        'Vorerst hilft der Helfer bei doppelten Playlists. Er schaut und schlägt vor; kein Song wird je gelöscht.',
+        'Er hilft in jedem Doctor-Bereich: doppelte Playlists, doppelte Songs (auch Remixe und andere Versionen, die die Prüfung nicht gruppiert), Songs, die unter einer neuen Spotify-ID erneut geladen wurden, slskd-Reste und Navidrome. Er schaut und schlägt vor; nichts ändert sich, bevor ein Vorschlag angewendet wird.',
       connectTitle: 'Assistenten verbinden',
       clientCode: 'Claude Code',
       clientDesktop: 'Claude Desktop',
@@ -2814,7 +2814,7 @@ export default {
       firstHint:
         'Füge das zum Start ein und sag dann in deinen eigenen Worten, was du willst.',
       firstMessage:
-        'Nutze die downtify-doctor-Werkzeuge, um mir beim Aufräumen meiner Downtify-Bibliothek zu helfen. Beginne mit get_overview (führe eine Prüfung durch, wenn sie alt ist), dann geh die doppelten Playlists durch. Sag mir zu jeder Gruppe in einfachen Worten, was drin ist, welche Playlist behalten würde, was nur in einer davon ist und was du empfiehlst. Wende nichts an: Mach Vorschläge, damit ich sie in Downtify prüfen kann.',
+        'Nutze die downtify-doctor-Werkzeuge, um mir beim Aufräumen meiner Downtify-Bibliothek zu helfen. Beginne mit get_overview (führe eine Prüfung durch, wenn sie alt ist) und sag mir dann in einfachen Worten, was der Doctor in jedem Bereich gefunden hat. Geh einen Bereich nach dem anderen durch: Erkläre bei jedem Fund, was drin ist, was sich unterscheidet und was du empfiehlst. Wende nichts an: Mach Vorschläge, damit ich sie in Downtify prüfen kann.',
       canApply: 'Assistent darf anwenden, was du im Chat bestätigst',
       canApplyHint:
         'Aus: Du drückst hier auf Anwenden. An: Sobald du im Chat zustimmst, darf der Assistent diese Vorschläge selbst anwenden. Schaltet sich bei jedem Start des Helfers wieder aus.',
@@ -2828,10 +2828,38 @@ export default {
       applyAll: 'Alle anwenden ({count})',
       clear: 'Erledigte entfernen',
       state: {
+        queued: 'In der Warteschlange',
         waiting: 'Wartet auf dich',
         applying: 'Wird angewendet…',
         applied: 'Erledigt',
         failed: 'Fehlgeschlagen',
+      },
+      decisionKeep: 'Eine Kopie behalten',
+      decisionSongsApart: 'Verschiedene Songs',
+      decisionClean: 'Reste löschen',
+      decisionNavidrome: 'Navidrome aufräumen',
+      songsTrash:
+        'Die anderen Kopien kommen in den Musik-Papierkorb und lassen sich 30 Tage lang wiederherstellen. Ihre Playlists, Likes und Beobachtungen wechseln vorher zur behaltenen Kopie.',
+      songsForGood:
+        'Der Musik-Papierkorb ist aus: Die anderen Kopien werden endgültig gelöscht. Ihre Playlists, Likes und Beobachtungen wechseln vorher zur behaltenen Kopie.',
+      slskdSummary:
+        '{count} Dateien · {size}, jeweils dasselbe Audio wie eine Datei der Bibliothek',
+      andMore: 'und {count} weitere',
+      ndRemoved: 'Wird entfernt',
+      ndImport:
+        'Schaltet außerdem „Navidrome die M3U-Playlists importieren lassen“ ein, damit Downtify keine zweite Kopie mehr anlegt.',
+      lockedHint:
+        'Eine Reparatur hat diesen Bereich verändert. Führe die Prüfung erneut aus, bevor du diese anwendest.',
+      section: {
+        playlists: 'Doppelte Playlists',
+        songs: 'Doppelte Songs',
+        slskd: 'slskd-Reste',
+        navidrome: 'Navidrome',
+      },
+      ndKind: {
+        import: 'Aus einer M3U importiert',
+        downtify: 'Kopie von Downtify',
+        other: 'Andere',
       },
     },
     outOfDate: 'Veraltet',

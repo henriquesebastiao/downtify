@@ -1232,9 +1232,23 @@ async def duplicates_merge(
     """Keep *keep*, move every reference to the copies in *remove* onto
     it, then remove them - to the music trash when it is on."""
 
-    user_id = admin_user(request)
+    return start_dedupe(payload, admin_user(request))
+
+
+def start_dedupe(
+    payload: DuplicateMerge, user_id: int, *, grouped: bool = True
+) -> dict[str, Any]:
+    """Start the merge of *payload* as the Doctor's job.
+
+    *grouped* (the page): only copies the last health check put in one
+    group. The AI helper passes ``False`` for copies it found itself (a
+    remix kept apart from the original by its length, say), which the
+    user approved; the merge's own checks still apply.
+    """
+
     _require_fresh('duplicates')
-    _same_group([payload.keep, *payload.remove])
+    if grouped:
+        _same_group([payload.keep, *payload.remove])
 
     async def work(job: dict[str, Any]) -> dict[str, Any]:
         return await _merge_duplicates(job, payload, user_id)

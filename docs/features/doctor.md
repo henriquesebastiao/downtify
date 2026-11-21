@@ -18,7 +18,7 @@ A repair can change what another section found: merging duplicate songs rewrites
 
 ## AI helper
 
-Going through every duplicate group by hand is a lot of reading. The **AI helper** lets an AI assistant such as Claude do that reading with you. Tell it in plain words what you want ("these are all the same road-trip mix, keep one"). It compares the playlists song by song, explains each group, and suggests what to do. The decisions stay yours. For now it covers [duplicate playlists](#duplicate-playlists).
+Going through every finding by hand is a lot of reading, and the checks below are strict yes-or-no rules. The **AI helper** lets an AI assistant such as Claude do that reading with you. Tell it in plain words what you want ("these are all the same road-trip mix, keep one", "keep the album version of these songs, not the remixes"). It compares, explains each finding, and suggests what to do. The decisions stay yours. It covers every section: [duplicate playlists](#duplicate-playlists), [duplicate songs](#duplicate-songs), [songs downloaded again under a new Spotify ID](#downloaded-again-under-a-new-spotify-id), [slskd leftovers](#slskd-leftovers) and [Navidrome](#navidrome).
 
 It is meant for the occasional clean-up, not to run all the time:
 
@@ -35,15 +35,18 @@ The helper is an [MCP](https://modelcontextprotocol.io) server at `/api/doctor/a
 | Claude Desktop | A few lines for `claude_desktop_config.json`, using the small `mcp-remote` bridge (needs Node.js on that computer); restart Claude Desktop afterwards |
 | Claude on the web or phone, ChatGPT | Only when the server can be reached from the internet over HTTPS, for example with Tailscale Funnel or Cloudflare Tunnel. ChatGPT needs its developer mode, which isn't on every plan |
 
-Below that is a first message to paste into the chat to get started. Keep the key to yourself: while the helper runs, whoever has it can change your playlists.
+Below that is a first message to paste into the chat to get started. Keep the key to yourself: while the helper runs, whoever has it can change your library.
 
 ### What the assistant can do
 
 - Read what the last health check found and run a new one.
-- List every playlist, read one's songs, and compare 2 to 20 playlists song by song (what's in all of them, what's only in one).
-- **Suggest** a merge, or that a group is **Different playlists**, with a reason written for you. A merge is still only possible under the usual rule (80% of the smaller playlist's songs in the larger one), and playlists you made in the Library are never merged.
+- **Duplicate playlists:** list every playlist, read one's songs, and compare 2 to 20 playlists song by song (what's in all of them, what's only in one). It suggests a merge, or that a group is **Different playlists**. A merge is still only possible under the usual rule (80% of the smaller playlist's songs in the larger one), and playlists you made in the Library are never merged.
+- **Duplicate songs:** the check's groups, and a search of the whole library, so it also finds remixes, live and sped-up versions that the check never groups (their length differs). For each file it can read the tags, ISRC, lyrics, length, format, source and playlists, check whether two files hold the very same audio, and look the song up on MusicBrainz (official releases, lengths, ISRCs). It suggests **Keep one copy**, which works like **Keep the selected copy**: everything that used the other copies moves to the kept one first, then they go to the music trash, or are deleted for good when the trash is off. Or it suggests **Different songs**.
+- **Downloaded again under a new Spotify ID:** the whole list, fixed with **Keep one copy**.
+- **slskd leftovers:** run the slskd check (new downloads wait meanwhile, as when you run it here) and suggest deleting leftovers. Only those verified to hold the same audio as a library file can be deleted.
+- **Navidrome:** the problems found and the page's own plan. It suggests deleting playlists the check flagged, and only those, and turning on M3U import.
 
-Suggestions appear under **The assistant's suggestions** as the same cards as the rest of the Doctor: each playlist with its cover and song count, the one that is kept, and the assistant's reason. **Apply** runs one, **Apply all** runs them together as one job, and **Dismiss** drops one. Applying works exactly like deciding on the page yourself: the same backups, the same single Navidrome rescan, and afterwards the playlists section is **Out of date** until it is checked again.
+Every suggestion comes with a reason written for you. They appear under **The assistant's suggestions**, one group per section, as the same cards as the rest of the Doctor: playlists with their covers and song counts, songs with a player for each copy and the one that is kept, the slskd files with the library file each matches, the Navidrome playlists that go. **Apply** runs one. A section's **Apply all** runs its suggestions together, merging songs one after the other. **Dismiss** drops one. Applying works exactly like deciding on the page yourself: the same checks, backups and music trash. Afterwards the sections it changed are **Out of date** until they are checked again, and their waiting suggestions wait for that, so it's one section at a time.
 
 **Let the assistant apply what you agree to in the chat** lets the assistant press Apply for you, once you said yes in the chat. It is off every time the helper starts. While it is off, the assistant can only suggest.
 
