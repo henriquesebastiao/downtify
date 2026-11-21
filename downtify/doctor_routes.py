@@ -1298,7 +1298,10 @@ async def _merge_duplicates(
     removed, failed = await _remove_copies(plan, ctx, user_id, batch)
     await asyncio.to_thread(finish_merge, plan, stores, removed)
     await asyncio.to_thread(_kept_apart().forget_files, removed)
-    await asyncio.to_thread(_publish_library, ctx)
+    # A fresh context: *ctx* was built before the copies went to the
+    # music trash, so its listing would still show them as library songs
+    # (and the apps' sync list would try to add them back).
+    await asyncio.to_thread(_publish_library, _ctx())
     if plan.playlists:
         await api._schedule_playlist_refresh_after_delete(set(plan.playlists))
     await api.announce_playlists_changed()

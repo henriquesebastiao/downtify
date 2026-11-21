@@ -408,3 +408,57 @@ def test_settling_the_review_drops_merged_files_and_kept_groups(monkeypatch):
     assert review['groups'] == []
     assert review['kept_apart'] == 1
     assert review['totals']['exact']['groups'] == 0
+
+
+def test_the_apps_sync_list_sees_the_library_after_the_merge(monkeypatch):
+    """The copies are gone (to the music trash, whose own refresh already
+    marked them deleted) when the apps' sync list is refreshed: it must
+    use the library as it is then, not the context the merge started
+    with, or it tries to add the trashed copies back
+    (``UNIQUE constraint failed: sync_tracks.path``)."""
+
+    contexts: list[object] = []
+
+    def new_ctx():
+        contexts.append(object())
+        return contexts[-1]
+
+    published: list[object] = []
+    plan = SimpleNamespace(
+        keep='a.mp3', extras=[('b.mp3', Path('b.mp3'))], playlists=set()
+    )
+
+    async def remove_copies(_plan, _ctx, _user_id, _batch):
+        return ['b.mp3'], []
+
+    async def nothing(*_args, **_kwargs):
+        return None
+
+    monkeypatch.setattr(doctor_routes, '_ctx', new_ctx)
+    monkeypatch.setattr(doctor_routes, '_merge_stores', lambda ctx: None)
+    monkeypatch.setattr(doctor_routes, 'plan_merge', lambda *a: plan)
+    monkeypatch.setattr(doctor_routes, 'relink_duplicates', lambda *a: None)
+    monkeypatch.setattr(doctor_routes, '_remove_copies', remove_copies)
+    monkeypatch.setattr(doctor_routes, 'finish_merge', lambda *a: None)
+    monkeypatch.setattr(
+        doctor_routes,
+        '_kept_apart',
+        lambda: SimpleNamespace(forget_files=lambda files: None),
+    )
+    monkeypatch.setattr(doctor_routes, '_publish_library', published.append)
+    monkeypatch.setattr(doctor_routes, 'leftover_references', lambda *a: [])
+    monkeypatch.setattr(doctor_routes, '_settle_review', lambda *a: None)
+    monkeypatch.setattr(doctor_routes.api.state, 'library_trash', None)
+    monkeypatch.setattr(
+        doctor_routes.api, 'announce_playlists_changed', nothing
+    )
+
+    result = asyncio.run(
+        doctor_routes._merge_duplicates(
+            {}, doctor_routes.DuplicateMerge(keep='a.mp3', remove=['b.mp3']), 1
+        )
+    )
+
+    assert result['removed'] == ['b.mp3']
+    assert len(contexts) == 2
+    assert published == [contexts[1]]  # built after the removal
