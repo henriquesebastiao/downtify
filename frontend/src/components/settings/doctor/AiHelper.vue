@@ -42,7 +42,8 @@
         <div class="flex flex-col gap-1">
           <pre
             class="max-h-60 overflow-auto rounded-control bg-surface-2 px-3 py-2 font-mono text-[12px] break-all whitespace-pre-wrap text-fg"
-            >{{ snippet }}</pre>
+            >{{ snippet }}</pre
+          >
           <div>
             <UiButton size="sm" icon="copy" @click="copy(snippet)">
               {{ t('doctor.ai.copy') }}
@@ -57,7 +58,8 @@
         <p class="text-fg-3">{{ t('doctor.ai.firstHint') }}</p>
         <pre
           class="rounded-control bg-surface-2 px-3 py-2 font-sans text-[13px] whitespace-pre-wrap text-fg"
-          >{{ t('doctor.ai.firstMessage') }}</pre>
+          >{{ t('doctor.ai.firstMessage') }}</pre
+        >
         <div>
           <UiButton
             size="sm"
