@@ -518,8 +518,20 @@ def _normalize_search_text(text: str) -> str:
     return re.sub(r'\s+', ' ', folded).strip()
 
 
+def _fold_accents(text: str) -> str:
+    """*text* without accents: ``Tití Me Preguntó`` -> ``Titi Me Pregunto``
+    (a file name often drops them)."""
+
+    decomposed = unicodedata.normalize('NFKD', text)
+    return ''.join(ch for ch in decomposed if not unicodedata.combining(ch))
+
+
 def _alnum_only(text: str) -> str:
-    return re.sub(r'[^a-z0-9]+', '', _normalize_search_text(text).casefold())
+    return re.sub(
+        r'[^a-z0-9]+',
+        '',
+        _fold_accents(_normalize_search_text(text)).casefold(),
+    )
 
 
 def _primary_title(title: str) -> str:
@@ -531,6 +543,48 @@ def _primary_title(title: str) -> str:
     return text
 
 
+# "(feat. X)", "[with X]", "(from GTAVI: The Album)": credits and where a
+# song comes from, which Spotify puts in the title and a shared file's name
+# usually leaves out, words differently or moves in front of the title.
+_CREDIT_PART = re.compile(
+    r'\s*[\(\[]\s*(?:feat\.?|ft\.?|featuring|with|from)\s[^\)\]]*[\)\]]',
+    re.IGNORECASE,
+)
+_CREDIT_TAIL = re.compile(
+    r'\s+(?:feat\.?|ft\.?|featuring)\s.*$', re.IGNORECASE
+)
+
+
+def _core_title(title: str) -> str:
+    """The song's own name, as a shared file names it: :func:`_primary_title`
+    without featured artists or a "(from …)" note - ``That's It (feat.
+    Future & Metro Boomin)`` -> ``That's It``."""
+
+    primary = _primary_title(title)
+    core = _CREDIT_TAIL.sub('', _CREDIT_PART.sub('', primary)).strip()
+    return core or primary
+
+
+def _artist_key(artist: str) -> str:
+    """*artist* as a file name is compared with it: :func:`_alnum_only`,
+    without a leading "The" (``The Killers`` is often filed as ``Killers``)."""
+
+    name = re.sub(r'^\s*the\s+', '', str(artist or ''), flags=re.IGNORECASE)
+    return _alnum_only(name) or _alnum_only(artist)
+
+
+def _soulseek_words(text: str, *, join_apostrophes: bool = False) -> str:
+    """*text* as Soulseek search words. Peers match whole words of a shared
+    path, split at punctuation, so ``That's It (feat. A & B)`` is searched
+    as ``That s It feat A B`` - the way Nicotine+ sends it - since
+    ``Thats`` or ``(feat.`` match no file. *join_apostrophes* gives the
+    ``Thats It`` spelling instead, for files named without the apostrophe."""
+
+    folded = unicodedata.normalize('NFKC', str(text or ''))
+    folded = re.sub(r"['`\u2019]", '' if join_apostrophes else ' ', folded)
+    return re.sub(r'[\W_]+', ' ', folded).strip()
+
+
 def _title_in_basename(filename: str, title_alnum: str) -> bool:
     """Require title as a basename token (avoids folder-only and substring false hits)."""
 
@@ -540,7 +594,7 @@ def _title_in_basename(filename: str, title_alnum: str) -> bool:
     base_alnum = _alnum_only(base)
     if title_alnum == base_alnum:
         return True
-    folded = _normalize_search_text(base).casefold()
+    folded = _fold_accents(_normalize_search_text(base)).casefold()
     tokens = [
         _alnum_only(part)
         for part in re.split(r'[^a-z0-9]+', folded)
@@ -554,6 +608,15 @@ def _title_in_basename(filename: str, title_alnum: str) -> bool:
 
 
 def _slskd_search_queries(song: dict[str, Any]) -> list[str]:
+    """What to search Soulseek for, most likely first, as plain words
+    (:func:`_soulseek_words`): the artist and the song's own name
+    (:func:`_core_title`, no "(feat. …)"), the same without apostrophes,
+    the artist with the full title (``Loud Enough Radio Mix``), the song's
+    name alone, and the artist and name without accents. A peer only
+    answers when every word is in a file's path, so fewer, plainer words
+    find more; the ranking (:func:`_score_slskd_candidate`) decides which
+    file is the song."""
+
     artists = [
         str(a).strip()
         for a in (song.get('artists') or [])[:2]
@@ -561,27 +624,28 @@ def _slskd_search_queries(song: dict[str, Any]) -> list[str]:
     ]
     artist = artists[0] if artists else ''
     title = str(song.get('name') or '').strip()
+    core = _core_title(title)
     short_title = _primary_title(title)
     queries: list[str] = []
     seen: set[str] = set()
 
-    def add(q: str) -> None:
-        normalized = _normalize_search_text(q)
-        if normalized and normalized not in seen:
-            seen.add(normalized)
-            queries.append(normalized)
+    def add(q: str, *, join_apostrophes: bool = False) -> None:
+        words = _soulseek_words(q, join_apostrophes=join_apostrophes)
+        if words and words.casefold() not in seen:
+            seen.add(words.casefold())
+            queries.append(words)
 
-    # Explo uses "title - artist"
-    if short_title and artist:
-        add(f'{short_title} - {artist}')
-    if title and artist and title != short_title:
-        add(f'{title} - {artist}')
-    if short_title:
-        add(short_title)
-    if artist and short_title and short_title != title:
-        add(f'{artist} {short_title}')
+    if artist and core:
+        add(f'{artist} {core}')
+        add(f'{artist} {core}', join_apostrophes=True)
     if artist and title:
-        add(f'{artist} {title}')
+        add(f'{artist} {_CREDIT_PART.sub("", title)}')
+        if short_title != core:
+            add(f'{artist} {short_title}')
+    if core:
+        add(core)
+    if artist and core:
+        add(_fold_accents(f'{artist} {core}'))
     return queries
 
 
@@ -713,17 +777,27 @@ def _score_slskd_candidate(  # noqa: PLR0914
 ) -> Optional[tuple[int, list[str]]]:
     """Return (score, reasons) or None when hard requirements fail."""
     tol = duration_tolerances_from_settings(settings)
-    artist = _alnum_only(
-        ' '.join(str(a) for a in (song.get('artists') or [])[:1])
-    )
     album = _alnum_only(str(song.get('album_name') or ''))
     raw_name = str(song.get('name') or '')
-    title = _alnum_only(_primary_title(raw_name))
+    title = _alnum_only(_core_title(raw_name))
     full_title = _alnum_only(raw_name)
     sanitized_name = _alnum_only(filename)
     basename = _file_basename(filename)
     base_alnum = _alnum_only(basename)
     path_segments = _path_segments(filename)
+    # The first credited artist, or another one when only that one is in
+    # the path ("Metro Boomin - …" for a Yung Lean song featuring him).
+    artist_keys = [
+        key
+        for key in (
+            _artist_key(str(a)) for a in (song.get('artists') or [])[:3]
+        )
+        if key
+    ]
+    artist = next(
+        (key for key in artist_keys if key in sanitized_name),
+        artist_keys[0] if artist_keys else '',
+    )
 
     if not artist and not title and not full_title:
         return None
@@ -779,7 +853,9 @@ def _score_slskd_candidate(  # noqa: PLR0914
     score = 0
     reasons: list[str] = []
 
-    if artist and base_alnum.startswith(artist):
+    if artist and (
+        base_alnum.startswith(artist) or base_alnum.startswith(f'the{artist}')
+    ):
         score += 3
         reasons.append('artist_prefix')
     elif artist and artist in base_alnum:

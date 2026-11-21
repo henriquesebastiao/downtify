@@ -32,14 +32,17 @@ def test_flatten_slskd_responses_attaches_username_to_files():
     assert rows[0]['filename'] == 'Artist - Track.mp3'
 
 
-def test_slskd_search_queries_prefers_title_dash_artist():
+def test_slskd_search_queries_are_plain_words_artist_first():
+    # Peers match whole words split at punctuation: "WE'RE" is "WE RE",
+    # with "WERE" as a second try for files named without the apostrophe.
     queries = _slskd_search_queries({
         'artists': ['4D4M'],
         'name': "YOU KNOW WHERE WE'RE GOING - Hardstyle Bass Bounce Edition",
         'album_name': "YOU KNOW WHERE WE'RE GOING",
     })
-    assert queries[0] == 'YOU KNOW WHERE WERE GOING - 4D4M'
-    assert 'YOU KNOW WHERE WERE GOING' in queries
+    assert queries[0] == '4D4M YOU KNOW WHERE WE RE GOING'
+    assert '4D4M YOU KNOW WHERE WERE GOING' in queries
+    assert 'YOU KNOW WHERE WE RE GOING' in queries
 
 
 def test_slskd_search_queries_include_full_and_short_radio_mix():
@@ -47,9 +50,9 @@ def test_slskd_search_queries_include_full_and_short_radio_mix():
         'artists': ['Y:K'],
         'name': 'Loud Enough - Radio Mix',
     })
-    assert queries[0] == 'Loud Enough - Y:K'
-    assert 'Loud Enough - Radio Mix - Y:K' in queries
-    assert 'Y:K Loud Enough - Radio Mix' in queries
+    assert queries[0] == 'Y K Loud Enough'
+    assert 'Y K Loud Enough Radio Mix' in queries
+    assert 'Loud Enough' in queries
 
 
 def test_rank_accepts_radio_mix_filename_for_radio_mix_track():
