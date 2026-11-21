@@ -1857,6 +1857,9 @@ export default {
     overwrite: 'Dosya varsa yeniden indir',
     overwriteHint:
       'Kitaplıktaki şarkıları atlayıp bant genişliğinden tasarruf etmek için kapat.',
+    completeAlbums: 'Her albümü eksiksiz tut',
+    completeAlbumsHint:
+      'Sanatçı İzleme, bir şarkıyı yer aldığı her yayın için (albüm, en iyiler derlemesi, deluxe sürüm) zaten sahip olduğun kopyayı bağlamak yerine yeniden indirir. Daha fazla disk alanı kullanır.',
     m3u: 'M3U çalma listeleri yaz',
     m3uHint:
       'Jellyfin, Plex, Navidrome ve diğerleri için indirilen her çalma listesine .m3u kaydet.',

@@ -1762,6 +1762,9 @@ export default {
       '將歌曲存到各專輯的資料夾。搭配「依藝人整理」時會變成「藝人/專輯」。',
     overwrite: '檔案已存在時重新下載',
     overwriteHint: '關閉後會略過媒體庫中已有的歌曲，節省流量。',
+    completeAlbums: '保持每張專輯完整',
+    completeAlbumsHint:
+      '藝人監看會為歌曲所在的每個發行（專輯、精選輯、豪華版）重新下載一份，而不是連結你已有的副本。會佔用更多磁碟空間。',
     m3u: '寫入 M3U 播放清單',
     m3uHint:
       '為每份下載的播放清單儲存 .m3u 檔案，供 Jellyfin、Plex、Navidrome 等使用。',

@@ -442,10 +442,18 @@ function keyOf(song, index) {
 function statusOf(song) {
   tracker.queueVersion.value
   const artist = (song.artists || [])[0] || song.artist
-  const state = songDownloadState(
-    tracker.getBySong(song),
-    library.hasSong(artist, song.name)
-  )
+  // On an album, a song only counts as in the library when it's there on
+  // this album: one it has from another release (a greatest hits, a
+  // single) is still offered, so the album can be completed (#546).
+  const inLibrary =
+    details.value?.kind === 'album'
+      ? library.hasSongOnAlbum(
+          artist,
+          song.name,
+          song.album_name || details.value.name
+        )
+      : library.hasSong(artist, song.name)
+  const state = songDownloadState(tracker.getBySong(song), inLibrary)
   // Every queue state shows the same neutral chip here; a song that is
   // neither queued nor in the library is downloadable.
   return state === 'library' || state === 'new' ? state : 'queue'

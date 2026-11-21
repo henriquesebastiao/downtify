@@ -623,6 +623,18 @@ export function songKey(artist, title) {
 }
 
 /**
+ * `songKey` plus the album: the key of a song *on one album*, so an album
+ * page can tell a song the library has on that album from one it only
+ * has on another (a greatest hits, a single) - issue #546.
+ */
+export function songAlbumKey(artist, title, album) {
+  const albumKey = fold(album)
+    .replace(/[^\p{L}\p{N}]+/gu, ' ')
+    .trim()
+  return `${songKey(artist, title)}|${albumKey}`
+}
+
+/**
  * `songKey` -> library track, for finding the file behind a song that is
  * already downloaded (search and link results are songs, not files). The
  * first track wins when two share a key.

@@ -1876,6 +1876,9 @@ export default {
     overwrite: 'Baixar de novo se o arquivo existir',
     overwriteHint:
       'Desative para pular músicas que já estão na biblioteca e economizar banda.',
+    completeAlbums: 'Manter todo álbum completo',
+    completeAlbumsHint:
+      'O monitoramento de artistas baixa a música de novo para cada lançamento em que ela aparece (um álbum, uma coletânea, uma edição deluxe) em vez de usar a cópia que você já tem. Ocupa mais espaço em disco.',
     m3u: 'Gerar playlists M3U',
     m3uHint:
       'Salva um .m3u para cada playlist baixada, para Jellyfin, Plex, Navidrome e outros.',

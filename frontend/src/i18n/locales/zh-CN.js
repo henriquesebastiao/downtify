@@ -1733,6 +1733,9 @@ export default {
       '每张专辑保存到独立文件夹，同时开启“按艺人整理”时，结构为“艺人/专辑”。',
     overwrite: '文件存在时重新下载',
     overwriteHint: '关闭后跳过音乐库中已有的歌曲，节省带宽。',
+    completeAlbums: '保持每张专辑完整',
+    completeAlbumsHint:
+      '艺人监控会为歌曲所在的每个发行（专辑、精选集、豪华版）重新下载一份，而不是链接你已有的副本。会占用更多磁盘空间。',
     m3u: '生成 M3U 播放列表',
     m3uHint:
       '为每个下载的播放列表保存 .m3u 文件，供 Jellyfin、Plex、Navidrome 等使用。',

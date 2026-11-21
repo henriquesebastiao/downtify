@@ -1875,6 +1875,9 @@ export default {
     overwrite: 'Újratöltés, ha a fájl létezik',
     overwriteHint:
       'Kapcsold ki, hogy a könyvtárban lévő dalokat kihagyja és sávszélességet spóroljon.',
+    completeAlbums: 'Minden album maradjon teljes',
+    completeAlbumsHint:
+      'Az előadófigyelés minden kiadáshoz újra letölti a dalt, amelyen szerepel (album, válogatás, deluxe kiadás), ahelyett hogy a meglévő példányt kapcsolná hozzá. Több tárhelyet foglal.',
     m3u: 'M3U listák írása',
     m3uHint:
       'Minden letöltött listához .m3u fájlt ment Jellyfinhez, Plexhez, Navidrome-hoz és másokhoz.',

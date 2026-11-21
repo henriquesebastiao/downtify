@@ -1912,6 +1912,9 @@ export default {
     overwrite: 'Retélécharger si le fichier existe',
     overwriteHint:
       'Désactivez pour ignorer les titres déjà présents et économiser de la bande passante.',
+    completeAlbums: 'Garder chaque album complet',
+    completeAlbumsHint:
+      "Le suivi d'artistes retélécharge un titre pour chaque sortie où il figure (un album, un best-of, une édition deluxe) au lieu de lier la copie que vous avez déjà. Prend plus de place sur le disque.",
     m3u: 'Écrire des playlists M3U',
     m3uHint:
       'Enregistre un .m3u pour chaque playlist téléchargée, pour Jellyfin, Plex, Navidrome et d’autres.',

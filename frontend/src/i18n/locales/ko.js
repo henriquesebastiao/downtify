@@ -1852,6 +1852,9 @@ export default {
     overwrite: '파일이 이미 존재해도 다시 다운로드',
     overwriteHint:
       '비활성화하면 이미 라이브러리에 있는 곡을 건너뛰어 네트워크 대역폭을 절약합니다.',
+    completeAlbums: '모든 앨범을 완전하게 유지',
+    completeAlbumsHint:
+      '아티스트 모니터링이 곡이 실린 각 릴리스(앨범, 베스트 앨범, 디럭스 에디션)마다 이미 있는 사본을 연결하지 않고 곡을 다시 다운로드합니다. 디스크 공간을 더 사용합니다.',
     m3u: 'M3U 재생목록 생성',
     m3uHint:
       '다운로드한 각 재생목록마다 .m3u 파일을 생성하여 Jellyfin, Plex, Navidrome 등과 연동합니다.',

@@ -1835,6 +1835,9 @@ export default {
     overwrite: 'Download again if the file exists',
     overwriteHint:
       'Turn off to skip songs already in your library and save bandwidth.',
+    completeAlbums: 'Keep every album complete',
+    completeAlbumsHint:
+      "Artist Watch downloads a song again for each release it's on (an album, a greatest hits, a deluxe edition) instead of linking the copy you already have. Uses more disk space.",
     m3u: 'Write M3U playlists',
     m3uHint:
       'Save a .m3u file for each downloaded playlist, for Jellyfin, Plex, Navidrome and others.',

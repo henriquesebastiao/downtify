@@ -2048,6 +2048,8 @@ def _download_release_track(
     album: dict[str, Any],
     progress: Optional[ProgressCallback],
     observed: dict[str, Any],
+    *,
+    complete_albums: bool = False,
 ) -> str:
     """Download one track of a watched artist's release.
 
@@ -2059,14 +2061,18 @@ def _download_release_track(
     same name - another album's ``Intro``, with files organized by
     artist but not by album - the track is saved as ``<name> (<album>)``
     instead, so both songs are kept and the release can be completed.
+    With *complete_albums* the same recording is saved that way too, so
+    every release keeps a copy of its own (issue #546).
     """
 
     try:
         return downloader.download(song, progress)
     except FileExistsError:
         taken = downloader.existing_filename_for(song)
-        if taken and same_recording(
-            Path(downloader.download_dir) / taken, song
+        if (
+            not complete_albums
+            and taken
+            and same_recording(Path(downloader.download_dir) / taken, song)
         ):
             observed.update(reused=True, other_release=True)
             return taken
@@ -2204,6 +2210,9 @@ async def check_artist(  # noqa: PLR0914  # one sweep: discography, releases, tr
         )
 
     delay_seconds = (settings or {}).get('download_delay_seconds', 0) or 0
+    complete_albums = bool(
+        (settings or {}).get('artist_watch_complete_albums')
+    )
     known_tracks = await asyncio.to_thread(db.get_track_filenames, playlist.id)
     # Songs the library already holds under another name - a playlist
     # download named from Spotify, another release of this artist - are
@@ -2274,7 +2283,14 @@ async def check_artist(  # noqa: PLR0914  # one sweep: discography, releases, tr
                     filename,
                 )
                 continue
-            same = songs.find(song) if songs is not None else None
+            # "Keep every album complete": each release gets its own copy
+            # of a song it shares with another (a greatest hits, a deluxe
+            # edition, a single) instead of linking the one already there.
+            same = (
+                songs.find(song)
+                if songs is not None and not complete_albums
+                else None
+            )
             if same and await asyncio.to_thread(
                 _library_file_exists, same, downloader, settings or {}
             ):
@@ -2323,6 +2339,7 @@ async def check_artist(  # noqa: PLR0914  # one sweep: discography, releases, tr
                                     progress_state,
                                 ),
                                 progress_state,
+                                complete_albums=complete_albums,
                             )
                         ),
                     )
