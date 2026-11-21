@@ -1381,6 +1381,7 @@ export default {
     pause: 'Pause',
     resume: 'Reprendre',
     stop: 'Arrêter la surveillance',
+    watched: 'Surveillé',
     openSource: 'Ouvrir l’original',
     everyMinutes: { one: 'Chaque minute', other: 'Toutes les {count} minutes' },
     everyHours: { one: 'Chaque heure', other: 'Toutes les {count} heures' },

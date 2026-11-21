@@ -48,7 +48,7 @@ A watch is never checked twice at the same time. Adding a watch starts its first
 
 Each tab has its own box. Pasting an artist link into the Playlists tab (or a playlist link into Artists) doesn't add anything: the page says what kind of link it is and offers to move it to the right tab.
 
-You can also start watching from a playlist's page: paste its link in the search bar and use **Watch for new tracks** (or **Watch for new releases** on a YouTube Music artist). Downloaded playlists in the Library offer the same action in their **⋯** menu. Watches added this way use a 6-hour interval — change it on the Monitor page.
+You can also start watching from a playlist's page: paste its link in the search bar and use **Watch for new tracks** (or **Watch for new releases** on a YouTube Music artist). Downloaded playlists in the Library offer the same action in their **⋯** menu. Watches added this way use a 6-hour interval — change it on the Monitor page. A playlist or artist you already watch shows **Watching** there instead; click it to open the watch's **Activity and songs** page or to **Stop watching** (downloaded songs stay in the library).
 
 ## Deezer playlists
 
@@ -141,7 +141,7 @@ An artist's page in the Library (`/library/artist`) has a **Watch artist** butto
 - when exactly one artist there has that name, the watch is added right away. It is checked daily and has **New releases only** on, since the library already holds their earlier music;
 - otherwise (namesakes, no artist with exactly that name, or the lookup failed) a dialog shows the YouTube Music artists found, each with its photo and a link to its profile, plus a box for a Spotify or YouTube Music artist link. The **Download** and **New releases only** options at the top apply to whichever you follow.
 
-Once the server has added the watch, the button turns into a **Monitor** link, where you change the interval and options; a refusal (the artist is already watched, say) shows in the dialog instead. It isn't shown in [library-only mode](library-only.md) or on the **Various Artists** page.
+When you already watch an artist of that name, the button reads **Watching** as soon as the page opens, and so does it once the server has added the watch. Click it for the watch's **Activity and songs** page, the **Monitor** page (to change the interval and options) or **Stop watching**, which asks first and keeps the songs already downloaded. Only your own watches count: an admin sees everyone's on the Monitor page, but another user's watch of the same artist doesn't turn the button. A refusal (the server can't find the artist, say) shows in the dialog instead. It isn't shown in [library-only mode](library-only.md) or on the **Various Artists** page.
 
 ## Check intervals
 

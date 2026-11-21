@@ -1390,6 +1390,7 @@ export default {
     pause: 'Pausieren',
     resume: 'Fortsetzen',
     stop: 'Überwachung beenden',
+    watched: 'Wird überwacht',
     openSource: 'Original öffnen',
     everyMinutes: { one: 'Jede Minute', other: 'Alle {count} Minuten' },
     everyHours: { one: 'Jede Stunde', other: 'Alle {count} Stunden' },

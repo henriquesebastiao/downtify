@@ -1239,6 +1239,7 @@ export default {
     pause: '暂停',
     resume: '恢复',
     stop: '停止监控',
+    watched: '监控中',
     openSource: '打开来源',
     everyMinutes: { one: '每分钟', other: '每 {count} 分钟' },
     everyHours: { one: '每小时', other: '每 {count} 小时' },

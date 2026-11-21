@@ -3,7 +3,12 @@ import { isArtistLink, useArtistWatch } from '../model/artistWatch'
 import monitorAPI from '../model/monitor'
 
 vi.mock('../model/monitor', () => ({
-  default: { addMonitoredPlaylist: vi.fn(), resolveArtistSuggestion: vi.fn() },
+  default: {
+    addMonitoredPlaylist: vi.fn(),
+    resolveArtistSuggestion: vi.fn(),
+    listMonitoredPlaylists: vi.fn(),
+    deleteMonitoredPlaylist: vi.fn(),
+  },
 }))
 const CHANNEL = 'https://music.youtube.com/channel/UCabcdefghijklmnopqrstuv'
 const OTHER = 'https://music.youtube.com/channel/UCvutsrqponmlkjihgfedcba'
@@ -136,5 +141,61 @@ describe('watch artist from the library', () => {
     expect(await pending).toBe(false)
     expect(monitorAPI.addMonitoredPlaylist).not.toHaveBeenCalled()
     expect(state.busy.value).toBe(false)
+  })
+})
+
+describe('an artist already watched', () => {
+  const WATCH = {
+    id: 4,
+    user_id: 1,
+    kind: 'artist',
+    name: 'Nirvana',
+    spotify_id: 'UCabcdefghijklmnopqrstuv',
+    url: CHANNEL,
+  }
+
+  it('shows as watched when the page opens', async () => {
+    monitorAPI.listMonitoredPlaylists.mockResolvedValueOnce({ data: [WATCH] })
+    const state = useArtistWatch()
+    expect(await state.check('nirvana', 1)).toBe(WATCH)
+    expect(state.followed.value).toBe(true)
+    expect(state.watch.value).toEqual(WATCH)
+  })
+
+  it('stays watchable when another user watches it', async () => {
+    monitorAPI.listMonitoredPlaylists.mockResolvedValueOnce({ data: [WATCH] })
+    const state = useArtistWatch()
+    expect(await state.check('Nirvana', 2)).toBeNull()
+    expect(state.followed.value).toBe(false)
+  })
+
+  it('remembers the watch it just added, and can stop it', async () => {
+    resolvesTo({ url: CHANNEL, candidates: [] })
+    monitorAPI.addMonitoredPlaylist.mockResolvedValueOnce({ data: WATCH })
+    monitorAPI.deleteMonitoredPlaylist.mockResolvedValueOnce({ data: {} })
+    const state = useArtistWatch()
+    expect(await state.follow('Nirvana')).toBe(true)
+    expect(state.watch.value).toEqual(WATCH)
+    expect(await state.stop()).toBe(true)
+    expect(monitorAPI.deleteMonitoredPlaylist).toHaveBeenCalledWith(4)
+    expect(state.followed.value).toBe(false)
+    expect(state.watch.value).toBeNull()
+  })
+
+  it('keeps the watch when stopping fails', async () => {
+    monitorAPI.listMonitoredPlaylists.mockResolvedValueOnce({ data: [WATCH] })
+    monitorAPI.deleteMonitoredPlaylist.mockRejectedValueOnce(new Error('no'))
+    const state = useArtistWatch()
+    await state.check('Nirvana', 1)
+    expect(await state.stop()).toBe(false)
+    expect(state.followed.value).toBe(true)
+    expect(state.stopping.value).toBe(false)
+  })
+
+  it('a failed lookup leaves the button offering to watch', async () => {
+    monitorAPI.listMonitoredPlaylists.mockRejectedValueOnce(new Error('down'))
+    const state = useArtistWatch()
+    expect(await state.check('Nirvana', 1)).toBeNull()
+    expect(state.followed.value).toBe(false)
   })
 })

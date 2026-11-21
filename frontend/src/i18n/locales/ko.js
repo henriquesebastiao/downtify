@@ -1339,6 +1339,7 @@ export default {
     pause: '일시정지',
     resume: '재개',
     stop: '모니터링 중지',
+    watched: '모니터링 중',
     openSource: '원본 링크 열기',
     everyMinutes: { one: '매분', other: '{count}분마다' },
     everyHours: { one: '매시간', other: '{count}시간마다' },

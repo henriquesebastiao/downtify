@@ -1367,6 +1367,7 @@ export default {
     pause: 'Παύση',
     resume: 'Συνέχιση',
     stop: 'Διακοπή παρακολούθησης',
+    watched: 'Παρακολουθείται',
     openSource: 'Άνοιγμα πρωτοτύπου',
     everyMinutes: { one: 'Κάθε λεπτό', other: 'Κάθε {count} λεπτά' },
     everyHours: { one: 'Κάθε ώρα', other: 'Κάθε {count} ώρες' },

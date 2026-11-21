@@ -1352,6 +1352,7 @@ export default {
     pause: 'Szüneteltetés',
     resume: 'Folytatás',
     stop: 'Figyelés leállítása',
+    watched: 'Figyelve',
     openSource: 'Eredeti megnyitása',
     everyMinutes: { one: 'Percenként', other: '{count} percenként' },
     everyHours: { one: 'Óránként', other: '{count} óránként' },

@@ -1532,6 +1532,7 @@ export default {
     pause: 'Пауза',
     resume: 'Продолжить',
     stop: 'Прекратить отслеживание',
+    watched: 'Отслеживается',
     openSource: 'Открыть оригинал',
     everyMinutes: {
       one: 'Каждую минуту',

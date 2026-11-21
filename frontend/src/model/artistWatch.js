@@ -1,6 +1,7 @@
 import { ref } from 'vue'
 import monitorAPI from './monitor'
 import { classifyInput } from '../lib/input'
+import { findWatch } from '../lib/watchMatch'
 
 // Watching an artist from their Library page. An artist watch follows a
 // YouTube Music artist, so the name is looked up there, as the Monitor's
@@ -11,6 +12,9 @@ import { classifyInput } from '../lib/input'
 //
 // These watches check daily and download new releases only: the library
 // already has the artist, and a whole discography is the dialog's choice.
+//
+// An artist already watched (by this user) shows as such: `check` looks
+// the watch up when the page opens, and `stop` removes it.
 export const ARTIST_WATCH_INTERVAL = 1440
 const ALL_RELEASE_TYPES = ['album', 'single', 'ep']
 
@@ -29,6 +33,9 @@ export function useArtistWatch() {
   // Looking the name up, or adding the watch.
   const busy = ref(false)
   const followed = ref(false)
+  // The watch that follows this artist, once known (`check` or `add`).
+  const watch = ref(null)
+  const stopping = ref(false)
   const candidates = ref([])
   const lookupFailed = ref(false)
   const url = ref('')
@@ -45,6 +52,8 @@ export function useArtistWatch() {
     open.value = false
     busy.value = false
     followed.value = false
+    watch.value = null
+    stopping.value = false
     candidates.value = []
     lookupFailed.value = false
     url.value = ''
@@ -62,12 +71,17 @@ export function useArtistWatch() {
     chosen.value = link
     error.value = ''
     try {
-      await monitorAPI.addMonitoredPlaylist(link, ARTIST_WATCH_INTERVAL, {
-        new_only: newOnly.value,
-        release_types: [...releaseTypes.value],
-      })
+      const res = await monitorAPI.addMonitoredPlaylist(
+        link,
+        ARTIST_WATCH_INTERVAL,
+        {
+          new_only: newOnly.value,
+          release_types: [...releaseTypes.value],
+        }
+      )
       if (current !== generation) return false
       followed.value = true
+      watch.value = res?.data?.id ? res.data : null
       open.value = false
       return true
     } catch (err) {
@@ -107,6 +121,41 @@ export function useArtistWatch() {
     return false
   }
 
+  // Whether `name` is already watched by `userId`; a failed lookup just
+  // leaves the button offering to watch (the server still refuses twice).
+  async function check(name, userId = null) {
+    const current = generation
+    try {
+      const { data } = await monitorAPI.listMonitoredPlaylists()
+      if (current !== generation) return null
+      const found = findWatch(data, { kind: 'artist', name, userId })
+      watch.value = found
+      followed.value = Boolean(found)
+      return found
+    } catch {
+      return null
+    }
+  }
+
+  // Stop watching; true once the server removed the watch.
+  async function stop() {
+    const target = watch.value
+    if (!target?.id || stopping.value) return false
+    const current = generation
+    stopping.value = true
+    try {
+      await monitorAPI.deleteMonitoredPlaylist(target.id)
+      if (current !== generation) return false
+      watch.value = null
+      followed.value = false
+      return true
+    } catch {
+      return false
+    } finally {
+      if (current === generation) stopping.value = false
+    }
+  }
+
   function choose(candidate) {
     if (busy.value || !candidate?.url) return Promise.resolve(false)
     return add(candidate.url)
@@ -121,6 +170,8 @@ export function useArtistWatch() {
     open,
     busy,
     followed,
+    watch,
+    stopping,
     candidates,
     lookupFailed,
     url,
@@ -129,6 +180,8 @@ export function useArtistWatch() {
     newOnly,
     releaseTypes,
     reset,
+    check,
+    stop,
     follow,
     choose,
     submit,

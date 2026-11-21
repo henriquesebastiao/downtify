@@ -1365,6 +1365,7 @@ export default {
     pause: 'Pausar',
     resume: 'Reanudar',
     stop: 'Dejar de vigilar',
+    watched: 'Vigilando',
     openSource: 'Abrir original',
     everyMinutes: { one: 'Cada minuto', other: 'Cada {count} minutos' },
     everyHours: { one: 'Cada hora', other: 'Cada {count} horas' },

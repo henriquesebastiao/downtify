@@ -1344,6 +1344,7 @@ export default {
     pause: 'Duraklat',
     resume: 'Sürdür',
     stop: 'İzlemeyi bırak',
+    watched: 'İzleniyor',
     openSource: 'Orijinali aç',
     everyMinutes: { one: 'Her dakika', other: 'Her {count} dakikada' },
     everyHours: { one: 'Her saat', other: 'Her {count} saatte' },

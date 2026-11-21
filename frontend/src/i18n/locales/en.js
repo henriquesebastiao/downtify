@@ -1326,6 +1326,7 @@ export default {
     pause: 'Pause',
     resume: 'Resume',
     stop: 'Stop watching',
+    watched: 'Watching',
     openSource: 'Open original',
     everyMinutes: { one: 'Every minute', other: 'Every {count} minutes' },
     everyHours: { one: 'Every hour', other: 'Every {count} hours' },

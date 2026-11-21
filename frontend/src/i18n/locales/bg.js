@@ -1336,6 +1336,7 @@ export default {
     pause: 'Пауза',
     resume: 'Продължи',
     stop: 'Спри наблюдението',
+    watched: 'Наблюдава се',
     openSource: 'Отвори оригинала',
     everyMinutes: { one: 'Всяка минута', other: 'На всеки {count} минути' },
     everyHours: { one: 'Всеки час', other: 'На всеки {count} часа' },

@@ -1267,6 +1267,7 @@ export default {
     pause: '暫停',
     resume: '繼續',
     stop: '停止監看',
+    watched: '監看中',
     openSource: '開啟原始頁面',
     everyMinutes: { one: '每分鐘', other: '每 {count} 分鐘' },
     everyHours: { one: '每小時', other: '每 {count} 小時' },
