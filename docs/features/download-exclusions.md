@@ -1,3 +1,7 @@
+---
+icon: lucide/ban
+---
+
 # Download exclusions and attempt budgets
 
 Administrators can stop retrying a track from its active or failed queue row.

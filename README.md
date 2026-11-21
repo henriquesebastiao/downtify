@@ -230,7 +230,7 @@ The image is built for both `amd64` and `arm64`, and Umbrel, CasaOS and HomeDock
 <summary><b>YouTube says "Sign in to confirm you're not a bot". What now?</b></summary>
 <br>
 
-Upload a `cookies.txt` in **Settings → YouTube cookies**; Downtify then keeps that session signed in on its own. If YouTube still rate-limits you, raise _Delay between downloads_, lower _Parallel downloads_, then try `DOWNTIFY_FORCE_IPV4=1`. See [Troubleshooting](https://downtify.henriquesebastiao.com/troubleshooting/) and [YouTube cookies](https://downtify.henriquesebastiao.com/features/youtube-cookies/).
+Upload a `cookies.txt` in **Settings → YouTube cookies**; Downtify then keeps that session signed in on its own. If YouTube still rate-limits you, raise _Pause between downloads_, lower _Parallel downloads_, then try `DOWNTIFY_FORCE_IPV4=1`. See [Troubleshooting](https://downtify.henriquesebastiao.com/troubleshooting/) and [YouTube cookies](https://downtify.henriquesebastiao.com/features/youtube-cookies/).
 
 </details>
 

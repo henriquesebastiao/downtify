@@ -1,26 +1,33 @@
 <template>
-  <ol
-    class="not-doc my-6 grid gap-3 md:grid-cols-[1fr_auto_1fr_auto_1fr] md:items-stretch"
-  >
+  <ol class="not-doc my-6 flex flex-col gap-2 md:flex-row md:items-stretch">
     <template v-for="(step, i) in steps" :key="step.title">
       <li
-        class="flex items-center gap-4 rounded-panel border border-line-2 bg-surface px-5 py-4"
+        class="flex flex-1 flex-col gap-3 rounded-panel border border-line-2 bg-surface p-5"
       >
-        <span
-          class="text-display flex size-10 shrink-0 items-center justify-center rounded-full bg-accent/12 text-sm font-bold text-accent"
-          >{{ i + 1 }}</span
-        >
-        <span class="min-w-0">
-          <span class="block font-semibold text-fg">{{ step.title }}</span>
-          <span class="block text-[13px] text-muted">{{ step.text }}</span>
+        <span class="flex items-center justify-between">
+          <span
+            class="flex size-10 items-center justify-center rounded-[12px] bg-accent text-on-accent"
+          >
+            <Icon :name="step.icon" :size="20" :stroke-width="2" />
+          </span>
+          <span
+            class="text-display text-[13px] font-semibold tracking-[0.08em] text-faint"
+            >{{ String(i + 1).padStart(2, '0') }}</span
+          >
         </span>
+        <span class="text-display text-[16px] font-semibold text-fg">{{
+          step.title
+        }}</span>
+        <span class="text-[13.5px] leading-relaxed text-muted">{{
+          step.text
+        }}</span>
       </li>
       <li
         v-if="i < steps.length - 1"
         aria-hidden="true"
-        class="flex items-center justify-center text-faint max-md:rotate-90"
+        class="flex items-center justify-center text-accent max-md:rotate-90"
       >
-        <Icon name="arrow-right" :size="18" />
+        <Icon name="chevron-right" :size="18" :stroke-width="2.2" />
       </li>
     </template>
   </ol>
@@ -29,5 +36,6 @@
 <script setup>
 import Icon from './Icon.vue'
 
+// steps: [{ icon, title, text }]
 defineProps({ steps: { type: Array, required: true } })
 </script>

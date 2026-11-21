@@ -59,14 +59,16 @@ function sidebarFor(code) {
       icon: iconName(ref),
     }
   }
-  return NAV.map((entry) =>
-    entry.items
-      ? {
-          title: nav.groups[entry.title] || entry.title,
-          items: entry.items.map(navItem),
-        }
-      : navItem(entry)
-  )
+  return NAV.map((entry) => {
+    if (!entry.items) return navItem(entry)
+    // A feature area's icon heads its card on the home page.
+    if (entry.icon) iconRefs.push(entry.icon)
+    return {
+      title: nav.groups[entry.title] || entry.title,
+      icon: entry.icon ? iconName(entry.icon) : undefined,
+      items: entry.items.map(navItem),
+    }
+  })
 }
 
 /** One locale's share of the VitePress `locales` option. */
@@ -109,14 +111,21 @@ const UI_ICONS = [
   'check',
   'file-code',
   'house',
-  'eye',
-  'sliders-horizontal',
-  'mic-vocal',
-  'headphones',
-  'list-music',
-  'folder',
-  'import',
   'download',
+  'play',
+  'pause',
+  'link',
+  'tag',
+  'music',
+  'radar',
+  'server',
+  'shield',
+  'smartphone',
+  'tablet-smartphone',
+  'star',
+  'heart',
+  'languages',
+  'git-pull-request',
 ]
 
 /** First prose paragraph of a page, for <meta name="description">. */
