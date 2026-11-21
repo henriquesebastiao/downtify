@@ -1068,6 +1068,21 @@ export default {
     },
     missingHint:
       'Estão na playlist, mas não na sua biblioteca — porque falharam ou foram adicionadas depois.',
+    heldHint: {
+      one: '{count} delas já está na sua biblioteca, com outro nome ou em outra pasta.',
+      other:
+        '{count} delas já estão na sua biblioteca, com outro nome ou em outra pasta.',
+    },
+    addFromLibrary: {
+      one: 'Adicionar {count} da biblioteca',
+      other: 'Adicionar {count} da biblioteca',
+    },
+    addedFromLibrary: {
+      one: '{count} música adicionada da sua biblioteca',
+      other: '{count} músicas adicionadas da sua biblioteca',
+    },
+    addedFromLibraryNone:
+      'Nenhuma bateu o suficiente para ser adicionada: a duração ou a versão é diferente da da playlist.',
     showMissing: 'Mostrar faixas',
     downloadMissing: {
       one: 'Baixar {count} faltante',

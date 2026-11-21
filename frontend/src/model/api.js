@@ -356,6 +356,14 @@ function downloadMissingPlaylistTracks(payload) {
   return API.post('/api/playlists/incomplete/download-missing', payload)
 }
 
+// Add the playlist's songs the library already holds (another name,
+// another folder) without downloading them: `{ linked, missing_count }`.
+function linkExistingPlaylistTracks(spotifyPlaylistId) {
+  return API.post(
+    `/api/playlists/batches/${encodeURIComponent(spotifyPlaylistId)}/link-existing`
+  )
+}
+
 function deletePlaylistBatch(spotifyPlaylistId) {
   return API.delete(
     `/api/playlists/batches/${encodeURIComponent(spotifyPlaylistId)}`
@@ -1243,6 +1251,7 @@ export default {
   getPlaylistBatches,
   getPlaylistBatchDetails,
   downloadMissingPlaylistTracks,
+  linkExistingPlaylistTracks,
   deletePlaylistBatch,
   downloadFileURL: fileURL,
   downloadSaveName: saveName,

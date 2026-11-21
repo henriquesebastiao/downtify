@@ -1089,6 +1089,21 @@ export default {
     },
     missingHint:
       'Ils sont dans la playlist mais pas dans votre bibliothèque — en échec ou ajoutés plus tard.',
+    heldHint: {
+      one: "{count} d'entre eux est déjà dans votre bibliothèque, sous un autre nom ou dans un autre dossier.",
+      other:
+        "{count} d'entre eux sont déjà dans votre bibliothèque, sous un autre nom ou dans un autre dossier.",
+    },
+    addFromLibrary: {
+      one: 'Ajouter {count} depuis la bibliothèque',
+      other: 'Ajouter {count} depuis la bibliothèque',
+    },
+    addedFromLibrary: {
+      one: '{count} titre ajouté depuis votre bibliothèque',
+      other: '{count} titres ajoutés depuis votre bibliothèque',
+    },
+    addedFromLibraryNone:
+      'Aucun ne correspondait assez pour être ajouté : leur durée ou leur version diffère de celle de la playlist.',
     showMissing: 'Afficher les titres',
     downloadMissing: {
       one: 'Télécharger {count} manquant',

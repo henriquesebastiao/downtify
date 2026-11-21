@@ -2508,6 +2508,14 @@ Delete the playlist like `DELETE /api/library/playlist`, and also stop tracking 
 
 ---
 
+### `POST /api/playlists/batches/{spotify_playlist_id}/link-existing`
+
+Add the playlist's songs the library already holds to it, without downloading anything: a song counts as held when a library file has the same ISRC, or the same lead artist and title (`feat.`/`with` credits and remaster tags folded away) and a length within 3 seconds. That covers older downloads saved under another name and files in [existing music folders](features/external-library.md). Each song found joins the playlist's catalog (and its M3U and Navidrome playlist, when those are on) and is indexed under its Spotify id. Used by **Add … from library** on a playlist's **Missing** filter.
+
+**Response:** `{ "linked": 4, "missing_count": 2, "playlist_name": "Road Trip" }` — `linked` is how many songs joined the playlist, `missing_count` what it still misses. `404` if the playlist isn't tracked (or isn't theirs, for a user).
+
+---
+
 ### `GET /api/playlists/incomplete`
 
 Tracked playlist downloads that are still missing tracks (one's own for a user).
@@ -2522,7 +2530,9 @@ Queue only the tracks of a Spotify playlist that aren't in the library yet. For 
 
 **Request body:** `{ "spotify_playlist_id": "…" }` or `{ "playlist_url": "https://open.spotify.com/playlist/…" }`, optionally with `"generate_m3u": true`.
 
-**Response:** Same as `POST /api/download/batch`, plus `missing_count` and `playlist_name`. When nothing is missing: `{ "count": 0, "message": "Playlist already complete", "catalog_linked": 12, "playlist_refresh": true }`.
+With **Download again if the file exists** off, songs the library already holds (see [`link-existing`](#post-apiplaylistsbatchesspotify_playlist_idlink-existing)) are added to the playlist first and aren't queued; `linked_from_library` says how many.
+
+**Response:** Same as `POST /api/download/batch`, plus `missing_count`, `playlist_name` and `linked_from_library`. When nothing is missing: `{ "count": 0, "message": "Playlist already complete", "catalog_linked": 12, "linked_from_library": 0, "playlist_refresh": true }`.
 
 ---
 

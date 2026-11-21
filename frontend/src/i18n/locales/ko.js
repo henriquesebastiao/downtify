@@ -1055,6 +1055,21 @@ export default {
     },
     missingHint:
       '재생목록에는 포함되어 있으나 다운로드에 실패했거나 나중에 추가되어 라이브러리에 없는 곡들입니다.',
+    heldHint: {
+      one: '그중 {count}곡은 이미 라이브러리에 다른 이름이나 다른 폴더로 있습니다.',
+      other:
+        '그중 {count}곡은 이미 라이브러리에 다른 이름이나 다른 폴더로 있습니다.',
+    },
+    addFromLibrary: {
+      one: '라이브러리에서 {count}곡 추가',
+      other: '라이브러리에서 {count}곡 추가',
+    },
+    addedFromLibrary: {
+      one: '라이브러리에서 {count}곡을 추가했습니다',
+      other: '라이브러리에서 {count}곡을 추가했습니다',
+    },
+    addedFromLibraryNone:
+      '추가할 만큼 정확히 일치하는 곡이 없습니다. 길이나 버전이 플레이리스트와 다릅니다.',
     showMissing: '트랙 보기',
     downloadMissing: {
       one: '누락된 {count}개 다운로드',

@@ -1049,6 +1049,21 @@ export default {
     },
     missingHint:
       'These are on the playlist but not in your library — because they failed, or were added later.',
+    heldHint: {
+      one: '{count} of them is already in your library, under another name or in another folder.',
+      other:
+        '{count} of them are already in your library, under another name or in another folder.',
+    },
+    addFromLibrary: {
+      one: 'Add {count} from library',
+      other: 'Add {count} from library',
+    },
+    addedFromLibrary: {
+      one: 'Added {count} song from your library',
+      other: 'Added {count} songs from your library',
+    },
+    addedFromLibraryNone:
+      "None of them matched closely enough to add: their length or version differs from the playlist's.",
     showMissing: 'Show tracks',
     downloadMissing: {
       one: 'Download {count} missing',
