@@ -2250,7 +2250,7 @@ export default {
     ratingsNextSoon: 'Следующий запуск — в течение часа',
     ratingsNever: 'Ещё не запускалось',
     ratingsFailedDeezer:
-      'Не удалось связаться с Deezer. Уже поставленные звёзды сохранены.',
+      'Deezer не отвечал несколько минут. Уже поставленные звёзды сохранены, а следующий запуск продолжит с того места, где остановился этот.',
     ratingsFailedNavidrome: 'Ошибка Navidrome: {message}',
     ratingsFailed: 'Расчёт рейтингов не удался: {message}',
     ratingsNotConfigured: 'Сначала сохраните вход в Navidrome.',

@@ -1995,7 +1995,7 @@ export default {
     ratingsNextSoon: 'Próxima execução dentro de uma hora',
     ratingsNever: 'Ainda não executada',
     ratingsFailedDeezer:
-      'Não foi possível acessar o Deezer. As estrelas já dadas continuam.',
+      'O Deezer não respondeu por vários minutos. As estrelas já dadas continuam, e a próxima execução continua de onde esta parou.',
     ratingsFailedNavidrome: 'Erro do Navidrome: {message}',
     ratingsFailed: 'A avaliação falhou: {message}',
     ratingsNotConfigured: 'Salve primeiro o login do Navidrome.',

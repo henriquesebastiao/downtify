@@ -2040,7 +2040,7 @@ export default {
     ratingsNextSoon: 'Nächster Durchlauf innerhalb der nächsten Stunde',
     ratingsNever: 'Noch nicht ausgeführt',
     ratingsFailedDeezer:
-      'Deezer war nicht erreichbar. Bereits vergebene Sterne bleiben erhalten.',
+      'Deezer hat mehrere Minuten nicht geantwortet. Bereits vergebene Sterne bleiben erhalten, und der nächste Lauf macht dort weiter, wo dieser aufgehört hat.',
     ratingsFailedNavidrome: 'Navidrome-Fehler: {message}',
     ratingsFailed: 'Der Bewertungslauf ist fehlgeschlagen: {message}',
     ratingsNotConfigured: 'Speichere zuerst die Navidrome-Anmeldung.',

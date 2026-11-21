@@ -1972,7 +1972,7 @@ export default {
     ratingsNextSoon: '한 시간 안에 다음 실행',
     ratingsNever: '아직 실행하지 않음',
     ratingsFailedDeezer:
-      'Deezer에 연결할 수 없습니다. 이미 준 별점은 그대로 유지됩니다.',
+      'Deezer가 몇 분 동안 응답하지 않았습니다. 이미 준 별점은 그대로 유지되며, 다음 실행은 이번에 멈춘 곳부터 이어서 진행합니다.',
     ratingsFailedNavidrome: 'Navidrome 오류: {message}',
     ratingsFailed: '별점 실행에 실패했습니다: {message}',
     ratingsNotConfigured: '먼저 Navidrome 로그인 정보를 저장하세요.',

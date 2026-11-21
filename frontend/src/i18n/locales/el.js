@@ -2017,7 +2017,7 @@ export default {
     ratingsNextSoon: 'Επόμενη εκτέλεση μέσα στην ώρα',
     ratingsNever: 'Δεν έχει εκτελεστεί ακόμη',
     ratingsFailedDeezer:
-      'Δεν ήταν δυνατή η σύνδεση με το Deezer. Τα αστέρια που δόθηκαν ήδη παραμένουν.',
+      'Το Deezer δεν απάντησε για αρκετά λεπτά. Τα αστέρια που δόθηκαν ήδη παραμένουν και η επόμενη εκτέλεση συνεχίζει από εκεί που σταμάτησε αυτή.',
     ratingsFailedNavidrome: 'Σφάλμα Navidrome: {message}',
     ratingsFailed: 'Η βαθμολόγηση απέτυχε: {message}',
     ratingsNotConfigured: 'Αποθήκευσε πρώτα τη σύνδεση στο Navidrome.',
