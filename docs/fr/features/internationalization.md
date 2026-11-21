@@ -32,6 +32,7 @@ Une page pas encore traduite affiche une note et le texte anglais, si bien que c
 | `bg` | Български | ✓ | ✓ |
 | `de` | Deutsch | ✓ | ✓ |
 | `ko` | 한국어 | ✓ | ✓ |
+| `ru` | Русский | ✓ | ✓ |
 | `zh-CN` | 简体中文 | ✓ | — |
 | `zh-TW` | 繁體中文 | ✓ | — |
 

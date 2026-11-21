@@ -209,7 +209,7 @@ Any other client can use the same API: see the [mobile client contract](mobile-c
 
 ## Made in the open
 
-Downtify is free and open source. More than 35 people have contributed code, community translators brought it to 12 languages, and many features began as an idea someone opened as an issue. If it has earned a place on your server, star it on GitHub, tell a friend who self-hosts, or sponsor its development: it helps pay for the time that goes into every release.
+Downtify is free and open source. More than 35 people have contributed code, community translators brought it to 13 languages, and many features began as an idea someone opened as an issue. If it has earned a place on your server, star it on GitHub, tell a friend who self-hosts, or sponsor its development: it helps pay for the time that goes into every release.
 
 <HomeActions :actions="$frontmatter.community" />
 

@@ -14,6 +14,7 @@ export const OG_LOCALE = {
   hu: 'hu_HU',
   ko: 'ko_KR',
   'pt-BR': 'pt_BR',
+  ru: 'ru_RU',
   tr: 'tr_TR',
   'zh-CN': 'zh_CN',
 }

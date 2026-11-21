@@ -32,6 +32,7 @@ Una página que aún no está traducida muestra un aviso y el texto en inglés, 
 | `bg` | Български | ✓ | ✓ |
 | `de` | Deutsch | ✓ | ✓ |
 | `ko` | 한국어 | ✓ | ✓ |
+| `ru` | Русский | ✓ | ✓ |
 | `zh-CN` | 简体中文 | ✓ | — |
 | `zh-TW` | 繁體中文 | ✓ | — |
 

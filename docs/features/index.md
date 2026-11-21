@@ -92,7 +92,7 @@ Everything Downtify does, grouped by area as in the sidebar. Every feature has i
 | [Library-only mode](library-only.md) | Keep every account and app to the music already in the library: no outside search, streams or downloads |
 | [Outbound Proxy](outbound-proxy.md) | Send Downtify's outbound traffic through an HTTP, HTTPS or SOCKS5 proxy |
 | [Update Notifications](updates.md) | Hourly check against GitHub Releases; a notice appears in the sidebar when a newer version is out, and a "What's new" summary after you update |
-| [Internationalization](internationalization.md) | The app in 12 languages and the documentation in nearly all of them, and how to add yours |
+| [Internationalization](internationalization.md) | The app in 13 languages and the documentation in nearly all of them, and how to add yours |
 
 ## Input types
 

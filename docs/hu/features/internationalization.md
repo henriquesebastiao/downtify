@@ -32,6 +32,7 @@ Egy még le nem fordított oldal egy megjegyzést és az angol szöveget mutatja
 | `bg` | Български | ✓ | ✓ |
 | `de` | Deutsch | ✓ | ✓ |
 | `ko` | 한국어 | ✓ | ✓ |
+| `ru` | Русский | ✓ | ✓ |
 | `zh-CN` | 简体中文 | ✓ | — |
 | `zh-TW` | 繁體中文 | ✓ | — |
 
