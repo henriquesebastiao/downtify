@@ -77,6 +77,10 @@ O Downtify registra todas as faixas baixadas automaticamente em seu banco de dad
 
 Se os arquivos somem a cada reinício, o volume `/downloads` não está persistido — mesma solução acima.
 
+## Um mix do Spotify baixa músicas que não estão no meu mix
+
+Daily Mix, Descobertas da Semana, Radar de Novidades e as outras playlists "feitas para você" do Spotify mostram as suas músicas só para você, com sua conta conectada. O Downtify lê o Spotify sem conta, então recebe a versão que o Spotify mostra para quem não entrou, que pode ter músicas completamente diferentes. Copie as músicas do mix para uma playlist sua no Spotify e monitore essa. Veja [Mixes do Spotify feitos para você](features/playlist-monitor.md#spotify-mixes-made-for-you).
+
 ## "Could not find a YouTube match for '…'"
 
 Nem o YouTube Music nem o YouTube comum devolveram um resultado que passasse nas verificações do comparador — título parecido com o original, ao menos um artista em comum, não ser versão de karaokê/cover/ao vivo/em outro idioma e duração a até 30 segundos da do Spotify. Veja [Como funciona](how-it-works.md#fallback-to-standard-youtube).

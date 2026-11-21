@@ -13,6 +13,7 @@ import {
   isGuestOn,
   isVariousArtists,
   normalizeTrack,
+  songAlbumKey,
   songKey,
   sortItems,
 } from '../lib/library.js'
@@ -712,5 +713,17 @@ describe('albumLinkFor', () => {
   it('gives no link to a song without an album', () => {
     expect(albumLinkFor(albums, { album_name: '', artists: ['A'] })).toBe(null)
     expect(albumLinkFor(albums, null)).toBe(null)
+  })
+})
+
+describe('songAlbumKey', () => {
+  it('tells the same song on two albums apart (issue #546)', () => {
+    const onAlbum = songAlbumKey('Drake', 'Hotline Bling', 'Views')
+    expect(songAlbumKey('drake', 'Hotline Bling (feat. X)', 'VIEWS')).toBe(
+      onAlbum
+    )
+    expect(songAlbumKey('Drake', 'Hotline Bling', 'Greatest Hits')).not.toBe(
+      onAlbum
+    )
   })
 })

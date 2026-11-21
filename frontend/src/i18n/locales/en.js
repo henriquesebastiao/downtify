@@ -1049,6 +1049,21 @@ export default {
     },
     missingHint:
       'These are on the playlist but not in your library — because they failed, or were added later.',
+    heldHint: {
+      one: '{count} of them is already in your library, under another name or in another folder.',
+      other:
+        '{count} of them are already in your library, under another name or in another folder.',
+    },
+    addFromLibrary: {
+      one: 'Add {count} from library',
+      other: 'Add {count} from library',
+    },
+    addedFromLibrary: {
+      one: 'Added {count} song from your library',
+      other: 'Added {count} songs from your library',
+    },
+    addedFromLibraryNone:
+      "None of them matched closely enough to add: their length or version differs from the playlist's.",
     showMissing: 'Show tracks',
     downloadMissing: {
       one: 'Download {count} missing',
@@ -1327,6 +1342,11 @@ export default {
     resume: 'Resume',
     stop: 'Stop watching',
     watched: 'Watching',
+    personalMixTitle: 'A Spotify mix made for one listener',
+    personalMixBody:
+      "Daily Mixes, Discover Weekly, Release Radar and Spotify's other “made for you” playlists show your songs only to you, signed in. Downtify reads Spotify without an account, so it gets the version Spotify shows someone who isn't signed in, often with completely different songs. To keep your version, copy its songs into a playlist of your own on Spotify and use that one.",
+    personalMixWatch: 'Watch anyway',
+    personalMixBadge: 'Personal mix',
     openSource: 'Open original',
     everyMinutes: { one: 'Every minute', other: 'Every {count} minutes' },
     everyHours: { one: 'Every hour', other: 'Every {count} hours' },
@@ -1690,6 +1710,8 @@ export default {
     sourcesTitle: 'Where audio comes from',
     sourcesHint:
       'Each track tries the enabled sources in this order until one has a match.',
+    sourcesOwnServersOnly:
+      "Only your own servers are on: a song they don't have fails instead of coming from YouTube. Switch YouTube Music back on to use it as a fallback.",
     moveUp: 'Move up',
     moveDown: 'Move down',
     sourceSlskd: 'Soulseek (slskd)',
@@ -1829,6 +1851,9 @@ export default {
     overwrite: 'Download again if the file exists',
     overwriteHint:
       'Turn off to skip songs already in your library and save bandwidth.',
+    completeAlbums: 'Keep every album complete',
+    completeAlbumsHint:
+      "Artist Watch downloads a song again for each release it's on (an album, a greatest hits, a deluxe edition) instead of linking the copy you already have. Uses more disk space.",
     m3u: 'Write M3U playlists',
     m3uHint:
       'Save a .m3u file for each downloaded playlist, for Jellyfin, Plex, Navidrome and others.',

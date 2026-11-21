@@ -1122,6 +1122,7 @@ async def check_playlist(
         known_tracks,
         resolved,
         initial=initial,
+        settings=settings or {},
     )
 
     if new_tracks:
@@ -1280,20 +1281,29 @@ async def _split_new_tracks(
     resolved: dict[str, str],
     *,
     initial: bool = False,
+    settings: Optional[dict[str, Any]] = None,
 ) -> tuple[list[dict[str, Any]], int]:
     """``(tracks to download, number linked from the library)``.
 
     Tracks the watch already recorded are skipped (and their filenames
     added to ``resolved``). With *Overwrite existing files* off, a new
-    track the track index already has on disk is recorded for the watch
-    instead of being downloaded again (as :data:`OUTCOME_LINKED`).
+    track the library already holds is recorded for the watch instead of
+    being downloaded again (as :data:`OUTCOME_LINKED`): by its Spotify id
+    in the track index, else as the same song (:func:`_same_song_in_library`).
+
+    The second lookup is what stops a long-finished playlist from growing
+    (issue #573): Spotify swaps a playlist entry for the same song under
+    a new id (a re-release, a remaster, another market's copy), the new
+    id is unknown to the watch and to the index, and the name-based check
+    misses a title that changed (``… - Remastered 2011``).
     """
 
     new_tracks: list[dict[str, Any]] = []
     linked = 0
-    link_existing = library.track_index is not None and not getattr(
-        downloader, 'overwrite_existing_files', True
-    )
+    link_existing = not getattr(downloader, 'overwrite_existing_files', True)
+    settings = settings or {}
+    # The library by song, read once per sweep and only when needed.
+    songs: list[Optional[LibrarySongs]] = []
     for track in tracks:
         tid = track.get('song_id')
         if not tid:
@@ -1305,12 +1315,30 @@ async def _split_new_tracks(
             continue
         existing = (
             await asyncio.to_thread(
-                _library_file_for, track, downloader, library
+                _library_file_for, track, downloader, library, settings
             )
             if link_existing
             else None
         )
+        if not existing and link_existing:
+            if not songs:
+                songs.append(await asyncio.to_thread(_library_songs, library))
+            existing = await asyncio.to_thread(
+                _same_song_in_library,
+                track,
+                songs[0],
+                downloader,
+                library,
+                settings,
+            )
         if not existing:
+            logger.debug(
+                'Watch "{}": {} ({}) is new to the watch and not in the '
+                'library; downloading it',
+                playlist.name,
+                track.get('name'),
+                tid,
+            )
             new_tracks.append(track)
             continue
         await asyncio.to_thread(
@@ -1407,9 +1435,16 @@ def _forget_stale_failures(
 
 
 def _library_file_for(
-    song: dict[str, Any], downloader: Downloader, library: LibraryStores
+    song: dict[str, Any],
+    downloader: Downloader,
+    library: LibraryStores,
+    settings: Optional[dict[str, Any]] = None,
 ) -> Optional[str]:
-    """The library path already holding ``song`` per the track index."""
+    """The library path already holding ``song`` per the track index.
+
+    The configured external music folders count (an ``ext/…`` entry is
+    found there, not forgotten as missing); an entry whose file is gone
+    everywhere is forgotten."""
 
     tid = normalize_spotify_track_id(song)
     if not tid or library.track_index is None:
@@ -1417,12 +1452,48 @@ def _library_file_for(
     stored = library.track_index.lookup(tid)
     if not stored:
         return None
-    if locate_library_file(
-        stored, downloader.download_dir, slskd_dir_from_downloader(downloader)
-    ):
+    if _locate(stored, downloader, settings or {}):
         return stored
     library.track_index.forget(tid)
     return None
+
+
+def _same_song_in_library(
+    song: dict[str, Any],
+    songs: Optional[LibrarySongs],
+    downloader: Downloader,
+    library: LibraryStores,
+    settings: Optional[dict[str, Any]] = None,
+) -> Optional[str]:
+    """The library file holding ``song`` under another id: the same ISRC,
+    else the same song key and length (:mod:`downtify.library_songs`).
+
+    The file is then indexed under ``song``'s Spotify id too, so the next
+    sweep (and the playlist catalog) finds it straight away."""
+
+    if songs is None:
+        return None
+    found = songs.find(song)
+    if not found:
+        return None
+    full = _locate(found, downloader, settings or {})
+    if full is None:
+        return None
+    logger.info(
+        'Linking {!r} ({}) to {} already in the library (same song under '
+        'another id)',
+        song.get('name'),
+        song.get('song_id'),
+        found,
+    )
+    if library.track_index is not None:
+        try:
+            library.track_index.register_song(song, found, full_path=full)
+        except Exception:
+            logger.opt(exception=True).debug(
+                'Could not index {} for {}', found, song.get('song_id')
+            )
+    return found
 
 
 def _record_sweep_owner(
@@ -2048,6 +2119,8 @@ def _download_release_track(
     album: dict[str, Any],
     progress: Optional[ProgressCallback],
     observed: dict[str, Any],
+    *,
+    complete_albums: bool = False,
 ) -> str:
     """Download one track of a watched artist's release.
 
@@ -2059,14 +2132,18 @@ def _download_release_track(
     same name - another album's ``Intro``, with files organized by
     artist but not by album - the track is saved as ``<name> (<album>)``
     instead, so both songs are kept and the release can be completed.
+    With *complete_albums* the same recording is saved that way too, so
+    every release keeps a copy of its own (issue #546).
     """
 
     try:
         return downloader.download(song, progress)
     except FileExistsError:
         taken = downloader.existing_filename_for(song)
-        if taken and same_recording(
-            Path(downloader.download_dir) / taken, song
+        if (
+            not complete_albums
+            and taken
+            and same_recording(Path(downloader.download_dir) / taken, song)
         ):
             observed.update(reused=True, other_release=True)
             return taken
@@ -2204,6 +2281,9 @@ async def check_artist(  # noqa: PLR0914  # one sweep: discography, releases, tr
         )
 
     delay_seconds = (settings or {}).get('download_delay_seconds', 0) or 0
+    complete_albums = bool(
+        (settings or {}).get('artist_watch_complete_albums')
+    )
     known_tracks = await asyncio.to_thread(db.get_track_filenames, playlist.id)
     # Songs the library already holds under another name - a playlist
     # download named from Spotify, another release of this artist - are
@@ -2274,7 +2354,14 @@ async def check_artist(  # noqa: PLR0914  # one sweep: discography, releases, tr
                     filename,
                 )
                 continue
-            same = songs.find(song) if songs is not None else None
+            # "Keep every album complete": each release gets its own copy
+            # of a song it shares with another (a greatest hits, a deluxe
+            # edition, a single) instead of linking the one already there.
+            same = (
+                songs.find(song)
+                if songs is not None and not complete_albums
+                else None
+            )
             if same and await asyncio.to_thread(
                 _library_file_exists, same, downloader, settings or {}
             ):
@@ -2323,6 +2410,7 @@ async def check_artist(  # noqa: PLR0914  # one sweep: discography, releases, tr
                                     progress_state,
                                 ),
                                 progress_state,
+                                complete_albums=complete_albums,
                             )
                         ),
                     )

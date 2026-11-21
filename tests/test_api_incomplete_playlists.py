@@ -7,10 +7,12 @@ from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock, patch
 
+import pytest
 from starlette.requests import Request
 
 from downtify import api
 from downtify.auth import Principal
+from downtify.library_songs import LibrarySongs
 from downtify.playlist_batches import (
     PlaylistBatchStore,
     split_tracks_by_library,
@@ -603,3 +605,167 @@ def test_rebuild_playlist_catalog_from_library_links_all_on_disk(
         api.state.playlist_catalog = None
         api.state.track_index = None
         api.state.downloader = None
+
+
+def _held_song_setup(tmp_path: Path):
+    """A downloaded playlist 'Road Trip' (pl550) whose second song was
+    never downloaded for it, while the library holds that very song under
+    another name in another folder (issue #550)."""
+
+    db = tmp_path / 'lib.db'
+    download_dir = tmp_path / 'downloads'
+    pl_dir = download_dir / 'Road Trip'
+    pl_dir.mkdir(parents=True)
+    old_dir = download_dir / 'Old Rips'
+    old_dir.mkdir()
+
+    tracks = [
+        {
+            'song_id': '4uLU6hMCjMI75M1A2tKUQ1',
+            'name': 'One',
+            'artists': ['A'],
+            'duration': 200,
+        },
+        {
+            'song_id': '4uLU6hMCjMI75M1A2tKUQ2',
+            'name': 'Two - Remastered 2011',
+            'artists': ['B', 'Guest'],
+            'duration': 181,
+        },
+    ]
+    index = TrackIndex(db)
+    one = pl_dir / 'A - One.mp3'
+    one.write_bytes(b'x' * 100)
+    index.register(
+        tracks[0]['song_id'], 'Road Trip/A - One.mp3', full_path=one
+    )
+    held = old_dir / 'b_two.mp3'
+    held.write_bytes(b'y' * 100)
+
+    catalog = PlaylistCatalog(db)
+    catalog.ensure_playlist('Road Trip', spotify_id='pl550')
+    catalog.upsert_track('Road Trip', tracks[0], 'Road Trip/A - One.mp3', one)
+
+    downloader = MagicMock()
+    downloader.download_dir = str(download_dir)
+    downloader.organize_by_artist = False
+    downloader.organize_by_album = False
+    downloader.overwrite_existing_files = False
+    downloader.slskd_settings = {}
+    downloader.existing_filename_for.return_value = None
+    downloader.find_existing_download.return_value = None
+
+    songs = LibrarySongs([
+        {
+            'file': 'Road Trip/A - One.mp3',
+            'artist': 'A',
+            'title': 'One',
+            'duration': 200,
+        },
+        {
+            'file': 'Old Rips/b_two.mp3',
+            'artist': 'B',
+            'title': 'Two',
+            'duration': 180,
+        },
+    ])
+    return catalog, index, downloader, tracks, songs
+
+
+def test_rebuild_links_a_song_the_library_holds_under_another_name(
+    tmp_path: Path, monkeypatch
+) -> None:
+    catalog, index, downloader, tracks, songs = _held_song_setup(tmp_path)
+    monkeypatch.setattr(api.state, 'playlist_catalog', catalog)
+    monkeypatch.setattr(api.state, 'track_index', index)
+    monkeypatch.setattr(api.state, 'downloader', downloader)
+    monkeypatch.setattr(api, '_library_songs', lambda: songs)
+
+    with patch(
+        'downtify.api._fetch_playlist_tracks',
+        return_value=('Road Trip', tracks),
+    ):
+        linked = api._rebuild_playlist_catalog_from_library(
+            'Road Trip', 'pl550'
+        )
+
+    assert linked == 2
+    files = [row['filename'] for row in catalog.list_tracks('Road Trip')]
+    assert files == ['Road Trip/A - One.mp3', 'Old Rips/b_two.mp3']
+    assert index.lookup(tracks[1]['song_id']) == 'Old Rips/b_two.mp3'
+
+
+def test_rebuild_without_same_songs_leaves_the_held_song_out(
+    tmp_path: Path, monkeypatch
+) -> None:
+    catalog, index, downloader, tracks, songs = _held_song_setup(tmp_path)
+    monkeypatch.setattr(api.state, 'playlist_catalog', catalog)
+    monkeypatch.setattr(api.state, 'track_index', index)
+    monkeypatch.setattr(api.state, 'downloader', downloader)
+    monkeypatch.setattr(api, '_library_songs', lambda: songs)
+
+    with patch(
+        'downtify.api._fetch_playlist_tracks',
+        return_value=('Road Trip', tracks),
+    ):
+        linked = api._rebuild_playlist_catalog_from_library(
+            'Road Trip', 'pl550', same_songs=False
+        )
+
+    assert linked == 1
+    assert index.lookup(tracks[1]['song_id']) is None
+
+
+def test_link_existing_endpoint_adds_held_songs(
+    tmp_path: Path, monkeypatch
+) -> None:
+    catalog, index, downloader, tracks, songs = _held_song_setup(tmp_path)
+    monkeypatch.setattr(api.state, 'playlist_catalog', catalog)
+    monkeypatch.setattr(api.state, 'track_index', index)
+    monkeypatch.setattr(api.state, 'downloader', downloader)
+    monkeypatch.setattr(api.state, 'settings', {'generate_m3u': False})
+    monkeypatch.setattr(api, '_library_songs', lambda: songs)
+    monkeypatch.setattr(
+        api,
+        '_known_spotify_playlist_sources',
+        lambda _scope=None: {'pl550': {'playlist_name': 'Road Trip'}},
+    )
+    monkeypatch.setattr(
+        api,
+        '_report_for_spotify_playlist',
+        lambda *a, **k: {'missing_count': 0},
+    )
+
+    with patch(
+        'downtify.api._fetch_playlist_tracks',
+        return_value=('Road Trip', tracks),
+    ):
+        out = asyncio.run(
+            api.link_existing_playlist_tracks_endpoint(
+                _admin_request(), 'pl550'
+            )
+        )
+
+    assert out == {
+        'linked': 1,
+        'missing_count': 0,
+        'playlist_name': 'Road Trip',
+    }
+    assert len(catalog.list_tracks('Road Trip')) == 2
+
+
+def test_link_existing_endpoint_404s_for_an_unknown_playlist(
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(api.state, 'downloader', MagicMock())
+    monkeypatch.setattr(api.state, 'playlist_catalog', MagicMock())
+    monkeypatch.setattr(
+        api, '_known_spotify_playlist_sources', lambda _scope=None: {}
+    )
+    with pytest.raises(api.HTTPException) as exc:
+        asyncio.run(
+            api.link_existing_playlist_tracks_endpoint(
+                _admin_request(), 'nope'
+            )
+        )
+    assert exc.value.status_code == 404

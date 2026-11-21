@@ -1073,6 +1073,21 @@ export default {
     },
     missingHint:
       'Están en la playlist pero no en tu biblioteca — porque fallaron o se añadieron después.',
+    heldHint: {
+      one: '{count} de ellas ya está en tu biblioteca, con otro nombre o en otra carpeta.',
+      other:
+        '{count} de ellas ya están en tu biblioteca, con otro nombre o en otra carpeta.',
+    },
+    addFromLibrary: {
+      one: 'Añadir {count} de la biblioteca',
+      other: 'Añadir {count} de la biblioteca',
+    },
+    addedFromLibrary: {
+      one: 'Se añadió {count} canción de tu biblioteca',
+      other: 'Se añadieron {count} canciones de tu biblioteca',
+    },
+    addedFromLibraryNone:
+      'Ninguna coincidió lo suficiente para añadirla: su duración o versión difiere de la de la lista.',
     showMissing: 'Mostrar canciones',
     downloadMissing: {
       one: 'Descargar {count} faltante',
@@ -1366,6 +1381,11 @@ export default {
     resume: 'Reanudar',
     stop: 'Dejar de vigilar',
     watched: 'Vigilando',
+    personalMixTitle: 'Un mix de Spotify hecho para una persona',
+    personalMixBody:
+      'Daily Mix, Descubrimiento semanal, Radar de Novedades y las demás listas «hechas para ti» de Spotify muestran tus canciones solo a ti, con tu sesión iniciada. Downtify lee Spotify sin cuenta, así que recibe la versión que Spotify muestra a quien no ha iniciado sesión, a menudo con canciones completamente distintas. Para quedarte con tu versión, copia sus canciones a una lista tuya en Spotify y usa esa.',
+    personalMixWatch: 'Vigilar de todos modos',
+    personalMixBadge: 'Mix personal',
     openSource: 'Abrir original',
     everyMinutes: { one: 'Cada minuto', other: 'Cada {count} minutos' },
     everyHours: { one: 'Cada hora', other: 'Cada {count} horas' },
@@ -1744,6 +1764,8 @@ export default {
     sourcesTitle: 'De dónde viene el audio',
     sourcesHint:
       'Cada canción prueba las fuentes activadas en este orden hasta que una encuentra coincidencia.',
+    sourcesOwnServersOnly:
+      'Solo están activados tus propios servidores: una canción que no tengan fallará en lugar de venir de YouTube. Vuelve a activar YouTube Music para usarlo como respaldo.',
     moveUp: 'Subir',
     moveDown: 'Bajar',
     sourceSlskd: 'Soulseek (slskd)',
@@ -1886,6 +1908,9 @@ export default {
     overwrite: 'Descargar de nuevo si el archivo existe',
     overwriteHint:
       'Desactívalo para omitir canciones que ya tienes y ahorrar ancho de banda.',
+    completeAlbums: 'Mantener cada álbum completo',
+    completeAlbumsHint:
+      'La vigilancia de artistas descarga una canción de nuevo para cada lanzamiento en el que aparece (un álbum, un grandes éxitos, una edición deluxe) en lugar de enlazar la copia que ya tienes. Ocupa más espacio en disco.',
     m3u: 'Generar playlists M3U',
     m3uHint:
       'Guarda un .m3u por cada playlist descargada, para Jellyfin, Plex, Navidrome y otros.',

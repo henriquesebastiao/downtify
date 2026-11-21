@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from downtify.download_sources import DownloadSources
 from downtify.library_catalog import LibraryContext, PlaylistCatalog
 from downtify.library_delete import (
     TagMismatchDeleteContext,
@@ -241,3 +242,43 @@ def test_delete_playlist_spares_same_named_album_folder_when_organized_by_album(
     assert result.get('ok') is True
     assert not playlist_track.is_file()
     assert album_only.is_file()
+
+
+def test_tag_mismatch_delete_rejects_the_wrong_upload(tmp_path: Path) -> None:
+    """Issue #573: the upload a wrong file came from is rejected for the
+    playlist's song, so the monitor's next download picks another one
+    instead of fetching (and deleting) the same file forever."""
+
+    download_dir = tmp_path / 'downloads'
+    pl_dir = download_dir / 'My Playlist'
+    pl_dir.mkdir(parents=True)
+    wrong = pl_dir / 'Noizy - 100 Kile.mp3'
+    wrong.write_bytes(b'audio')
+    sources = DownloadSources(tmp_path / 'lib.db')
+    sources.record(
+        'My Playlist/Noizy - 100 Kile.mp3',
+        None,
+        'wrongVideo1',
+        ['spotify:4uLU6hMCjMI75M1A2tKUQC'],
+    )
+
+    ctx = LibraryContext(download_dir=download_dir)
+    song = {
+        'song_id': '4uLU6hMCjMI75M1A2tKUQC',
+        'spotify_name': '100 Kile',
+        'spotify_artists': ['Noizy'],
+        'name': '100',
+        'artists': ['Ledri Vula', 'Lyrical Son', 'Singi'],
+        'filename': 'My Playlist/Noizy - 100 Kile.mp3',
+        'library_from_tags': True,
+    }
+    del_ctx = TagMismatchDeleteContext(ctx=ctx, download_sources=sources)
+    assert delete_if_spotify_tag_mismatch(song, del_ctx)
+    assert not wrong.is_file()
+
+    again = {
+        'song_id': '4uLU6hMCjMI75M1A2tKUQC',
+        'name': '100 Kile',
+        'artists': ['Noizy'],
+    }
+    assert sources.rejected_for(again) == {'wrongVideo1'}

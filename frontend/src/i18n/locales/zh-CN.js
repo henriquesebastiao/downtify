@@ -975,6 +975,20 @@ export default {
     },
     missingHint:
       '这些歌曲在播放列表中，但不在音乐库中，可能下载失败或是在之后添加的。',
+    heldHint: {
+      one: '其中 {count} 首已在你的音乐库中，名称不同或位于其他文件夹。',
+      other: '其中 {count} 首已在你的音乐库中，名称不同或位于其他文件夹。',
+    },
+    addFromLibrary: {
+      one: '从音乐库添加 {count} 首',
+      other: '从音乐库添加 {count} 首',
+    },
+    addedFromLibrary: {
+      one: '已从你的音乐库添加 {count} 首歌曲',
+      other: '已从你的音乐库添加 {count} 首歌曲',
+    },
+    addedFromLibraryNone:
+      '没有匹配得足够准确的歌曲可添加：时长或版本与歌单中的不同。',
     showMissing: '显示歌曲',
     downloadMissing: {
       one: '下载 {count} 首缺失歌曲',
@@ -1240,6 +1254,11 @@ export default {
     resume: '恢复',
     stop: '停止监控',
     watched: '监控中',
+    personalMixTitle: '为单个听众生成的 Spotify 混音歌单',
+    personalMixBody:
+      '每日推荐（Daily Mix）、每周新发现、新歌雷达以及 Spotify 其他“为你推荐”的歌单，只在你登录时向你本人显示你的歌曲。Downtify 不使用账号读取 Spotify，因此拿到的是 Spotify 向未登录用户显示的版本，歌曲往往完全不同。要保留你的版本，请在 Spotify 上把这些歌曲复制到你自己的歌单，然后使用那个歌单。',
+    personalMixWatch: '仍然监控',
+    personalMixBadge: '个人混音',
     openSource: '打开来源',
     everyMinutes: { one: '每分钟', other: '每 {count} 分钟' },
     everyHours: { one: '每小时', other: '每 {count} 小时' },
@@ -1594,6 +1613,8 @@ export default {
     showShortcuts: '显示快捷键',
     sourcesTitle: '音频来源',
     sourcesHint: '每首歌曲会按此顺序尝试已启用的来源，直到找到匹配版本。',
+    sourcesOwnServersOnly:
+      '只启用了你自己的服务器：它们没有的歌曲会直接失败，而不会改从 YouTube 下载。重新启用 YouTube Music 即可把它作为备用来源。',
     moveUp: '上移',
     moveDown: '下移',
     sourceSlskd: 'Soulseek（slskd）',
@@ -1727,6 +1748,9 @@ export default {
       '每张专辑保存到独立文件夹，同时开启“按艺人整理”时，结构为“艺人/专辑”。',
     overwrite: '文件存在时重新下载',
     overwriteHint: '关闭后跳过音乐库中已有的歌曲，节省带宽。',
+    completeAlbums: '保持每张专辑完整',
+    completeAlbumsHint:
+      '艺人监控会为歌曲所在的每个发行（专辑、精选集、豪华版）重新下载一份，而不是链接你已有的副本。会占用更多磁盘空间。',
     m3u: '生成 M3U 播放列表',
     m3uHint:
       '为每个下载的播放列表保存 .m3u 文件，供 Jellyfin、Plex、Navidrome 等使用。',

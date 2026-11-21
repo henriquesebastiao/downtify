@@ -1089,6 +1089,21 @@ export default {
     },
     missingHint:
       'Ils sont dans la playlist mais pas dans votre bibliothèque — en échec ou ajoutés plus tard.',
+    heldHint: {
+      one: "{count} d'entre eux est déjà dans votre bibliothèque, sous un autre nom ou dans un autre dossier.",
+      other:
+        "{count} d'entre eux sont déjà dans votre bibliothèque, sous un autre nom ou dans un autre dossier.",
+    },
+    addFromLibrary: {
+      one: 'Ajouter {count} depuis la bibliothèque',
+      other: 'Ajouter {count} depuis la bibliothèque',
+    },
+    addedFromLibrary: {
+      one: '{count} titre ajouté depuis votre bibliothèque',
+      other: '{count} titres ajoutés depuis votre bibliothèque',
+    },
+    addedFromLibraryNone:
+      'Aucun ne correspondait assez pour être ajouté : leur durée ou leur version diffère de celle de la playlist.',
     showMissing: 'Afficher les titres',
     downloadMissing: {
       one: 'Télécharger {count} manquant',
@@ -1382,6 +1397,11 @@ export default {
     resume: 'Reprendre',
     stop: 'Arrêter la surveillance',
     watched: 'Surveillé',
+    personalMixTitle: 'Un mix Spotify fait pour une seule personne',
+    personalMixBody:
+      "Les Daily Mix, Découvertes de la semaine, Radar des sorties et les autres playlists « conçues pour vous » de Spotify ne montrent vos titres qu'à vous, une fois connecté. Downtify lit Spotify sans compte : il reçoit la version que Spotify montre à quelqu'un qui n'est pas connecté, souvent avec des titres complètement différents. Pour garder votre version, copiez ses titres dans une playlist à vous sur Spotify et utilisez celle-ci.",
+    personalMixWatch: 'Surveiller quand même',
+    personalMixBadge: 'Mix personnel',
     openSource: 'Ouvrir l’original',
     everyMinutes: { one: 'Chaque minute', other: 'Toutes les {count} minutes' },
     everyHours: { one: 'Chaque heure', other: 'Toutes les {count} heures' },
@@ -1763,6 +1783,8 @@ export default {
     sourcesTitle: 'Provenance de l’audio',
     sourcesHint:
       'Chaque titre essaie les sources activées dans cet ordre jusqu’à trouver une correspondance.',
+    sourcesOwnServersOnly:
+      "Seuls vos propres serveurs sont activés : un titre qu'ils n'ont pas échoue au lieu de venir de YouTube. Réactivez YouTube Music pour vous en servir en secours.",
     moveUp: 'Monter',
     moveDown: 'Descendre',
     sourceSlskd: 'Soulseek (slskd)',
@@ -1906,6 +1928,9 @@ export default {
     overwrite: 'Retélécharger si le fichier existe',
     overwriteHint:
       'Désactivez pour ignorer les titres déjà présents et économiser de la bande passante.',
+    completeAlbums: 'Garder chaque album complet',
+    completeAlbumsHint:
+      "Le suivi d'artistes retélécharge un titre pour chaque sortie où il figure (un album, un best-of, une édition deluxe) au lieu de lier la copie que vous avez déjà. Prend plus de place sur le disque.",
     m3u: 'Écrire des playlists M3U',
     m3uHint:
       'Enregistre un .m3u pour chaque playlist téléchargée, pour Jellyfin, Plex, Navidrome et d’autres.',

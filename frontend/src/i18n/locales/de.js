@@ -1088,6 +1088,21 @@ export default {
     },
     missingHint:
       'Diese Titel sind in der Playlist, aber nicht in deiner Bibliothek - entweder ist der Download fehlgeschlagen oder sie wurden später hinzugefügt.',
+    heldHint: {
+      one: '{count} davon ist schon in deiner Bibliothek, unter anderem Namen oder in einem anderen Ordner.',
+      other:
+        '{count} davon sind schon in deiner Bibliothek, unter anderem Namen oder in einem anderen Ordner.',
+    },
+    addFromLibrary: {
+      one: '{count} aus der Bibliothek hinzufügen',
+      other: '{count} aus der Bibliothek hinzufügen',
+    },
+    addedFromLibrary: {
+      one: '{count} Song aus deiner Bibliothek hinzugefügt',
+      other: '{count} Songs aus deiner Bibliothek hinzugefügt',
+    },
+    addedFromLibraryNone:
+      'Keiner passte genau genug, um ihn hinzuzufügen: Länge oder Version weichen von der Playlist ab.',
     showMissing: 'Titel anzeigen',
     downloadMissing: {
       one: '{count} fehlenden Titel herunterladen',
@@ -1391,6 +1406,11 @@ export default {
     resume: 'Fortsetzen',
     stop: 'Überwachung beenden',
     watched: 'Wird überwacht',
+    personalMixTitle: 'Ein Spotify-Mix, gemacht für eine Person',
+    personalMixBody:
+      'Daily Mixes, Dein Mix der Woche, Release Radar und die anderen „Für dich“-Playlists von Spotify zeigen deine Songs nur dir, wenn du angemeldet bist. Downtify liest Spotify ohne Konto und bekommt daher die Version, die Spotify nicht angemeldeten Personen zeigt – oft mit völlig anderen Songs. Um deine Version zu behalten, kopiere die Songs in eine eigene Playlist auf Spotify und nutze diese.',
+    personalMixWatch: 'Trotzdem überwachen',
+    personalMixBadge: 'Persönlicher Mix',
     openSource: 'Original öffnen',
     everyMinutes: { one: 'Jede Minute', other: 'Alle {count} Minuten' },
     everyHours: { one: 'Jede Stunde', other: 'Alle {count} Stunden' },
@@ -1768,6 +1788,8 @@ export default {
     sourcesTitle: 'Audioquellen',
     sourcesHint:
       'Jeder Titel wird nacheinander bei den aktivierten Quellen gesucht, bis ein Treffer gefunden wird.',
+    sourcesOwnServersOnly:
+      'Nur deine eigenen Server sind an: Ein Song, den sie nicht haben, schlägt fehl, statt von YouTube zu kommen. Schalte YouTube Music wieder ein, um es als Ausweichquelle zu nutzen.',
     moveUp: 'Nach oben',
     moveDown: 'Nach unten',
     sourceSlskd: 'Soulseek (slskd)',
@@ -1913,6 +1935,9 @@ export default {
     overwrite: 'Bei vorhandener Datei erneut herunterladen',
     overwriteHint:
       'Deaktiviere die Option, um Titel in deiner Bibliothek zu überspringen und Datenvolumen zu sparen.',
+    completeAlbums: 'Jedes Album vollständig halten',
+    completeAlbumsHint:
+      'Die Künstlerbeobachtung lädt einen Song für jede Veröffentlichung, auf der er ist (ein Album, ein Best-of, eine Deluxe-Edition), erneut herunter, statt die vorhandene Kopie zu verknüpfen. Braucht mehr Speicherplatz.',
     m3u: 'M3U-Playlists erstellen',
     m3uHint:
       'Speichere für jede heruntergeladene Playlist eine .m3u-Datei für Jellyfin, Plex, Navidrome und andere.',

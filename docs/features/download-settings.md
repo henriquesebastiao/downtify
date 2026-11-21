@@ -127,6 +127,8 @@ Changing this value in Settings takes effect immediately — it does not require
 
 On by default, matching Downtify's historical behavior: every download runs through the pipeline (audio fetch, tagging, cover art, lyrics) and overwrites whatever file already sits at the computed output path.
 
+On an album's page (a pasted album link), a song only counts as already in your library when you have it on that album: one you only have from another release — a greatest hits, a single — is offered for download, so the album can be completed. **Keep every album complete**, the switch below this one, does the same for Artist Watch, which otherwise links the copy you already have.
+
 ### What "again" actually means
 
 With it on, a re-download is a **completely fresh run**, not a repair of the existing file. Downtify does not look at what you already have: it searches your [audio sources](#audio-provider) in their configured order — so if slskd is first, slskd is tried first, not only as a fallback — fetches the audio from whichever source answers, and writes today's tags, cover art and lyrics onto it.

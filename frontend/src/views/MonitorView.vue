@@ -450,7 +450,7 @@
                       : ''
                   "
                 >
-                  <WatchSourceBadge :source="item.source" />
+                  <WatchSourceBadge :source="item.source" :url="item.url" />
                 </span>
                 <UiSelect
                   :class="
@@ -656,6 +656,7 @@ import API from '/src/model/api'
 import monitorAPI from '/src/model/monitor'
 import { useUi } from '/src/model/ui'
 import { artistPhotoSource } from '/src/lib/artistPhotoProxy'
+import { confirmWatchMix } from '/src/lib/spotifyMix'
 import { formatBytes, timeAgo } from '/src/lib/format'
 import {
   STAT_PERIODS,
@@ -1272,6 +1273,7 @@ async function add() {
     wrongKind.value = detected
     return
   }
+  if (kind === 'playlist' && !(await confirmWatchMix(url, { ui, t }))) return
   adding.value = true
   try {
     const res = await monitorAPI.addMonitoredPlaylist(

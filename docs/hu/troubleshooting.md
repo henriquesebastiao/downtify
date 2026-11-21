@@ -77,6 +77,10 @@ A Downtify az adatbázisában rögzíti minden automatikusan letöltött számot
 
 Ha a fájlok minden újraindításkor eltűnnek, a `/downloads` kötet nem tartós — ugyanaz a javítás, mint fent.
 
+## Egy Spotify-mix olyan dalokat tölt le, amelyek nincsenek a mixemben
+
+A Daily Mixek, a Heti felfedezések, a Friss Radar és a Spotify többi „neked készült” listája csak neked mutatja a dalaidat, bejelentkezve. A Downtify fiók nélkül olvassa a Spotifyt, így azt a változatot kapja, amelyet a Spotify a be nem jelentkezetteknek mutat, és ebben egészen más dalok lehetnek. Másold a mix dalait egy saját listába a Spotifyon, és azt figyeld. Lásd: [Neked készült Spotify-mixek](features/playlist-monitor.md#spotify-mixes-made-for-you).
+
 ## „Could not find a YouTube match for '…'”
 
 Sem a YouTube Music, sem a hagyományos YouTube nem adott olyan találatot, amely átment az illesztő ellenőrzésein — a forráshoz hasonló cím, legalább egy közös előadó, nem karaoke-/feldolgozás-/élő/más nyelvű verzió, és a Spotify hosszától legfeljebb 30 másodpercnyi eltérés. Lásd: [Hogyan működik](how-it-works.md#fallback-to-standard-youtube).

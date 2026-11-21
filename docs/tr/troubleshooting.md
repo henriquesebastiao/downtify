@@ -77,6 +77,10 @@ Downtify otomatik indirilen her parçayı veritabanına kaydeder; bu yüzden dos
 
 Dosyalar her yeniden başlatmada kayboluyorsa `/downloads` birimi kalıcı değildir — çözüm yukarıdakiyle aynı.
 
+## Bir Spotify mix'i, mix'imde olmayan şarkıları indiriyor
+
+Daily Mix'ler, Haftalık Keşif, Yeni Çıkanlar Radarı ve Spotify'ın diğer "senin için" listeleri şarkılarını yalnızca oturum açmışken sana gösterir. Downtify Spotify'ı hesapsız okur; bu yüzden Spotify'ın oturum açmamış birine gösterdiği sürümü alır ve bu sürümde tamamen farklı şarkılar olabilir. Mix'in şarkılarını Spotify'da kendi çalma listene kopyala ve onu izle. Bkz. [Senin için yapılmış Spotify mix'leri](features/playlist-monitor.md#spotify-mixes-made-for-you).
+
 ## “Could not find a YouTube match for '…'”
 
 Ne YouTube Music ne de standart YouTube, eşleştiricinin denetimlerini geçen bir sonuç döndürdü — kaynağa benzeyen başlık, en az bir ortak sanatçı, karaoke/cover/canlı/başka dil sürümü olmama ve Spotify’ınkinin 30 saniye içinde bir süre. [Nasıl çalışır](how-it-works.md#fallback-to-standard-youtube) sayfasına bakın.

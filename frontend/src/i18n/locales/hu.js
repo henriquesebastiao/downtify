@@ -1065,6 +1065,21 @@ export default {
     },
     missingHint:
       'Ezek a listán vannak, de a könyvtáradban nem — mert sikertelenek voltak, vagy később kerültek fel.',
+    heldHint: {
+      one: 'Közülük {count} már megvan a könyvtáradban, más néven vagy másik mappában.',
+      other:
+        'Közülük {count} már megvan a könyvtáradban, más néven vagy másik mappában.',
+    },
+    addFromLibrary: {
+      one: '{count} hozzáadása a könyvtárból',
+      other: '{count} hozzáadása a könyvtárból',
+    },
+    addedFromLibrary: {
+      one: '{count} dal hozzáadva a könyvtáradból',
+      other: '{count} dal hozzáadva a könyvtáradból',
+    },
+    addedFromLibraryNone:
+      'Egyik sem egyezett elég pontosan a hozzáadáshoz: a hossza vagy a változata eltér a lejátszási listáétól.',
     showMissing: 'Számok megjelenítése',
     downloadMissing: {
       one: '{count} hiányzó letöltése',
@@ -1353,6 +1368,11 @@ export default {
     resume: 'Folytatás',
     stop: 'Figyelés leállítása',
     watched: 'Figyelve',
+    personalMixTitle: 'Egyetlen hallgatónak készült Spotify-mix',
+    personalMixBody:
+      'A Daily Mixek, a Heti felfedezések, a Friss Radar és a Spotify többi „neked készült” lejátszási listája csak neked mutatja a dalaidat, bejelentkezve. A Downtify fiók nélkül olvassa a Spotifyt, így azt a változatot kapja, amelyet a Spotify a be nem jelentkezett felhasználóknak mutat, gyakran teljesen más dalokkal. Ha a saját változatodat szeretnéd megtartani, másold a dalokat egy saját lejátszási listába a Spotifyon, és azt használd.',
+    personalMixWatch: 'Figyelés mégis',
+    personalMixBadge: 'Személyes mix',
     openSource: 'Eredeti megnyitása',
     everyMinutes: { one: 'Percenként', other: '{count} percenként' },
     everyHours: { one: 'Óránként', other: '{count} óránként' },
@@ -1727,6 +1747,8 @@ export default {
     sourcesTitle: 'Honnan jön a hang',
     sourcesHint:
       'Minden szám ebben a sorrendben próbálja az engedélyezett forrásokat, amíg egyezést nem talál.',
+    sourcesOwnServersOnly:
+      'Csak a saját szervereid vannak bekapcsolva: az a dal, amely nincs meg rajtuk, sikertelen lesz, és nem a YouTube-ról érkezik. Kapcsold vissza a YouTube Musicot, ha tartaléknak szeretnéd használni.',
     moveUp: 'Feljebb',
     moveDown: 'Lejjebb',
     sourceSlskd: 'Soulseek (slskd)',
@@ -1869,6 +1891,9 @@ export default {
     overwrite: 'Újratöltés, ha a fájl létezik',
     overwriteHint:
       'Kapcsold ki, hogy a könyvtárban lévő dalokat kihagyja és sávszélességet spóroljon.',
+    completeAlbums: 'Minden album maradjon teljes',
+    completeAlbumsHint:
+      'Az előadófigyelés minden kiadáshoz újra letölti a dalt, amelyen szerepel (album, válogatás, deluxe kiadás), ahelyett hogy a meglévő példányt kapcsolná hozzá. Több tárhelyet foglal.',
     m3u: 'M3U listák írása',
     m3uHint:
       'Minden letöltött listához .m3u fájlt ment Jellyfinhez, Plexhez, Navidrome-hoz és másokhoz.',

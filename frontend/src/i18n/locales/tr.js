@@ -1062,6 +1062,21 @@ export default {
     },
     missingHint:
       'Bunlar çalma listesinde var ama kitaplığında yok — başarısız oldukları ya da sonradan eklendikleri için.',
+    heldHint: {
+      one: 'Bunlardan {count} tanesi zaten kitaplığında, başka bir adla ya da başka bir klasörde.',
+      other:
+        'Bunlardan {count} tanesi zaten kitaplığında, başka bir adla ya da başka bir klasörde.',
+    },
+    addFromLibrary: {
+      one: 'Kitaplıktan {count} ekle',
+      other: 'Kitaplıktan {count} ekle',
+    },
+    addedFromLibrary: {
+      one: 'Kitaplığından {count} şarkı eklendi',
+      other: 'Kitaplığından {count} şarkı eklendi',
+    },
+    addedFromLibraryNone:
+      'Hiçbiri eklenecek kadar yakın eşleşmedi: süresi ya da sürümü çalma listesindekinden farklı.',
     showMissing: 'Parçaları göster',
     downloadMissing: {
       one: '{count} eksik parçayı indir',
@@ -1345,6 +1360,11 @@ export default {
     resume: 'Sürdür',
     stop: 'İzlemeyi bırak',
     watched: 'İzleniyor',
+    personalMixTitle: "Tek bir dinleyici için yapılmış bir Spotify mix'i",
+    personalMixBody:
+      "Daily Mix'ler, Haftalık Keşif, Yeni Çıkanlar Radarı ve Spotify'ın diğer “senin için” çalma listeleri şarkılarını yalnızca oturum açmış olarak sana gösterir. Downtify Spotify'ı hesapsız okur, bu yüzden Spotify'ın oturum açmamış birine gösterdiği sürümü alır; bu sürümde çoğu zaman tamamen farklı şarkılar olur. Kendi sürümünü korumak için şarkıları Spotify'da kendi çalma listene kopyala ve onu kullan.",
+    personalMixWatch: 'Yine de izle',
+    personalMixBadge: 'Kişisel mix',
     openSource: 'Orijinali aç',
     everyMinutes: { one: 'Her dakika', other: 'Her {count} dakikada' },
     everyHours: { one: 'Her saat', other: 'Her {count} saatte' },
@@ -1713,6 +1733,8 @@ export default {
     sourcesTitle: 'Sesin geldiği yer',
     sourcesHint:
       'Her parça, biri eşleşme bulana kadar etkin kaynakları bu sırayla dener.',
+    sourcesOwnServersOnly:
+      "Yalnızca kendi sunucuların açık: onlarda olmayan bir şarkı YouTube'dan gelmek yerine başarısız olur. Yedek olarak kullanmak için YouTube Music'i yeniden aç.",
     moveUp: 'Yukarı taşı',
     moveDown: 'Aşağı taşı',
     sourceSlskd: 'Soulseek (slskd)',
@@ -1851,6 +1873,9 @@ export default {
     overwrite: 'Dosya varsa yeniden indir',
     overwriteHint:
       'Kitaplıktaki şarkıları atlayıp bant genişliğinden tasarruf etmek için kapat.',
+    completeAlbums: 'Her albümü eksiksiz tut',
+    completeAlbumsHint:
+      'Sanatçı İzleme, bir şarkıyı yer aldığı her yayın için (albüm, en iyiler derlemesi, deluxe sürüm) zaten sahip olduğun kopyayı bağlamak yerine yeniden indirir. Daha fazla disk alanı kullanır.',
     m3u: 'M3U çalma listeleri yaz',
     m3uHint:
       'Jellyfin, Plex, Navidrome ve diğerleri için indirilen her çalma listesine .m3u kaydet.',

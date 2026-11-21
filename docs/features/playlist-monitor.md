@@ -30,6 +30,8 @@ Downtify keeps a background task running every 60 seconds. On each sweep it chec
 
 The first check, which starts as soon as you add the watch, downloads everything already in the playlist; later checks download only what was added since. "Already downloaded" is tracked in a small SQLite database (`downtify_monitor.db` under `/data`; with PostgreSQL, in the PostgreSQL database), not by checking the downloads folder — so moving a downloaded file elsewhere on disk (into your own library layout, another drive, wherever) does **not** make Downtify think it's missing and re-download it on the next check.
 
+With **Download again if the file exists** off (Settings → Downloads), a track that is new to the watch but already in your library is linked into the playlist instead of downloaded again. Downtify looks for it by its Spotify id first, then as the same song: the same ISRC, or the same lead artist and title (`feat.`/`with` credits and remaster tags folded away) with a length within 3 seconds. That second lookup matters for big, old playlists: Spotify sometimes swaps an entry for the same song under a new id (a re-release, a remaster, another market's copy), and without it the song would be downloaded a second time under its new name. A live version, a remix or an extended mix keeps its own title or length, so it still downloads.
+
 A separate sweep runs every hour and checks whether each downloaded track's file is still available in the registered library folders: the downloads folder, the slskd source folder and **Existing music folders**, including read-only mounts. Tracks still present in a configured external folder keep their download records. Files no longer found in any of those locations are forgotten, so the track becomes eligible for download again on the next watch check after that hourly sweep, not instantly.
 
 The external folder list is read again on every hourly sweep, so saving or reordering it takes effect without restarting Downtify. Removing a folder from Settings leaves its audio untouched, but watch records pointing only into that now-unmapped folder are no longer considered available. A temporarily unavailable mount is also treated as missing; the sweep does not distinguish that from deletion.
@@ -53,6 +55,20 @@ You can also start watching from a playlist's page: paste its link in the search
 ## Deezer playlists
 
 Public Deezer playlists are watched like any other: paste the link on the **Playlists** tab, use **Watch for new tracks** on the playlist's page, or pick **Watch for new tracks** in the **⋯** menu of a playlist card in [Charts](charts.md). No Deezer account is needed, and every track is fetched, however long the playlist is. The songs download through your [audio sources](download-settings.md) like any other Deezer link, and the playlist gets its M3U file, cover art and Library entry as a Spotify one does — even with M3U files turned off, the Library keeps track of which songs belong to it. Only public playlists can be watched, and a Deezer **artist** link can be downloaded but not watched.
+
+## Spotify mixes made for you
+
+Daily Mixes, Discover Weekly, Release Radar, the mood, genre, decade and artist mixes, the radios and On Repeat are built by Spotify for one listener. Their link opens that listener's version only while they are signed in to Spotify. Downtify reads Spotify without an account (it never asks for your Spotify login), so for these links it gets the version Spotify shows someone who isn't signed in — often a completely different set of songs. Watching one downloads those songs, not yours.
+
+Downtify recognises these playlists by their id and:
+
+- asks before watching one (**Watch anyway** goes ahead with the signed-out version);
+- shows a note on the link's page, above its songs;
+- marks a watch of one with a **Personal mix** badge next to **Spotify** on the Monitor page and on the watch's page.
+
+To keep your own version, copy its songs into a playlist you own on Spotify (select all, **Add to playlist**) and watch that playlist instead: a playlist you made is the same for everyone. Editorial playlists such as Today's Top Hits or "This Is …" are the same for everyone too and aren't flagged.
+
+If a mix was watched before, its **Activity and songs** page (see [below](#activity-and-storage-per-watch)) lists the songs it brought in, so you can find and delete the ones that don't belong.
 
 ## YouTube Music playlists
 
@@ -113,6 +129,8 @@ The Monitor list shows a watch's filters under its link when they're not the def
 A release is only recorded as processed once every one of its tracks is accounted for, so a track that fails on a transient error is retried on the next sweep rather than being skipped forever. Tracks that already downloaded are never fetched twice.
 
 A song the library already has is linked instead of downloaded again, even under another name. That covers a song downloaded from a playlist (named from Spotify, where YouTube Music writes `(feat. …)` for Spotify's `(with …)`), a single that is also on the album, and an album's deluxe edition. Two songs count as the same when their first artist and their title match, with `(feat. …)`, `(with …)`, remaster tags and Deezer's `(Album Version)` / `(Explicit Version)` ignored, and their lengths are within 3 seconds, so a live version or a remix is still downloaded. When a *different* song already has the file name a track would get (two albums' `Intro`, with files organized by artist but not by album), the track is saved with the album's name added, as `Intro (Album)`.
+
+To give every release its own copy instead — so a greatest hits or a deluxe edition is complete on its own, in its own folder — turn on **Keep every album complete** in Settings → Downloads. A song the library has from another release is then downloaded again for each release it's on (saved as `Song (Album)` when its file name is taken), which uses more disk space.
 
 Artist watches don't generate M3U files — the tracks are laid out by your [file organization](file-organization.md) settings rather than as a playlist.
 

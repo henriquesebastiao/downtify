@@ -52,6 +52,20 @@ Du kannst auch von der Seite einer Playlist aus mit dem Beobachten beginnen: Fü
 
 Öffentliche Deezer-Playlists werden wie alle anderen beobachtet: Füge den Link im Tab **Playlists** ein, nutze **Auf neue Titel achten** auf der Seite der Playlist, oder wähle **Auf neue Titel achten** im Menü **⋯** einer Playlist-Karte in den [Charts](charts.md). Ein Deezer-Konto ist nicht nötig, und jeder Titel wird abgerufen, egal wie lang die Playlist ist. Die Titel werden wie bei jedem anderen Deezer-Link über deine [Audioquellen](download-settings.md) heruntergeladen, und die Playlist bekommt ihre M3U-Datei, ihr Cover und ihren Eintrag in der Bibliothek wie eine Spotify-Playlist — auch mit ausgeschalteten M3U-Dateien merkt sich die Bibliothek, welche Titel dazugehören. Nur öffentliche Playlists können beobachtet werden, und ein Deezer-**Künstler**-Link lässt sich herunterladen, aber nicht beobachten.
 
+## Spotify-Mixe, die für dich gemacht sind
+
+Daily Mixes, Dein Mix der Woche, Release Radar, die Stimmungs-, Genre-, Jahrzehnt- und Künstler-Mixe, die Radios und On Repeat stellt Spotify für eine einzelne Person zusammen. Ihr Link öffnet die Version dieser Person nur, solange sie bei Spotify angemeldet ist. Downtify liest Spotify ohne Konto (es fragt nie nach deinem Spotify-Login) und bekommt für diese Links daher die Version, die Spotify nicht angemeldeten Personen zeigt – oft mit völlig anderen Songs. Wer so einen Mix überwacht, lädt diese Songs herunter, nicht die eigenen.
+
+Downtify erkennt diese Playlists an ihrer ID und:
+
+- fragt nach, bevor eine überwacht wird (**Trotzdem überwachen** fährt mit der abgemeldeten Version fort);
+- zeigt auf der Seite des Links einen Hinweis über den Songs;
+- kennzeichnet eine Überwachung davon mit dem Abzeichen **Persönlicher Mix** neben **Spotify** auf der Monitor-Seite und auf der Seite der Überwachung.
+
+Um deine Version zu behalten, kopiere die Songs in eine eigene Playlist auf Spotify (alle auswählen, **Zur Playlist hinzufügen**) und überwache diese: Eine selbst erstellte Playlist ist für alle gleich. Redaktionelle Playlists wie Today's Top Hits oder „This Is …“ sind ebenfalls für alle gleich und werden nicht markiert.
+
+Wurde ein Mix bereits überwacht, listet seine Seite **Aktivität und Titel** (siehe [unten](#activity-and-storage-per-watch)) die Songs auf, die er hinzugefügt hat, damit du die unpassenden findest und löschst.
+
 ## YouTube-Music-Playlists
 
 Nutze eine YouTube-Music-Playlist für Songs, die nicht auf Spotify sind: Remixe, Live-Sets, Coverversionen, Uploads von Promo-Kanälen. Jeder Titel wird von **genau dem Video in der Playlist** heruntergeladen. Downtify sucht nicht erneut danach, du bekommst also, was du in die Playlist gelegt hast.

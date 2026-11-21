@@ -1055,6 +1055,21 @@ export default {
     },
     missingHint:
       '재생목록에는 포함되어 있으나 다운로드에 실패했거나 나중에 추가되어 라이브러리에 없는 곡들입니다.',
+    heldHint: {
+      one: '그중 {count}곡은 이미 라이브러리에 다른 이름이나 다른 폴더로 있습니다.',
+      other:
+        '그중 {count}곡은 이미 라이브러리에 다른 이름이나 다른 폴더로 있습니다.',
+    },
+    addFromLibrary: {
+      one: '라이브러리에서 {count}곡 추가',
+      other: '라이브러리에서 {count}곡 추가',
+    },
+    addedFromLibrary: {
+      one: '라이브러리에서 {count}곡을 추가했습니다',
+      other: '라이브러리에서 {count}곡을 추가했습니다',
+    },
+    addedFromLibraryNone:
+      '추가할 만큼 정확히 일치하는 곡이 없습니다. 길이나 버전이 플레이리스트와 다릅니다.',
     showMissing: '트랙 보기',
     downloadMissing: {
       one: '누락된 {count}개 다운로드',
@@ -1340,6 +1355,11 @@ export default {
     resume: '재개',
     stop: '모니터링 중지',
     watched: '모니터링 중',
+    personalMixTitle: '한 사람을 위해 만든 Spotify 믹스',
+    personalMixBody:
+      '데일리 믹스, 위클리 디스커버리, 릴리즈 레이더 등 Spotify의 ‘회원님을 위한’ 플레이리스트는 로그인한 본인에게만 그 곡들을 보여 줍니다. Downtify는 계정 없이 Spotify를 읽기 때문에 로그인하지 않은 사람에게 보이는 버전을 받으며, 곡이 완전히 다른 경우가 많습니다. 내 버전을 유지하려면 Spotify에서 곡들을 내 플레이리스트로 복사한 뒤 그 플레이리스트를 사용하세요.',
+    personalMixWatch: '그래도 모니터링',
+    personalMixBadge: '개인 믹스',
     openSource: '원본 링크 열기',
     everyMinutes: { one: '매분', other: '{count}분마다' },
     everyHours: { one: '매시간', other: '{count}시간마다' },
@@ -1706,6 +1726,8 @@ export default {
     sourcesTitle: '음원 출처 우선순위',
     sourcesHint:
       '각 트랙은 일치하는 음원을 찾을 때까지 활성화된 출처를 위에서부터 순서대로 시도합니다.',
+    sourcesOwnServersOnly:
+      '내 서버만 켜져 있습니다. 거기에 없는 곡은 YouTube에서 받지 않고 실패합니다. 대체 소스로 쓰려면 YouTube Music을 다시 켜세요.',
     moveUp: '위로 이동',
     moveDown: '아래로 이동',
     sourceSlskd: 'Soulseek (slskd)',
@@ -1846,6 +1868,9 @@ export default {
     overwrite: '파일이 이미 존재해도 다시 다운로드',
     overwriteHint:
       '비활성화하면 이미 라이브러리에 있는 곡을 건너뛰어 네트워크 대역폭을 절약합니다.',
+    completeAlbums: '모든 앨범을 완전하게 유지',
+    completeAlbumsHint:
+      '아티스트 모니터링이 곡이 실린 각 릴리스(앨범, 베스트 앨범, 디럭스 에디션)마다 이미 있는 사본을 연결하지 않고 곡을 다시 다운로드합니다. 디스크 공간을 더 사용합니다.',
     m3u: 'M3U 재생목록 생성',
     m3uHint:
       '다운로드한 각 재생목록마다 .m3u 파일을 생성하여 Jellyfin, Plex, Navidrome 등과 연동합니다.',

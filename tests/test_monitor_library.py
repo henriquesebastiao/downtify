@@ -7,6 +7,7 @@ import asyncio
 from pathlib import Path
 
 from downtify import monitor
+from downtify.library_paths import library_stored_path
 from downtify.monitor import LibraryStores, PlaylistMonitorDB
 from downtify.playlist_catalog import PlaylistCatalog
 from downtify.track_index import TrackIndex
@@ -258,3 +259,135 @@ def test_a_track_leaving_the_playlist_keeps_its_file(monkeypatch, tmp_path):
         library.playlist_catalog.playlists_for_track('Road Trip/Alpha.mp3')
         == []
     )
+
+
+def _songs_listing(rows):
+    return lambda: rows
+
+
+def test_sweep_links_the_same_song_under_a_new_spotify_id(
+    monkeypatch, tmp_path
+):
+    """Issue #573: Spotify swaps a playlist entry for the same song under
+    a new id (here with a remaster tag). The library already holds the
+    song, so the sweep links it instead of downloading a second copy, and
+    indexes it under the new id."""
+
+    library = _library(tmp_path)
+    existing = tmp_path / 'downloads' / 'Road Trip' / 'Artist - Alpha.mp3'
+    existing.parent.mkdir(parents=True)
+    existing.write_bytes(b'audio')
+    library.listing = _songs_listing([
+        {
+            'file': 'Road Trip/Artist - Alpha.mp3',
+            'artist': 'Artist',
+            'title': 'Alpha',
+            'duration': 200,
+        }
+    ])
+    downloader = _Downloader(tmp_path / 'downloads', overwrite=False)
+    tracks = [
+        {
+            'song_id': TRACK_A,
+            'name': 'Alpha - Remastered 2011',
+            'artists': ['Artist'],
+            'duration': 201,
+        },
+        {
+            'song_id': TRACK_B,
+            'name': 'Beta',
+            'artists': ['Artist'],
+            'duration': 180,
+        },
+    ]
+    monkeypatch.setattr(
+        monitor.spotify, 'playlist_tracks_from_id', lambda _id: tracks
+    )
+    monkeypatch.setattr(monitor.spotify, 'track_from_id', lambda _id: {})
+    db, playlist = _watch(tmp_path)
+
+    count = _run(db, playlist, downloader, {'generate_m3u': False}, library)
+
+    assert downloader.downloaded == [TRACK_B]
+    assert count == 1
+    assert (
+        db.get_track_filenames(playlist.id)[TRACK_A]
+        == 'Road Trip/Artist - Alpha.mp3'
+    )
+    assert (
+        library.track_index.lookup(TRACK_A) == 'Road Trip/Artist - Alpha.mp3'
+    )
+
+
+def test_sweep_downloads_a_different_recording_of_the_same_title(
+    monkeypatch, tmp_path
+):
+    """Same artist and title but a length far off (an extended mix): a
+    different recording, downloaded rather than linked."""
+
+    library = _library(tmp_path)
+    existing = tmp_path / 'downloads' / 'Artist - Alpha.mp3'
+    existing.parent.mkdir(parents=True)
+    existing.write_bytes(b'audio')
+    library.listing = _songs_listing([
+        {
+            'file': 'Artist - Alpha.mp3',
+            'artist': 'Artist',
+            'title': 'Alpha',
+            'duration': 200,
+        }
+    ])
+    downloader = _Downloader(tmp_path / 'downloads', overwrite=False)
+    tracks = [
+        {
+            'song_id': TRACK_A,
+            'name': 'Alpha',
+            'artists': ['Artist'],
+            'duration': 420,
+        },
+    ]
+    monkeypatch.setattr(
+        monitor.spotify, 'playlist_tracks_from_id', lambda _id: tracks
+    )
+    monkeypatch.setattr(monitor.spotify, 'track_from_id', lambda _id: {})
+    db, playlist = _watch(tmp_path)
+
+    _run(db, playlist, downloader, {'generate_m3u': False}, library)
+
+    assert downloader.downloaded == [TRACK_A]
+
+
+def test_sweep_finds_an_indexed_track_in_an_external_folder(
+    monkeypatch, tmp_path
+):
+    """Issue #573: a track indexed at an `ext/…` path (a configured
+    external music folder) is linked, not forgotten as missing and
+    downloaded again."""
+
+    library = _library(tmp_path)
+    music = tmp_path / 'music'
+    (music / 'Artist').mkdir(parents=True)
+    (music / 'Artist' / 'Alpha.mp3').write_bytes(b'audio')
+    settings = {
+        'generate_m3u': False,
+        'external_library': {'folders': [str(music)]},
+    }
+    downloader = _Downloader(tmp_path / 'downloads', overwrite=False)
+    (tmp_path / 'downloads').mkdir()
+    stored = library_stored_path(
+        music / 'Artist' / 'Alpha.mp3',
+        downloader.download_dir,
+        None,
+        [music],
+    )
+    assert stored.startswith('ext/')
+    library.track_index.register(TRACK_A, stored)
+
+    count, db, playlist = _sweep(
+        monkeypatch, tmp_path, downloader, settings, library
+    )
+
+    assert downloader.downloaded == [TRACK_B]
+    assert count == 1
+    assert db.get_track_filenames(playlist.id)[TRACK_A] == stored
+    assert library.track_index.lookup(TRACK_A) == stored

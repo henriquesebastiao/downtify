@@ -156,6 +156,22 @@
       <div
         class="mx-auto flex max-w-[1680px] flex-col gap-6 px-4 sm:px-6 lg:px-10"
       >
+        <!-- A Spotify mix made for one listener: what Downtify reads is
+             the signed-out version, not the listener's own. -->
+        <p
+          v-if="personalMix"
+          class="flex items-start gap-3 rounded-[12px] border border-line-2 bg-surface px-4 py-3 text-[13px] text-pretty text-fg-3"
+          role="note"
+        >
+          <AppIcon name="alert" :size="18" class="mt-0.5 shrink-0 text-warn" />
+          <span>
+            <span class="font-semibold text-fg">{{
+              t('monitor.personalMixTitle')
+            }}</span>
+            {{ t('monitor.personalMixBody') }}
+          </span>
+        </p>
+
         <!-- Tracks -->
         <template v-if="details.tracks.length">
           <div class="flex flex-wrap items-center gap-3">
@@ -305,6 +321,7 @@ import { useAuth } from '/src/model/auth'
 import { classifyInput } from '/src/lib/input'
 import { findWatch } from '/src/lib/watchMatch'
 import { watchRouteFor } from '/src/lib/watchStats'
+import { confirmWatchMix, isPersonalMix } from '/src/lib/spotifyMix'
 import { playableQueue } from '/src/lib/topSongs'
 import { formatDuration, splitLength } from '/src/lib/format'
 import { useI18n } from '/src/i18n'
@@ -414,6 +431,10 @@ const watchable = computed(
     (kind.value.source !== 'deezer' || details.value?.kind === 'playlist')
 )
 
+const personalMix = computed(
+  () => details.value?.kind === 'playlist' && isPersonalMix(url.value)
+)
+
 const mosaic = computed(() =>
   [
     ...new Set(
@@ -443,10 +464,18 @@ function keyOf(song, index) {
 function statusOf(song) {
   tracker.queueVersion.value
   const artist = (song.artists || [])[0] || song.artist
-  const state = songDownloadState(
-    tracker.getBySong(song),
-    library.hasSong(artist, song.name)
-  )
+  // On an album, a song only counts as in the library when it's there on
+  // this album: one it has from another release (a greatest hits, a
+  // single) is still offered, so the album can be completed (#546).
+  const inLibrary =
+    details.value?.kind === 'album'
+      ? library.hasSongOnAlbum(
+          artist,
+          song.name,
+          song.album_name || details.value.name
+        )
+      : library.hasSong(artist, song.name)
+  const state = songDownloadState(tracker.getBySong(song), inLibrary)
   // Every queue state shows the same neutral chip here; a song that is
   // neither queued nor in the library is downloadable.
   return state === 'library' || state === 'new' ? state : 'queue'
@@ -614,6 +643,7 @@ async function stopWatching() {
 }
 
 async function watch() {
+  if (!(await confirmWatchMix(url.value, { ui, t }))) return
   watching.value = true
   try {
     const res = await monitorAPI.addMonitoredPlaylist(url.value, 360)

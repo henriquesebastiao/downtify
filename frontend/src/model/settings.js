@@ -97,6 +97,7 @@ const settings = ref({
   cover_resolution: 1200,
   download_cover_art: true,
   overwrite_existing_files: true,
+  artist_watch_complete_albums: false,
   write_isrc: true,
   search_albums: true,
   mini_player_enabled: true,

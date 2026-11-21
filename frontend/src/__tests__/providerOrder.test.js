@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   dropProvider,
   moveProvider,
+  onlyOwnServers,
   providerRows,
   toggleProvider,
 } from '../lib/providerOrder.js'
@@ -111,5 +112,19 @@ describe('dropProvider', () => {
   it('ignores a drop on itself or on a disabled provider', () => {
     expect(dropProvider(ALL, 'slskd', 'slskd')).toBeNull()
     expect(dropProvider(['slskd'], 'slskd', 'youtube')).toBeNull()
+  })
+})
+
+describe('onlyOwnServers', () => {
+  it('is true when slskd and/or Deemix are the only sources', () => {
+    expect(onlyOwnServers(['slskd'])).toBe(true)
+    expect(onlyOwnServers(['deemix', 'slskd'])).toBe(true)
+  })
+
+  it('is false with any public source, or none at all', () => {
+    expect(onlyOwnServers(['slskd', 'youtube-music'])).toBe(false)
+    expect(onlyOwnServers(['soundcloud'])).toBe(false)
+    expect(onlyOwnServers([])).toBe(false)
+    expect(onlyOwnServers(undefined)).toBe(false)
   })
 })

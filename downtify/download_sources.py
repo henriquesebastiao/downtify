@@ -209,7 +209,11 @@ class DownloadSources:
     # -- rejections -----------------------------------------------------
 
     def reject_file_source(
-        self, file: str, extra_keys: Iterable[str] = (), keep: str = ''
+        self,
+        file: str,
+        extra_keys: Iterable[str] = (),
+        keep: str = '',
+        why: str = 'its audio was replaced',
     ) -> Optional[str]:
         """The upload *file* came from was wrong: never pick it again for
         its song (known by the recorded keys plus *extra_keys*). Returns
@@ -222,9 +226,7 @@ class DownloadSources:
             return None
         keys = {*((row or {}).get('track_keys') or []), *extra_keys}
         self.reject(source, keys)
-        logger.info(
-            'Source {} rejected for {} (its audio was replaced)', source, file
-        )
+        logger.info('Source {} rejected for {} ({})', source, file, why)
         return source
 
     def reject(self, source: str, keys: Iterable[str]) -> None:
