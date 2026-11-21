@@ -4,6 +4,39 @@ icon: lucide/history
 
 # Changelog
 
+## [3.12.0](https://github.com/henriquesebastiao/downtify/tree/3.12.0) (2026-11-20)
+
+[Full Changelog](https://github.com/henriquesebastiao/downtify/compare/3.11.0...3.12.0)
+
+**Implemented enhancements:**
+
+- A song I replaced or deleted comes back: Downtify downloads it again \(and what Doctor duplicate cleanup needs\) [\#582](https://github.com/henriquesebastiao/downtify/issues/582)
+- Automatic Cookie Puller [\#569](https://github.com/henriquesebastiao/downtify/issues/569)
+- Playlist Monitor sweeps \(and other queue additions\) should respect the Parallel downloads limit [\#548](https://github.com/henriquesebastiao/downtify/issues/548)
+
+**Merged pull requests:**
+
+- fix\(covers\): every download aims for 1200px covers from four sources [\#632](https://github.com/henriquesebastiao/downtify/pull/632) ([BigBrownMF69](https://github.com/BigBrownMF69))
+- feat: backup and restore [\#630](https://github.com/henriquesebastiao/downtify/pull/630) ([BigBrownMF69](https://github.com/BigBrownMF69))
+- fix\(monitor\): watch downloads share the Parallel downloads limit [\#629](https://github.com/henriquesebastiao/downtify/pull/629) ([BigBrownMF69](https://github.com/BigBrownMF69))
+- feat\(covers\): option to always embed the largest cover [\#628](https://github.com/henriquesebastiao/downtify/pull/628) ([BigBrownMF69](https://github.com/BigBrownMF69))
+- feat\(queue\): show why slskd wasn't used, and clear a watch's failures [\#627](https://github.com/henriquesebastiao/downtify/pull/627) ([BigBrownMF69](https://github.com/BigBrownMF69))
+- feat\(slskd\): keep a shared file's own cover when it's bigger [\#626](https://github.com/henriquesebastiao/downtify/pull/626) ([BigBrownMF69](https://github.com/BigBrownMF69))
+- feat\(settings\): say what each audio source needs [\#625](https://github.com/henriquesebastiao/downtify/pull/625) ([BigBrownMF69](https://github.com/BigBrownMF69))
+- feat\(lyrics\): Kugou, LRCLIB search, synced-only, and "Scan and find lyrics" [\#624](https://github.com/henriquesebastiao/downtify/pull/624) ([BigBrownMF69](https://github.com/BigBrownMF69))
+- feat\(monitor\): show announced releases and download them on release day [\#623](https://github.com/henriquesebastiao/downtify/pull/623) ([BigBrownMF69](https://github.com/BigBrownMF69))
+- feat\(queue\): show which Monitor watch is downloading each song [\#622](https://github.com/henriquesebastiao/downtify/pull/622) ([BigBrownMF69](https://github.com/BigBrownMF69))
+- feat\(monitor\): a click on a watch's row opens its page [\#621](https://github.com/henriquesebastiao/downtify/pull/621) ([BigBrownMF69](https://github.com/BigBrownMF69))
+- Navidrome: optionally hold library scans while someone is listening [\#619](https://github.com/henriquesebastiao/downtify/pull/619) ([BigBrownMF69](https://github.com/BigBrownMF69))
+- Doctor: fix 'Same songs' grouping; decide on each playlist group, then apply at once [\#618](https://github.com/henriquesebastiao/downtify/pull/618) ([BigBrownMF69](https://github.com/BigBrownMF69))
+- Doctor: show what's in slskd's folder next to what Downtify counts [\#617](https://github.com/henriquesebastiao/downtify/pull/617) ([BigBrownMF69](https://github.com/BigBrownMF69))
+- Monitor: find an artist by name, and warn about Spotify user links [\#616](https://github.com/henriquesebastiao/downtify/pull/616) ([BigBrownMF69](https://github.com/BigBrownMF69))
+- Covers: the minimum cover size raises the first request, and smaller cover sizes are greyed out [\#615](https://github.com/henriquesebastiao/downtify/pull/615) ([BigBrownMF69](https://github.com/BigBrownMF69))
+- Doctor: fold-out sections, playlist covers, and check again after a repair [\#614](https://github.com/henriquesebastiao/downtify/pull/614) ([BigBrownMF69](https://github.com/BigBrownMF69))
+- feat\(cookies\): keep the YouTube cookies.txt signed in automatically [\#613](https://github.com/henriquesebastiao/downtify/pull/613) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- feat\(library\): never pick a replaced upload again; keep files swapped on disk [\#612](https://github.com/henriquesebastiao/downtify/pull/612) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- ci\(docker\): tag releases with their major and minor lines too [\#611](https://github.com/henriquesebastiao/downtify/pull/611) ([henriquesebastiao](https://github.com/henriquesebastiao))
+
 ## [3.11.0](https://github.com/henriquesebastiao/downtify/tree/3.11.0) (2026-11-17)
 
 [Full Changelog](https://github.com/henriquesebastiao/downtify/compare/3.10.0...3.11.0)
