@@ -1767,6 +1767,8 @@ export default {
     sourcesTitle: 'Audioquellen',
     sourcesHint:
       'Jeder Titel wird nacheinander bei den aktivierten Quellen gesucht, bis ein Treffer gefunden wird.',
+    sourcesOwnServersOnly:
+      'Nur deine eigenen Server sind an: Ein Song, den sie nicht haben, schlägt fehl, statt von YouTube zu kommen. Schalte YouTube Music wieder ein, um es als Ausweichquelle zu nutzen.',
     moveUp: 'Nach oben',
     moveDown: 'Nach unten',
     sourceSlskd: 'Soulseek (slskd)',

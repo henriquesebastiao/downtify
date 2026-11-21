@@ -1728,6 +1728,8 @@ export default {
     sourcesTitle: 'De onde vem o áudio',
     sourcesHint:
       'Cada faixa tenta as fontes ativadas nesta ordem até uma encontrar correspondência.',
+    sourcesOwnServersOnly:
+      'Só os seus próprios servidores estão ligados: uma música que eles não tenham falha em vez de vir do YouTube. Ligue o YouTube Music de novo para usá-lo como alternativa.',
     moveUp: 'Mover para cima',
     moveDown: 'Mover para baixo',
     sourceSlskd: 'Soulseek (slskd)',

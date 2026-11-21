@@ -767,16 +767,22 @@ def test_effective_audio_providers_filters_invalid_and_dedupes():
     ]
 
 
-def test_effective_audio_providers_adds_youtube_fallback_when_only_slskd():
+def test_effective_audio_providers_keeps_slskd_alone():
+    # Issue #471: slskd as the only source must stay the only source, so
+    # turning YouTube Music and YouTube off survives a save.
     settings = {
         'audio_providers': ['slskd'],
         'slskd': {'enabled': True},
     }
-    assert _effective_audio_providers(settings) == [
-        'slskd',
-        'youtube-music',
-        'youtube',
-    ]
+    assert _effective_audio_providers(settings) == ['slskd']
+
+
+def test_effective_audio_providers_falls_back_when_slskd_alone_is_off():
+    settings = {
+        'audio_providers': ['slskd'],
+        'slskd': {'enabled': False},
+    }
+    assert _effective_audio_providers(settings) == ['youtube-music']
 
 
 def test_effective_audio_providers_skips_slskd_when_disabled():
@@ -965,3 +971,23 @@ def test_update_settings_applies_providers_and_slskd_to_downloader(
     assert downloader.audio_providers == ['slskd', 'youtube-music']
     assert downloader.slskd_settings['enabled'] is True
     assert downloader.slskd_settings['output_dir'] == str(tmp_path)
+
+
+def test_update_settings_saves_slskd_as_the_only_source(monkeypatch, tmp_path):
+    # Issue #471: switching YouTube Music and YouTube off, leaving slskd,
+    # used to come back with all three on after Save.
+    downloader = Downloader(tmp_path)
+    out = _update(
+        monkeypatch,
+        {
+            'audio_providers': ['slskd'],
+            'slskd': {
+                'enabled': True,
+                'base_url': 'http://slskd:5030',
+                'api_key': 'key',
+            },
+        },
+        downloader=downloader,
+    )
+    assert out['audio_providers'] == ['slskd']
+    assert downloader.audio_providers == ['slskd']

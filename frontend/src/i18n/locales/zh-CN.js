@@ -1593,6 +1593,8 @@ export default {
     showShortcuts: '显示快捷键',
     sourcesTitle: '音频来源',
     sourcesHint: '每首歌曲会按此顺序尝试已启用的来源，直到找到匹配版本。',
+    sourcesOwnServersOnly:
+      '只启用了你自己的服务器：它们没有的歌曲会直接失败，而不会改从 YouTube 下载。重新启用 YouTube Music 即可把它作为备用来源。',
     moveUp: '上移',
     moveDown: '下移',
     sourceSlskd: 'Soulseek（slskd）',
