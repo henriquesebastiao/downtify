@@ -253,6 +253,18 @@ export default {
     noMatch: 'Няма съвпадения',
     noMatchHint: 'Опитайте с други думи или друг филтър.',
   },
+  whatsNew: {
+    title: 'Какво ново в Downtify {version}',
+    intro: 'Downtify е обновен до {version}. Ето какво се промени:',
+    noHighlights:
+      'Downtify е обновен до {version}. Пълният списък с промени е в GitHub.',
+    changelog: 'Пълен списък с промени',
+    gotIt: 'Разбрах',
+    star: 'Харесва ли ви Downtify? Дайте му звезда в GitHub',
+    reopen: 'Какво ново',
+    reopenHint:
+      'Акцентите на тази версия и връзка към пълния списък с промени.',
+  },
   common: {
     cancel: 'Отказ',
     confirm: 'Потвърждение',

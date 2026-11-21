@@ -313,6 +313,7 @@ frontend/dist/
 data/downtify_monitor.db
 data/settings.json
 
-.claude/
+.claude/*
+!.claude/skills/
 data/
 design/

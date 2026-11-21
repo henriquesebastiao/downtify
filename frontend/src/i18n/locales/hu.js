@@ -258,6 +258,18 @@ export default {
     noMatch: 'Nincs találat',
     noMatchHint: 'Próbálj más szavakat vagy másik szűrőt.',
   },
+  whatsNew: {
+    title: 'A Downtify {version} újdonságai',
+    intro: 'A Downtify frissült erre: {version}. Ez változott:',
+    noHighlights:
+      'A Downtify frissült erre: {version}. A változások teljes listája a GitHubon található.',
+    changelog: 'Teljes változásnapló',
+    gotIt: 'Értem',
+    star: 'Tetszik a Downtify? Adj neki egy csillagot a GitHubon',
+    reopen: 'Újdonságok',
+    reopenHint:
+      'A verzió legfontosabb újdonságai és egy hivatkozás a teljes változásnaplóra.',
+  },
   common: {
     cancel: 'Mégse',
     confirm: 'Megerősítés',

@@ -265,6 +265,18 @@ export default {
     noMatch: 'Δεν βρέθηκε τίποτα',
     noMatchHint: 'Δοκιμάστε άλλες λέξεις ή άλλο φίλτρο.',
   },
+  whatsNew: {
+    title: 'Τι νέο υπάρχει στο Downtify {version}',
+    intro: 'Το Downtify ενημερώθηκε στην {version}. Δείτε τι άλλαξε:',
+    noHighlights:
+      'Το Downtify ενημερώθηκε στην {version}. Η πλήρης λίστα αλλαγών βρίσκεται στο GitHub.',
+    changelog: 'Πλήρες αρχείο αλλαγών',
+    gotIt: 'Εντάξει',
+    star: 'Σας αρέσει το Downtify; Δώστε του ένα αστέρι στο GitHub',
+    reopen: 'Τι νέο υπάρχει',
+    reopenHint:
+      'Τα κυριότερα σημεία αυτής της έκδοσης και σύνδεσμος στο πλήρες αρχείο αλλαγών.',
+  },
   common: {
     cancel: 'Ακύρωση',
     confirm: 'Επιβεβαίωση',

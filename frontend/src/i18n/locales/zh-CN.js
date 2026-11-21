@@ -229,6 +229,16 @@ export default {
     noMatch: '没有匹配项',
     noMatchHint: '请尝试其他关键词或筛选条件。',
   },
+  whatsNew: {
+    title: 'Downtify {version} 新功能',
+    intro: 'Downtify 已更新到 {version}。以下是变化：',
+    noHighlights: 'Downtify 已更新到 {version}。完整的更改列表在 GitHub 上。',
+    changelog: '完整更新日志',
+    gotIt: '知道了',
+    star: '喜欢 Downtify？在 GitHub 上给它一颗星',
+    reopen: '新功能',
+    reopenHint: '此版本的亮点及其完整更新日志的链接。',
+  },
   common: {
     cancel: '取消',
     confirm: '确认',

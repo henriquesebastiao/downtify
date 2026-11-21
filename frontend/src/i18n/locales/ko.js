@@ -251,6 +251,17 @@ export default {
     noMatch: '일치하는 항목 없음',
     noMatchHint: '다른 단어나 다른 필터를 사용해 보세요.',
   },
+  whatsNew: {
+    title: 'Downtify {version}의 새로운 기능',
+    intro: 'Downtify가 {version}(으)로 업데이트되었습니다. 변경 사항:',
+    noHighlights:
+      'Downtify가 {version}(으)로 업데이트되었습니다. 전체 변경 사항은 GitHub에 있습니다.',
+    changelog: '전체 변경 로그',
+    gotIt: '확인',
+    star: 'Downtify가 마음에 드시나요? GitHub에서 별을 눌러 주세요',
+    reopen: '새로운 기능',
+    reopenHint: '이 버전의 주요 변경 사항과 전체 변경 로그 링크입니다.',
+  },
   common: {
     cancel: '취소',
     confirm: '확인',

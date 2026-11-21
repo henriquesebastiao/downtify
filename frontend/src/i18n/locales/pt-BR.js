@@ -258,6 +258,18 @@ export default {
     noMatch: 'Nada corresponde',
     noMatchHint: 'Tente outras palavras ou outro filtro.',
   },
+  whatsNew: {
+    title: 'Novidades do Downtify {version}',
+    intro: 'O Downtify foi atualizado para a {version}. Veja o que mudou:',
+    noHighlights:
+      'O Downtify foi atualizado para a {version}. A lista completa de mudanças está no GitHub.',
+    changelog: 'Changelog completo',
+    gotIt: 'Entendi',
+    star: 'Curtindo o Downtify? Deixe uma estrela no GitHub',
+    reopen: 'Novidades',
+    reopenHint:
+      'Os destaques desta versão e um link para o changelog completo.',
+  },
   common: {
     cancel: 'Cancelar',
     confirm: 'Confirmar',

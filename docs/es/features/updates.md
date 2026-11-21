@@ -10,6 +10,14 @@ Downtify consulta su propia [página de Releases de GitHub](https://github.com/h
 
 Haz clic para abrir esa versión en GitHub.
 
+## Novedades tras una actualización
+
+La primera vez que se abre la app web después de actualizar Downtify, un diálogo **Novedades de Downtify 3.12.0** muestra lo más destacado de la versión, con un botón **Registro de cambios completo** que abre la versión en GitHub y una línea discreta para darle una estrella al repositorio. **Entendido** (o cerrarlo) lo oculta hasta la próxima actualización. **Ajustes → Acerca de → Novedades** lo vuelve a abrir.
+
+- Se recuerda por navegador: cada navegador (y cada persona que inicia sesión en él) lo ve una vez por actualización. Un navegador que nunca abrió Downtify — una instalación nueva — no lo ve.
+- Lo más destacado viene incluido en la app, así que el diálogo funciona sin internet; solo los dos enlaces van a GitHub. Una versión sin novedades escritas muestra solo el enlace a su registro de cambios.
+- Espera al inicio de sesión y no se abre encima del aviso para cambiar la contraseña predeterminada.
+
 ## Cómo funciona
 
 - Una tarea en segundo plano del backend (`downtify/update_check.py`) obtiene la última versión de la API de GitHub una vez nada más arrancar y luego cada hora. Es de tipo «lanzar y olvidar»: nada en la interfaz espera por ella.

@@ -1139,6 +1139,14 @@
             </div>
             <SettingGroup>
               <SettingRow
+                :label="t('whatsNew.reopen')"
+                :description="t('whatsNew.reopenHint')"
+              >
+                <UiButton variant="ghost" icon="sparkle" @click="whatsNew.show">
+                  {{ t('whatsNew.reopen') }}
+                </UiButton>
+              </SettingRow>
+              <SettingRow
                 :label="t('settings.source')"
                 :description="t('settings.sourceHint')"
               >
@@ -1256,6 +1264,7 @@ import { usePlayerPrefs } from '/src/model/playerPrefs'
 import { useTheme } from '/src/model/theme'
 import { useUi } from '/src/model/ui'
 import { useUpdateCheck } from '/src/model/updateCheck'
+import { useWhatsNew } from '/src/model/whatsNew'
 import { useI18n } from '/src/i18n'
 
 const { t, locale, setLocale, locales } = useI18n()
@@ -1268,6 +1277,7 @@ const { showLyrics } = usePlayerPrefs()
 const ui = useUi()
 const player = usePlayer()
 const update = useUpdateCheck().status
+const whatsNew = useWhatsNew()
 
 const hasTrack = computed(() => !!player.currentTrack.value)
 const s = sm.settings
