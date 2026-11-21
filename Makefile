@@ -39,7 +39,7 @@ changelog:
 test:
 	npm run test --prefix frontend
 	npm run test --prefix docs
-	uv run pytest -x -s -v
+	uv run pytest -x -s -v --cov=downtify && uv run coverage html
 
 version:
 	@VERSION=$(word 2,$(MAKECMDGOALS)); \

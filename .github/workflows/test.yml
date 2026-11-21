@@ -49,12 +49,21 @@ jobs:
         run: uv run ruff check .; uv run ruff check . --diff
 
       - name: Run pytest (SQLite)
-        run: uv run pytest -x -s -v
+        run: uv run pytest -x -s -v --cov=downtify
 
       - name: Run pytest (PostgreSQL)
-        run: uv run pytest -x -s -v
+        run: uv run pytest -x -s -v --cov=downtify
         env:
           TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/downtify_test
+      
+      - name: Coverage
+        run: uv run coverage html
+      
+      - name: Store coverage files
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-html
+          path: htmlcov
 
   frontend-test:
     name: Frontend tests

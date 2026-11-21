@@ -17,7 +17,8 @@
   <a href="https://github.com/henriquesebastiao/downtify/releases"><img alt="Latest release" src="https://img.shields.io/github/v/release/henriquesebastiao/downtify?color=1AD05C&label=release"></a>
   <a href="https://github.com/henriquesebastiao/downtify/pkgs/container/downtify"><img alt="Docker pulls" src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fghcr-badge.elias.eu.org%2Fapi%2Fhenriquesebastiao%2Fdowntify%2Fdowntify&query=downloadCount&label=docker%20pulls&color=1AD05C"></a>
   <a href="https://star-history.com/#henriquesebastiao/downtify&Date"><img alt="GitHub stars" src="https://img.shields.io/github/stars/henriquesebastiao/downtify?style=flat&label=stars&color=1AD05C"></a>
-  <a href="https://github.com/henriquesebastiao/downtify/actions/workflows/test.yml"><img alt="Tests" src="https://img.shields.io/github/actions/workflow/status/henriquesebastiao/downtify/test.yml?branch=main&label=tests"></a>
+  <a href="https://github.com/henriquesebastiao/downtify/actions/workflows/test.yml"><img alt="Tests" src="https://img.shields.io/github/actions/workflow/status/henriquesebastiao/downtify/test.yml?branch=main&label=tests&color=1AD05C"></a>
+  <a href="https://coverage-badge.samuelcolvin.workers.dev/redirect/henriquesebastiao/downtify"><img alt="Smokeshow" src="https://coverage-badge.samuelcolvin.workers.dev/henriquesebastiao/downtify.svg"></a>
   <a href="LICENSE"><img alt="License: AGPL-3.0" src="https://img.shields.io/github/license/henriquesebastiao/downtify?color=1AD05C"></a>
 </p>
 

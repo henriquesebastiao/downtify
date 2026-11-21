@@ -24,14 +24,20 @@ dependencies = [
 [dependency-groups]
 dev = [
     "codeflash>=0.20.6",
+    "gevent>=26.9.0",
     "httpx2>=2.16.2",
     "pytest>=9.2.0",
     "pytest-codspeed>=5.0.4",
+    "pytest-cov>=7.1.0",
     "ruff>=0.17.6",
 ]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+asyncio_mode = 'auto'
+
+[tool.coverage.run]
+concurrency = ["thread", "gevent"]
 
 [tool.uv]
 upgrade = true
