@@ -4,7 +4,7 @@
   >
     <PageHeader :title="t('monitor.title')" :subtitle="t('monitor.subtitle')">
       <UiButton
-        v-if="enabledInTab.length"
+        v-if="tab !== 'wanted' && enabledInTab.length"
         variant="ghost"
         icon="retry"
         :loading="checkingAll"
@@ -18,6 +18,7 @@
     <UiTabs :items="tabs" :model-value="tab" />
 
     <form
+      v-if="tab !== 'wanted'"
       ref="watchForm"
       class="flex flex-col gap-2 rounded-panel border border-line-2 bg-surface p-2 sm:flex-row sm:items-center"
       @submit.prevent="add"
@@ -29,7 +30,7 @@
         <span class="sr-only">{{ copy.urlLabel }}</span>
         <input
           v-model="newUrl[tab]"
-          type="url"
+          :type="tab === 'artist' ? 'text' : 'url'"
           :placeholder="copy.urlPlaceholder"
           class="h-full min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-faint"
         />
@@ -45,14 +46,27 @@
         <UiButton
           type="submit"
           variant="primary"
-          :icon="tab === 'artist' ? 'user' : 'radar'"
+          :icon="artistQuery ? 'search' : tab === 'artist' ? 'user' : 'radar'"
           :loading="adding"
           :disabled="!newUrl[tab].trim()"
         >
-          {{ copy.add }}
+          {{ artistQuery ? t('monitor.searchArtists') : copy.add }}
         </UiButton>
       </div>
     </form>
+    <ArtistNameSearch
+      v-if="tab === 'artist'"
+      ref="nameSearch"
+      :query="artistQuery"
+      :busy="adding"
+      @choose="followSearched"
+    />
+    <SpotifyUserLinkDialog
+      :user-id="userLink.id"
+      :link="userLink.url"
+      @back="userLink = { id: '', url: '' }"
+      @search="searchUserLinkName"
+    />
     <div
       v-if="tab === 'artist'"
       class="-mt-3 rounded-panel border border-line-2 bg-surface px-4 py-3"
@@ -83,24 +97,30 @@
       </UiButton>
     </p>
 
-    <p class="flex items-start gap-2 text-[13px] text-pretty text-muted">
+    <p
+      v-if="tab !== 'wanted'"
+      class="flex items-start gap-2 text-[13px] text-pretty text-muted"
+    >
       <AppIcon name="info" :size="16" class="mt-0.5 shrink-0" />{{
         copy.explainer
       }}
     </p>
 
-    <div v-if="loading && !items.length" class="flex flex-col gap-2">
+    <div
+      v-if="tab !== 'wanted' && loading && !items.length"
+      class="flex flex-col gap-2"
+    >
       <UiSkeleton v-for="n in 4" :key="n" class="h-[72px] !rounded-[12px]" />
     </div>
 
     <UiEmpty
-      v-else-if="!inTab.length"
+      v-else-if="tab !== 'wanted' && !inTab.length"
       :icon="tab === 'artist' ? 'user' : 'playlist'"
       :title="copy.emptyTitle"
       :body="copy.emptyBody"
     />
 
-    <template v-else>
+    <template v-else-if="tab !== 'wanted'">
       <div
         class="flex flex-wrap items-center gap-x-6 gap-y-3 rounded-panel border border-line-2 bg-surface px-4 py-3"
       >
@@ -142,6 +162,15 @@
         </label>
         <UiChips v-model="show" :items="showFilters" />
         <div class="ml-auto flex items-center gap-2">
+          <UiButton
+            size="sm"
+            :variant="selecting ? 'secondary' : 'ghost'"
+            :icon="selecting ? 'x' : 'check'"
+            :aria-pressed="selecting"
+            @click="setSelecting(!selecting)"
+          >
+            {{ selecting ? t('monitor.selectDone') : t('monitor.select') }}
+          </UiButton>
           <span class="hidden lg:inline-flex">
             <UiMenu :items="tableColumnMenu" :label="t('monitor.tableColumns')"
               ><template #trigger
@@ -166,6 +195,89 @@
             "
             @click="sortDir = sortDir === 'asc' ? 'desc' : 'asc'"
           />
+        </div>
+      </div>
+
+      <div
+        v-if="selecting"
+        class="sticky top-[76px] z-20 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-[14px] border border-accent/40 bg-surface-2/95 px-4 py-3 shadow-float backdrop-blur-xl md:top-[84px]"
+        role="toolbar"
+        :aria-label="t('monitor.selectedCount', { count: selectedIds.length })"
+      >
+        <label class="flex cursor-pointer items-center gap-2.5 text-sm">
+          <input
+            ref="selectAllBox"
+            type="checkbox"
+            class="size-4 cursor-pointer accent-accent"
+            :checked="shownSelection === 'all'"
+            :disabled="!visibleIds.length"
+            @change="selected = toggleShown(selected, visibleIds)"
+          />
+          {{ t('monitor.selectAllShown') }}
+        </label>
+        <span class="tabular text-sm font-semibold">
+          {{ t('monitor.selectedCount', { count: selectedIds.length }) }}
+        </span>
+        <span class="hidden text-[12px] text-faint xl:inline">
+          {{ t('monitor.selectRangeHint') }}
+        </span>
+        <div
+          class="flex w-full flex-wrap items-center gap-2 sm:ml-auto sm:w-auto"
+        >
+          <UiSelect
+            :model-value="''"
+            :options="bulkIntervalOptions"
+            :label="t('monitor.bulkInterval')"
+            icon="clock"
+            size="sm"
+            :class="
+              selectedIds.length && !bulkBusy
+                ? ''
+                : 'pointer-events-none opacity-50'
+            "
+            @update:model-value="
+              (value) => value && bulkUpdate({ interval_minutes: value })
+            "
+          />
+          <UiButton
+            size="sm"
+            variant="ghost"
+            icon="pause"
+            :disabled="!selectedEnabled.length || bulkBusy"
+            @click="bulkUpdate({ enabled: false })"
+          >
+            {{ t('monitor.pause') }}
+          </UiButton>
+          <UiButton
+            size="sm"
+            variant="ghost"
+            icon="play"
+            :disabled="
+              selectedEnabled.length === selectedIds.length || bulkBusy
+            "
+            @click="bulkUpdate({ enabled: true })"
+          >
+            {{ t('monitor.resume') }}
+          </UiButton>
+          <UiButton
+            size="sm"
+            variant="ghost"
+            icon="retry"
+            :disabled="!selectedEnabled.length || bulkBusy"
+            @click="bulkCheck"
+          >
+            {{ t('monitor.checkNow') }}
+          </UiButton>
+          <UiButton
+            size="sm"
+            variant="ghost"
+            icon="trash"
+            class="text-danger"
+            :disabled="!selectedIds.length || bulkBusy"
+            @click="bulkStop"
+          >
+            {{ t('monitor.stop') }}
+          </UiButton>
         </div>
       </div>
 
@@ -234,59 +346,74 @@
             <li
               v-for="item in visible"
               :key="item.id"
-              class="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-2 rounded-[12px] px-4 py-3 transition-colors hover:bg-surface monitor-table-grid"
+              class="grid cursor-pointer grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-2 rounded-[12px] px-4 py-3 transition-colors hover:bg-surface monitor-table-grid"
+              :class="
+                selecting && selected.has(item.id)
+                  ? 'bg-surface ring-1 ring-accent/40 ring-inset'
+                  : ''
+              "
+              @click="openRow(item, $event)"
             >
-              <div
-                class="flex min-w-0 items-center gap-3 transition-opacity"
-                :class="item.enabled ? '' : 'opacity-50'"
-              >
-                <CoverArt
-                  :src="tab === 'artist' ? artistCover(item) : ''"
-                  :name="item.name"
-                  :round="tab === 'artist'"
-                  :icon="tab === 'artist' ? 'user' : 'playlist'"
-                  rounded="rounded-[8px]"
-                  :letter-size="16"
-                  class="size-11"
+              <div class="flex min-w-0 items-center gap-3">
+                <input
+                  v-if="selecting"
+                  type="checkbox"
+                  class="size-4 shrink-0 cursor-pointer accent-accent"
+                  :checked="selected.has(item.id)"
+                  :aria-label="t('monitor.selectWatch', { name: item.name })"
+                  @click="pick(item, $event)"
                 />
-                <div class="min-w-0">
-                  <button
-                    type="button"
-                    class="block max-w-full whitespace-normal break-words text-left text-sm font-semibold hover:underline"
-                    :title="item.name"
-                    @click="editing = item"
-                  >
-                    {{ item.name }}
-                  </button>
-                  <a
-                    :href="item.url"
-                    target="_blank"
-                    rel="noopener"
-                    :title="item.url"
-                    class="block truncate font-mono text-[11.5px] text-muted hover:text-fg hover:underline"
-                    >{{ displayUrl(item.url) }}</a
-                  >
-                  <span
-                    v-if="
-                      releaseFilterSummary(item).types.length ||
-                      releaseFilterSummary(item).newOnly
-                    "
-                    class="mt-1 flex flex-wrap gap-1"
-                  >
-                    <UiBadge v-if="releaseFilterSummary(item).types.length">
-                      {{
-                        releaseFilterSummary(item)
-                          .types.map((type) => t(`monitor.release.${type}`))
-                          .join(' · ')
-                      }}
-                    </UiBadge>
-                    <UiBadge
-                      v-if="releaseFilterSummary(item).newOnly"
-                      tone="accent"
+                <div
+                  class="flex min-w-0 items-center gap-3 transition-opacity"
+                  :class="item.enabled ? '' : 'opacity-50'"
+                >
+                  <CoverArt
+                    :src="tab === 'artist' ? artistCover(item) : ''"
+                    :name="item.name"
+                    :round="tab === 'artist'"
+                    :icon="tab === 'artist' ? 'user' : 'playlist'"
+                    rounded="rounded-[8px]"
+                    :letter-size="16"
+                    class="size-11"
+                  />
+                  <div class="min-w-0">
+                    <RouterLink
+                      :to="watchRouteFor(item)"
+                      class="block max-w-full whitespace-normal break-words text-left text-sm font-semibold hover:underline"
+                      :title="item.name"
                     >
-                      {{ t('monitor.newOnlyBadge') }}
-                    </UiBadge>
-                  </span>
+                      {{ item.name }}
+                    </RouterLink>
+                    <a
+                      :href="item.url"
+                      target="_blank"
+                      rel="noopener"
+                      :title="item.url"
+                      class="block truncate font-mono text-[11.5px] text-muted hover:text-fg hover:underline"
+                      >{{ displayUrl(item.url) }}</a
+                    >
+                    <span
+                      v-if="
+                        releaseFilterSummary(item).types.length ||
+                        releaseFilterSummary(item).newOnly
+                      "
+                      class="mt-1 flex flex-wrap gap-1"
+                    >
+                      <UiBadge v-if="releaseFilterSummary(item).types.length">
+                        {{
+                          releaseFilterSummary(item)
+                            .types.map((type) => t(`monitor.release.${type}`))
+                            .join(' · ')
+                        }}
+                      </UiBadge>
+                      <UiBadge
+                        v-if="releaseFilterSummary(item).newOnly"
+                        tone="accent"
+                      >
+                        {{ t('monitor.newOnlyBadge') }}
+                      </UiBadge>
+                    </span>
+                  </div>
                 </div>
               </div>
 
@@ -470,6 +597,9 @@
       </template>
     </template>
 
+    <!-- Everything the watched artists are missing. -->
+    <WantedReleases v-if="tab === 'wanted'" @totals="wantedCount = $event" />
+
     <ArtistSuggestions
       v-if="tab === 'artist' && listed"
       :revision="watchesRevision"
@@ -516,6 +646,9 @@ import UiTabs from '/src/components/ui/UiTabs.vue'
 import PageHeader from '/src/components/library/PageHeader.vue'
 import ReleaseFilters from '/src/components/monitor/ReleaseFilters.vue'
 import ArtistSuggestions from '/src/components/monitor/ArtistSuggestions.vue'
+import ArtistNameSearch from '/src/components/monitor/ArtistNameSearch.vue'
+import SpotifyUserLinkDialog from '/src/components/monitor/SpotifyUserLinkDialog.vue'
+import WantedReleases from '/src/components/monitor/WantedReleases.vue'
 import WatchEditDialog from '/src/components/monitor/WatchEditDialog.vue'
 import WatchSourceBadge from '/src/components/monitor/WatchSourceBadge.vue'
 import { intervalOptions } from '/src/components/monitor/intervals'
@@ -541,7 +674,16 @@ import {
   releaseFilterSummary,
   watchKind,
   watchKindOfUrl,
+  artistNameQuery,
+  nameFromSpotifyUser,
+  spotifyUserOf,
 } from '/src/lib/watches'
+import {
+  keepExisting,
+  shownState,
+  toggleShown,
+  toggleWatch,
+} from '/src/lib/watchSelection'
 import { useI18n } from '/src/i18n'
 import {
   MONITOR_COLUMNS,
@@ -566,6 +708,13 @@ const adding = ref(false)
 const newUrl = reactive({ playlist: '', artist: '' })
 const addError = reactive({ playlist: '', artist: '' })
 const wrongKind = ref(null)
+// A name typed in the Artists box (not a link): its matches show under it.
+const artistQuery = computed(() =>
+  tab.value === 'artist' ? artistNameQuery(newUrl.artist) : ''
+)
+const nameSearch = ref(null)
+// A pasted Spotify user link waiting on the warning dialog.
+const userLink = ref({ id: '', url: '' })
 const newInterval = ref(360)
 // A new artist watch's filters (the artists tab's form).
 const newReleaseTypes = ref([...RELEASE_TYPES])
@@ -663,9 +812,13 @@ const counts = computed(() => countWatches(items.value))
 
 // /monitor/playlists and /monitor/artists; plain /monitor opens the tab
 // that has something in it.
+// The releases the Wanted tab last listed (it is read only when opened).
+const wantedCount = ref(null)
+
 const tab = computed(() => {
   if (route.params.tab === 'artists') return 'artist'
   if (route.params.tab === 'playlists') return 'playlist'
+  if (route.params.tab === 'wanted') return 'wanted'
   return !counts.value.playlist && counts.value.artist ? 'artist' : 'playlist'
 })
 
@@ -832,6 +985,13 @@ const tabs = computed(() => [
     count: counts.value.artist,
     to: { name: 'Monitor', params: { tab: 'artists' } },
   },
+  {
+    id: 'wanted',
+    label: t('monitor.filterWanted'),
+    // Known once the Wanted tab has been opened in this visit.
+    count: wantedCount.value,
+    to: { name: 'Monitor', params: { tab: 'wanted' } },
+  },
 ])
 
 // Wording that depends on the tab.
@@ -904,7 +1064,149 @@ watch(tab, () => {
   query.value = ''
   show.value = 'all'
   wrongKind.value = null
+  setSelecting(false)
 })
+
+// Picking several watches of the tab to change together ("Select").
+// What's picked stays picked when the filter hides it; the actions apply
+// to every picked watch of the tab.
+const selecting = ref(false)
+const selected = ref(new Set())
+const selectAllBox = ref(null)
+const bulkBusy = ref(false)
+let lastPicked = null
+
+const visibleIds = computed(() => visible.value.map((item) => item.id))
+const selectedItems = computed(() =>
+  inTab.value.filter((item) => selected.value.has(item.id))
+)
+const selectedIds = computed(() => selectedItems.value.map((item) => item.id))
+const selectedEnabled = computed(() =>
+  selectedItems.value.filter((item) => item.enabled)
+)
+const shownSelection = computed(() =>
+  shownState(selected.value, visibleIds.value)
+)
+const bulkIntervalOptions = computed(() => [
+  { value: '', label: t('monitor.bulkInterval') },
+  ...intervalOptions(t),
+])
+
+watch([shownSelection, selectAllBox], ([state, box]) => {
+  if (box) box.indeterminate = state === 'some'
+})
+watch(
+  () => inTab.value.map((item) => item.id),
+  (ids) => {
+    selected.value = keepExisting(selected.value, ids)
+  }
+)
+
+function setSelecting(on) {
+  selecting.value = on
+  selected.value = new Set()
+  lastPicked = null
+}
+
+function pick(item, event) {
+  selected.value = toggleWatch(selected.value, visibleIds.value, item.id, {
+    anchor: lastPicked,
+    range: event.shiftKey,
+  })
+  lastPicked = item.id
+}
+
+// A click on the row's empty space opens the watch's page (in "Select",
+// it picks the row). Its buttons, links and menus keep their own clicks,
+// and dragging to select text opens nothing.
+const ROW_CONTROLS =
+  'a, button, input, select, textarea, label, [role="button"], [role="menu"], [role="menuitem"], [role="listbox"], [role="option"]'
+
+function openRow(item, event) {
+  if (event.target.closest?.(ROW_CONTROLS)) return
+  if (window.getSelection?.()?.toString()) return
+  if (selecting.value) pick(item, event)
+  else router.push(watchRouteFor(item))
+}
+
+// Escape leaves "Select", unless it is closing a dialog (the capture
+// phase sees the dialog before Escape closes it).
+function onSelectKey(event) {
+  if (event.key !== 'Escape' || !selecting.value) return
+  if (editing.value || ui.dialog.value || ui.modals.value.length) return
+  setSelecting(false)
+}
+onMounted(() => window.addEventListener('keydown', onSelectKey, true))
+onBeforeUnmount(() => window.removeEventListener('keydown', onSelectKey, true))
+
+async function bulkUpdate(changes) {
+  const ids = selectedIds.value
+  if (!ids.length || bulkBusy.value) return
+  bulkBusy.value = true
+  try {
+    const res = await monitorAPI.updateMonitoredPlaylists(ids, changes)
+    const byId = new Map((res.data?.updated || []).map((w) => [w.id, w]))
+    for (const item of items.value) {
+      if (byId.has(item.id)) Object.assign(item, byId.get(item.id))
+    }
+    ui.toast(t('monitor.bulkUpdated', { count: byId.size }), {
+      kind: 'success',
+    })
+  } catch {
+    ui.toast(t('toast.actionFailed'), { kind: 'error' })
+  } finally {
+    bulkBusy.value = false
+  }
+}
+
+async function bulkCheck() {
+  const targets = selectedEnabled.value
+  if (!targets.length || bulkBusy.value) return
+  bulkBusy.value = true
+  ui.toast(t('monitor.bulkChecking', { count: targets.length }))
+  try {
+    for (const item of targets) {
+      await monitorAPI.checkMonitoredPlaylist(item.id).catch(() => {})
+    }
+  } finally {
+    bulkBusy.value = false
+    setTimeout(load, 4000)
+  }
+}
+
+async function bulkStop() {
+  const targets = selectedItems.value
+  if (!targets.length || bulkBusy.value) return
+  const ok = await ui.confirm({
+    title: t('confirm.stopWatchingManyTitle', { count: targets.length }),
+    body: t('confirm.stopWatchingBody'),
+    confirmLabel: t('monitor.stop'),
+    danger: true,
+  })
+  if (!ok) return
+  bulkBusy.value = true
+  const stopped = new Set()
+  try {
+    for (const item of targets) {
+      try {
+        await monitorAPI.deleteMonitoredPlaylist(item.id)
+        stopped.add(item.id)
+      } catch {
+        // Left in the list (and picked) to try again.
+      }
+    }
+  } finally {
+    items.value = items.value.filter((item) => !stopped.has(item.id))
+    bulkBusy.value = false
+  }
+  if (stopped.size === targets.length) {
+    ui.toast(t('monitor.bulkStopped', { count: stopped.size }), {
+      kind: 'success',
+    })
+  } else {
+    ui.toast(t('toast.actionFailed'), { kind: 'error' })
+  }
+}
 
 function clearFilters() {
   query.value = ''
@@ -952,6 +1254,15 @@ async function add() {
   const url = newUrl[kind].trim()
   addError[kind] = ''
   wrongKind.value = null
+  const userId = spotifyUserOf(url)
+  if (userId) {
+    userLink.value = { id: userId, url }
+    return
+  }
+  if (kind === 'artist' && artistQuery.value) {
+    nameSearch.value?.now()
+    return
+  }
   const detected = watchKindOfUrl(url)
   if (detected && detected !== kind) {
     addError[kind] =
@@ -995,6 +1306,25 @@ async function chooseSuggestedArtist(artist) {
   }
   await nextTick()
   watchForm.value?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  watchForm.value?.querySelector('input')?.focus({ preventScroll: true })
+}
+
+// An artist picked from the name search: followed by its link.
+async function followSearched(candidate) {
+  newUrl.artist = candidate.url
+  await add()
+}
+
+// "Find the artist instead" in the Spotify user link dialog: the Artists
+// tab, searching the account's handle when it reads like a name.
+async function searchUserLinkName() {
+  const name = nameFromSpotifyUser(userLink.value.id)
+  const from = tab.value
+  userLink.value = { id: '', url: '' }
+  newUrl[from] = ''
+  newUrl.artist = name
+  if (from !== 'artist') await router.push(tabRoute('artist'))
+  await nextTick()
   watchForm.value?.querySelector('input')?.focus({ preventScroll: true })
 }
 

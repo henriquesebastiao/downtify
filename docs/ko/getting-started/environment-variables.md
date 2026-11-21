@@ -16,6 +16,25 @@ icon: lucide/settings
 | `DOWNTIFY_LOG_LEVEL` | `info` | 애플리케이션 로그 수준(`debug`, `info`, `warning`, …). |
 | `TZ` | `UTC` | 로컬 시간대(IANA 이름, 예: `America/Sao_Paulo`). 아래 `DOWNTIFY_MONITOR_SYNC_TIME`을 해석하는 데 쓰입니다. |
 
+## 데이터베이스
+
+기본적으로 Downtify는 `DATABASE_DIR` 아래의 SQLite 파일에 데이터를 저장합니다. PostgreSQL을 쓰려면 `DATABASE_URL`을 설정하세요. 설정 방법, 마이그레이션, 각 데이터가 어디에 저장되는지는 [데이터베이스](../database.md) 페이지에서 다룹니다.
+
+| 변수 | 기본값 | 설명 |
+|----------|---------|-------------|
+| `DATABASE_URL` | _(설정 안 됨)_ | PostgreSQL 연결 URL, `postgresql://사용자:비밀번호@호스트:5432/데이터베이스`(`postgres://`도 가능). 설정하지 않으면 SQLite. 설정하면 원래 SQLite 파일이었을 저장소(라이브러리, 모니터, 계정, 활동, Doctor)가 PostgreSQL을 사용합니다. 다른 스킴의 값은 거부됩니다. URL은 오류 메시지에 절대 표시되지 않습니다. |
+| `DB_POOL_MIN` | `2` | PostgreSQL 풀이 열어 둘 연결 수. `0` 이상이어야 합니다. |
+| `DB_POOL_MAX` | `20` | PostgreSQL 풀이 열 수 있는 최대 연결 수. `1` 이상이며 `DB_POOL_MIN` 이상이어야 합니다. |
+| `DB_POOL_TIMEOUT` | `10` | 요청이 빈 연결을 기다리다 실패하기까지의 초. |
+| `DB_SEARCH_PATH` | _(설정 안 됨)_ | 사용할 PostgreSQL 스키마. 다른 애플리케이션과 공유하는 데이터베이스일 때 씁니다. 일반 식별자만 가능: 문자, 숫자, 밑줄, 숫자로 시작하지 않아야 합니다. 설정하지 않으면 서버 기본값(`public`). |
+| `DATABASE_DIR` | `/data` | 설정, 캐시, SQLite 파일의 디렉터리. PostgreSQL과 함께 쓸 때도 데이터베이스 테이블이 아닌 나머지에 계속 사용됩니다. |
+| `POSTGRES_PASSWORD` | `downtify` | Docker Compose 전용(서버가 아니라 저장소의 `docker-compose.yml`이 읽음): 포함된 `postgres` 서비스의 `downtify` 사용자 비밀번호이며, `DATABASE_URL`도 이를 사용합니다. 처음 실행하기 전에 Compose 파일 옆 `.env` 파일에 넣으세요. PostgreSQL은 데이터 볼륨을 만들 때만 이 값을 적용하므로, 나중에 바꿔도 기존 데이터베이스의 비밀번호는 바뀌지 않습니다. |
+
+```yaml
+environment:
+  - DATABASE_URL=postgresql://downtify:change-me@postgres:5432/downtify
+```
+
 ## 재생목록 모니터
 
 | 변수 | 기본값 | 설명 |
@@ -65,7 +84,7 @@ OIDC is optional. Configure the issuer, client ID and secret together; partial c
 
 ## 상태 확인
 
-이미지에는 [Docker `HEALTHCHECK`](https://docs.docker.com/reference/dockerfile/#healthcheck)가 내장되어 있어 별도의 `--health-cmd`가 필요 없습니다. 30초마다 컨테이너 자체 포트의 `GET /api/health`를 확인합니다(타임아웃 5초, 시작 유예 20초, 컨테이너를 비정상으로 표시하기 전 3회 재시도). `docker ps`와 `docker inspect`에서 결과를 볼 수 있고, Compose의 `condition: service_healthy`나 Watchtower 같은 도구가 이를 활용할 수 있습니다.
+이미지에는 [Docker `HEALTHCHECK`](https://docs.docker.com/reference/dockerfile/#healthcheck)가 내장되어 있어 별도의 `--health-cmd`가 필요 없습니다. 30초마다 컨테이너 자체 포트의 `GET /api/health`를 확인합니다(타임아웃 5초, 시작 유예 20초, 컨테이너를 비정상으로 표시하기 전 3회 재시도). `docker ps`와 `docker inspect`에서 결과를 볼 수 있고, Compose의 `condition: service_healthy`나 Watchtower 같은 도구가 이를 활용할 수 있습니다. PostgreSQL을 쓰면 데이터베이스에 연결할 수 없는 동안 상태 확인도 실패합니다(`503`, [`GET /api/health`](../api-reference.md#get-apihealth) 참고).
 
 | 변수 | 기본값 | 설명 |
 |----------|---------|-------------|
@@ -86,6 +105,7 @@ YouTube는 주기적으로 자동 다운로더를 확인합니다. 기본값이 
 | `DOWNTIFY_YT_PLAYER_CLIENTS` | `ios,android,web_embedded,mweb,web,tv` | 순서대로 시도할 yt-dlp 플레이어 클라이언트의 쉼표 구분 목록. Downtify의 기본 목록은 이미 JavaScript 런타임 없이 동작하는 클라이언트를 우선합니다. 특정 클라이언트가 차단된다는 것을 알 때만 바꾸세요. |
 | `DOWNTIFY_YT_PO_TOKEN` | _(설정 안 됨)_ | yt-dlp용 Proof-of-Origin 토큰을 쉼표로 구분하며, 각각 `<client>.<context>+<token>` 형식입니다(예: `mweb.gvs+ABC123`). YouTube가 사용 중인 클라이언트에 PO Token을 요구하기 시작할 때만 필요합니다. |
 | `DOWNTIFY_COOKIES_FILE` | _(설정 안 됨)_ | **컨테이너 안의** Netscape 형식 `cookies.txt` 경로. yt-dlp가 실제 브라우저 세션처럼 인증할 수 있게 하며, 선정적/연령 제한 트랙과 YouTube가 로그인 장벽을 둘 때 필요합니다. 웹 UI에서 업로드한 파일보다 우선하고 UI의 해당 섹션을 읽기 전용으로 만듭니다. [YouTube 쿠키](../features/youtube-cookies.md)를 참고하세요. |
+| `DOWNTIFY_COOKIES_REFRESH_MINUTES` | `15` | 쿠키 유지 기능이 YouTube 세션 쿠키를 교체하고 저장하는 간격(분, `5`–`1440`). `0`이면 끕니다. 업로드한 파일이나 `DOWNTIFY_COOKIES_FILE` 파일(쓰기 가능할 때)을 갱신합니다. [계속 동작하게 유지하기](../features/youtube-cookies.md#keeping-them-working)를 참고하세요. |
 | `DOWNTIFY_COOKIES_FROM_BROWSER` | _(설정 안 됨)_ | 쿠키를 추출할 브라우저 이름(예: `chrome`, `firefox`). 브라우저의 쿠키 저장소가 컨테이너 안에서 접근 가능해야 하므로 Docker에서는 거의 쓸 수 없습니다. |
 
 ::: tip 아마 필요 없을 것입니다
@@ -103,7 +123,7 @@ services:
     volumes:
       - ./downloads:/downloads
       - downtify_data:/data
-      - ./cookies.txt:/cookies.txt:ro
+      - ./cookies.txt:/cookies.txt
     environment:
       - DOWNTIFY_FORCE_IPV4=1
       - DOWNTIFY_COOKIES_FILE=/cookies.txt

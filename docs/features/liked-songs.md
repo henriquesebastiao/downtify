@@ -59,7 +59,7 @@ Keeping the like of a missing file means an unplugged drive doesn't cost you you
 
 ## Good to know
 
-- Likes are stored in the library database (`downtify_library.db`, in your `/data` volume), not in the audio files. Nothing is written into a song's tags.
+- Likes are stored in the library database (`downtify_library.db`, in your `/data` volume on the default SQLite backend; with PostgreSQL, in the PostgreSQL database), not in the audio files. Nothing is written into a song's tags.
 - The playlist is not created in [Navidrome](slskd-navidrome.md) by Downtify. It is a plain M3U file, so what a media server does with it depends on how that server reads M3U files.
 - The [playlist file](m3u-export.md) is written even when *Write M3U playlists* is off in the download settings: the playlist is the point of the feature.
 

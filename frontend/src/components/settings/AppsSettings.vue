@@ -26,6 +26,17 @@
       </div>
     </SettingGroup>
 
+    <SettingGroup :title="t('apps.iosGroup')" :description="t('apps.iosHint')">
+      <div class="flex flex-col gap-4 px-5 py-4">
+        <p class="text-sm text-pretty text-fg-2">{{ t('apps.iosBody') }}</p>
+        <div class="flex flex-wrap gap-2">
+          <UiButton :href="IOS_REPO" icon="link" icon-right="arrow-up-right">
+            {{ t('apps.iosRepo') }}
+          </UiButton>
+        </div>
+      </div>
+    </SettingGroup>
+
     <!-- This server -->
     <SettingGroup
       :title="t('apps.serverGroup')"
@@ -202,6 +213,7 @@ const auth = useAuth()
 
 // The Android client, still in development - no release yet.
 const ANDROID_REPO = 'https://github.com/henriquesebastiao/downtify-android'
+const IOS_REPO = 'https://github.com/michaelmoskie/Downtify-IOS-Client'
 
 const info = ref(null)
 const serverName = ref('')

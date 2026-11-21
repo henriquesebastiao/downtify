@@ -10,6 +10,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from downtify.deezer import (
+    album_credits_from_id,
     album_from_id,
     artist_page_from_id,
     artist_top_songs_from_id,
@@ -200,6 +201,29 @@ def test_album_from_id_numbers_tracks_in_order():
     assert all(s['year'] == '2023' for s in songs)
 
 
+def test_album_credits_from_id_names_the_main_artists():
+    payload = {
+        'title': '$ome $exy $ongs 4 U',
+        'release_date': '2025-02-14',
+        'artist': {'id': 1, 'name': 'PARTYNEXTDOOR'},
+        'contributors': [
+            {'name': 'PARTYNEXTDOOR', 'role': 'Main'},
+            {'name': 'Drake', 'role': 'Main'},
+            {'name': 'A Producer', 'role': 'Featured'},
+        ],
+        'tracks': {'data': [_album_track_row(1, 'CN TOWER', 'PARTYNEXTDOOR')]},
+    }
+    with patch(
+        'downtify.deezer.httpx.get', return_value=_mock_response(payload)
+    ) as get:
+        owner, main, songs = album_credits_from_id('999')
+    assert owner == 'PARTYNEXTDOOR'
+    assert main == ['PARTYNEXTDOOR', 'Drake']
+    assert [s['name'] for s in songs] == ['CN TOWER']
+    assert songs[0]['album_artist'] == 'PARTYNEXTDOOR'
+    assert get.call_count == 1
+
+
 def test_album_from_id_follows_pagination():
     first = {
         'title': 'Big Album',
@@ -350,6 +374,7 @@ def test_artist_page_from_id_fills_in_the_artist_name():
             'artist': 'The Artist',
             'cover_url': 'https://example.com/album1-xl.jpg',
             'year': '2022',
+            'release_date': '2022-06-01',
             'explicit': False,
             'url': 'https://www.deezer.com/album/1',
             'source': 'deezer',
@@ -361,6 +386,7 @@ def test_artist_page_from_id_fills_in_the_artist_name():
             'artist': 'The Artist',
             'cover_url': 'https://example.com/album2-xl.jpg',
             'year': '2021',
+            'release_date': '2021-01-01',
             'explicit': False,
             'url': 'https://www.deezer.com/album/2',
             'source': 'deezer',

@@ -82,7 +82,7 @@ Controla quantas músicas são baixadas ao mesmo tempo. Escolha uma predefiniç�
 | **8** | Mais rápido para playlists grandes |
 | **até 30** | Melhor para conexões muito rápidas; usa mais CPU e banda e aumenta a chance de o YouTube limitar você. |
 
-O limite vale para todo download em lote — downloads de playlists/álbuns, o endpoint da fila em lote e [importações de biblioteca](library-import.md) por CSV — e para as consultas da sincronização das **[Pastas de músicas existentes](external-library.md)** (letras, capas, gênero). Ele **não** vale para as varreduras do Monitor de playlists, que baixam as faixas novas uma de cada vez. Mudar este valor em Configurações tem efeito imediato, sem reiniciar; o servidor limita qualquer valor fora de `1–30`.
+O limite vale para todo download em lote — downloads de playlists/álbuns, o endpoint da fila em lote e [importações de biblioteca](library-import.md) por CSV — e para as consultas da sincronização das **[Pastas de músicas existentes](external-library.md)** (letras, capas, gênero). Ele também vale para as verificações do [Monitor de playlists](playlist-monitor.md): os downloads de um monitoramento esperam uma vaga livre como qualquer outro e aparecem como aguardando na fila, então adicionar muitos monitoramentos de uma vez, **Verificar agora** ou **Baixar tudo o que falta** nunca rodam mais downloads que este limite. Mudar este valor em Configurações tem efeito imediato, sem reiniciar; o servidor limita qualquer valor fora de `1–30`.
 
 ## Pausa entre downloads
 
@@ -111,20 +111,17 @@ Esse `cover.jpg` é compartilhado por todas as faixas da pasta do álbum. Exclui
 
 ## Resolução da capa
 
-Só importa quando **Baixar capa** (acima) está ligado. Define o tamanho desejado (largura e altura, em pixels) que o Downtify pede para a capa incorporada vinda do **YouTube Music** ou do **Deezer**. Escolha uma predefinição (300, 600, 800, 1000, 1200) ou arraste o controle deslizante de **300 a 1200**; o valor atual em pixels aparece ao lado. O padrão é 600.
+Só importa quando **Baixar capa** (acima) está ligado. **Tamanho da capa** é o tamanho que a capa incorporada de cada download busca, em pixels (largura e altura). Escolha uma predefinição (600, 1000, 1200, 1400, 2000) ou digite qualquer valor de **300 a 3000**. O padrão é 1200.
 
-É útil ao alimentar a biblioteca em um servidor de mídia como o Plex, que exibe capas em resolução maior do que a incorporada por padrão pelo Downtify.
+Quando a capa que a fonte da faixa oferece é menor — a maior do Spotify tem 640 px, a do Deezer 1000 px —, o Downtify pede ao mesmo tempo ao Spotify, iTunes, YouTube Music e Deezer a capa da mesma música, cada um nesse tamanho, e incorpora a maior. Uma capa só conta quando o artista e o título batem com a faixa, então a capa de outra música nunca é usada.
 
-As duas fontes aplicam a configuração de modos diferentes, já que só uma delas pode de fato ser redimensionada sob demanda:
+As capas nunca são ampliadas. iTunes e YouTube Music reduzem a imagem original ao tamanho pedido e enviam o próprio original quando ele é menor — a maioria dos lançamentos tem 1400 px ou mais por lá. O Deezer oferece só quatro tamanhos fixos (56, 250, 500 e 1000 px); é usado o menor que alcança o tamanho. Quando nenhuma fonte o alcança, a maior capa encontrada é incorporada e o log registra isso.
 
-- As miniaturas do **YouTube Music** podem ser redimensionadas editando a URL — verificado no CDN real, as predefinições mais altas devolvem de verdade mais detalhe (não apenas ampliação) na maioria das capas, até a resolução da própria imagem de origem.
-- O **Deezer** só oferece quatro tamanhos fixos para a capa de qualquer faixa, álbum, artista ou playlist (56, 250, 500 e 1000 px) — não há tamanho intermediário para pedir. O Downtify escolhe o menor desses quatro que ainda seja pelo menos tão grande quanto o valor configurado (pedir 300 px dá a de 500 px, pois não existe um tamanho exato de 300 px); pedir mais de 1000 px também dá a de 1000 px, a maior do Deezer.
+**Tamanho mínimo da capa** (desligado por padrão) eleva essa meta: a capa precisa alcançar o maior dos dois valores, e os botões de **Tamanho da capa** abaixo do mínimo ficam acinzentados.
 
-::: info Capas vindas do Spotify não são afetadas
-O Downtify já incorpora a **maior** capa que a API de embed pública do Spotify oferece para faixas/álbuns/playlists resolvidos pelo Spotify — não há tamanho maior para pedir. Esta configuração só eleva o teto para faixas resolvidas pelo YouTube Music (busca de texto livre, URLs do YouTube e qualquer faixa do Spotify reassociada ao YouTube Music para o áudio em si) ou pelo Deezer (um link do Deezer colado, ou uma faixa das [Paradas](charts.md)).
-:::
+Para levar a esse tamanho as capas que já estão na sua biblioteca, rode **Melhorar biblioteca** com a categoria de capas; por padrão ela melhora capas com menos de 1200 px.
 
-Mudar este valor em Configurações tem efeito imediato, inclusive na página de busca aberta no momento — não exige baixar de novo nada que já esteja no disco.
+Mudar este valor nas Configurações vale na hora — não é preciso baixar de novo nada que já esteja no disco.
 
 ## Sobrescrever arquivos existentes
 
@@ -208,3 +205,6 @@ O Downtify incorpora as tags a seguir em todo arquivo baixado, qualquer que seja
 | Ano | Embed do Spotify (busca no nível da faixa) |
 | Capa do álbum | Embed do Spotify (capa no nível da faixa) para faixas resolvidas pelo Spotify; miniatura do YouTube Music ou capa do Deezer nos demais casos. Opcional — veja [Baixar capa](#download-cover-art) e [Resolução da capa](#cover-art-resolution) |
 | Letra | lrclib (se ativado) |
+| ISRC | Deezer, só quando há certeza. Opcional — **Gravar códigos ISRC** (veja abaixo) |
+
+O **ISRC** é o código que uma gravadora dá a uma gravação, como `USCM51600061`. Com **Configurações → Tags e letras → Gravar códigos ISRC** ativado (padrão), cada novo download é buscado no Deezer: um download do Deezer usa o código da própria faixa; qualquer outro é buscado por artista, título e duração, e o código só é gravado quando todos os resultados concordam. Uma música que o Deezer não identifica com certeza fica sem código em vez de receber um errado. O Monitoramento de artistas e a verificação de duplicatas comparam primeiro por esse código, então a mesma gravação é reconhecida mesmo quando dois catálogos a chamam de forma diferente. Os arquivos que já estão na sua biblioteca não mudam, e o Navidrome não identifica músicas pelo ISRC, então gravá-lo não muda nada lá.

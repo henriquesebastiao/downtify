@@ -3652,6 +3652,23 @@ def test_set_cover_resolution_changes_the_requested_size(monkeypatch):
         set_cover_resolution(DEFAULT_COVER_RESOLUTION)
 
 
+def test_minimum_cover_size_raises_the_first_request(monkeypatch):
+    # A smaller first request would only be swapped for a larger cover
+    # from another source, so the minimum raises it - up to the largest
+    # master YouTube Music keeps (it sends the master when asked for more).
+    monkeypatch.setattr(providers, '_cover_resolution', 600)
+    monkeypatch.setattr(providers, '_cover_minimum', 0)
+    assert providers.cover_resolution() == 600
+    providers.set_cover_minimum(1000)
+    assert providers.cover_resolution() == 1000
+    assert _upgrade_thumbnail(_RAW_THUMB).endswith('=w1000-h1000-l90-rj')
+    providers.set_cover_minimum(5000)
+    assert providers.cover_resolution() == 3000
+    monkeypatch.setattr(providers, '_cover_resolution', 1200)
+    providers.set_cover_minimum(800)
+    assert providers.cover_resolution() == 1200
+
+
 def test_upgrade_thumbnail_replaces_any_prior_size(monkeypatch):
     monkeypatch.setattr(providers, '_cover_resolution', 900)
     # A URL that already carries a completely different size/param tail

@@ -502,3 +502,27 @@ mark {
 .doc .doc-cards > ul > li > p:first-child svg {
   color: var(--c-accent);
 }
+
+/* Screenshots with a light variant follow the docs' theme (HomeShowcase). */
+[data-theme='light'] .theme-dark,
+[data-theme='dark'] .theme-light {
+  display: none;
+}
+
+/* Closing call to action on the home page */
+.doc .home-cta {
+  margin-top: 3.5rem;
+  border: 1px solid var(--c-line-2);
+  border-radius: 24px;
+  background:
+    radial-gradient(
+      90% 140% at 0% 0%,
+      color-mix(in srgb, var(--c-accent) 14%, transparent),
+      transparent 62%
+    ),
+    var(--c-surface);
+  padding: 1.75rem 1.75rem 2rem;
+}
+.doc .home-cta h2 {
+  margin-top: 0;
+}

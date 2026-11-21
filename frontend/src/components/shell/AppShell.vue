@@ -32,6 +32,7 @@
     <PlaylistShareModal />
     <AddTracksToPlaylistModal />
     <DefaultPasswordPrompt />
+    <WhatsNewDialog />
     <ReplaceAudioDialog v-if="auth.isAdmin.value" />
     <BuyLinksDialog />
     <TrackOriginDialog />
@@ -60,6 +61,7 @@ import RenamePlaylistModal from '../library/RenamePlaylistModal.vue'
 import AddTracksToPlaylistModal from '../library/AddTracksToPlaylistModal.vue'
 import SignIn from './SignIn.vue'
 import DefaultPasswordPrompt from './DefaultPasswordPrompt.vue'
+import WhatsNewDialog from './WhatsNewDialog.vue'
 import ReplaceAudioDialog from '../library/ReplaceAudioDialog.vue'
 import BuyLinksDialog from '../library/BuyLinksDialog.vue'
 import TrackOriginDialog from '../monitor/TrackOriginDialog.vue'
@@ -71,6 +73,7 @@ import { usePlayer } from '/src/model/player'
 import { usePlayerPrefs } from '/src/model/playerPrefs'
 import { useLibrary } from '/src/model/library'
 import { useDiscover } from '/src/model/discover'
+import { useKaraokeStage } from '/src/model/karaokeStage'
 import { useNowPlaying, useUi } from '/src/model/ui'
 import { useShortcuts } from './shortcuts'
 
@@ -113,6 +116,7 @@ API.onForbidden(() => {
 })
 // Count listens for Discover, whichever page the music is playing on.
 useDiscover().startListenTracking()
+useKaraokeStage().resume()
 
 useShortcuts({
   player,

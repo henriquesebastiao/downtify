@@ -2,16 +2,26 @@
 
 from __future__ import annotations
 
-import sqlite3
 from datetime import datetime, timezone
-from typing import Callable
+from typing import Callable, ContextManager
+
+from downtify.db.config import Dialect
+from downtify.db.core import Connection
 
 
 class ArtistReleaseStore:
-    def __init__(self, connect: Callable[[], sqlite3.Connection]) -> None:
+    def __init__(
+        self, connect: Callable[[], ContextManager[Connection]]
+    ) -> None:
         self._connect = connect
         with self._connect() as conn:
-            conn.execute("""CREATE TABLE IF NOT EXISTS artist_release_tracks (
+            if getattr(conn, 'dialect', Dialect.SQLITE) is Dialect.SQLITE:
+                self._init_sqlite(conn)
+
+    @staticmethod
+    def _init_sqlite(conn: Connection) -> None:
+        """Create the SQLite-only schema; PostgreSQL migrations own it."""
+        conn.execute("""CREATE TABLE IF NOT EXISTS artist_release_tracks (
                 playlist_id INTEGER NOT NULL,
                 album_id TEXT NOT NULL,
                 position INTEGER NOT NULL,
@@ -21,14 +31,13 @@ class ArtistReleaseStore:
                 FOREIGN KEY (playlist_id) REFERENCES monitored_playlists(id)
                     ON DELETE CASCADE
             )""")
-            columns = {
-                r['name']
-                for r in conn.execute('PRAGMA table_info(seen_albums)')
-            }
-            if 'last_attempt' not in columns:
-                conn.execute(
-                    'ALTER TABLE seen_albums ADD COLUMN last_attempt TEXT'
-                )
+        columns = {
+            r['name'] for r in conn.execute('PRAGMA table_info(seen_albums)')
+        }
+        if 'last_attempt' not in columns:
+            conn.execute(
+                'ALTER TABLE seen_albums ADD COLUMN last_attempt TEXT'
+            )
 
     def tracks(
         self, playlist_id: int, album_id: str
@@ -39,6 +48,19 @@ class ArtistReleaseStore:
                 for r in conn.execute(
                     'SELECT position,track_id,filename FROM artist_release_tracks WHERE playlist_id=? AND album_id=?',
                     (playlist_id, album_id),
+                )
+            }
+
+    def counts(self, playlist_id: int) -> dict[str, int]:
+        """``{album_id: tracks recorded}`` for an artist watch."""
+
+        with self._connect() as conn:
+            return {
+                r['album_id']: r['n']
+                for r in conn.execute(
+                    'SELECT album_id, COUNT(*) AS n FROM artist_release_tracks '
+                    'WHERE playlist_id=? GROUP BY album_id',
+                    (playlist_id,),
                 )
             }
 
@@ -68,7 +90,7 @@ class ArtistReleaseStore:
             row = conn.execute(
                 """SELECT album_id FROM seen_albums
                 WHERE playlist_id=? AND skipped=0
-                ORDER BY last_attempt, id LIMIT 1""",
+                ORDER BY last_attempt NULLS FIRST, id LIMIT 1""",
                 (playlist_id,),
             ).fetchone()
             return row['album_id'] if row else None

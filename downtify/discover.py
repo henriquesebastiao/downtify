@@ -68,8 +68,9 @@ from typing import Any, Optional
 from loguru import logger
 
 from . import deezer, spotify
+from .db.config import Dialect
+from .db.core import Database, as_database
 from .file_naming import file_name_key, title_key
-from .sqlite_utils import connect_sqlite
 
 #: How long a seed's related artists are trusted before asking Deezer again.
 RELATED_TTL = timedelta(days=7)
@@ -258,14 +259,21 @@ def rank_candidates(
 class DiscoverStore:
     """Listen counts, the block list, and the related-artists cache."""
 
-    def __init__(self, db_path: Path) -> None:
-        self._path = str(db_path)
+    def __init__(self, db_path: str | Path | Database) -> None:
+        self.db = as_database(db_path, 'library')
+        if isinstance(db_path, Database):
+            self._path = str(self.db.path) if self.db.path else None
+        else:
+            self._path = str(db_path)
         self._init_db()
 
     def _connect(self):
-        return connect_sqlite(self._path, row_factory=True)
+        return self.db.connect()
 
     def _init_db(self) -> None:
+        # PostgreSQL gets its schema from the migrations.
+        if self.db.dialect is not Dialect.SQLITE:
+            return
         with self._connect() as conn:
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS discover_listens (
@@ -425,8 +433,12 @@ class DiscoverStore:
                        VALUES (?, ?, ?, 1, ?)
                        ON CONFLICT(artist_key, user_id) DO UPDATE SET
                          name = excluded.name,
-                         plays = plays + 1,
-                         last_played = MAX(last_played, excluded.last_played)""",
+                         plays = discover_listens.plays + 1,
+                         last_played = CASE
+                           WHEN excluded.last_played > discover_listens.last_played
+                           THEN excluded.last_played
+                           ELSE discover_listens.last_played
+                         END""",
                     (key, uid, name, stamp),
                 )
             row = conn.execute(
@@ -436,17 +448,25 @@ class DiscoverStore:
             ).fetchone()
         return dict(row)
 
+    @property
+    def _name_sort(self) -> str:
+        """Text sort matching SQLite's byte order on both backends."""
+        if self.db.dialect is Dialect.SQLITE:
+            return 'name'
+        return 'name COLLATE "C"'
+
     def listens(self, user_id: Optional[int] = None) -> list[dict[str, Any]]:
+        order = f'ORDER BY plays DESC, {self._name_sort}'
         with self._connect() as conn:
             if user_id is None:
                 rows = conn.execute(
                     'SELECT name, plays, last_played FROM discover_listens '
-                    'ORDER BY plays DESC, name'
+                    + order
                 ).fetchall()
             else:
                 rows = conn.execute(
                     'SELECT name, plays, last_played FROM discover_listens '
-                    'WHERE user_id = ? ORDER BY plays DESC, name',
+                    'WHERE user_id = ? ' + order,
                     (int(user_id),),
                 ).fetchall()
         return [dict(row) for row in rows]
@@ -532,16 +552,16 @@ class DiscoverStore:
             return cur.rowcount > 0
 
     def blocked(self, user_id: Optional[int] = None) -> list[dict[str, Any]]:
+        order = f'ORDER BY blocked_at DESC, {self._name_sort}'
         with self._connect() as conn:
             if user_id is None:
                 rows = conn.execute(
-                    'SELECT name, blocked_at FROM discover_blocked '
-                    'ORDER BY blocked_at DESC, name'
+                    'SELECT name, blocked_at FROM discover_blocked ' + order
                 ).fetchall()
             else:
                 rows = conn.execute(
                     'SELECT name, blocked_at FROM discover_blocked '
-                    'WHERE user_id = ? ORDER BY blocked_at DESC, name',
+                    'WHERE user_id = ? ' + order,
                     (int(user_id),),
                 ).fetchall()
         return [dict(row) for row in rows]

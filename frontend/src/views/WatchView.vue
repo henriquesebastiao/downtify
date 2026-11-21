@@ -205,7 +205,19 @@
       <UiPanel
         v-if="failures.length"
         :title="t('watchStats.failuresTitle', { count: failures.length })"
+        :description="t('watchStats.failuresClearHint')"
       >
+        <template #actions>
+          <UiButton
+            size="sm"
+            variant="ghost"
+            icon="x"
+            :loading="clearing"
+            @click="clearFailures"
+          >
+            {{ t('watchStats.failuresClear') }}
+          </UiButton>
+        </template>
         <ul class="flex flex-col divide-y divide-line-2">
           <li
             v-for="failure in failures"
@@ -235,6 +247,8 @@
           </li>
         </ul>
       </UiPanel>
+
+      <ArtistReleases v-if="watch.kind === 'artist'" :watch-id="watch.id" />
 
       <section class="flex flex-col gap-3 pb-10">
         <div>
@@ -294,6 +308,7 @@ import UiSkeleton from '/src/components/ui/UiSkeleton.vue'
 import PageHeader from '/src/components/library/PageHeader.vue'
 import SelectionBar from '/src/components/library/SelectionBar.vue'
 import TrackList from '/src/components/library/TrackList.vue'
+import ArtistReleases from '/src/components/monitor/ArtistReleases.vue'
 import WatchSourceBadge from '/src/components/monitor/WatchSourceBadge.vue'
 import monitorAPI from '/src/model/monitor'
 import { useLibrary } from '/src/model/library'
@@ -327,6 +342,19 @@ const watchId = computed(() => Number(route.params.id))
 const watch = ref(null)
 const tracks = ref([])
 const failures = ref([])
+const clearing = ref(false)
+
+// Start the failing list over (after a settings change, say): what still
+// fails shows up again on the next check.
+async function clearFailures() {
+  clearing.value = true
+  try {
+    await monitorAPI.clearWatchFailures(watchId.value)
+    failures.value = []
+  } finally {
+    clearing.value = false
+  }
+}
 const missing = ref(0)
 const loading = ref(false)
 const data = ref(null)

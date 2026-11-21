@@ -2,16 +2,17 @@
 
 from __future__ import annotations
 
-import sqlite3
 from collections.abc import Collection
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
 
+from .db.config import Dialect
+from .db.core import Database, as_database
+from .db.dialect import insert_returning_id
 from .library_cache_keys import file_content_key
 from .library_paths import locate_library_file, slskd_dir_from_downloader
-from .sqlite_utils import connect_sqlite
 from .track_index import normalize_spotify_track_id, resolve_existing_download
 
 _BATCH_STATUSES = frozenset({'in_progress', 'incomplete', 'complete'})
@@ -24,17 +25,25 @@ def _now_iso() -> str:
 
 
 class PlaylistBatchStore:
-    """SQLite store for playlist download batches under ``/data``."""
+    """Store for playlist download batches (SQLite or PostgreSQL)."""
 
-    def __init__(self, db_path: Path) -> None:
-        self._path = str(db_path)
+    def __init__(self, path_or_db: str | Path | Database) -> None:
+        self.db = as_database(path_or_db, 'library')
+        if isinstance(path_or_db, Database):
+            self._path = str(self.db.path) if self.db.path else None
+        else:
+            self._path = str(path_or_db)
         self._init_db()
 
-    def _connect(self) -> sqlite3.Connection:
-        return connect_sqlite(self._path, row_factory=True)
+    def _connect(self):
+        return self.db.connect()
 
     def _init_db(self) -> None:
-        with self._connect() as conn:
+        # On PostgreSQL the library migrations already created the final
+        # table (identity ``id``, ``user_id``) and its index.
+        if self.db.dialect is not Dialect.SQLITE:
+            return
+        with self.db.transaction(lock=True) as conn:
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS playlist_batches (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -83,14 +92,14 @@ class PlaylistBatchStore:
                 'spotify_playlist_id and playlist_url are required'
             )
         with self._connect() as conn:
-            cur = conn.execute(
+            return insert_returning_id(
+                conn,
                 """INSERT INTO playlist_batches
                    (spotify_playlist_id, playlist_name, playlist_url,
                     expected_count, started_at, status, user_id)
                    VALUES (?, ?, ?, ?, ?, 'in_progress', ?)""",
                 (sid, name, url, expected, _now_iso(), int(user_id or 0)),
             )
-            return int(cur.lastrowid)
 
     def update_batch_name(self, batch_id: int, playlist_name: str) -> None:
         name = str(playlist_name or '').strip()
@@ -266,7 +275,7 @@ def ensure_batch_records(
     return created
 
 
-def _row_to_dict(row: sqlite3.Row) -> dict[str, Any]:
+def _row_to_dict(row: Any) -> dict[str, Any]:
     return {
         'id': int(row['id']),
         'spotify_playlist_id': str(row['spotify_playlist_id']),

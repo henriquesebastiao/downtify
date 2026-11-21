@@ -80,6 +80,14 @@ sed -i \
   "$REPO_ROOT/Dockerfile"
 echo "  updated Dockerfile"
 
+# "What's new" highlights (frontend/src/lib/releaseHighlights.js)
+
+if ! grep -q "'${NEW_VERSION}':" "$REPO_ROOT/frontend/src/lib/releaseHighlights.js"; then
+  echo
+  echo "  note: no highlights for ${NEW_VERSION} in frontend/src/lib/releaseHighlights.js"
+  echo "        the What's new dialog will only link to the GitHub release"
+fi
+
 # verify
 
 echo

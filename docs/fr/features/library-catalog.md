@@ -8,6 +8,8 @@ Downtify tient un petit **catalogue** des fichiers sous `/downloads` (le dossier
 
 ## Ce qui est stocké
 
+Les emplacements ci-dessous valent pour le backend SQLite par défaut. Avec PostgreSQL ([Base de données](../database.md)), les mêmes données sont conservées dans la base PostgreSQL.
+
 | Stockage | Emplacement | Rôle |
 |-------|----------|---------|
 | **Index des morceaux** | `/data/downtify_library.db` | Associe les identifiants de morceaux Spotify aux chemins de la bibliothèque, pour reconnaître un morceau déjà sur le disque |

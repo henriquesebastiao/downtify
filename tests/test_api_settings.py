@@ -706,6 +706,14 @@ def test_update_settings_applies_cover_resolution_to_providers(monkeypatch):
     assert captured == [900]
 
 
+def test_update_settings_applies_cover_minimum_to_providers(monkeypatch):
+    monkeypatch.setitem(api.state.settings, 'cover_min_resolution', 0)
+    captured = []
+    monkeypatch.setattr(api.providers, 'set_cover_minimum', captured.append)
+    _call_update_settings(monkeypatch, {'cover_min_resolution': 1000})
+    assert captured == [1000]
+
+
 def test_update_settings_leaves_providers_untouched_when_key_absent(
     monkeypatch,
 ):
@@ -833,6 +841,31 @@ def test_effective_slskd_settings_normalizes_format_policy():
         _effective_slskd_settings({'slskd': {'min_bitrate': 0}})['min_bitrate']
         == 0
     )
+
+
+def test_effective_slskd_settings_normalizes_fine_tune_quality():
+    out = _effective_slskd_settings({
+        'slskd': {
+            'advanced': True,
+            'unknown_bitrate': 'ALLOW',
+            'format_min_bitrate': {'.M4A': '192', 'opus': None, 'ogg': 'x'},
+            'max_bitrate': 99999,
+            'prefer_bitrate': True,
+        }
+    })
+
+    assert out['advanced'] is True
+    assert out['unknown_bitrate'] == 'allow'
+    assert out['format_min_bitrate'] == {'m4a': 192, 'ogg': 0}
+    assert out['max_bitrate'] == 10000
+    assert out['prefer_bitrate'] is True
+
+    defaults = _effective_slskd_settings({'slskd': {'unknown_bitrate': '?'}})
+    assert defaults['advanced'] is False
+    assert defaults['unknown_bitrate'] == 'auto'
+    assert defaults['format_min_bitrate'] == {}
+    assert defaults['max_bitrate'] == 0
+    assert defaults['prefer_bitrate'] is False
 
 
 def test_effective_slskd_settings_caps_parallelism_at_eight():

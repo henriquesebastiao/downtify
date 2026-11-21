@@ -36,9 +36,10 @@ nothing about.
 
 from __future__ import annotations
 
+import contextlib
 import html
 import re
-import sqlite3
+from collections.abc import Iterator
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from html.parser import HTMLParser
@@ -67,11 +68,13 @@ from mutagen.oggopus import OggOpus
 from mutagen.oggvorbis import OggVorbis
 
 from . import itunes
+from .db.config import Dialect
+from .db.core import Connection, Database, as_database
+from .db.dialect import insert_returning_id
 from .image_size import image_short_side
 from .library_catalog import PODCASTS_DIRNAME
 from .m3u import sanitize_playlist_name
 from .spotify import fetch_embed_entity, parse_spotify_url
-from .sqlite_utils import connect_sqlite
 
 _FEED_TIMEOUT = 20
 _DOWNLOAD_TIMEOUT = httpx.Timeout(15, read=120)
@@ -229,15 +232,24 @@ class ParsedFeed:
 
 
 def _entry_enclosure(entry: Any) -> Optional[tuple[str, str]]:
+    fallback: Optional[tuple[str, str]] = None
     for enc in entry.get('enclosures') or []:
         url = str(enc.get('href') or '').strip()
-        mime = str(enc.get('type') or '').strip().lower()
+        mime = (
+            str(enc.get('type') or '')
+            .split(';', maxsplit=1)[0]
+            .strip()
+            .lower()
+        )
         if not url:
             continue
-        if mime.startswith('video/'):
-            continue
-        return url, mime
-    return None
+        if mime.startswith('audio/'):
+            return url, mime
+        # Sloppy feeds can omit the type or label audio as generic binary.
+        # Keep their first candidate, but prefer explicit audio anywhere.
+        if fallback is None and mime in {'', 'application/octet-stream'}:
+            fallback = url, mime
+    return fallback
 
 
 def parse_feed_bytes(content: bytes, feed_url: str) -> ParsedFeed:
@@ -248,7 +260,8 @@ def parse_feed_bytes(content: bytes, feed_url: str) -> ParsedFeed:
     (unescaped ``&``, mismatched encodings, non-standard date formats),
     and surviving that is feedparser's entire job — it sets a ``bozo``
     flag rather than raising, and still returns whatever it could
-    recover. Episodes with no usable audio enclosure (missing, or video)
+    recover. Explicit audio enclosures take precedence over untyped or
+    generic-binary fallbacks. Episodes with only non-audio attachments
     are dropped rather than listed as unplayable.
     """
 
@@ -768,19 +781,30 @@ class PodcastStore:
     does exactly that job for playlists and artists.
     """
 
-    def __init__(self, db_path: Path) -> None:
-        self._path = str(db_path)
+    def __init__(self, path_or_db: str | Path | Database) -> None:
+        self.db = as_database(path_or_db, 'library')
+        if isinstance(path_or_db, Database):
+            self._path = str(self.db.path) if self.db.path else None
+        else:
+            self._path = str(path_or_db)
         self._init_db()
 
-    def _connect(self):
-        conn = connect_sqlite(self._path, row_factory=True)
-        # Needed per-connection (SQLite doesn't persist it in the file);
-        # without it, deleting a show would silently orphan its episode
-        # and playback rows instead of cascading to them.
-        conn.execute('PRAGMA foreign_keys = ON')
-        return conn
+    @contextlib.contextmanager
+    def _connect(self) -> Iterator[Connection]:
+        with self.db.connect() as conn:
+            if conn.dialect is Dialect.SQLITE:
+                # Needed per-connection (SQLite doesn't persist it in the
+                # file); without it, deleting a show would silently orphan
+                # its episode and playback rows instead of cascading to
+                # them. PostgreSQL enforces the foreign keys natively.
+                conn.execute('PRAGMA foreign_keys = ON')
+            yield conn
 
     def _init_db(self) -> None:
+        # On PostgreSQL the library_b migration already created the final
+        # schema; the DDL, ALTERs and rebuilds below are SQLite-only.
+        if self.db.dialect is not Dialect.SQLITE:
+            return
         with self._connect() as conn:
             conn.executescript("""
                 CREATE TABLE IF NOT EXISTS podcast_shows (
@@ -900,30 +924,34 @@ class PodcastStore:
                 while f'{folder_name} ({suffix})' in existing:
                     suffix += 1
                 folder_name = f'{folder_name} ({suffix})'
-            try:
-                cur = conn.execute(
-                    """INSERT INTO podcast_shows
-                       (feed_url, name, author, description, artwork_url,
-                        source_url, folder_name, retention, created_at,
-                        user_id)
-                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-                    (
-                        feed_url,
-                        name,
-                        author,
-                        description,
-                        artwork_url,
-                        source_url,
-                        folder_name,
-                        retention,
-                        _now_iso(),
-                        int(user_id or 0),
-                    ),
-                )
-            except sqlite3.IntegrityError:
+            # ON CONFLICT DO NOTHING (rather than catching IntegrityError)
+            # keeps the PostgreSQL transaction usable after a duplicate.
+            cur = conn.execute(
+                """INSERT INTO podcast_shows
+                   (feed_url, name, author, description, artwork_url,
+                    source_url, folder_name, retention, created_at,
+                    user_id)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                   ON CONFLICT DO NOTHING""",
+                (
+                    feed_url,
+                    name,
+                    author,
+                    description,
+                    artwork_url,
+                    source_url,
+                    folder_name,
+                    retention,
+                    _now_iso(),
+                    int(user_id or 0),
+                ),
+            )
+            if cur.rowcount == 0:
                 return self.get_show_by_feed_url(feed_url, user_id) or {}
             row = conn.execute(
-                'SELECT * FROM podcast_shows WHERE id = ?', (cur.lastrowid,)
+                'SELECT * FROM podcast_shows WHERE feed_url = ? '
+                'AND user_id = ?',
+                (feed_url, int(user_id or 0)),
             ).fetchone()
             return _show_dict(row)
 
@@ -958,12 +986,12 @@ class PodcastStore:
         with self._connect() as conn:
             if user_id is None:
                 rows = conn.execute(
-                    'SELECT * FROM podcast_shows ORDER BY name COLLATE NOCASE'
+                    'SELECT * FROM podcast_shows ORDER BY lower(name)'
                 ).fetchall()
             else:
                 rows = conn.execute(
                     'SELECT * FROM podcast_shows WHERE user_id = ? '
-                    'ORDER BY name COLLATE NOCASE',
+                    'ORDER BY lower(name)',
                     (int(user_id),),
                 ).fetchall()
             return [_show_dict(r) for r in rows]
@@ -1048,7 +1076,8 @@ class PodcastStore:
             for ep in episodes:
                 if ep.guid in known:
                     continue
-                cur = conn.execute(
+                new_id = insert_returning_id(
+                    conn,
                     """INSERT INTO podcast_episodes
                        (show_id, guid, title, description, published_at,
                         duration_seconds, season_number, episode_number,
@@ -1072,7 +1101,7 @@ class PodcastStore:
                        FROM podcast_episodes e
                        LEFT JOIN podcast_playback p ON p.episode_id = e.id
                        WHERE e.id = ?""",
-                    (cur.lastrowid,),
+                    (new_id,),
                 ).fetchone()
                 inserted.append(_episode_dict(row))
                 known.add(ep.guid)

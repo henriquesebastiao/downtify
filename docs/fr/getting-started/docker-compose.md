@@ -8,23 +8,48 @@ Docker Compose est la méthode recommandée pour exécuter Downtify sur un serve
 
 ## Configuration minimale
 
-Créez un fichier `docker-compose.yml` :
+Créez un fichier `docker-compose.yml`. Il fait tourner Downtify sur PostgreSQL, la base de données étant dans un service `postgres` à côté (voir [Base de données](../database.md)) :
 
 ```yaml
 services:
   downtify:
     container_name: downtify
     image: ghcr.io/henriquesebastiao/downtify:latest
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
     ports:
       - '8000:8000'
     volumes:
       - ./downloads:/downloads
       - downtify_data:/data
+    environment:
+      DATABASE_URL: postgresql://downtify:${POSTGRES_PASSWORD:-downtify}@postgres:5432/downtify
+
+  postgres:
+    container_name: downtify-postgres
+    image: 'postgres:17-alpine'
     restart: unless-stopped
+    environment:
+      POSTGRES_USER: downtify
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-downtify}
+      POSTGRES_DB: downtify
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U downtify -d downtify']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
 
 volumes:
   downtify_data:
+  pgdata:
 ```
+
+Définissez `POSTGRES_PASSWORD` dans un fichier `.env` à côté du fichier Compose avant le premier démarrage (voir [Variables d’environnement](environment-variables.md#database)). Pour garder plutôt les fichiers SQLite, supprimez `DATABASE_URL`, le service `postgres` et le bloc `depends_on`.
 
 Démarrez-le :
 
@@ -133,6 +158,7 @@ Votre musique et vos réglages sont conservés dans les volumes.
 | Chemin dans le fichier compose | Rôle |
 |------------------------------|---------|
 | `./downloads:/downloads` | Fichiers audio téléchargés (répertoire local) |
-| `downtify_data:/data` | Base de données et réglages de l’application (volume nommé) |
+| `downtify_data:/data` | Réglages, caches et fichiers SQLite (volume nommé) |
+| `pgdata:/var/lib/postgresql/data` | La base PostgreSQL, dans le service `postgres` |
 
 Vous pouvez remplacer le volume nommé par un chemin local (`./data:/data`) si vous préférez le gérer vous-même.

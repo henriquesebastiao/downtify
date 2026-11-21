@@ -29,7 +29,7 @@ Le mode par défaut réécrit les **pochettes, paroles et tags**. Le [remplaceme
 Un morceau compte comme en retard quand :
 
 - le petit côté de sa pochette intégrée est **plus petit que la taille cible** (un morceau sans aucune pochette compte aussi) ;
-- il n’a **ni** paroles intégrées **ni** fichier `.lrc` (à côté du fichier ou dans le dossier des paroles des Paramètres) ;
+- il n’a **ni** paroles intégrées **ni** fichier `.lrc` (à côté du fichier ou dans le dossier des paroles des Paramètres)  — avec [Paroles synchronisées uniquement](lyrics.md#time-synced-lyrics-only) activé, quand il n’a pas de paroles **synchronisées**, et seules des paroles synchronisées sont écrites;
 - l’un des champs **album**, **artiste de l’album**, **année** ou **numéro de piste** manque dans ses tags.
 
 **Actualiser les étiquettes** ne fonctionne que pour les morceaux dont Downtify a encore l’identifiant Spotify — ceux qu’il a téléchargés depuis un lien Spotify, conservés dans l’[index des morceaux](library-catalog.md#what-gets-stored). Les autres morceaux sont mis en file mais reviennent en _Rien à faire_.
@@ -76,13 +76,25 @@ Deux choses la passent toujours outre :
 
 Quand une analyse ne trouve plus rien à faire _parce que_ tout a été vérifié récemment, elle le dit et propose de relancer sans la mémoire, plutôt que de vous laisser avec un « rien à améliorer » inexpliqué.
 
+### Analyser et trouver les paroles
+
+**Analyser et trouver les paroles** analyse la bibliothèque et, dès la fin de l’analyse, commence à chercher des paroles pour les titres qui n’en ont pas, sans rien à choisir entre-temps. Ce passage ne cherche que des paroles ; pochettes et tags attendent un autre passage.
+
+### ISRC pour les anciens morceaux
+
+Les morceaux téléchargés avant que Downtify n'écrive les ISRC n'en ont pas. L'ISRC est le code propre à l'enregistrement : Downtify s'en sert pour savoir si un morceau est déjà dans la bibliothèque, et la corbeille musicale pour reconnaître un fichier qu'elle pourra restaurer. Un fichier sans ISRC, sans identifiant de fournisseur et sans tag d'album ne peut pas aller à la corbeille.
+
+**Rechercher les ISRC (n'écrit rien)** cherche les fichiers sans ISRC, interroge chacun et affiche dans la liste des pistes ce qu'il ajouterait (`Would add ISRC …`) sans modifier aucun fichier. **Ajouter les ISRC** fait de même et les écrit. Seul le tag ISRC est ajouté, par la même copie vérifiée que toute mise à niveau, et tout ce qui pointait vers le fichier (playlists, favoris, propriétaires) le suit.
+
+Un code n'est ajouté que si Deezer le confirme sans aucun doute, selon les mêmes règles que pour les nouveaux téléchargements : même premier artiste et titre, durée à 3 secondes près, et tous les résultats correspondants d'accord sur un seul code. Tout autre fichier reste exactement tel quel et n'est pas réinterrogé avant que **Ne pas revérifier un morceau pendant** soit écoulé. Aucune des deux analyses ne regarde les pochettes, les paroles ni les tags, et une analyse normale ne cherche jamais d'ISRC.
+
 ## Pendant l’exécution
 
-Le panneau de progression montre les morceaux traités sur la file, un chiffre approximatif de données (`8.4 GB of 51.3 GB`) et combien ont été améliorés, n’avaient rien à faire ou ont échoué. Chaque morceau indique ce qu’il fait — _Identification_, _Recherche de la pochette_, _Recherche des paroles_, _Écriture du fichier_ — et se termine par ce qui a changé, par ex. `artwork 1200px (itunes)`.
+Le panneau de progression montre les morceaux traités sur la file, un chiffre approximatif de données (`8.4 GB of 51.3 GB`) et combien ont été améliorés, n’avaient rien à faire ou ont échoué. Chaque morceau indique ce qu’il fait — _Identification_, _Recherche de la pochette_, _Recherche des paroles_, _Écriture du fichier_ — et se termine par ce qui a changé, par ex. `artwork 1200px (itunes)`. Quand le passage cherche des paroles, une ligne en dessous compte les titres qui ont reçu des paroles, ceux pour lesquels aucun fournisseur n’en avait et ceux qui ont échoué.
 
 **Mettre en pause** s’arrête après le morceau en cours et garde la file. **Arrêter** abandonne le reste ; les morceaux déjà améliorés le restent. Vous pouvez quitter la page — l’exécution continue, et tout autre onglet ouvert la suit.
 
-La file vit dans `/data/downtify_library.db`, donc **redémarrer Downtify (ou le conteneur) en cours d’exécution la reprend** là où elle s’est arrêtée. Un morceau en cours quand le processus s’est arrêté est remis dans la file.
+La file vit dans `/data/downtify_library.db` (ou dans la base PostgreSQL, si [`DATABASE_URL`](../getting-started/environment-variables.md#database) est défini), donc **redémarrer Downtify (ou le conteneur) en cours d’exécution la reprend** là où elle s’est arrêtée. Un morceau en cours quand le processus s’est arrêté est remis dans la file.
 
 ## Rien n’est perdu si une amélioration échoue
 
@@ -109,7 +121,7 @@ Après avoir activé et testé la [source Deemix](deemix.md), **Améliorer la bi
 
 Cette analyse produit une catégorie **audio** au lieu de tâches pochette/paroles/tags. Deemix possède les fichiers de sortie, la pochette, l’organisation des albums et les paroles natives. Downtify les lit sur place. Les paroles natives ou intégrées existantes sont conservées ; seules les paroles absentes peuvent être complétées dans un dossier de paroles dédié et accessible en écriture, sans réécrire l’audio. Un original sans perte de meilleure qualité est conservé quand Deemix est configuré pour le MP3.
 
-La publication a lieu une fois par lot. Les commentaires M3U, les marqueurs manuels et l’ordre des morceaux sont conservés, puis les chemins du catalogue, les appartenances aux playlists, les mentions J’aime de chaque utilisateur, la propriété et les règles de morceaux masqués passent en une seule transaction SQLite. Les identifiants Navidrome en cache des anciens fichiers sont invalidés pour une nouvelle recherche native. Les identifiants mobiles déjà émis et les anciennes URL de lecture gardent des alias en lecture seule vers le remplaçant enregistré ; les mutations n’utilisent jamais ces alias d’URL.
+La publication a lieu une fois par lot. Les commentaires M3U, les marqueurs manuels et l’ordre des morceaux sont conservés, puis les chemins du catalogue, les appartenances aux playlists, les mentions J’aime de chaque utilisateur, la propriété et les règles de morceaux masqués passent en une seule transaction de base de données. Les identifiants Navidrome en cache des anciens fichiers sont invalidés pour une nouvelle recherche native. Les identifiants mobiles déjà émis et les anciennes URL de lecture gardent des alias en lecture seule vers le remplaçant enregistré ; les mutations n’utilisent jamais ces alias d’URL.
 
 Des reçus durables dans la base de la bibliothèque enregistrent les valeurs SHA-256 source/cible et l’état de publication. Les sources restent jusqu’à vérification du remplaçant et des références. Un montage modifié ou absent, un fichier modifié, une référence externe en lecture seule dans une playlist, une lecture active ou un échec de publication du catalogue arrêtent le nettoyage avec un motif visible. Pause/reprise et redémarrage réutilisent les reçus. Il n’y a pas de balayage général des doublons ni de nettoyage selon l’âge : seuls les originaux vérifiés dans le dossier de téléchargements de Downtify sont éligibles. Les téléchargements manuels Deemix/slskd, les originaux externes, les répertoires et les sidecars ne sont jamais supprimés. Une fois un original supprimé, revenir en arrière sur le conteneur ne restaure pas ce fichier ; restaurez-le depuis votre propre sauvegarde si besoin.
 

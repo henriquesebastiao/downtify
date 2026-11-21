@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import struct
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
 from downtify import cover_sources, itunes
 
@@ -33,7 +33,10 @@ def _stub_sources(
     asked: list[tuple[str, ...]] = []
 
     def _collect(
-        song: dict[str, Any], *, sources: tuple[str, ...]
+        song: dict[str, Any],
+        *,
+        sources: tuple[str, ...],
+        px: Optional[int] = None,
     ) -> list[cover_sources.CoverCandidate]:
         asked.append(tuple(sources))
         return [
@@ -118,8 +121,8 @@ def test_highest_wins_across_every_source(monkeypatch: Any) -> None:
 
     assert best is not None
     assert (best.source, best.width) == ('itunes', 1400)
-    # One pass over all three, not one call per source.
-    assert asked == [('spotify', 'itunes', 'youtube-music')]
+    # One pass over all four, not one call per source.
+    assert asked == [('spotify', 'itunes', 'youtube-music', 'deezer')]
 
 
 def test_a_named_preference_wins_even_when_it_is_smaller(

@@ -13,23 +13,23 @@ import sqlite3
 import pytest
 
 from downtify import traffic as traffic_mod
+from downtify.db.core import Database
 from downtify.traffic import (
     DIRECTION_IN,
     DIRECTION_OUT,
     TrafficCounters,
     traffic_flush_loop,
 )
+from tests.db.helpers import query
 
 
 def _saved(path) -> list[tuple[int, str, int]]:
-    conn = sqlite3.connect(str(path))
-    try:
-        return conn.execute(
-            'SELECT user_id, direction, total_bytes FROM traffic_counters '
-            'ORDER BY user_id, direction'
-        ).fetchall()
-    finally:
-        conn.close()
+    rows = query(
+        Database.sqlite(path),
+        'SELECT user_id, direction, total_bytes FROM traffic_counters '
+        'ORDER BY user_id, direction',
+    )
+    return [(row[0], row[1], row[2]) for row in rows]
 
 
 def test_add_does_not_touch_the_database(tmp_path, monkeypatch):

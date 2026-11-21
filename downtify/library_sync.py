@@ -30,6 +30,7 @@ same way without reimplementing the rules.
 
 from __future__ import annotations
 
+import contextlib
 import hashlib
 import json
 import secrets
@@ -40,9 +41,11 @@ from pathlib import Path
 from typing import Any, Optional
 
 from . import library_metadata
+from .db.config import Dialect
+from .db.core import Database, as_database
+from .db.dialect import table_exists
 from .deemix_upgrade_store import replacement_for_id
 from .library_cache_keys import file_content_key_from_name_and_size
-from .sqlite_utils import connect_sqlite
 
 #: How long a removed track's id is kept for clients to hear about it.
 TOMBSTONE_DAYS = 90
@@ -59,6 +62,9 @@ ROW_FIELDS = (
     'artist_id',
     'track_number',
     'year',
+    'release_date',
+    'genre',
+    'compilation',
     'duration',
     'codec',
     'bitrate',
@@ -136,6 +142,9 @@ def public_row(entry: dict[str, Any]) -> dict[str, Any]:
         'album': str(entry.get('album') or ''),
         'track_number': int(entry.get('track_number') or 0),
         'year': str(entry.get('year') or ''),
+        'release_date': str(entry.get('release_date') or ''),
+        'genre': str(entry.get('genre') or ''),
+        'compilation': bool(entry.get('compilation')),
         'duration': float(entry.get('duration') or 0.0),
         'codec': str(entry.get('codec') or ''),
         'bitrate': int(entry.get('bitrate') or 0),
@@ -152,6 +161,9 @@ def public_row(entry: dict[str, Any]) -> dict[str, Any]:
     # and the rows of every other track - hash included - stay as they were.
     if entry.get('explicit'):
         public['explicit'] = True
+    public['revision'] = hashlib.sha256(
+        json.dumps(public, sort_keys=True).encode()
+    ).hexdigest()
     return public
 
 
@@ -184,18 +196,55 @@ def new_track_id() -> str:
     return 't' + secrets.token_hex(8)
 
 
+#: Optional tables (audio replacement) read by the id lookups below.
+_REPLACEMENT_TABLES = (
+    'library_audio_sync_aliases',
+    'library_audio_replacements',
+)
+
+
+def _tables_exist(conn, names: Iterable[str]) -> bool:
+    return all(table_exists(conn, name) for name in names)
+
+
+def _replacement_for_id(conn, track_id: str) -> Optional[dict[str, Any]]:
+    """:func:`replacement_for_id`, skipped when its tables are absent.
+
+    Checked up front, not by catching an error: a failed statement
+    aborts the whole PostgreSQL transaction.
+    """
+
+    if not _tables_exist(conn, _REPLACEMENT_TABLES):
+        return None
+    return replacement_for_id(conn, track_id)
+
+
+def _path_order(conn) -> str:
+    """Byte order for paths: PostgreSQL would otherwise sort by its
+    locale collation, SQLite by bytes."""
+
+    return ' COLLATE "C"' if conn.dialect is Dialect.POSTGRES else ''
+
+
 class LibrarySync:
     """Track ids and the change feed, in ``downtify_library.db``."""
 
-    def __init__(self, db_path: Path) -> None:
-        self._path = str(db_path)
+    def __init__(self, db_path: str | Path | Database) -> None:
+        self.db = as_database(db_path, 'library')
+        if isinstance(db_path, Database):
+            self._path = str(self.db.path) if self.db.path else None
+        else:
+            self._path = str(db_path)
         self._lock = threading.Lock()
         self._init_db()
 
     def _connect(self):
-        return connect_sqlite(self._path, row_factory=True)
+        return self.db.connect()
 
     def _init_db(self) -> None:
+        # PostgreSQL gets its schema from the migrations.
+        if self.db.dialect is not Dialect.SQLITE:
+            return
         with self._connect() as conn:
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS sync_tracks (
@@ -239,6 +288,40 @@ class LibrarySync:
             (key, value),
         )
 
+    def _write_guard(self):
+        """The in-process lock: SQLite only. PostgreSQL serialises writers
+        on the ``sync_meta`` row instead (see :meth:`_allocate`), which
+        also covers other processes."""
+
+        if self.db.dialect is Dialect.SQLITE:
+            return self._lock
+        return contextlib.nullcontext()
+
+    @staticmethod
+    def _allocate(conn, count: int) -> int:
+        """Reserve *count* seq numbers and return the last one.
+
+        Every writing transaction calls this first. On PostgreSQL the
+        upsert takes the row lock on ``sync_meta.seq`` until the
+        transaction commits, so writers queue and commit in seq order
+        (a database SEQUENCE would not guarantee that). ``count=0`` only
+        takes the lock. On SQLite ``BEGIN IMMEDIATE`` already serialises
+        writers, so a plain read-modify-write is used there.
+        """
+
+        if conn.dialect is Dialect.POSTGRES:
+            row = conn.execute(
+                """INSERT INTO sync_meta (key, value) VALUES (?, ?)
+                   ON CONFLICT (key) DO UPDATE
+                   SET value = sync_meta.value + excluded.value
+                   RETURNING value""",
+                ('seq', count),
+            ).fetchone()
+            return int(row['value'])
+        last = LibrarySync._meta(conn, 'seq') + count
+        LibrarySync._set_meta(conn, 'seq', last)
+        return last
+
     # Reconciling with what's on disk
 
     def refresh(
@@ -254,16 +337,12 @@ class LibrarySync:
             row = public_row(entry)
             if row['file']:
                 rows[row['file']] = row
-        with self._lock, self._connect() as conn:
-            seq = self._meta(conn, 'seq')
+        with self._write_guard(), self.db.transaction(lock=True) as conn:
+            # First statement: takes the seq row lock (PostgreSQL).
+            seq = self._allocate(conn, 0)
             reserved = set()
             restored = set()
-            if (
-                conn.execute(
-                    "SELECT 1 FROM sqlite_master WHERE type='table' AND name='library_trash'"
-                ).fetchone()
-                is not None
-            ):
+            if table_exists(conn, 'library_trash'):
                 reserved = {
                     r[0]
                     for r in conn.execute(
@@ -389,9 +468,7 @@ class LibrarySync:
 
         cutoff = (now - timedelta(days=TOMBSTONE_DAYS)).isoformat()
         protected = ''
-        if conn.execute(
-            "SELECT 1 FROM sqlite_master WHERE name='library_trash'"
-        ).fetchone():
+        if table_exists(conn, 'library_trash'):
             protected = " AND track_id NOT IN (SELECT track_id FROM library_trash WHERE state NOT IN ('preview','restored','purged'))"
         rows = conn.execute(
             'SELECT MAX(seq) AS seq FROM sync_tracks '
@@ -418,16 +495,17 @@ class LibrarySync:
 
         if not path:
             return False
-        with self._lock, self._connect() as conn:
-            seq = self._meta(conn, 'seq') + 1
+        with self._write_guard(), self.db.transaction(lock=True) as conn:
+            seq = self._allocate(conn, 1)
             cur = conn.execute(
                 'UPDATE sync_tracks SET seq = ? WHERE path = ? '
                 'AND deleted_at IS NULL',
                 (seq, path),
             )
             if cur.rowcount == 0:
+                # Nothing to stamp: hand the number back.
+                self._set_meta(conn, 'seq', seq - 1)
                 return False
-            self._set_meta(conn, 'seq', seq)
             return True
 
     def touch_all(self) -> int:
@@ -438,15 +516,15 @@ class LibrarySync:
         see. Returns how many rows were poked.
         """
 
-        with self._lock, self._connect() as conn:
-            seq = self._meta(conn, 'seq') + 1
+        with self._write_guard(), self.db.transaction(lock=True) as conn:
+            seq = self._allocate(conn, 1)
             cur = conn.execute(
                 'UPDATE sync_tracks SET seq = ? WHERE deleted_at IS NULL',
                 (seq,),
             )
             if cur.rowcount == 0:
+                self._set_meta(conn, 'seq', seq - 1)
                 return 0
-            self._set_meta(conn, 'seq', seq)
             return cur.rowcount
 
     # Reading the feed
@@ -480,6 +558,7 @@ class LibrarySync:
                 live = conn.execute(
                     'SELECT track_id, content_key, row_json FROM sync_tracks '
                     'WHERE deleted_at IS NULL ORDER BY path'
+                    + _path_order(conn)
                 ).fetchall()
                 deleted: list[str] = []
             else:
@@ -518,7 +597,7 @@ class LibrarySync:
 
     def path_for(self, track_id: str) -> Optional[str]:
         with self._connect() as conn:
-            replacement = replacement_for_id(conn, track_id)
+            replacement = _replacement_for_id(conn, track_id)
             if replacement is not None:
                 return replacement['file']
             row = conn.execute(
@@ -530,7 +609,7 @@ class LibrarySync:
 
     def row_for(self, track_id: str) -> Optional[dict[str, Any]]:
         with self._connect() as conn:
-            replacement = replacement_for_id(conn, track_id)
+            replacement = _replacement_for_id(conn, track_id)
             if replacement is not None:
                 current = conn.execute(
                     'SELECT row_json FROM sync_tracks WHERE path=? AND deleted_at IS NULL',
@@ -547,6 +626,72 @@ class LibrarySync:
         if row is None:
             return None
         return {'id': row['track_id'], **json.loads(row['row_json'])}
+
+    def rows_for(self, track_ids: Iterable[str]) -> dict[str, dict[str, Any]]:
+        """Resolve many live ids in one database connection.
+
+        Includes the compatibility aliases handled by :meth:`row_for`.
+        Missing and deleted ids are omitted from the returned mapping.
+        """
+
+        wanted = list(dict.fromkeys(track_ids))
+        found: dict[str, dict[str, Any]] = {}
+        with self._connect() as conn:
+            for start in range(0, len(wanted), 400):
+                chunk = wanted[start : start + 400]
+                marks = ','.join('?' * len(chunk))
+                replacements: dict[str, dict[str, Any]] = {}
+                if _tables_exist(conn, _REPLACEMENT_TABLES):
+                    for row in conn.execute(
+                        f"""SELECT a.track_id, r.new_metadata
+                            FROM library_audio_sync_aliases a
+                            JOIN library_audio_replacements r
+                              ON r.old_file = a.old_file
+                            WHERE a.track_id IN ({marks})
+                              AND r.state IN ('linked','retained','removed','complete')""",
+                        chunk,
+                    ).fetchall():
+                        replacements[row['track_id']] = json.loads(
+                            row['new_metadata']
+                        )
+
+                # row_for gives compatibility aliases precedence over a
+                # same-named live id, so resolve those first.
+                replacement_paths = list({
+                    row['file'] for row in replacements.values()
+                })
+                current_rows = {}
+                if replacement_paths:
+                    marks = ','.join('?' * len(replacement_paths))
+                    current_rows = {
+                        row['path']: json.loads(row['row_json'])
+                        for row in conn.execute(
+                            f'SELECT path, row_json FROM sync_tracks '
+                            f'WHERE deleted_at IS NULL AND path IN ({marks})',
+                            replacement_paths,
+                        ).fetchall()
+                    }
+                for track_id, replacement in replacements.items():
+                    current = current_rows.get(replacement['file'])
+                    found[track_id] = (
+                        {'id': track_id, **current}
+                        if current is not None
+                        else {'id': track_id, **public_row(replacement)}
+                    )
+                remaining = [key for key in chunk if key not in replacements]
+                if not remaining:
+                    continue
+                marks = ','.join('?' * len(remaining))
+                for row in conn.execute(
+                    f'SELECT track_id, row_json FROM sync_tracks '
+                    f'WHERE deleted_at IS NULL AND track_id IN ({marks})',
+                    remaining,
+                ).fetchall():
+                    found[row['track_id']] = {
+                        'id': row['track_id'],
+                        **json.loads(row['row_json']),
+                    }
+        return found
 
     def ids_for_paths(self, paths: Iterable[str]) -> dict[str, str]:
         """``{path: track_id}`` for the paths that are known."""

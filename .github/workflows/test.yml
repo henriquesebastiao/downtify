@@ -7,6 +7,20 @@ jobs:
     name: Tests
     runs-on: ubuntu-latest
 
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: downtify_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
     env:
       UV_SYSTEM_PYTHON: 1
       PYTHON_COLORS: 0
@@ -34,8 +48,13 @@ jobs:
       - name: Run Ruff
         run: uv run ruff check .; uv run ruff check . --diff
 
-      - name: Run pytest
+      - name: Run pytest (SQLite)
         run: uv run pytest -x -s -v
+
+      - name: Run pytest (PostgreSQL)
+        run: uv run pytest -x -s -v
+        env:
+          TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/downtify_test
 
   frontend-test:
     name: Frontend tests
@@ -61,15 +80,3 @@ jobs:
 
       - name: Run Vitest
         run: npm test
-
-  prettier:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-
-      - name: Prettify code
-        uses: creyD/prettier_action@v4.6
-        with:
-          prettier_options: --write frontend/src/.

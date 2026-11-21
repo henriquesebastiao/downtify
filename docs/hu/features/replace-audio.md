@@ -17,6 +17,21 @@ Hangot csak adminisztrátorok cserélhetnek (lásd: [Felhasználók és bejelent
 
 Ha meghiúsul (a videó nem érhető el, vagy a YouTube bejelentkezést kér — lásd: [YouTube sütik](youtube-cookies.md)), a fájlod pontosan úgy marad, ahogy volt. A Sor **Újra** gombja ugyanazt a videót próbálja meg újra, a Sorban egy másik hivatkozást beillesztve pedig azzal cserél.
 
+## Fájl használata az eszközödről
+
+Ha a helyes változat nincs fent a YouTube-on (CD-rip, Soulseek-letöltés, egy fájl, amit valaki küldött), használd a saját fájlodat:
+
+1. A párbeszédablakban a **Vagy használj egy fájlt az eszközödről** résznél nyomd meg a **Fájl kiválasztása…** gombot, és válaszd ki a hangfájlt.
+2. Nyomd meg a **Hang cseréje** gombot. A fájl feltöltődik, a Downtify ellenőrzi, hogy olvasható hang-e, és megkapja a régi fájl címkéit.
+
+A szám saját formátumában lévő fájl (`.mp3` egy `.mp3` helyett) pontosan úgy kerül felhasználásra, ahogy van. Más formátum (`.mp3`, `.flac`, `.m4a`, `.ogg`, `.opus`, `.wav`, `.aiff`, `.aac` vagy `.webm`) a szám formátumára alakul a [Letöltési beállítások](download-settings.md) között választott bitrátával, ezért ha van, ugyanazt a formátumot használd. Csak könyvtár módban is működik, mert semmi sem töltődik le az internetről.
+
+## A letöltések békén hagyják a lecserélt fájlt
+
+Ha az **Újratöltés, ha a fájl létezik** be van kapcsolva, ugyanannak a dalnak egy későbbi letöltése (egy másik figyelt lejátszási listából, előadó-figyelésből vagy lejátszási lista letöltéséből) felülírná a cserédet azzal, amit az automatikus keresés talál. Ezért a Downtify megjegyez minden fájlt, amelynek a hangját lecserélted, bármelyik módon, és egy ilyen letöltés inkább már letöltöttnek számítja. A [Könyvtár feljavítása](library-upgrade.md) sem cseréli le a hangját; a borítója, a dalszövege és a címkéi továbbra is feljavíthatók.
+
+A párbeszédablak jelzi, ha egy szám hangját kézzel cserélted le. **A letöltések lecserélhetik** feloldja ezt az adott fájlra.
+
 ## Ami változatlan marad
 
 - **A fájl.** Az új hang ugyanarra az útvonalra, ugyanabban a formátumban íródik: az `.mp3` MP3 marad (a [Letöltési beállításokban](download-settings.md) választott bitrátával), a `.flac` FLAC, és így tovább. Így minden lejátszási lista, M3U fájl, kedvelt szám, Navidrome-bejegyzés és párosított alkalmazás, amely a fájlra mutat, tovább mutat rá.

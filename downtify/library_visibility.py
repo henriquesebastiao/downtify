@@ -27,19 +27,20 @@ they know; it is not an access-control boundary.
 
 from __future__ import annotations
 
-import sqlite3
 import threading
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from .db.config import Dialect
+from .db.core import Database, as_database
+from .db.dialect import insertion_order_col
 from .library_catalog import (
     album_artist_of,
     album_owner_of,
     entry_content_key,
 )
-from .sqlite_utils import connect_sqlite
 
 KIND_TRACK = 'track'
 KIND_ALBUM = 'album'
@@ -130,16 +131,23 @@ class HiddenRules:
 class LibraryVisibility:
     """The hidden items, in ``downtify_library.db``."""
 
-    def __init__(self, db_path: Path) -> None:
-        self._path = str(db_path)
+    def __init__(self, db_path: str | Path | Database) -> None:
+        self.db = as_database(db_path, 'library')
+        if isinstance(db_path, Database):
+            self._path = str(self.db.path) if self.db.path else None
+        else:
+            self._path = str(db_path)
         self._lock = threading.Lock()
         self._rules: HiddenRules | None = None
         self._init_db()
 
-    def _connect(self) -> sqlite3.Connection:
-        return connect_sqlite(self._path, row_factory=True)
+    def _connect(self):
+        return self.db.connect()
 
     def _init_db(self) -> None:
+        # PostgreSQL gets its schema from the migrations.
+        if self.db.dialect is not Dialect.SQLITE:
+            return
         with self._connect() as conn:
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS hidden_library_items (
@@ -267,11 +275,15 @@ class LibraryVisibility:
             return 0
         path = _norm_path(stored_path)
         with self._lock, self._connect() as conn:
+            # Skip the move when the new key is already hidden (what SQLite's
+            # UPDATE OR IGNORE did); the old row is dropped below.
             cur = conn.execute(
-                'UPDATE OR IGNORE hidden_library_items SET item_key = ?, '
+                'UPDATE hidden_library_items SET item_key = ?, '
                 "item_path = COALESCE(NULLIF(?, ''), item_path) "
-                'WHERE kind = ? AND item_key = ?',
-                (new, path, KIND_TRACK, old),
+                'WHERE kind = ? AND item_key = ? AND NOT EXISTS ('
+                '  SELECT 1 FROM hidden_library_items AS other '
+                '  WHERE other.kind = ? AND other.item_key = ?)',
+                (new, path, KIND_TRACK, old, KIND_TRACK, new),
             )
             moved = cur.rowcount
             conn.execute(
@@ -302,10 +314,12 @@ class LibraryVisibility:
         """Every hidden item for the admin's list, newest first:
         ``{tracks, albums, artists}``."""
 
+        order = insertion_order_col(self.db.dialect)
         with self._connect() as conn:
             rows = conn.execute(
                 'SELECT kind, item_key, item_path, label, detail, hidden_at '
-                'FROM hidden_library_items ORDER BY hidden_at DESC, rowid DESC'
+                'FROM hidden_library_items '
+                f'ORDER BY hidden_at DESC, {order} DESC'
             ).fetchall()
         out: dict[str, list[dict[str, Any]]] = {
             'tracks': [],

@@ -37,3 +37,35 @@ export function activeLineIndex(lines, seconds) {
   }
   return found
 }
+
+// LRC only times the start of a line, so how long it is sung is a guess:
+// until the next line, but no longer than a slow singer would need, or a
+// line before an untimed solo would crawl across the whole solo.
+const SECONDS_PER_CHAR = 0.25
+const MIN_SUNG_SECONDS = 3
+
+/** How much of line `index` has been sung at `seconds`, from 0 to 1. */
+export function lineProgress(lines, index, seconds) {
+  const line = lines[index]
+  if (!line) return 0
+  const gap = (lines[index + 1]?.time ?? Infinity) - line.time
+  const sung = Math.min(
+    gap,
+    Math.max(MIN_SUNG_SECONDS, line.text.length * SECONDS_PER_CHAR)
+  )
+  if (sung <= 0) return 1
+  return Math.min(1, Math.max(0, (seconds - line.time) / sung))
+}
+
+/**
+ * Seconds left, whole and capped at `max`, before singing starts again:
+ * the dots that count a singer in during an intro or an instrumental gap.
+ * 0 while a line is being sung or no words are left.
+ */
+export function countInBeats(lines, seconds, max = 3) {
+  const index = activeLineIndex(lines, seconds)
+  if (index >= 0 && lines[index].text) return 0
+  const next = lines.slice(index + 1).find((line) => line.text)
+  if (!next) return 0
+  return Math.min(max, Math.max(0, Math.ceil(next.time - seconds)))
+}

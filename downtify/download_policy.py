@@ -9,7 +9,39 @@ import secrets
 import threading
 import time
 import unicodedata
-from typing import Any, Callable
+from typing import TYPE_CHECKING, Any, Callable
+
+from downtify.db.config import Dialect
+
+if TYPE_CHECKING:
+    from downtify.db.core import Connection
+
+
+def _is_postgres(conn: Connection) -> bool:
+    # Raw sqlite3 connections (used by tests) carry no ``dialect``.
+    return getattr(conn, 'dialect', Dialect.SQLITE) is Dialect.POSTGRES
+
+
+def _row_lock(conn: Connection) -> str:
+    """Lock the rows a read-modify-write is about to change (PostgreSQL)."""
+    return ' FOR UPDATE' if _is_postgres(conn) else ''
+
+
+def _begin_write(conn: Connection) -> None:
+    """Open an exclusive write section for find-or-create.
+
+    SQLite: ``BEGIN IMMEDIATE`` takes the database write lock. PostgreSQL
+    has no such statement (the connection already runs in a transaction),
+    and a row that does not exist yet cannot be locked with ``FOR UPDATE``,
+    so a transaction-scoped advisory lock serialises the find-or-create
+    across threads and processes. It is released at commit.
+    """
+    if _is_postgres(conn):
+        conn.execute(
+            "SELECT pg_advisory_xact_lock(hashtext('download_policy'))"
+        )
+    else:
+        conn.execute('BEGIN IMMEDIATE')
 
 
 class DownloadPolicyBlocked(Exception):
@@ -73,27 +105,34 @@ class DownloadPolicy:
         self._lock = threading.RLock()
         self._active: set[str] = set()
         with self._connect() as conn:
-            conn.execute("""CREATE TABLE IF NOT EXISTS download_policy (
-                id TEXT PRIMARY KEY, track_id TEXT NOT NULL DEFAULT '',
-                title TEXT NOT NULL, artist TEXT NOT NULL, album TEXT NOT NULL,
-                duration INTEGER NOT NULL, title_key TEXT NOT NULL,
-                artist_key TEXT NOT NULL, album_key TEXT NOT NULL,
-                fallback_key TEXT NOT NULL, elapsed REAL NOT NULL DEFAULT 0,
-                blocked INTEGER NOT NULL DEFAULT 0, reason TEXT NOT NULL DEFAULT '',
-                requested_by INTEGER NOT NULL DEFAULT 0, updated REAL NOT NULL
-            )""")
-            conn.execute(
-                'CREATE INDEX IF NOT EXISTS idx_policy_track ON download_policy(track_id)'
-            )
-            conn.execute(
-                'CREATE INDEX IF NOT EXISTS idx_policy_match ON download_policy(title_key,artist_key)'
-            )
+            # PostgreSQL migrations own the schema; only SQLite creates it.
+            if not _is_postgres(conn):
+                self._init_sqlite(conn)
+
+    @staticmethod
+    def _init_sqlite(conn: Connection) -> None:
+        conn.execute("""CREATE TABLE IF NOT EXISTS download_policy (
+            id TEXT PRIMARY KEY, track_id TEXT NOT NULL DEFAULT '',
+            title TEXT NOT NULL, artist TEXT NOT NULL, album TEXT NOT NULL,
+            duration INTEGER NOT NULL, title_key TEXT NOT NULL,
+            artist_key TEXT NOT NULL, album_key TEXT NOT NULL,
+            fallback_key TEXT NOT NULL, elapsed REAL NOT NULL DEFAULT 0,
+            blocked INTEGER NOT NULL DEFAULT 0, reason TEXT NOT NULL DEFAULT '',
+            requested_by INTEGER NOT NULL DEFAULT 0, updated REAL NOT NULL
+        )""")
+        conn.execute(
+            'CREATE INDEX IF NOT EXISTS idx_policy_track ON download_policy(track_id)'
+        )
+        conn.execute(
+            'CREATE INDEX IF NOT EXISTS idx_policy_match ON download_policy(title_key,artist_key)'
+        )
 
     @staticmethod
     def _find(conn, item: dict[str, Any]):
         if item['track_id']:
             row = conn.execute(
-                'SELECT * FROM download_policy WHERE track_id=?',
+                'SELECT * FROM download_policy WHERE track_id=?'
+                + _row_lock(conn),
                 (item['track_id'],),
             ).fetchone()
             if row is not None:
@@ -107,7 +146,8 @@ class DownloadPolicy:
             return None
         rows = conn.execute(
             """SELECT * FROM download_policy WHERE title_key=? AND artist_key=?
-            AND duration>0 AND abs(duration-?)<=3""",
+            AND duration>0 AND abs(duration-?)<=3"""
+            + _row_lock(conn),
             (title, artist, item['duration']),
         ).fetchall()
         # Manually excluding a named version may span releases; automatic
@@ -161,7 +201,7 @@ class DownloadPolicy:
     ) -> dict[str, Any]:
         item = recording(song)
         with self._lock, self._connect() as conn:
-            conn.execute('BEGIN IMMEDIATE')
+            _begin_write(conn)
             row = self._get_or_create(conn, item)
             conn.execute(
                 "UPDATE download_policy SET blocked=1,reason='manual',requested_by=?,updated=? WHERE id=?",
@@ -189,7 +229,7 @@ class DownloadPolicy:
     def begin(self, song: dict[str, Any], limit_seconds: int):
         item = recording(song)
         with self._lock, self._connect() as conn:
-            conn.execute('BEGIN IMMEDIATE')
+            _begin_write(conn)
             row = self._get_or_create(conn, item)
             ident = row['id']
             if row['blocked']:
@@ -204,7 +244,8 @@ class DownloadPolicy:
     def _checkpoint(self, ident: str, elapsed: float, limit: int) -> bool:
         with self._lock, self._connect() as conn:
             row = conn.execute(
-                'SELECT blocked,reason,elapsed FROM download_policy WHERE id=?',
+                'SELECT blocked,reason,elapsed FROM download_policy WHERE id=?'
+                + _row_lock(conn),
                 (ident,),
             ).fetchone()
             if row is None:

@@ -8,6 +8,8 @@ A Downtify egy kis **katalógust** vezet a `/downloads` alatti fájlokról (a sl
 
 ## Mi tárolódik
 
+Az alábbi helyek az alapértelmezett SQLite-backendre vonatkoznak. PostgreSQL-lel ([Adatbázis](../database.md)) ugyanezek az adatok a PostgreSQL-adatbázisban vannak.
+
 | Tároló | Hely | Cél |
 |-------|----------|---------|
 | **Számindex** | `/data/downtify_library.db` | Spotify-számazonosítókat rendel könyvtárútvonalakhoz, hogy a már lemezen lévő számot fel lehessen ismerni |

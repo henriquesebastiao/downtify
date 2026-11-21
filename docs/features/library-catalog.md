@@ -8,6 +8,8 @@ Downtify keeps a small **catalog** of the files under `/downloads` (the slskd fo
 
 ## What gets stored
 
+The locations below apply to the default SQLite backend. With PostgreSQL ([Database](../database.md)), the same data is kept in the PostgreSQL database.
+
 | Store | Location | Purpose |
 |-------|----------|---------|
 | **Track index** | `/data/downtify_library.db` | Maps Spotify track IDs to library paths, so a track already on disk can be recognized |
@@ -92,9 +94,13 @@ Downloaded Spotify playlists also have a **Playlist diagnostics** panel. Choose 
 
 A playlist imported from a Spotify or YouTube Music link can't be edited, because Downtify keeps it in step with its source. To tidy one up — drop a song that doesn't belong, add one that does — open it and choose **Detach from source**. It becomes a playlist like the ones you create: its songs and owner stay as they are, and you get **Add songs**, **Rename** and removing songs. In exchange the link to its source is cut: it is no longer updated from Spotify or YouTube Music, its [Playlist Monitor](playlist-monitor.md) watch (if it had one) is removed, and its "missing songs" tracking goes. Songs already downloaded are never touched, and its artwork stays until your first edit, when a mosaic of its songs replaces it. Detaching can't be undone from the app; downloading the link again makes a new imported playlist.
 
+Detaching is applied once, even when two requests arrive together. The first converts the playlist; a later request finds it already editable and returns a conflict (`409`). This operation is serialized with Library playlist edits and maintenance.
+
 Every account sees the same library: what an admin [hides from users](users.md#hiding-from-users) is left out for them, and an admin sees it all with a crossed-out eye on what is hidden. Admins hide and show from the `…` menu of a song, album or artist, or from the selection bar in **Tracks**.
 
 **Download as ZIP** saves the selected tracks to the device you're browsing from as a single ZIP, keeping their folder layout — handy when Downtify runs on a home server and you want a batch of tracks locally. Combine it with **Select all** to take everything the current filter shows. The archive is built while it downloads, so nothing is written to the server's disk, and it's capped at 2000 tracks per download.
+
+Individual audio files over 2 GiB are supported: Downtify selects ZIP64 headers before streaming large files. Use a ZIP64-compatible extractor for large downloads. ZIP64 is used only when needed, keeping ordinary small downloads compatible with standard ZIP extractors. Audio is stored without compression.
 
 ## API
 

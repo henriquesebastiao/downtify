@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import re
 import secrets
+import threading
 import time
 import unicodedata
 from dataclasses import dataclass
@@ -22,6 +23,7 @@ from .library_delete import (
 from .library_metadata import read_audio_metadata
 from .library_paths import locate_library_file
 from .navidrome_index import NavidromeIndex
+from .playlist_identity import made_by_downtify, playlist_key
 from .track_index import normalize_spotify_track_id
 from .track_tag_match import (
     snapshot_spotify_metadata,
@@ -221,6 +223,24 @@ def _normalize_tag(text: str) -> str:
     return unicodedata.normalize('NFC', str(text or '').strip()).casefold()
 
 
+def _title_matches_with_navidrome_suffix(
+    title: str, candidate_title: str
+) -> bool:
+    """Match titles when Navidrome appends a media source label."""
+
+    expected = _normalize_tag(title)
+    candidate = _normalize_tag(candidate_title)
+    if expected == candidate:
+        return True
+    if not expected or not candidate.startswith(f'{expected} ('):
+        return False
+    suffix = candidate[len(expected) + 2 :].strip()
+    if not suffix.endswith(')'):
+        return False
+    suffix = suffix[:-1].strip()
+    return suffix == 'pmedia' or bool(re.fullmatch(r'\[\d+\]\s*pl', suffix))
+
+
 def _duration_close(
     target_duration: int, candidate_duration: int, *, slack: int = 12
 ) -> bool:
@@ -349,10 +369,9 @@ def _pick_song_id_from_candidates(
         c_duration = int(candidate.get('duration') or 0)
 
         artist_match = artist and artist.casefold() in c_artist.casefold()
-        title_match = (
-            search_title.casefold() == c_title.casefold()
-            or title.casefold() == c_title.casefold()
-        )
+        title_match = _title_matches_with_navidrome_suffix(
+            search_title, c_title
+        ) or _title_matches_with_navidrome_suffix(title, c_title)
         duration_match = _duration_close(target_duration, c_duration, slack=10)
 
         if artist_match and title_match and duration_match:
@@ -394,8 +413,15 @@ def _effective_navidrome_settings(settings: dict[str, Any]) -> dict[str, Any]:
         'admin_username': admin_username,
         'admin_password': admin_password,
         'public_playlist': bool(raw.get('public_playlist', False)),
+        # Navidrome imports the M3U Downtify writes (with its cover) as a
+        # playlist of its own; with this on, Downtify doesn't create a
+        # second one through the API (see sync_playlist_to_navidrome).
+        'm3u_import': bool(raw.get('m3u_import', False)),
         'scan_after_download': bool(raw.get('scan_after_download', True)),
         'scan_full': bool(raw.get('scan_full', False)),
+        # Hold the scans Downtify starts while a Navidrome client is
+        # playing (see _trigger_library_scan / IdleScan).
+        'scan_when_idle': bool(raw.get('scan_when_idle', False)),
         'scan_wait_seconds': scan_wait_seconds,
         'scan_poll_seconds': scan_poll_seconds,
         'scan_retry_seconds': scan_retry_seconds,
@@ -507,6 +533,18 @@ class NavidromeClient:
         user, pwd = self._scan_credentials()
         self._request('startScan', extra or None, username=user, password=pwd)
 
+    def now_playing(self) -> list[dict[str, Any]]:
+        """What Navidrome's clients report playing right now
+        (``getNowPlaying``), for every user."""
+
+        user, pwd = self._scan_credentials()
+        body = self._request('getNowPlaying', username=user, password=pwd)
+        block = body.get('nowPlaying') if isinstance(body, dict) else None
+        entries = block.get('entry') if isinstance(block, dict) else None
+        if isinstance(entries, dict):
+            entries = [entries]
+        return [e for e in entries or [] if isinstance(e, dict)]
+
     def wait_scan_complete(self, max_wait_seconds: int) -> bool:
         deadline = time.monotonic() + max(10, max_wait_seconds)
         user, pwd = self._scan_credentials()
@@ -610,8 +648,211 @@ class NavidromeClient:
             return []
         return [song for song in songs if isinstance(song, dict)]
 
-    def delete_playlist(self, playlist_id: str) -> None:
+    def delete_playlist(
+        self, playlist_id: str, *, admin: bool = False
+    ) -> None:
+        """Delete a playlist - with the admin login when *admin*, which
+        is what a playlist Navidrome imported (owned by its admin)
+        needs."""
+
+        if admin:
+            user, pwd = self._scan_credentials()
+            self._request(
+                'deletePlaylist',
+                {'id': playlist_id},
+                username=user,
+                password=pwd,
+            )
+            return
         self._request('deletePlaylist', {'id': playlist_id})
+
+    def list_playlists(self, *, admin: bool = False) -> list[dict[str, Any]]:
+        """``getPlaylists`` rows the user (or the admin login) can see."""
+
+        user, pwd = (
+            self._scan_credentials()
+            if admin
+            else (self.username, self.password)
+        )
+        body = self._request('getPlaylists', username=user, password=pwd)
+        playlists = body.get('playlists') if isinstance(body, dict) else None
+        items = (
+            playlists.get('playlist') if isinstance(playlists, dict) else []
+        )
+        if isinstance(items, dict):
+            items = [items]
+        return [p for p in items or [] if isinstance(p, dict)]
+
+    def native_playlists(self) -> Optional[list[dict[str, Any]]]:
+        """Every playlist through Navidrome's own API, with the M3U each
+        was imported from (``path``) and whether it follows that file
+        (``sync``) - which the Subsonic API doesn't say. Signs in with
+        the admin login when one is set. ``None`` when that fails (not
+        Navidrome, or no admin rights)."""
+
+        user, pwd = self._scan_credentials()
+        try:
+            login = httpx.post(
+                f'{self.base_url}/auth/login',
+                json={'username': user, 'password': pwd},
+                timeout=self.timeout,
+                follow_redirects=True,
+            )
+            login.raise_for_status()
+            token = str((login.json() or {}).get('token') or '')
+            if not token:
+                return None
+            headers = {'x-nd-authorization': f'Bearer {token}'}
+            found: list[dict[str, Any]] = []
+            start = 0
+            while True:
+                resp = httpx.get(
+                    f'{self.base_url}/api/playlist',
+                    params={'_start': start, '_end': start + 500},
+                    headers=headers,
+                    timeout=self.timeout,
+                    follow_redirects=True,
+                )
+                resp.raise_for_status()
+                batch = resp.json()
+                if not isinstance(batch, list):
+                    return None
+                found.extend(p for p in batch if isinstance(p, dict))
+                if len(batch) < 500 or start > 50_000:
+                    break
+                start += 500
+        except (httpx.HTTPError, ValueError) as exc:
+            logger.info('navidrome: native playlist list failed err={}', exc)
+            return None
+        return [
+            {
+                'id': str(p.get('id') or ''),
+                'name': str(p.get('name') or ''),
+                'songCount': int(p.get('songCount') or 0),
+                'owner': str(p.get('ownerName') or ''),
+                'comment': str(p.get('comment') or ''),
+                'path': str(p.get('path') or ''),
+                'sync': bool(p.get('sync')),
+                'public': bool(p.get('public')),
+            }
+            for p in found
+        ]
+
+    def all_songs(self, *, limit: int = 200_000) -> list[dict[str, Any]]:
+        """Every song Navidrome lists (``search3`` with an empty query,
+        500 at a time), as ``{id, artist, title, duration, path}``."""
+
+        songs: list[dict[str, Any]] = []
+        offset = 0
+        while offset < limit:
+            body = self._request(
+                'search3',
+                {
+                    'query': '',
+                    'songCount': 500,
+                    'songOffset': offset,
+                    'artistCount': 0,
+                    'albumCount': 0,
+                },
+            )
+            result = (
+                body.get('searchResult3') if isinstance(body, dict) else None
+            )
+            batch = result.get('song') if isinstance(result, dict) else None
+            if isinstance(batch, dict):
+                batch = [batch]
+            if not batch:
+                break
+            for song in batch:
+                if isinstance(song, dict):
+                    songs.append({
+                        'id': str(song.get('id') or ''),
+                        'artist': str(song.get('artist') or ''),
+                        'title': str(song.get('title') or ''),
+                        'duration': song.get('duration') or 0,
+                        'path': str(song.get('path') or ''),
+                    })
+            if len(batch) < 500:
+                break
+            offset += 500
+        return songs
+
+    @staticmethod
+    def _as_list(value: Any) -> list[dict[str, Any]]:
+        """Subsonic sends a single entry as an object, not a list."""
+
+        if isinstance(value, dict):
+            value = [value]
+        if not isinstance(value, list):
+            return []
+        return [item for item in value if isinstance(item, dict)]
+
+    def artists(self) -> list[dict[str, str]]:
+        """Every artist (``getArtists``) as ``{id, name}``."""
+
+        body = self._request('getArtists')
+        root = body.get('artists') if isinstance(body, dict) else None
+        found: list[dict[str, str]] = []
+        for index in self._as_list(
+            root.get('index') if isinstance(root, dict) else None
+        ):
+            for artist in self._as_list(index.get('artist')):
+                found.append({
+                    'id': str(artist.get('id') or ''),
+                    'name': str(artist.get('name') or ''),
+                })
+        return found
+
+    def artist_albums(self, artist_id: str) -> list[dict[str, Any]]:
+        """An artist's albums (``getArtist``) as
+        ``{id, name, song_count}``."""
+
+        body = self._request('getArtist', {'id': artist_id})
+        artist = body.get('artist') if isinstance(body, dict) else None
+        return [
+            {
+                'id': str(album.get('id') or ''),
+                'name': str(album.get('name') or ''),
+                'song_count': int(album.get('songCount') or 0),
+            }
+            for album in self._as_list(
+                artist.get('album') if isinstance(artist, dict) else None
+            )
+        ]
+
+    def album(self, album_id: str) -> dict[str, Any]:
+        """An album (``getAlbum``) as ``{id, name, artist, songs}``, each
+        song ``{id, title, starred, rating}``."""
+
+        body = self._request('getAlbum', {'id': album_id})
+        album = body.get('album') if isinstance(body, dict) else None
+        if not isinstance(album, dict):
+            album = {}
+        songs: list[dict[str, Any]] = []
+        for song in self._as_list(album.get('song')):
+            try:
+                rating = int(song.get('userRating') or 0)
+            except (TypeError, ValueError):
+                rating = 0
+            songs.append({
+                'id': str(song.get('id') or ''),
+                'title': str(song.get('title') or ''),
+                'starred': bool(song.get('starred')),
+                'rating': rating,
+            })
+        return {
+            'id': str(album.get('id') or album_id),
+            'name': str(album.get('name') or ''),
+            'artist': str(album.get('artist') or ''),
+            'songs': songs,
+        }
+
+    def set_rating(self, song_id: str, rating: int) -> None:
+        """Give a song 0-5 stars (``setRating``)."""
+
+        self._request(
+            'setRating', {'id': song_id, 'rating': max(0, min(5, rating))}
+        )
 
     def _rest_post(
         self,
@@ -869,13 +1110,97 @@ def _match_songs_in_library(
     return song_ids, unmatched
 
 
+def someone_listening(client: NavidromeClient) -> bool:
+    """Whether any Navidrome client is playing. A failed check counts as
+    nobody, so scans are never held by an error."""
+
+    try:
+        return bool(client.now_playing())
+    except Exception as exc:
+        logger.info('navidrome: now-playing check failed err={}', exc)
+        return False
+
+
+class IdleScan:
+    """One Navidrome scan held until nobody is listening.
+
+    With ``scan_when_idle`` on, a scan Downtify would start while a
+    Navidrome client is playing is handed here instead: requests are
+    merged into one (full if any asked for full), and a background
+    thread checks every :attr:`poll_seconds` and starts it once nothing
+    is playing. Nothing else waits for it - the playlist sync that asked
+    goes on without a fresh scan.
+    """
+
+    poll_seconds = 60
+
+    def __init__(self) -> None:
+        self._lock = threading.Lock()
+        self._pending: Optional[tuple[NavidromeClient, bool]] = None
+        self._thread: Optional[threading.Thread] = None
+
+    @property
+    def pending(self) -> bool:
+        return self._pending is not None
+
+    def request(self, client: NavidromeClient, *, full: bool) -> None:
+        with self._lock:
+            if self._pending is not None:
+                full = full or self._pending[1]
+            self._pending = (client, full)
+            if self._thread is None or not self._thread.is_alive():
+                self._thread = threading.Thread(
+                    target=self._run, name='navidrome-idle-scan', daemon=True
+                )
+                self._thread.start()
+
+    def run_once(self) -> bool:
+        """Start the held scan if nobody is listening; returns whether
+        one is still held."""
+
+        with self._lock:
+            held = self._pending
+        if held is None:
+            return False
+        client, full = held
+        if someone_listening(client):
+            return True
+        with self._lock:
+            if self._pending is held:
+                self._pending = None
+        try:
+            client.start_scan(full=full)
+            logger.info('navidrome: nobody listening; held scan started')
+        except Exception as exc:
+            logger.info('navidrome: held scan failed err={}', exc)
+        return self.pending
+
+    def _run(self) -> None:
+        while True:
+            time.sleep(self.poll_seconds)
+            if not self.run_once():
+                return
+
+
+idle_scan = IdleScan()
+
+
 def _trigger_library_scan(
     client: NavidromeClient,
     cfg: dict[str, Any],
     track_count: int,
 ) -> bool:
-    """Start Navidrome scan and block until idle or timeout. Returns scan finished."""
+    """Start Navidrome scan and block until idle or timeout. Returns scan
+    finished. With ``scan_when_idle`` on and a client playing, the scan
+    is held (:class:`IdleScan`) and ``False`` returned at once."""
 
+    if cfg.get('scan_when_idle') and someone_listening(client):
+        logger.info(
+            'navidrome: someone is listening; library scan held until '
+            'playback stops'
+        )
+        idle_scan.request(client, full=bool(cfg.get('scan_full')))
+        return False
     wait_seconds = _scan_wait_budget(cfg, track_count)
     mode = 'full' if cfg.get('scan_full') else 'incremental'
     logger.info(
@@ -910,6 +1235,41 @@ def _library_dirs_from_settings(
     if dl is None:
         dl = Path('/downloads')
     return Path(dl), slskd_dir
+
+
+def remove_own_playlist_copies(client: NavidromeClient, name: str) -> int:
+    """Delete the playlists Downtify created for *name* through the API.
+
+    Only the Downtify login's own playlists carrying Downtify's comment
+    are touched - never one Navidrome imported or a user made. Names are
+    compared the way the M3U file is named, so ``Chill: Vibes`` also
+    finds the copy for ``Chill Vibes.m3u``.
+    """
+
+    want = playlist_key(name)
+    removed = 0
+    try:
+        playlists = client.list_playlists()
+    except Exception as exc:
+        logger.info('navidrome: could not list playlists err={}', exc)
+        return 0
+    for playlist in playlists:
+        if (
+            playlist_key(str(playlist.get('name') or '')) != want
+            or not made_by_downtify(playlist)
+            or str(playlist.get('owner') or '') != client.username
+        ):
+            continue
+        try:
+            client.delete_playlist(str(playlist.get('id') or ''))
+            removed += 1
+        except Exception as exc:
+            logger.info(
+                'navidrome: could not remove playlist id={} err={}',
+                playlist.get('id'),
+                exc,
+            )
+    return removed
 
 
 def remove_navidrome_playlist_by_name(
@@ -1010,6 +1370,21 @@ def sync_playlist_to_navidrome(  # noqa: PLR0914
             scan_complete = _trigger_library_scan(client, cfg, len(songs))
         except Exception as exc:
             logger.info('navidrome: library scan failed err={}', exc)
+
+    if cfg.get('m3u_import') and settings.get('generate_m3u', True):
+        # Navidrome builds this playlist itself from the M3U (and its
+        # cover) on the scan above; a playlist of Downtify's own would
+        # only show up next to it as a duplicate.
+        removed = remove_own_playlist_copies(client, playlist_name)
+        logger.info(
+            'navidrome: {!r} is imported from its M3U by Navidrome; no API '
+            'playlist created ({} earlier copy removed)',
+            playlist_name,
+            removed,
+        )
+        return PlaylistSyncResult(
+            '', playlist_name, 0, len(songs), scanned, scan_complete
+        )
 
     dl_dir, slskd_dir = _library_dirs_from_settings(settings, download_dir)
     song_ids, pending = _match_songs_in_library(

@@ -17,10 +17,29 @@ Only admins can replace audio (see [Users & Sign-in](users.md#admins-and-users))
 
 If it fails (the video is unavailable, or YouTube asks to sign in — see [YouTube cookies](youtube-cookies.md)), your file is left exactly as it was. **Retry** in the Queue tries the same video again, and pasting another link there replaces with that one instead.
 
+## Using a file from your device
+
+When the right version isn't on YouTube (a CD rip, a Soulseek download, a file someone sent you), use your own file:
+
+1. In the dialog, under **Or use a file from your device**, press **Choose a file…** and pick the audio file.
+2. Press **Replace audio**. The file is uploaded, checked to be readable audio, and given the old file's tags.
+
+A file in the track's own format (an `.mp3` for an `.mp3`) is used exactly as it is. Another format (`.mp3`, `.flac`, `.m4a`, `.ogg`, `.opus`, `.wav`, `.aiff`, `.aac` or `.webm`) is converted to the track's format at the bitrate chosen in [Download settings](download-settings.md), so use the same format when you have it. This works in library-only mode too, since nothing is fetched from the internet.
+
+## Downloads leave a replaced file alone
+
+With **Download again if the file exists** on, a later download of the same song (from another monitored playlist, an artist watch or a playlist download) would write over your replacement with whatever the automatic match finds. So Downtify remembers every file whose audio you replaced, either way, and such a download counts it as already downloaded instead. [Library upgrade](library-upgrade.md) doesn't swap its audio either; its cover, lyrics and tags can still be upgraded.
+
+The same goes for a file you swapped yourself, outside Downtify: saving the right version over a file Downtify downloaded, under the same name (a Soulseek download, a CD rip). Downtify remembers what the audio of each file it downloads is like (its format, sample rate, channels and length; tags don't count, so editing them changes nothing). The first time a download would write over a file whose audio no longer matches, Downtify keeps the file instead and from then on treats it as replaced by hand. Files downloaded before this version have nothing to compare with: replace those with **Replace audio** (or **Using a file from your device**) instead.
+
+The upload a replaced file came from is also **never picked again for that song**. Downtify remembers which YouTube video or SoundCloud track each file was downloaded from; when you replace the audio (either way above, or by swapping the file yourself), that upload is rejected for the song, by its Spotify id, ISRC and artist + title. So when the song turns up again — in another playlist, a daily mix, an artist watch, or after you delete the file — the automatic match picks the next best version instead of the same wrong one. Picking a rejected upload again by hand in **Replace audio** takes the rejection back.
+
+The dialog says when a track's audio was replaced by hand. **Let downloads replace it** lifts this for that file.
+
 ## What stays the same
 
 - **The file.** The new audio is written to the same path, in the same format: an `.mp3` stays MP3 (at the bitrate chosen in [Download settings](download-settings.md)), a `.flac` stays FLAC, and so on. So every playlist, M3U file, liked song, Navidrome entry and paired app that points at the file keeps pointing at it.
-- **The tags.** Title, artists, album, track number, year, cover art, embedded lyrics and every other tag are copied from the old file to the new audio as they are. The `.lrc` sidecar is left alone. Synced lyrics were timed to the old audio: if the new version starts at a different point, they may be off.
+- **The tags.** Title, artists, album, track number, year, cover art, embedded lyrics and every other tag are copied from the old file to the new audio as they are. For FLAC, the replacement's embedded pictures are removed first: only the original file's pictures are kept, in their original order, including front and back covers. If the original has no embedded pictures, the replacement stays without them. This applies to both downloaded and uploaded replacements. The `.lrc` sidecar is left alone. Synced lyrics were timed to the old audio: if the new version starts at a different point, they may be off.
 - **The date.** The file keeps its modification date, so it doesn't jump to the top of "Recently added".
 
 Only `.mp3`, `.flac`, `.m4a`, `.ogg` and `.opus` files — the formats Downtify writes — can be replaced.

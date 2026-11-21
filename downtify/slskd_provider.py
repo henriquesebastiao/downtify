@@ -28,6 +28,8 @@ from .track_tag_match import (
     strip_mix_suffix,
     verify_downloaded_file_matches_spotify,
 )
+from .track_tag_match import fold_accents as _fold_accents
+from .track_tag_match import plain_name as _plain_name
 
 ProgressCallback = Callable[[float, str], None]
 
@@ -171,6 +173,50 @@ def _int_setting(
     return min(maximum, max(minimum, value))
 
 
+SLSKD_UNKNOWN_BITRATE_MODES = ('auto', 'allow', 'reject')
+
+
+def _bitrate_value(value: Any) -> int:
+    """A kbps value clamped to 0-10000; anything unreadable is 0 (off)."""
+    try:
+        number = int(value)
+    except (TypeError, ValueError):
+        return 0
+    return min(10000, max(0, number))
+
+
+def normalize_slskd_quality(raw: dict[str, Any]) -> dict[str, Any]:
+    """The fine-tune quality fields of the slskd settings, normalized.
+
+    ``advanced`` switches them on; while it is off, candidate selection
+    ignores them, so turning it off restores the basic behaviour without
+    losing what was set. ``unknown_bitrate`` decides files that report no
+    bitrate (``auto`` keeps the basic rule: rejected in strict mode with a
+    minimum, allowed otherwise). ``format_min_bitrate`` overrides the
+    minimum per extension, ``max_bitrate`` (0 = off) skips files above it,
+    such as lossless audio in an ``.m4a``, and ``prefer_bitrate`` tries the
+    highest bitrate first among files that match well enough.
+    """
+
+    floors_raw = raw.get('format_min_bitrate')
+    floors: dict[str, int] = {}
+    if isinstance(floors_raw, dict):
+        for ext, value in floors_raw.items():
+            key = str(ext or '').strip().lower().lstrip('.')
+            if key and value not in {None, ''}:
+                floors[key] = _bitrate_value(value)
+    unknown = str(raw.get('unknown_bitrate') or 'auto').strip().lower()
+    if unknown not in SLSKD_UNKNOWN_BITRATE_MODES:
+        unknown = 'auto'
+    return {
+        'advanced': bool(raw.get('advanced', False)),
+        'unknown_bitrate': unknown,
+        'format_min_bitrate': floors,
+        'max_bitrate': _bitrate_value(raw.get('max_bitrate')),
+        'prefer_bitrate': bool(raw.get('prefer_bitrate', False)),
+    }
+
+
 def _slskd_deadline(settings: dict[str, Any]) -> float:
     seconds = _int_setting(
         settings,
@@ -194,6 +240,8 @@ _PATH_PENALTY_KEYWORDS = (
     'discography',
 )
 _AMBIGUOUS_TITLE_ALNUM_LEN = 5
+# Share of the minimum bitrate a variable-bitrate file's average must reach.
+_VBR_FLOOR_SHARE = 0.85
 _DEFAULT_MATCH_MIN_SCORE = 5
 _STRICT_DURATION_SECONDS = 3
 
@@ -474,8 +522,40 @@ def _normalize_search_text(text: str) -> str:
     return re.sub(r'\s+', ' ', folded).strip()
 
 
+# "&", "+" and "and" join names the same way ("Earth, Wind & Fire" is
+# often filed as "Earth Wind and Fire"), so a comparison leaves them out.
+_JOINER = re.compile(r'(?<!\w)(?:and|&|\+)(?!\w)', re.IGNORECASE)
+# "Pt. II" / "Part 2" / "pt 2" are one spelling to a comparison.
+_PART_NUMBER = re.compile(
+    r'\b(?:pt|part|vol|volume|chapter)\b\.?\s*([ivx]+|\d+)\b', re.IGNORECASE
+)
+_ROMAN = {
+    'i': '1',
+    'ii': '2',
+    'iii': '3',
+    'iv': '4',
+    'v': '5',
+    'vi': '6',
+    'vii': '7',
+    'viii': '8',
+    'ix': '9',
+    'x': '10',
+}
+
+
+def _part_number(match: re.Match) -> str:
+    number = match.group(1).casefold()
+    return f' pt {_ROMAN.get(number, number)} '
+
+
 def _alnum_only(text: str) -> str:
-    return re.sub(r'[^a-z0-9]+', '', _normalize_search_text(text).casefold())
+    """*text* as names are compared: letters and digits only (any script,
+    so ``夜に駆ける`` is still a title), no accents, no case, without
+    ``&``/``+``/``and``, and ``Part II`` spelled ``pt 2``."""
+
+    folded = _fold_accents(_normalize_search_text(text)).casefold()
+    folded = _PART_NUMBER.sub(_part_number, _JOINER.sub(' ', folded))
+    return re.sub(r'[\W_]+', '', folded)
 
 
 def _primary_title(title: str) -> str:
@@ -487,6 +567,144 @@ def _primary_title(title: str) -> str:
     return text
 
 
+# "(feat. X)", "[with X]", "(from GTAVI: The Album)": credits and where a
+# song comes from, which Spotify puts in the title and a shared file's name
+# usually leaves out, words differently or moves in front of the title.
+_CREDIT_PART = re.compile(
+    r'\s*[\(\[]\s*(?:feat\.?|ft\.?|featuring|with|from)\s[^\)\]]*[\)\]]',
+    re.IGNORECASE,
+)
+_CREDIT_TAIL = re.compile(
+    r'\s+(?:feat\.?|ft\.?|featuring)\s.*$', re.IGNORECASE
+)
+
+
+def _core_title(title: str) -> str:
+    """The song's own name, as a shared file names it: :func:`_primary_title`
+    without featured artists or a "(from …)" note - ``That's It (feat.
+    Future & Metro Boomin)`` -> ``That's It``."""
+
+    primary = _primary_title(title)
+    core = _CREDIT_TAIL.sub('', _CREDIT_PART.sub('', primary)).strip()
+    return core or primary
+
+
+# Words that make a recording a different version of the song. One that
+# is in Spotify's title must be in the file's path too, so "Despacito -
+# Remix" never gets the original and "Jóga - Live" never the studio take.
+_VERSION_WORDS = (
+    'remix',
+    'live',
+    'acoustic',
+    'instrumental',
+    'demo',
+    'unplugged',
+    'karaoke',
+    'acapella',
+    'a cappella',
+    'sped up',
+    'slowed',
+    'nightcore',
+    'reprise',
+    'orchestral',
+)
+
+
+def _version_words(text: str) -> list[str]:
+    folded = ' '.join(re.split(r'[\W_]+', _fold_accents(text).casefold()))
+    return [
+        word for word in _VERSION_WORDS if re.search(rf'\b{word}\b', folded)
+    ]
+
+
+def _missing_version_word(song: dict[str, Any], filename: str) -> bool:
+    title = str(song.get('name') or '')
+    album = str(song.get('album_name') or '')
+    wanted = [
+        w for w in _version_words(title) if w not in _version_words(album)
+    ] + [w for w in _version_words(album) if w in _version_words(title)]
+    if not wanted:
+        return False
+    path = ' '.join(re.split(r'[\W_]+', _fold_accents(filename).casefold()))
+    return any(word not in path for word in wanted)
+
+
+_BRACKETED = re.compile(r'\s*[\(\[][^\)\]]*[\)\]]')
+
+
+def _bare_title(title: str) -> str:
+    """:func:`_core_title` without bracketed extras that don't make it a
+    different version - ``Gangnam Style (강남스타일)`` -> ``Gangnam Style``,
+    ``Superhero (Heroes & Villains)`` -> ``Superhero`` - or ``""`` when
+    there are none, or one names a version (``(Taylor's Version)``,
+    ``(Remix)``)."""
+
+    core = _core_title(title)
+    parts = _BRACKETED.findall(core)
+    if not parts:
+        return ''
+    if any(
+        _version_words(part) or re.search(r'version|mix|edit', part, re.I)
+        for part in parts
+    ):
+        return ''
+    return _BRACKETED.sub('', core).strip()
+
+
+def _duo_surnames_in(artist: str, path_alnum: str) -> str:
+    """For a duo or group credited by full names (``Daryl Hall & John
+    Oates``), the first surname when every member's surname is in
+    *path_alnum* - files often say ``Hall & Oates`` - else ``""``."""
+
+    parts = [
+        p
+        for p in re.split(r'\s*(?:,|&|\+|\band\b)\s*', artist, flags=re.I)
+        if p.strip()
+    ]
+    if len(parts) < 2:
+        return ''
+    surnames = [_alnum_only(part.split()[-1]) for part in parts]
+    if all(len(name) >= 3 and name in path_alnum for name in surnames):
+        return surnames[0]
+    return ''
+
+
+def _artist_key(artist: str) -> str:
+    """*artist* as a file name is compared with it: :func:`_alnum_only`,
+    without a leading "The" (``The Killers`` is often filed as ``Killers``)."""
+
+    name = re.sub(r'^\s*the\s+', '', str(artist or ''), flags=re.IGNORECASE)
+    return _alnum_only(name) or _alnum_only(artist)
+
+
+def _soulseek_words(text: str, *, join_apostrophes: bool = False) -> str:
+    """*text* as Soulseek search words. Peers match whole words of a shared
+    path, split at punctuation, so ``That's It (feat. A & B)`` is searched
+    as ``That s It feat A B`` - the way Nicotine+ sends it - since
+    ``Thats`` or ``(feat.`` match no file. *join_apostrophes* gives the
+    ``Thats It`` spelling instead, for files named without the apostrophe."""
+
+    folded = unicodedata.normalize('NFKC', str(text or ''))
+    # A censored word ("F**kin'") matches no file ("Fuckin"): left out.
+    folded = re.sub(r'\S*[^\W\d_]\*+\S*', ' ', folded)
+    folded = re.sub(r"['`\u2019]", '' if join_apostrophes else ' ', folded)
+    return re.sub(r'[\W_]+', ' ', folded).strip()
+
+
+def _censored_title_in(title: str, base_alnum: str) -> bool:
+    """Whether *title*, censored by Spotify (``F**kin' Problems``), is in a
+    file name that spells it out (``Fuckin Problems``): each ``*`` run
+    stands for up to four letters, or none (``Fkin``)."""
+
+    if not re.search(r'[^\W\d_]\*', title):
+        return False
+    pieces = [_alnum_only(piece) for piece in re.split(r'\*+', title)]
+    if not any(pieces):
+        return False
+    pattern = r'\w{0,4}'.join(re.escape(piece) for piece in pieces)
+    return re.search(pattern, base_alnum) is not None
+
+
 def _title_in_basename(filename: str, title_alnum: str) -> bool:
     """Require title as a basename token (avoids folder-only and substring false hits)."""
 
@@ -496,20 +714,42 @@ def _title_in_basename(filename: str, title_alnum: str) -> bool:
     base_alnum = _alnum_only(base)
     if title_alnum == base_alnum:
         return True
-    folded = _normalize_search_text(base).casefold()
+    folded = _fold_accents(_normalize_search_text(base)).casefold()
     tokens = [
         _alnum_only(part)
-        for part in re.split(r'[^a-z0-9]+', folded)
+        for part in re.split(r'[\W_]+', folded)
         if _alnum_only(part)
     ]
     if title_alnum in tokens:
         return True
     if len(title_alnum) >= 6 and title_alnum in base_alnum:
         return True
+    # A short title of several words ("Hey Ya!") is in "OutKast - Hey Ya!"
+    # when it covers whole words there, not part of one ("Theyyard").
+    joined = ''.join(tokens)
+    starts, ends, position = set(), set(), 0
+    for token in tokens:
+        starts.add(position)
+        position += len(token)
+        ends.add(position)
+    at = joined.find(title_alnum)
+    while at >= 0:
+        if at in starts and at + len(title_alnum) in ends:
+            return True
+        at = joined.find(title_alnum, at + 1)
     return False
 
 
 def _slskd_search_queries(song: dict[str, Any]) -> list[str]:
+    """What to search Soulseek for, most likely first, as plain words
+    (:func:`_soulseek_words`): the artist and the song's own name
+    (:func:`_core_title`, no "(feat. …)"), the same without apostrophes,
+    the artist with the full title (``Loud Enough Radio Mix``), the song's
+    name alone, and the artist and name without accents. A peer only
+    answers when every word is in a file's path, so fewer, plainer words
+    find more; the ranking (:func:`_score_slskd_candidate`) decides which
+    file is the song."""
+
     artists = [
         str(a).strip()
         for a in (song.get('artists') or [])[:2]
@@ -517,28 +757,111 @@ def _slskd_search_queries(song: dict[str, Any]) -> list[str]:
     ]
     artist = artists[0] if artists else ''
     title = str(song.get('name') or '').strip()
+    core = _core_title(title)
     short_title = _primary_title(title)
     queries: list[str] = []
     seen: set[str] = set()
 
-    def add(q: str) -> None:
-        normalized = _normalize_search_text(q)
-        if normalized and normalized not in seen:
-            seen.add(normalized)
-            queries.append(normalized)
+    def add(q: str, *, join_apostrophes: bool = False) -> None:
+        words = _soulseek_words(q, join_apostrophes=join_apostrophes)
+        if words and words.casefold() not in seen:
+            seen.add(words.casefold())
+            queries.append(words)
 
-    # Explo uses "title - artist"
-    if short_title and artist:
-        add(f'{short_title} - {artist}')
-    if title and artist and title != short_title:
-        add(f'{title} - {artist}')
-    if short_title:
-        add(short_title)
-    if artist and short_title and short_title != title:
-        add(f'{artist} {short_title}')
+    if artist and core:
+        add(f'{artist} {core}')
+        add(f'{artist} {core}', join_apostrophes=True)
     if artist and title:
-        add(f'{artist} {title}')
+        add(f'{artist} {_CREDIT_PART.sub("", title)}')
+        if short_title != core:
+            add(f'{artist} {short_title}')
+    plain_artist = _plain_name(artist)
+    if artist and core and plain_artist != _soulseek_words(artist):
+        add(f'{plain_artist} {core}')
+    bare = _bare_title(title)
+    if artist and bare:
+        add(f'{artist} {bare}')
+    if core:
+        add(core)
+    if artist and core:
+        add(_fold_accents(f'{artist} {core}'))
     return queries
+
+
+# Words that carry little meaning in a search, dropped first when a search
+# has to be loosened (see _blocked_phrase_queries).
+_FILLER_WORDS = frozenset({
+    'a',
+    'an',
+    'and',
+    'at',
+    'by',
+    'for',
+    'from',
+    'in',
+    'is',
+    'it',
+    'me',
+    'my',
+    'of',
+    'on',
+    'or',
+    'the',
+    'to',
+    'with',
+    'you',
+    'your',
+})
+_BLOCKED_PHRASE_TRIES = 3
+_BLOCKED_PAIR_TRIES = 2
+
+
+def _blocked_phrase_queries(
+    song: dict[str, Any], tried: list[str]
+) -> list[str]:
+    """Searches with words left out, for when nobody answered any of
+    *tried*. The Soulseek server silently answers nothing to some word
+    combinations - artist names such as "Frank Ocean" or "Lady Gaga", and
+    some titles such as "Starting From Zero" or "Hold My Hand" - in any
+    order, while "Ocean Nights", "Justice Starting Zero" and "Gaga Hold
+    Hand" find the files (all measured). Up to three searches leave one
+    word out - filler words (``From``) first, then the shortest - then up
+    to two leave out two, for when the artist and the title are both
+    blocked. At least two words always remain."""
+
+    queries = _slskd_search_queries(song)
+    if not queries:
+        return []
+    words = queries[0].split()
+    if len(words) < 3:
+        return []
+    order = sorted(
+        range(len(words)),
+        key=lambda i: (
+            words[i].casefold() not in _FILLER_WORDS,
+            len(words[i]),
+        ),
+    )
+    seen = {q.casefold() for q in tried}
+    out: list[str] = []
+
+    def add(dropped: set[int], limit: int) -> None:
+        query = ' '.join(w for i, w in enumerate(words) if i not in dropped)
+        if (
+            len(out) < limit
+            and len(words) - len(dropped) >= 2
+            and query.casefold() not in seen
+        ):
+            seen.add(query.casefold())
+            out.append(query)
+
+    for index in order:
+        add({index}, _BLOCKED_PHRASE_TRIES)
+    if len(words) >= 4:
+        pairs = [(order[0], order[1]), (order[0], order[2])]
+        for pair in pairs:
+            add(set(pair), _BLOCKED_PHRASE_TRIES + _BLOCKED_PAIR_TRIES)
+    return out
 
 
 def _file_extension(filename: str) -> str:
@@ -560,7 +883,8 @@ def _contains_keyword(
     allow_mix_variants: bool = False,
 ) -> bool:
     """Filter remix/live/etc. on the file name, not parent folder names."""
-    title = str(song.get('name') or '')
+    # The album counts too: a track of "Homogenic (Live)" is a live take.
+    title = f'{song.get("name") or ""} {song.get("album_name") or ""}'
     artists = [str(a) for a in (song.get('artists') or []) if str(a).strip()]
     basename = _file_basename(filename)
     haystacks = [basename]
@@ -637,6 +961,18 @@ def _filter_slskd_responses(
     return [r for r in responses if _response_has_free_slot(r)]
 
 
+def _busy_responses(responses: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Peers whose upload slots are all taken. A download from one waits in
+    its queue (``queued_timeout_seconds``), which still beats YouTube when
+    no peer with a free slot has the song."""
+
+    return [
+        r
+        for r in responses
+        if not _response_has_free_slot(r) and int(r.get('fileCount') or 0) > 0
+    ]
+
+
 def _song_duration_seconds(song: dict[str, Any]) -> int:
     target_duration = int(song.get('duration') or 0)
     if target_duration > 1000:
@@ -669,17 +1005,36 @@ def _score_slskd_candidate(  # noqa: PLR0914
 ) -> Optional[tuple[int, list[str]]]:
     """Return (score, reasons) or None when hard requirements fail."""
     tol = duration_tolerances_from_settings(settings)
-    artist = _alnum_only(
-        ' '.join(str(a) for a in (song.get('artists') or [])[:1])
-    )
     album = _alnum_only(str(song.get('album_name') or ''))
     raw_name = str(song.get('name') or '')
-    title = _alnum_only(_primary_title(raw_name))
+    title = _alnum_only(_core_title(raw_name))
     full_title = _alnum_only(raw_name)
     sanitized_name = _alnum_only(filename)
     basename = _file_basename(filename)
     base_alnum = _alnum_only(basename)
     path_segments = _path_segments(filename)
+    # The first credited artist, or another one when only that one is in
+    # the path ("Metro Boomin - …" for a Yung Lean song featuring him).
+    artist_keys = [
+        key
+        for a in (song.get('artists') or [])[:3]
+        for key in dict.fromkeys((
+            _artist_key(str(a)),
+            _artist_key(_plain_name(str(a))),
+        ))
+        if key
+    ]
+    artist = next(
+        (key for key in artist_keys if key in sanitized_name),
+        '',
+    ) or next(
+        (
+            key
+            for a in (song.get('artists') or [])[:3]
+            if (key := _duo_surnames_in(str(a), sanitized_name))
+        ),
+        artist_keys[0] if artist_keys else '',
+    )
 
     if not artist and not title and not full_title:
         return None
@@ -687,6 +1042,7 @@ def _score_slskd_candidate(  # noqa: PLR0914
     # Soulseek paths often include the requested album/title in folders while
     # the leaf file is a different track — require title on the filename itself.
     title_ok = False
+    bare = _alnum_only(_bare_title(raw_name))
     if title and _title_in_basename(filename, title):
         title_ok = True
     elif (
@@ -695,7 +1051,15 @@ def _score_slskd_candidate(  # noqa: PLR0914
         and _title_in_basename(filename, full_title)
     ):
         title_ok = True
+    elif bare and _title_in_basename(filename, bare):
+        title_ok = True
+        title = bare
+    elif _censored_title_in(_core_title(raw_name), base_alnum):
+        title_ok = True
+        title = ''
     if (title or full_title) and not title_ok:
+        return None
+    if _missing_version_word(song, filename):
         return None
 
     artist_in_leaf = bool(artist and artist in base_alnum)
@@ -735,7 +1099,9 @@ def _score_slskd_candidate(  # noqa: PLR0914
     score = 0
     reasons: list[str] = []
 
-    if artist and base_alnum.startswith(artist):
+    if artist and (
+        base_alnum.startswith(artist) or base_alnum.startswith(f'the{artist}')
+    ):
         score += 3
         reasons.append('artist_prefix')
     elif artist and artist in base_alnum:
@@ -823,12 +1189,16 @@ def _rank_slskd_candidates(
     settings: Optional[dict[str, Any]] = None,
     *,
     allow_mix_variants: bool = False,
+    include_busy: bool = False,
 ) -> list[dict[str, Any]]:
-    """Score and sort all viable files (highest confidence first)."""
+    """Score and sort all viable files (highest confidence first); peers
+    without a free upload slot only with *include_busy*."""
     target_duration = _song_duration_seconds(song)
     ranked: list[dict[str, Any]] = []
 
-    for resp in _filter_slskd_responses(responses):
+    for resp in (
+        responses if include_busy else _filter_slskd_responses(responses)
+    ):
         if int(resp.get('fileCount') or 0) <= 0:
             continue
         username = str(resp.get('username') or '').strip()
@@ -907,12 +1277,21 @@ def _select_download_candidates(
     max_files = int(settings.get('download_attempts') or 5)
     strict_priority = bool(settings.get('strict_format_priority', False))
     whitelist = bool(settings.get('extensions_whitelist', False))
+    quality = normalize_slskd_quality(settings)
+    if not quality['advanced']:
+        quality = normalize_slskd_quality({})
 
     def bitrate_of(file_row: dict[str, Any]) -> int:
         try:
             return int(file_row.get('bitRate') or file_row.get('bitrate') or 0)
         except (TypeError, ValueError):
             return 0
+
+    def rank_key(file_row: dict[str, Any]) -> tuple[int, int]:
+        score = int(file_row.get('match_score') or 0)
+        if quality['prefer_bitrate']:
+            return (-bitrate_of(file_row), -score)
+        return (-score, -bitrate_of(file_row))
 
     candidates = [
         row
@@ -924,13 +1303,22 @@ def _select_download_candidates(
     def passes_bitrate(file_row: dict[str, Any]) -> bool:
         bitrate = bitrate_of(file_row)
         ext = _file_extension(str(file_row.get('filename') or ''))
+        if quality['max_bitrate'] and bitrate > quality['max_bitrate']:
+            return False
         if strict_priority and ext == 'flac':
             return True
-        if not min_bitrate:
-            return True
-        if strict_priority:
-            return bitrate >= min_bitrate
-        return not bitrate or bitrate >= min_bitrate
+        floor = quality['format_min_bitrate'].get(ext, min_bitrate)
+        if not bitrate:
+            if quality['unknown_bitrate'] == 'allow':
+                return True
+            if quality['unknown_bitrate'] == 'reject':
+                return False
+            return not (strict_priority and floor)
+        if file_row.get('isVariableBitRate') and floor:
+            # A VBR file reports its average: LAME V0, as good as 320 CBR,
+            # averages ~220-260 kbps, so it passes at 85 % of the floor.
+            return bitrate >= floor * _VBR_FLOOR_SHARE
+        return bitrate >= floor
 
     if strict_priority:
         selected: list[dict[str, Any]] = []
@@ -952,22 +1340,19 @@ def _select_download_candidates(
 
         for tier in tiers:
             accepted = [row for row in tier if passes_bitrate(row)]
-            accepted.sort(
-                key=lambda row: (
-                    -int(row.get('match_score') or 0),
-                    -bitrate_of(row),
-                )
-            )
+            accepted.sort(key=rank_key)
             selected.extend(accepted[:max_files])
         return selected
 
-    by_score: dict[int, list[dict[str, Any]]] = {}
-    for row in candidates:
-        by_score.setdefault(int(row.get('match_score') or 0), []).append(row)
+    # Grouped by match score, so the format order breaks ties; with
+    # ``prefer_bitrate`` grouped by bitrate instead (best match first).
+    by_group: dict[int, list[dict[str, Any]]] = {}
+    for row in sorted(candidates, key=rank_key):
+        by_group.setdefault(rank_key(row)[0], []).append(row)
 
     selected: list[dict[str, Any]] = []
-    for score in sorted(by_score.keys(), reverse=True):
-        bucket = by_score[score]
+    for group in sorted(by_group.keys()):
+        bucket = by_group[group]
         for ext in extensions:
             for file_row in bucket:
                 if _file_extension(str(file_row.get('filename') or '')) != ext:
@@ -1377,6 +1762,53 @@ def _wait_for_slskd_file(
     )
 
 
+# ── Why slskd didn't deliver ───────────────────────────────────────────
+# A download that slskd can't serve falls through to the next source. The
+# reason is kept for the thread that asked (one download per thread), so
+# the downloader can say why another source was used (see
+# downtify.slskd_misses).
+
+#: Reasons, in the order a download gets further: when several queries
+#: fail differently, the one that got furthest is reported.
+MISS_REASONS = (
+    'not_configured',
+    'unreachable',
+    'search_failed',
+    'search_timeout',
+    'no_results',
+    'no_match',
+    'low_confidence',
+    'quality_filtered',
+    'timeout',
+    'transfer_failed',
+    'tag_mismatch',
+)
+
+_miss = threading.local()
+
+
+def take_miss() -> Optional[dict[str, str]]:
+    """Why the last :func:`download_from_slskd` on this thread found
+    nothing (``{reason, detail}``), once; ``None`` when it didn't fail or
+    was never called."""
+
+    found = getattr(_miss, 'value', None)
+    _miss.value = None
+    return found
+
+
+def _missed(reason: str, detail: str = '') -> None:
+    """Remember why slskd found nothing, unless an earlier query of the
+    same download already got further. Returns ``None`` for ``return
+    _missed(...)``."""
+
+    current = getattr(_miss, 'value', None)
+    if current is None or MISS_REASONS.index(reason) >= MISS_REASONS.index(
+        current['reason']
+    ):
+        _miss.value = {'reason': reason, 'detail': str(detail)[:200]}
+
+
 def download_from_slskd(  # noqa: PLR0914  # search, rank, enqueue, poll, finalize
     song: dict[str, Any],
     settings: dict[str, Any],
@@ -1384,6 +1816,7 @@ def download_from_slskd(  # noqa: PLR0914  # search, rank, enqueue, poll, finali
     *,
     cancel_check=None,
 ) -> Optional[Path]:
+    _miss.value = None
     if cancel_check:
         cancel_check()
     if not bool(settings.get('enabled')):
@@ -1393,12 +1826,12 @@ def download_from_slskd(  # noqa: PLR0914  # search, rank, enqueue, poll, finali
         logger.info(
             'slskd: missing configuration title={!r}', song.get('name')
         )
-        return None
+        return _missed('not_configured')
     if not client.can_connect():
         logger.info(
             'slskd: connectivity check failed base_url={!r}', client.base_url
         )
-        return None
+        return _missed('unreachable')
 
     output_dir = Path(
         str(
@@ -1417,7 +1850,7 @@ def download_from_slskd(  # noqa: PLR0914  # search, rank, enqueue, poll, finali
     spotify_row = snapshot_spotify_metadata(song)
     queries = _slskd_search_queries(spotify_row)
     if not queries:
-        return None
+        return _missed('no_match', 'no title or artist to search for')
 
     label = f'{song.get("name")} - {", ".join(song.get("artists") or [])}'
 
@@ -1447,7 +1880,24 @@ def download_from_slskd(  # noqa: PLR0914  # search, rank, enqueue, poll, finali
         files: list[dict[str, Any]] = []
         min_score = _match_min_score(settings)
 
-        for query in queries:
+        # Nobody answering any search may mean the server blocks one of
+        # its word combinations: then a few looser searches are added.
+        answered = False
+        loosened_from: Optional[int] = None
+        for index, query in enumerate(queries):
+            if (
+                loosened_from is not None
+                and index >= loosened_from
+                and answered
+            ):
+                break
+            if (
+                loosened_from is None
+                and index == len(queries) - 1
+                and not answered
+            ):
+                loosened_from = len(queries)
+                queries.extend(_blocked_phrase_queries(spotify_row, queries))
             if cancel_check:
                 cancel_check()
             if _past_deadline(deadline):
@@ -1455,10 +1905,11 @@ def download_from_slskd(  # noqa: PLR0914  # search, rank, enqueue, poll, finali
                     'slskd: download timeout during search title={!r}',
                     song.get('name'),
                 )
-                return None
+                return _missed('search_timeout')
             report(8.0, 'searching')
             search_id = client.start_search(query) or ''
             if not search_id:
+                _missed('search_failed')
                 continue
             if not client.wait_search_complete(
                 search_id,
@@ -1467,17 +1918,36 @@ def download_from_slskd(  # noqa: PLR0914  # search, rank, enqueue, poll, finali
                 deadline=deadline,
                 **({'cancel_check': cancel_check} if cancel_check else {}),
             ):
+                _missed('search_timeout')
                 client.delete_search(search_id)
                 search_id = ''
                 continue
             raw_responses = client.search_responses(search_id)
+            if raw_responses:
+                answered = True
             responses = _filter_slskd_responses(raw_responses)
-            if not responses:
+            if not responses and not _busy_responses(raw_responses):
+                _missed(
+                    'no_results',
+                    f'{len(raw_responses)} users answered, none with a free '
+                    'slot and an unlocked file'
+                    if raw_responses
+                    else 'nobody had it',
+                )
                 client.delete_search(search_id)
                 search_id = ''
                 continue
 
             ranked = _rank_slskd_candidates(song, responses, settings)
+            if not ranked and (busy := _busy_responses(raw_responses)):
+                ranked = _rank_slskd_candidates(
+                    song, busy, settings, include_busy=True
+                )
+                if ranked:
+                    logger.info(
+                        'slskd: only busy peers have {!r}; queueing',
+                        song.get('name'),
+                    )
             if not ranked:
                 ranked = _rank_slskd_candidates(
                     song,
@@ -1500,6 +1970,7 @@ def download_from_slskd(  # noqa: PLR0914  # search, rank, enqueue, poll, finali
                     song.get('name'),
                     len(responses),
                 )
+                _missed('no_match', f'{len(raw_responses)} users answered')
                 client.delete_search(search_id)
                 search_id = ''
                 continue
@@ -1520,12 +1991,22 @@ def download_from_slskd(  # noqa: PLR0914  # search, rank, enqueue, poll, finali
                     _file_basename(str(top.get('filename') or '')),
                     min_score,
                 )
+                _missed(
+                    'low_confidence',
+                    f'best match {top.get("match_score")}, needs {min_score}: '
+                    f'{_file_basename(str(top.get("filename") or ""))}',
+                )
                 client.delete_search(search_id)
                 search_id = ''
                 continue
 
             selected = _select_download_candidates(qualified, settings)
             if not selected:
+                _missed(
+                    'quality_filtered',
+                    f'{len(qualified)} matching files, none passed the '
+                    'format and bitrate rules',
+                )
                 logger.info(
                     'slskd: no files passed quality filters for query={!r} '
                     'title={!r}',
@@ -1571,7 +2052,7 @@ def download_from_slskd(  # noqa: PLR0914  # search, rank, enqueue, poll, finali
                 'slskd: download timeout before transfer title={!r}',
                 song.get('name'),
             )
-            return None
+            return _missed('timeout')
 
         roots = _search_roots(settings, client)
 
@@ -1659,6 +2140,11 @@ def download_from_slskd(  # noqa: PLR0914  # search, rank, enqueue, poll, finali
                         len(files),
                         _file_basename(filename)[:120],
                     )
+                    _missed(
+                        'tag_mismatch',
+                        f'{spotify_file_tag_mismatch_label(mismatch_row)}: '
+                        f'{_file_basename(filename)}',
+                    )
                     found = None
 
             if found is not None:
@@ -1683,4 +2169,9 @@ def download_from_slskd(  # noqa: PLR0914  # search, rank, enqueue, poll, finali
             song.get('name'),
             len(files),
         )
-        return None
+        if _past_deadline(deadline):
+            return _missed('timeout', f'{len(files)} files tried')
+        return _missed(
+            'transfer_failed',
+            f'{len(files)} files tried: none arrived complete',
+        )

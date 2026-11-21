@@ -24,6 +24,7 @@ import asyncio
 import contextlib
 import os
 import re
+import time
 from pathlib import Path
 from typing import Any, Optional
 
@@ -31,6 +32,7 @@ import yt_dlp
 from loguru import logger
 from mutagen import File as _mutagen_file
 
+from .cookies import private_cookiefile
 from .downloader import (
     MAX_TRACK_DURATION_SECONDS,
     TrackTooLongError,
@@ -106,7 +108,7 @@ def stream_url_for_video(
         )
     url = f'https://www.youtube.com/watch?v={vid}'
     try:
-        with yt_dlp.YoutubeDL(opts) as ydl:
+        with private_cookiefile(opts), yt_dlp.YoutubeDL(opts) as ydl:
             info = ydl.extract_info(url, download=False)
     except Exception as exc:
         if is_age_restricted_error(str(exc)):
@@ -205,6 +207,7 @@ class _StreamJob:
     def __init__(self, task: asyncio.Task[Path]) -> None:
         self.task = task
         self.waiters = 0
+        self.fetch_started = False
 
 
 class StreamCache:
@@ -243,10 +246,12 @@ class StreamCache:
             if path.name.endswith('.part') or not path.is_file():
                 continue
             try:
-                if path.stat().st_size <= 0:
+                stat = path.stat()
+                if stat.st_size <= 0:
                     continue
                 with contextlib.suppress(OSError):
-                    os.utime(path)
+                    # Track cache use without changing the HTTP file validator.
+                    os.utime(path, ns=(time.time_ns(), stat.st_mtime_ns))
             except OSError:
                 continue
             return path
@@ -288,9 +293,11 @@ class StreamCache:
     ) -> Path:
         """The cached audio file for *video_id*, downloading it first.
 
-        Concurrent callers share one download; cancelling (the player
-        moved on) only stops the download once nobody else waits for
-        it. Raises :class:`ValueError` when there is nothing to serve.
+        Concurrent callers share one download. A queued download is
+        cancelled once nobody waits for it; a running download finishes
+        into the cache, keeping its concurrency slot and remaining
+        available to new callers. Raises :class:`ValueError` when there
+        is nothing to serve.
         """
 
         vid = clean_video_id(video_id)
@@ -298,22 +305,33 @@ class StreamCache:
         if cached is not None:
             return cached
         job = self._jobs.get(vid)
-        if job is None:
+        if job is None or job.task.cancelling():
             job = _StreamJob(
                 asyncio.ensure_future(
                     self._run(vid, cookies_file, max_seconds)
                 )
             )
             self._jobs[vid] = job
-            job.task.add_done_callback(lambda _t: self._jobs.pop(vid, None))
+            job.task.add_done_callback(lambda task: self._job_done(vid, task))
         job.waiters += 1
         try:
             return await asyncio.shield(job.task)
-        except asyncio.CancelledError:
+        finally:
             job.waiters -= 1
-            if job.waiters <= 0 and not job.task.done():
+            if (
+                job.waiters <= 0
+                and not job.fetch_started
+                and not job.task.done()
+            ):
                 job.task.cancel()
-            raise
+
+    def _job_done(self, video_id: str, task: asyncio.Task[Path]) -> None:
+        job = self._jobs.get(video_id)
+        if job is not None and job.task is task:
+            self._jobs.pop(video_id)
+        if not task.cancelled():
+            # A download may finish after its last caller was cancelled.
+            task.exception()
 
     async def _run(
         self, video_id: str, cookies_file: str, max_seconds: Optional[int]
@@ -323,6 +341,8 @@ class StreamCache:
             cached = self.streamable_path(video_id, max_seconds)
             if cached is not None:
                 return cached
+            # Cancelling to_thread cannot stop the blocking yt-dlp worker.
+            self._jobs[video_id].fetch_started = True
             self.running += 1
             try:
                 await asyncio.to_thread(self._fetch, video_id, cookies_file)
@@ -374,7 +394,7 @@ class StreamCache:
             )
         url = f'https://www.youtube.com/watch?v={video_id}'
         try:
-            with yt_dlp.YoutubeDL(opts) as ydl:
+            with private_cookiefile(opts), yt_dlp.YoutubeDL(opts) as ydl:
                 ydl.download([url])
         except Exception as exc:
             if is_age_restricted_error(str(exc)):
@@ -409,10 +429,10 @@ class StreamCache:
                 with contextlib.suppress(OSError):
                     path.unlink()
                 continue
-            stats.append((st.st_mtime, st.st_size, path))
-        total = sum(size for _m, size, _p in stats)
+            stats.append((st.st_atime_ns, st.st_size, path))
+        total = sum(size for _, size, _ in stats)
         removed = 0
-        for _mtime, size, path in sorted(stats):
+        for _atime, size, path in sorted(stats):
             if total <= self._max_bytes:
                 break
             with contextlib.suppress(OSError):

@@ -8,6 +8,8 @@ Downtify, `/downloads` altındaki dosyaların (slskd klasörü — [slskd dosyal
 
 ## Neler saklanır
 
+Aşağıdaki konumlar varsayılan SQLite arka ucu içindir. PostgreSQL ([Veritabanı](../database.md)) ile aynı veriler PostgreSQL veritabanında tutulur.
+
 | Depo | Konum | Amaç |
 |-------|----------|---------|
 | **Parça dizini** | `/data/downtify_library.db` | Spotify parça kimliklerini kitaplık yollarıyla eşler; böylece diskte zaten olan bir parça tanınabilir |

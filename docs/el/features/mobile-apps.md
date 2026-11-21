@@ -9,7 +9,7 @@ icon: lucide/smartphone
 ::: warning Η εφαρμογή βρίσκεται ακόμη σε ανάπτυξη
 Οι **Ρυθμίσεις → Εφαρμογές** είναι σημειωμένες ως *Πειραματικό*. Η πλευρά του διακομιστή που περιγράφεται σε αυτή τη σελίδα έχει ολοκληρωθεί και λειτουργεί, αλλά **καμία έκδοση της εφαρμογής Android δεν έχει δημοσιευτεί ακόμη**, οπότε προς το παρόν δεν υπάρχει τίποτα να εγκατασταθεί, και λεπτομέρειες της σύζευξης και του streaming μπορεί ακόμη να αλλάξουν μεταξύ εκδόσεων του Downtify.
 
-Η εφαρμογή αναπτύσσεται δημόσια στο [henriquesebastiao/downtify-android](https://github.com/henriquesebastiao/downtify-android). Οτιδήποτε άλλο μπορεί να χτιστεί πάνω στο ίδιο API — δες το [συμβόλαιο πελάτη κινητού](../mobile-client-contract.md).
+Η εφαρμογή αναπτύσσεται δημόσια στο [henriquesebastiao/downtify-android](https://github.com/henriquesebastiao/downtify-android). Η εφαρμογή για iPhone και iPad βρίσκεται στο [michaelmoskie/Downtify-IOS-Client](https://github.com/michaelmoskie/Downtify-IOS-Client). Οτιδήποτε άλλο μπορεί να χτιστεί πάνω στο ίδιο API — δες το [συμβόλαιο πελάτη κινητού](../mobile-client-contract.md).
 :::
 
 ## Σύνδεση από την εφαρμογή

@@ -9,6 +9,8 @@ from __future__ import annotations
 
 import functools
 import threading
+from collections import Counter
+from collections.abc import Collection, Iterable
 from pathlib import Path
 from shutil import copyfile
 from typing import Any, Callable, Optional, ParamSpec, TypeVar
@@ -27,7 +29,8 @@ from .playlist_mosaic import (
 )
 
 MAX_PLAYLIST_NAME_LEN = 120
-MAX_TRACKS_PER_EDIT = 500
+# Keep edits bounded, while supporting large imported playlists.
+MAX_TRACKS_PER_EDIT = 10_000
 
 _P = ParamSpec('_P')
 _R = TypeVar('_R')
@@ -35,9 +38,9 @@ _WRITE_LOCK = threading.RLock()
 
 
 def _serialized(func: Callable[_P, _R]) -> Callable[_P, _R]:
-    """Run *func* alone among this module's M3U rewrites: the owner and
-    the editors of a shared playlist read, change and write it back at
-    the same time, and the last write would drop the other's songs."""
+    """Serialize this module's M3U rewrites, including maintenance:
+    reading, changing and writing a playlist concurrently would let
+    a stale edit or cleanup overwrite another operation's changes."""
 
     @functools.wraps(func)
     def run(*args: _P.args, **kwargs: _P.kwargs) -> _R:
@@ -59,6 +62,30 @@ def _ctx_dirs(
     ctx: LibraryContext,
 ) -> tuple[Path, Optional[Path], tuple[Path, ...]]:
     return ctx.download_dir, ctx.slskd_dir, tuple(ctx.extra_dirs or ())
+
+
+def _clean_path(raw: object) -> str:
+    return str(raw or '').strip().replace('\\', '/')
+
+
+def _occurrence_indexes(
+    files: list[str], entries: Iterable[tuple[str, int]]
+) -> set[int]:
+    """Where in *files* each ``(file, occurrence)`` sits: the
+    *occurrence*-th copy (from 0) of a song the playlist repeats."""
+
+    wanted: dict[str, set[int]] = {}
+    for raw, occurrence in entries:
+        stored = _clean_path(raw)
+        if stored and occurrence >= 0:
+            wanted.setdefault(stored, set()).add(occurrence)
+    seen: Counter[str] = Counter()
+    indexes: set[int] = set()
+    for index, item in enumerate(files):
+        if seen[item] in wanted.get(item, ()):
+            indexes.add(index)
+        seen[item] += 1
+    return indexes
 
 
 def _entries_for(files: list[str]) -> list[dict[str, str]]:
@@ -164,21 +191,89 @@ def _validated_name(raw: str) -> str:
     return m3u.sanitize_playlist_name(text)
 
 
-def create_manual_playlist(ctx: LibraryContext, name: str) -> dict[str, Any]:
+def _create_playlist(
+    ctx: LibraryContext,
+    name: str,
+    files: list[str],
+    owners: Any = None,
+    user_id: int = 0,
+    shares: Any = None,
+) -> dict[str, Any]:
+    if user_id and (owners is None or shares is None):
+        raise ManualPlaylistError(
+            'Playlist ownership is temporarily unavailable', status_code=503
+        )
     safe = _validated_name(name)
     if safe.casefold() in existing_playlist_names(ctx.download_dir):
         raise ManualPlaylistError(
             f'A playlist named {safe!r} already exists', status_code=409
         )
     path = m3u.m3u_path_for(ctx.download_dir, safe)
-    written = _write(ctx, [], path)
+    cover_path = path.with_suffix('.jpg')
+    original_cover = cover_path.read_bytes() if cover_path.is_file() else None
+    # Reserve the exact path exclusively. A failed write/claim can then
+    # remove only the file this invocation created, never a preexisting one.
+    path.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        with path.open('x', encoding='utf-8'):
+            pass
+    except FileExistsError as exc:
+        raise ManualPlaylistError(
+            f'A playlist named {safe!r} already exists', status_code=409
+        ) from exc
+    identity = path.stat()
+    share_snapshot = None
+    try:
+        written = _write(ctx, files, path)
+        kept = _read_files(ctx, written)
+        if owners is not None and user_id:
+            if shares is not None:
+                share_snapshot = shares.snapshot(written.stem)
+                shares.forget(written.stem)
+            if not owners.claim_owner(written.stem, user_id):
+                raise RuntimeError('Playlist ownership claim was not accepted')
+    except BaseException:
+        if share_snapshot is not None:
+            try:
+                shares.restore(safe, share_snapshot)
+            except Exception:
+                logger.opt(exception=True).error(
+                    'Could not restore playlist sharing for {}', safe
+                )
+        try:
+            current = path.stat()
+            if (current.st_dev, current.st_ino) == (
+                identity.st_dev,
+                identity.st_ino,
+            ):
+                path.unlink()
+                if original_cover is None:
+                    cover_path.unlink(missing_ok=True)
+                else:
+                    cover_path.write_bytes(original_cover)
+        except OSError:
+            logger.opt(exception=True).warning(
+                'Could not roll back newly created playlist {}', path
+            )
+        raise
     logger.info('Created manual playlist {!r} at {}', safe, written)
     return {
         'name': written.stem,
         'manual': True,
-        'files': [],
-        'count': 0,
+        'files': kept,
+        'count': len(kept),
     }
+
+
+@_serialized
+def create_manual_playlist(
+    ctx: LibraryContext,
+    name: str,
+    owners: Any = None,
+    user_id: int = 0,
+    shares: Any = None,
+) -> dict[str, Any]:
+    return _create_playlist(ctx, name, [], owners, user_id, shares)
 
 
 @_serialized
@@ -188,7 +283,17 @@ def edit_manual_playlist(
     *,
     add: Optional[list[str]] = None,
     remove: Optional[list[str]] = None,
+    remove_entries: Optional[list[tuple[str, int]]] = None,
+    allow_duplicates: bool = False,
 ) -> dict[str, Any]:
+    """Add songs at the end and take songs out.
+
+    *remove* takes every copy of a song; *remove_entries* one copy each,
+    as ``(file, occurrence)``. A song the playlist already has is only
+    added again with *allow_duplicates*: otherwise it is listed in
+    ``already`` so the caller can ask.
+    """
+
     path = m3u.find_m3u_for_name(ctx.download_dir, name)
     if path is None:
         raise ManualPlaylistError(
@@ -196,19 +301,27 @@ def edit_manual_playlist(
         )
     _require_manual(path, path.stem)
     current = _read_files(ctx, path)
-    seen = set(current)
-    drop = {
-        str(item or '').strip().replace('\\', '/')
-        for item in (remove or [])
-        if str(item or '').strip()
-    }
-    files = [item for item in current if item not in drop]
+    present = set(current)
+    drop = {_clean_path(item) for item in (remove or []) if _clean_path(item)}
+    dropped_at = _occurrence_indexes(current, remove_entries or [])
+    files = [
+        item
+        for index, item in enumerate(current)
+        if item not in drop and index not in dropped_at
+    ]
+    removed = len(current) - len(files)
+    seen = set(files)
     added = 0
+    already: list[str] = []
     for raw in add or []:
-        stored = str(raw or '').strip().replace('\\', '/')
-        if not stored or stored in seen or stored in drop:
+        stored = _clean_path(raw)
+        if not stored or stored in drop:
             continue
-        if len(files) >= MAX_TRACKS_PER_EDIT and stored not in seen:
+        if stored in seen and not allow_duplicates:
+            if stored in present and stored not in already:
+                already.append(stored)
+            continue
+        if len(files) >= MAX_TRACKS_PER_EDIT:
             raise ManualPlaylistError(
                 f'Playlists can hold at most {MAX_TRACKS_PER_EDIT} tracks'
             )
@@ -225,10 +338,61 @@ def edit_manual_playlist(
         'files': kept,
         'count': len(kept),
         'added': added,
-        'removed': len(drop & set(current)),
+        'removed': removed,
+        'already': already,
     }
 
 
+@_serialized
+def reorder_manual_playlist(
+    ctx: LibraryContext,
+    name: str,
+    order: list[str],
+    *,
+    visible: Optional[Collection[str]] = None,
+) -> dict[str, Any]:
+    """Put the playlist's songs in *order*.
+
+    *order* is every song the caller sees, repeats included, in its new
+    place. Anything else means the playlist changed since they loaded it
+    (another editor added or removed a song): ``409``, so nobody's edit
+    is lost. Songs outside *visible* - hidden from the caller - keep the
+    places they had.
+    """
+
+    path = m3u.find_m3u_for_name(ctx.download_dir, name)
+    if path is None:
+        raise ManualPlaylistError(
+            f'Playlist {name!r} was not found', status_code=404
+        )
+    _require_manual(path, path.stem)
+    current = _read_files(ctx, path)
+    wanted = [_clean_path(item) for item in order if _clean_path(item)]
+    slots = [
+        index
+        for index, item in enumerate(current)
+        if visible is None or item in visible
+    ]
+    if Counter(current[index] for index in slots) != Counter(wanted):
+        raise ManualPlaylistError(
+            'The playlist changed meanwhile: reload it and try again',
+            status_code=409,
+        )
+    files = list(current)
+    for index, item in zip(slots, wanted, strict=True):
+        files[index] = item
+    written = _write(ctx, files, path)
+    kept = _read_files(ctx, written)
+    logger.info('Reordered manual playlist {!r}', written.stem)
+    return {
+        'name': written.stem,
+        'manual': True,
+        'files': kept,
+        'count': len(kept),
+    }
+
+
+@_serialized
 def detach_imported_playlist(ctx: LibraryContext, name: str) -> dict[str, Any]:
     """Turn an imported playlist into a Library one (tracks kept).
 
@@ -271,33 +435,20 @@ def detach_imported_playlist(ctx: LibraryContext, name: str) -> dict[str, Any]:
     }
 
 
+@_serialized
 def copy_playlist(
-    ctx: LibraryContext, files: list[str], new_name: str
+    ctx: LibraryContext,
+    files: list[str],
+    new_name: str,
+    owners: Any = None,
+    user_id: int = 0,
+    shares: Any = None,
 ) -> dict[str, Any]:
     """Save *files* as a new Library playlist called *new_name*."""
 
-    safe = _validated_name(new_name)
-    if safe.casefold() in existing_playlist_names(ctx.download_dir):
-        raise ManualPlaylistError(
-            f'A playlist named {safe!r} already exists', status_code=409
-        )
-    path = m3u.m3u_path_for(ctx.download_dir, safe)
-    unique = list(
-        dict.fromkeys(
-            str(item or '').strip().replace('\\', '/')
-            for item in files
-            if str(item or '').strip()
-        )
-    )
-    written = _write(ctx, unique, path)
-    kept = _read_files(ctx, written)
-    logger.info('Saved a copy of a playlist as {!r}', written.stem)
-    return {
-        'name': written.stem,
-        'manual': True,
-        'files': kept,
-        'count': len(kept),
-    }
+    # In order, a song the original repeats included.
+    cleaned = [_clean_path(item) for item in files if _clean_path(item)]
+    return _create_playlist(ctx, new_name, cleaned, owners, user_id, shares)
 
 
 @_serialized
@@ -392,6 +543,35 @@ def drop_manual_playlist(ctx: LibraryContext, name: str) -> dict[str, Any]:
         'playlists_affected': [],
         'manual': True,
     }
+
+
+@_serialized
+@_serialized
+def drop_copies_of(
+    ctx: LibraryContext, keep: str, extras: list[str]
+) -> list[str]:
+    """Drop *extras* from every manual M3U that already lists *keep* -
+    two copies of one song being merged into *keep*, where the playlist
+    would otherwise list it twice. Returns the playlists changed."""
+
+    keep = str(keep or '').strip().replace('\\', '/')
+    gone = {
+        str(item or '').strip().replace('\\', '/')
+        for item in extras
+        if str(item or '').strip()
+    }
+    if not keep or not gone:
+        return []
+    affected: list[str] = []
+    for path in m3u.iter_m3u_files(ctx.download_dir):
+        if not m3u.is_manual_m3u(path):
+            continue
+        files = _read_files(ctx, path)
+        if keep not in files or not gone.intersection(files):
+            continue
+        _write(ctx, [item for item in files if item not in gone], path)
+        affected.append(path.stem)
+    return affected
 
 
 @_serialized

@@ -258,6 +258,18 @@ export default {
     noMatch: 'Nincs találat',
     noMatchHint: 'Próbálj más szavakat vagy másik szűrőt.',
   },
+  whatsNew: {
+    title: 'A Downtify {version} újdonságai',
+    intro: 'A Downtify frissült erre: {version}. Ez változott:',
+    noHighlights:
+      'A Downtify frissült erre: {version}. A változások teljes listája a GitHubon található.',
+    changelog: 'Teljes változásnapló',
+    gotIt: 'Értem',
+    star: 'Tetszik a Downtify? Adj neki egy csillagot a GitHubon',
+    reopen: 'Újdonságok',
+    reopenHint:
+      'A verzió legfontosabb újdonságai és egy hivatkozás a teljes változásnaplóra.',
+  },
   common: {
     cancel: 'Mégse',
     confirm: 'Megerősítés',
@@ -501,6 +513,58 @@ export default {
     playCountSpotify: 'Lejátszások a Spotifyon',
     playCountYoutubeMusic: 'Lejátszások a YouTube Musicon (hozzávetőleges)',
   },
+  slskdMisses: {
+    title: 'Miért nem az slskd töltötte le',
+    hint: 'Dalok, amelyeket másik forrás töltött le, vagy sehol sem találtak, miután az slskd-nek nem volt. Kattints egy okra a példákért és a teendőkért.',
+    reset: 'Nullázás',
+    resetTitle: 'Újrakezdjük a számlálást?',
+    resetBody:
+      'Elfelejti az eddig rögzített okokat, így a következő letöltések megmutatják, segített-e egy beállítás. A dalokhoz és fájlokhoz nem nyúl.',
+    empty:
+      'Még semmi: a legutóbbi nullázás óta az slskd minden kért letöltést teljesített.',
+    since: '{count} dal, {when} óta',
+    usedInstead: 'Helyette használt:',
+    nothingFound: 'nem található',
+    reason: {
+      not_configured: 'Az slskd nincs beállítva',
+      unreachable: 'Az slskd nem érhető el',
+      search_failed: 'A keresés nem indult el',
+      search_timeout: 'A keresés kifutott az időből',
+      no_results: 'Senki sem osztotta meg',
+      no_match: 'Egy fájl sem egyezett',
+      low_confidence: 'Egyezés a minimális pontszám alatt',
+      quality_filtered: 'A minőségi szabályok kiszűrték',
+      timeout: 'A letöltés kifutott az időből',
+      transfer_failed: 'Sikertelen átvitelek',
+      tag_mismatch: 'Rossz dal a fájlban',
+      unknown: 'Ismeretlen',
+    },
+    fix: {
+      not_configured:
+        'Add meg a szerver URL-jét és az API-kulcsot a Beállítások → Hangforrások alatt.',
+      unreachable:
+        'Az slskd akkor nem volt elérhető. Ellenőrizd, hogy fut-e és jó-e az URL.',
+      search_failed:
+        'Az slskd elutasította a keresést, gyakran amíg még a Soulseek hálózathoz csatlakozik.',
+      search_timeout:
+        'A keresések túllépték az időkorlátot. Növeld a teljes időkorlátot a Beállítások → Hangforrások alatt.',
+      no_results:
+        'Senkinek sem volt meg a dal szabad feltöltési hellyel. A ritka dalok gyakran hiányoznak a Soulseekről; egy későbbi próbálkozás megtalálhatja.',
+      no_match:
+        'Jöttek fájlok, de egyik sem egyezett elég jól címben, előadóban és hosszban.',
+      low_confidence:
+        'Előkerült egy hasonló fájl, de a rossz dalok (remixek, élő felvételek) ellen védő küszöb alatt.',
+      quality_filtered:
+        'Találtak egyező fájlokat, de egyik sem felelt meg a formátum- és bitrátaszabályoknak. Több formátum, alacsonyabb minimális bitráta vagy a bitráta nélküli fájlok engedése átengedi őket.',
+      timeout:
+        'Kiválasztottak egy fájlt, de nem érkezett meg időben. Növeld a teljes vagy a sorban állási időkorlátot.',
+      transfer_failed:
+        'Minden kiválasztott fájlt elutasítottak, vagy sosem érkezett meg teljesen (offline felhasználók, hosszú sorok). Több jelöltpróbálkozás több fájlt próbál.',
+      tag_mismatch:
+        'A letöltött fájl címkéi másik dalt neveztek meg, ezért félretette az slskd mappájában.',
+      unknown: 'Ok nélkül rögzítve.',
+    },
+  },
   queue: {
     globalPause: 'Letöltések és figyelések szüneteltetése',
     globalResume: 'Letöltések és figyelések folytatása',
@@ -569,6 +633,14 @@ export default {
       'Ez nem tűnik YouTube videó- vagy SoundCloud számlinknek.',
     playlistDownloads: 'Lejátszásilista-letöltések',
     sources: 'Letöltési forrás',
+    fromWatch: 'Innen: {name}',
+    fromWatchTitle:
+      'A Figyelő ezt a(z) {name} miatt tölti le. Megnyitja a figyelést.',
+    watches: 'Letöltések figyelésekhez',
+    watchesHint:
+      'A Figyelő figyelései, amelyekből a sorban lévő dalok jönnek. Nyiss meg egyet a szüneteltetéshez vagy leállításhoz.',
+    watchWaiting: 'még {count}',
+    openWatchOriginal: 'Eredeti megnyitása',
     noSourcesYet: 'A kész letöltések forrása itt jelenik meg.',
     importTitle: 'Könyvtár importálása',
     importHint:
@@ -733,6 +805,22 @@ export default {
     ofBytes: '{total} / {done}',
     longJob:
       'Egy nagy könyvtár sokáig tart. Elhagyhatod ezt az oldalt, és újraindítás után a sor folytatódik.',
+    lyricsQuickTitle: 'Hiányzó dalszövegek',
+    lyricsQuickHint:
+      'Megkeresi a könyvtárban a dalszöveg nélküli számokat, és rögtön szöveget keres hozzájuk, köztes választás nélkül. A többi javítás egy másik futtatásra marad.',
+    lyricsQuickButton: 'Keresés és dalszövegek pótlása',
+    isrc: 'ISRC-k hozzáadása',
+    isrcHint:
+      'Hozzáadja a felvétel ISRC-kódját a kód nélküli fájlokhoz, csak ha a Deezer kétséget kizáróan megerősíti.',
+    isrcQuickTitle: 'ISRC-k régebbi dalokhoz',
+    isrcQuickHint:
+      'A dalok, amelyeket azelőtt töltöttél le, hogy a Downtify ISRC-t írt volna, nem tartalmaznak ilyet. Az ISRC a felvétel saját kódja: ezzel ismeri fel a Downtify a duplikátumokat, a zenei kuka pedig a fájlt. Csak a Deezer által kétséget kizáróan megerősített kódok kerülnek be (azonos előadó és cím, legfeljebb 3 másodperc hosszeltérés); minden más fájl pontosan úgy marad, ahogy van. Előbb keresd ki őket, hogy lásd a listát.',
+    isrcLookupButton: 'ISRC-k kikeresése (semmit sem ír)',
+    isrcAddButton: 'ISRC-k hozzáadása',
+    lyricsPlainOnly:
+      'Csak szinkronizálatlan szöveg: {count} — szinkronizáltra cserélődik, ha van',
+    lyricsOutcome:
+      'Hozzáadott dalszöveg: {added} · Nem található: {notFound} · Sikertelen: {failed}',
     completed: 'Feljavítva',
     skipped: 'Nincs tennivaló',
     failed: 'Hibára futott',
@@ -1007,6 +1095,26 @@ export default {
     },
     alreadyIn: 'Már benne van: „{name}”',
     removedTrack: 'Eltávolítva: „{name}”',
+    reorder: 'Átrendezés',
+    reorderHint:
+      'Húzd a számokat, vagy használd a nyilakat, majd mentsd az új sorrendet.',
+    reorderSave: 'Sorrend mentése',
+    reordered: 'Sorrend mentve',
+    reorderStale:
+      'Valaki időközben módosította ezt a listát. Újratöltöttük: rendezd át újra.',
+    moveUp: 'Feljebb',
+    moveDown: 'Lejjebb',
+    moveTop: 'Az elejére',
+    moveBottom: 'A végére',
+    repeatTitle: 'Már benne van ebben a listában',
+    repeatBody: {
+      one: 'Ez a szám már benne van: „{name}”. Hozzáadod újra?',
+      other:
+        'Ezek közül {count} szám már benne van: „{name}”. Hozzáadod őket újra?',
+    },
+    repeatConfirm: 'Hozzáadás mégis',
+    repeatCancel: 'Ne add hozzá',
+    inPlaylist: 'Már hozzáadva',
     hideTrack: 'Elrejtés a listáról',
     hiddenTrack: 'Elrejtve: „{name}”',
     hiddenTitle: {
@@ -1049,12 +1157,23 @@ export default {
     file: 'Fájl',
   },
   player: {
+    unlockLayout: 'Lejátszó elrendezésének feloldása',
+    lockLayout: 'Lejátszó elrendezésének zárolása',
+    resetLayout: 'Lejátszó elrendezésének visszaállítása',
+    resizeTrackSection: 'Száminformációk méretének módosítása',
+    resizeTransportSection: 'Lejátszásvezérlők méretének módosítása',
     nowPlaying: 'Most szól',
     openNowPlaying: 'Most szóló megnyitása',
     closeNowPlaying: 'Most szóló bezárása',
     queue: 'Sor',
     upNext: 'Következik',
     lyrics: 'Dalszöveg',
+    karaoke: 'Karaoke',
+    karaokeWindow: 'Megnyitás új ablakban',
+    karaokeWindowBlocked:
+      'A böngésző letiltotta az új ablakot. Engedélyezd a felugró ablakokat a Downtify számára, majd próbáld újra.',
+    karaokeWaiting: 'Várakozás egy dalra a Downtify fő ablakából',
+    fullscreen: 'Teljes képernyő',
     details: 'Részletek',
     playing: 'Lejátszás',
     play: 'Lejátszás',
@@ -1126,6 +1245,25 @@ export default {
       'A hangszínszabályzó nem indult el. A lejátszás nélküle folytatódik.',
   },
   monitor: {
+    select: 'Kijelölés',
+    selectDone: 'Kész',
+    selectAllShown: 'Az összes látható kijelölése',
+    selectWatch: '{name} kijelölése',
+    selectedCount: { one: '{count} kijelölve', other: '{count} kijelölve' },
+    selectRangeHint: 'Shift+kattintással tartomány jelölhető ki',
+    bulkInterval: 'Ellenőrzés módosítása erre…',
+    bulkUpdated: {
+      one: '{count} figyelés módosítva',
+      other: '{count} figyelés módosítva',
+    },
+    bulkChecking: {
+      one: '{count} figyelés ellenőrzése…',
+      other: '{count} figyelés ellenőrzése…',
+    },
+    bulkStopped: {
+      one: '{count} figyelés leállítva',
+      other: '{count} figyelés leállítva',
+    },
     tableColumns: 'Oszlopok',
     resetTableColumns: 'Oszlopok visszaállítása',
     releaseTypes: 'Letöltés',
@@ -1150,6 +1288,50 @@ export default {
     filterAll: 'Összes',
     filterPlaylists: 'Listák',
     filterArtists: 'Előadók',
+    filterWanted: 'Keresett',
+    wantedSummary: 'Hiányzik: {songs} ({releases})',
+    wantedSongs: { one: '{count} dal', other: '{count} dal' },
+    wantedReleases: {
+      one: '{count} kiadványban',
+      other: '{count} kiadványban',
+    },
+    wantedUpcoming: '{count} bejelentett',
+    wantedUnchecked: {
+      one: '{count} kiadvány még nincs ellenőrizve',
+      other: '{count} kiadvány még nincs ellenőrizve',
+    },
+    wantedCheckAll: 'Összes előadó ellenőrzése',
+    wantedDownloadAll: 'Az összes hiányzó letöltése',
+    wantedConfirmTitle: {
+      one: 'Letöltöd a(z) {count} hiányzó dalt?',
+      other: 'Letöltöd a(z) {count} hiányzó dalt?',
+    },
+    wantedConfirmUnchecked: {
+      one: 'Plusz ami hiányzik a(z) {count} még nem ellenőrzött kiadványból. Pontos számhoz előbb ellenőrizd az összes előadót.',
+      other:
+        'Plusz ami hiányzik a(z) {count} még nem ellenőrzött kiadványból. Pontos számhoz előbb ellenőrizd az összes előadót.',
+    },
+    wantedConfirmBody:
+      'A hiányzó dalok előadónként, egymás után töltődnek le. A Sorban követheted őket.',
+    wantedStop: 'Leállítás',
+    wantedChecking: 'Ellenőrzés: {done} / {total}: {name}',
+    wantedDownloading: 'Letöltés: {done} / {total}: {name}',
+    wantedFinished: {
+      one: 'Kész: {count} előadó',
+      other: 'Kész: {count} előadó',
+    },
+    wantedFailed: { one: '{count} sikertelen', other: '{count} sikertelen' },
+    wantedSkipped: { one: '{count} kihagyva', other: '{count} kihagyva' },
+    wantedStopped: 'Leállítva',
+    wantedStoppingDownload: 'Leállítás {name} után…',
+    wantedStoppingCheck: 'Leállítás…',
+    wantedBusy: 'Már fut egy „Összes ellenőrzése” vagy „Összes letöltése”.',
+    wantedNotChecked: 'Még nincs ellenőrizve: {names}',
+    wantedMore: { one: 'és még {count}', other: 'és még {count}' },
+    wantedUncheckedBadge: 'Még nincs ellenőrizve',
+    wantedEmpty: 'Nincs hiányzó dal: minden követett előadó teljes.',
+    wantedSearch: 'Előadók vagy kiadványok keresése',
+    wantedAllTypes: 'Minden típus',
     filterPaused: 'Szüneteltetve',
     sortAdded: 'Hozzáadás dátuma',
     sortName: 'Név',
@@ -1180,8 +1362,20 @@ export default {
     urlLabelArtist: 'Előadó linkje',
     urlPlaceholderPlaylist:
       'Illessz be egy Spotify, Deezer vagy YouTube Music lista linket',
-    urlPlaceholderArtist:
-      'Illessz be egy Spotify vagy YouTube Music előadó linket',
+    urlPlaceholderArtist: 'Illessz be előadó linket, vagy írj be egy nevet',
+    searchArtists: 'Keresés',
+    searchArtistsFor: '„{name}” nevű előadók',
+    searchArtistsHelp:
+      'Nézd meg a fotót, és ha bizonytalan vagy, nyisd meg a profilt, aztán kövesd a megfelelőt.',
+    userLinkTitle: 'Ez egy Spotify felhasználói link, nem előadói',
+    userLinkBody:
+      'Az open.spotify.com/user/… egy hallgató fiókja: valaki által készített lejátszási listák, nem egy előadó zenéje. A Downtify nem tudja figyelni. Az előadó kiadásai az előadói oldalán vannak (open.spotify.com/artist/…), ami minden Spotify-on zenét kiadó előadónak van.',
+    userLinkYours: 'A linked',
+    userLinkArtist: 'Előadói link',
+    userLinkHint:
+      'Keress inkább az előadó nevére, és válaszd ki a fotója alapján.',
+    userLinkBack: 'Nem, vissza',
+    userLinkSearch: 'Előadó keresése',
     watchPlaylist: 'Lista figyelése',
     watchArtist: 'Előadó figyelése',
     explainerPlaylists:
@@ -1227,6 +1421,86 @@ export default {
     save: 'Mentés',
     saved: 'Figyelés frissítve',
     retargeted: 'Most figyelve: {name}',
+  },
+  artistReleases: {
+    title: 'Kiadványok',
+    hint: 'Minden, amit a YouTube Music, a Deezer és a MusicBrainz listáz erről az előadóról a legutóbbi ellenőrzéskor, és hogy a könyvtáradban mi van belőlük. Kapcsolj be egy kiadványt, hogy akkor is letöltődjön, ha a típusát nem figyeled, vagy kapcsold ki, hogy ne töltődjön le többé (ami megvan, marad).',
+    empty: 'Még nincsenek kiadványok',
+    emptyHint: 'A következő ellenőrzés után jelennek meg.',
+    summary: '{complete} teljes · {partly} részben · {missing} még üres',
+    kinds: 'A MusicBrainzről töltsd le ezeket is',
+    kindsHint:
+      'Kiadványfajták, amelyeket csak a MusicBrainz különböztet meg. A mixtape-ek és filmzenék az előadó saját zenéi; az élő albumok, válogatások és remixek többnyire ismétlik őket. Csak ennél az előadónál.',
+    byYou: 'általad beállítva',
+    switch: '{name} letöltése',
+    switchedOn: '{name} bekapcsolva',
+    switchedOff: '{name} kikapcsolva',
+    noneHere: 'Itt nincs semmi.',
+    check: 'Nézd meg, mi van meg',
+    checking: 'Számlisták olvasása: {done} / {total}…',
+    checkDone: 'Kész: {count} számlista beolvasva, {failed} sikertelen',
+    checkHint:
+      'Beolvassa minden kiadvány számlistáját, és összeveti a teljes könyvtáraddal, így a figyelés előtt meglévő albumok is számítanak. Semmi nem töltődik le. Nagy előadónál lassú: a MusicBrainz másodpercenként egy kérést enged.',
+    tracks: '{name} számai',
+    tracksNotRead:
+      'A számlista még nincs beolvasva: nyomd meg a Nézd meg, mi van meg gombot.',
+    trackHave: 'A könyvtáradban',
+    trackMissing: 'Hiányzik',
+    downloadMissing: 'Hiányzók letöltése',
+    downloadMissingCount: '{count} hiányzó letöltése',
+    missingTitle: 'Letöltöd a hiányzókat?',
+    missingBody: {
+      one: 'Hiányzó dalok: {tracks}, {count} olyan kiadványból, amelyet a figyelés letölt. A könyvtáradban már meglévő dalok összekapcsolódnak, nem töltődnek le újra.',
+      other:
+        'Hiányzó dalok: {tracks}, {count} olyan kiadványból, amelyet a figyelés letölt. A könyvtáradban már meglévő dalok összekapcsolódnak, nem töltődnek le újra.',
+    },
+    missingBodyUnread: {
+      one: 'Hiányzó dalok: {tracks}, {count} olyan kiadványból, amelyet a figyelés letölt, plusz a még be nem olvasott számlistájú kiadványokban lévők ({unread}). A könyvtáradban már meglévő dalok összekapcsolódnak, nem töltődnek le újra.',
+      other:
+        'Hiányzó dalok: {tracks}, {count} olyan kiadványból, amelyet a figyelés letölt, plusz a még be nem olvasott számlistájú kiadványokban lévők ({unread}). A könyvtáradban már meglévő dalok összekapcsolódnak, nem töltődnek le újra.',
+    },
+    missingConfirm: 'Letöltés',
+    missingStarted: 'A hiányzók letöltése folyamatban: kövesd a sorban',
+    busy: 'Ez az előadó éppen ellenőrzés alatt áll: kövesd a sorban.',
+    missingHint:
+      'A Hiányzók letöltése végigmegy minden bekapcsolt kiadványon, és letölti a hiányzó dalokat; egy kiadvány bevonásához előbb kapcsold be.',
+    kind: {
+      mixtape: 'Mixtape-ek',
+      soundtrack: 'Filmzenék',
+      live: 'Élő albumok',
+      compilation: 'Válogatások',
+      remix: 'Remixek',
+      'dj-mix': 'DJ-mixek',
+      demo: 'Demók',
+    },
+    section: {
+      album: 'Albumok',
+      mixtape: 'Mixtape-ek',
+      ep: 'EP-k',
+      single: 'Kislemezek',
+      other: 'Élő, válogatás és remix',
+    },
+    filter: {
+      all: 'Mind',
+      missing: 'Letöltendő',
+      upcoming: 'Hamarosan',
+      partly: 'Részben megvan',
+      complete: 'Teljes',
+      not_watched: 'Nem figyelt',
+      off: 'Kikapcsolva',
+      not_own: 'Vendégszereplések',
+    },
+    state: {
+      complete: 'Teljes · {have}/{total}',
+      partly: 'Részben · {have}/{total}',
+      missing: 'Letöltendő',
+      upcoming: 'Megjelenik: {date}',
+      upcomingNoDate: 'Hamarosan',
+      skipped: 'A figyelés előtt jelent meg',
+      not_watched: 'Nem figyelt',
+      off: 'Kikapcsolva',
+      not_own: 'Vendégszereplés vagy bootleg',
+    },
   },
   watchStats: {
     colActivity: 'Aktivitás',
@@ -1311,6 +1585,9 @@ export default {
       one: '{count} szám továbbra is sikertelen',
       other: '{count} szám továbbra is sikertelen',
     },
+    failuresClear: 'Törlés',
+    failuresClearHint:
+      'A törlés újrakezdi a listát egy beállítás módosítása után; a továbbra is hibás dalok a következő ellenőrzésnél visszajönnek.',
     attempts: { one: '{count} próbálkozás', other: '{count} próbálkozás' },
     lastTried: 'utoljára {when}',
     songsTitle: 'Számok ebből a figyelésből',
@@ -1460,6 +1737,17 @@ export default {
     sourceSoundcloud: 'SoundCloud',
     sourceSoundcloudHint:
       'Máshol hiányzó feltöltések, és a SoundCloud linkek saját száma',
+    sourceNeedsTitle: 'Mit igényel az egyes források',
+    sourceNeedsSlskd:
+      'slskd: saját slskd szerver, az ingyenes Soulseek hálózathoz kapcsolva. Nincs előfizetés; a minőség az, amit mások megosztanak, gyakran FLAC vagy MP3 320.',
+    sourceNeedsDeemix:
+      'Deemix: saját Deemix szerver és saját Deezer-fiók. Ingyenes fiókkal csak MP3 128 kbps jár; az MP3 320 és a FLAC fizetős Deezer-csomagot igényel. A Downtify nem ad ilyet, és nem is kerüli meg.',
+    sourceNeedsYoutube:
+      'YouTube Music és YouTube: nincs mit beállítani. A hang veszteséges (kb. 128–160 kbps).',
+    sourceNeedsSoundcloud:
+      'SoundCloud: nincs mit beállítani, fiók sem kell. A streamek általában 128–160 kbps-osak.',
+    sourceNeedsCover:
+      'Bármelyik forrás is, a beágyazott borító az, amelyet a Downtify a dalhoz letölt (Beállítások → Letöltések → Borítóméret).',
     deemixTitle: 'Deemix',
     deemixHint:
       'Download from your own Deemix server. Requested quality requires the matching Deezer entitlement.',
@@ -1476,7 +1764,7 @@ export default {
       'Vesszővel elválasztott kiterjesztések, prioritás szerint (például flac, mp3).',
     slskdMinBitrate: 'Minimális bitráta veszteséges formátumoknál',
     slskdMinBitrateHint:
-      'Szigorú módban elutasítja az ennél kisebb vagy nem jelzett bitrátájú veszteséges fájlokat. A FLAC kivétel.',
+      'A kisebb bitrátát jelző veszteséges fájlok kimaradnak. A bitrátát nem jelző fájlok engedélyezettek, kivéve szigorú formátumsorrendnél. Szigorú módban a FLAC kivétel.',
     slskdAttempts: 'Jelöltek próbálkozásai',
     slskdAttemptsHint:
       'Szigorú módban formátumonként ennyi jelöltet próbál; egyébként ez az összesített szám.',
@@ -1497,9 +1785,40 @@ export default {
       'Az útvonal a Downtify konténeren belül, nem a gazdagépen.',
     slskdTimeout: 'Teljes időkorlát',
     slskdQueuedTimeout: 'Sorban állási időkorlát',
+    slskdTimeoutHint:
+      'Mennyi ideig tarthat egy letöltés, mielőtt a következő jelölt jön.',
+    slskdQueuedTimeoutHint:
+      'Mennyit várjon egy másik felhasználó feltöltési sorában, mielőtt továbblép.',
+    slskdProfile: 'Minőségi profil',
+    slskdProfileHint:
+      'Kiindulópont a formátumlistához. Módosíts bármely mezőt lent.',
+    slskdProfileDefault: 'Alapértelmezett',
+    slskdProfileLossless: 'Veszteségmentes először',
+    slskdProfileLossy: 'Csak veszteséges',
+    slskdAdvanced: 'Minőség és egyeztetés finomhangolása',
+    slskdAdvancedHint:
+      'További bitrátaszabályok, próbálkozások és időkorlátok. Kikapcsolva a további bitrátaszabályok nem érvényesek.',
+    slskdUnknownBitrate: 'Bitrátát nem jelző fájlok',
+    slskdUnknownBitrateHint:
+      'Néhány Soulseek-felhasználó nem osztja meg a bitrátát. Alapértelmezetten ezek csak szigorú módban, minimális bitrátával kerülnek elutasításra.',
+    slskdUnknownAuto: 'Alapértelmezett',
+    slskdUnknownAllow: 'Engedélyez',
+    slskdUnknownReject: 'Elutasít',
+    slskdPreferBitrate: 'Először a legnagyobb bitráta',
+    slskdPreferBitrateHint:
+      'Az elég jól egyező fájlok közül a legjobb minőséggel kezd a leghasonlóbb fájlnév helyett.',
+    slskdFormatFloors: 'Minimális bitráta formátumonként',
+    slskdFormatFloorsHint:
+      'Hagyd üresen a fenti minimum használatához. A hatékony formátumok, mint az AAC (m4a) és az Opus, kisebb bitrátán is jól szólnak, mint az MP3.',
+    slskdMaxBitrate: 'Maximális bitráta',
+    slskdMaxBitrateHint:
+      'A 0 bármit enged. Kb. 400 kihagyja a .m4a fájlokban lévő veszteségmentes hangot (ALAC), és kicsin tartja a fájlokat.',
     slskdInPlace: 'Fájlok hagyása az slskd mappában',
     slskdInPlaceHint:
       'Bekapcsolva: címkézés a helyükön, a fájlok megtartásával. Kikapcsolva: másolás és címkézés a Letöltések mappába; a forrás csak sikeres import után törlődik. Hiba esetén megmarad.',
+    slskdKeepCover: 'A fájl saját borítója marad, ha nagyobb',
+    slskdKeepCoverHint:
+      'A megosztott fájlokban gyakran benne van az album teljes méretű borítója. Be: az slskd-fájl megtartja a saját borítóját, ha nagyobb annál, amit a Downtify letölt (Spotify, YouTube Music). Ki: a letöltött borító mindig lecseréli.',
     youtubeTitle: 'YouTube',
     cookies: 'YouTube sütik',
     cookiesHint:
@@ -1513,6 +1832,18 @@ export default {
     cookiesLocked: 'A DOWNTIFY_COOKIES_FILE környezeti változó állítja be.',
     cookiesEnvMissing:
       'Ez a fájl nem létezik a konténerben — ellenőrizd az útvonalat és a kötetet.',
+    cookiesCheck: 'Ellenőrzés most',
+    cookiesChecked: 'ellenőrizve {when}',
+    cookiesStateValid: 'Bejelentkezve',
+    cookiesStateSignedOut: 'Kijelentkezve',
+    cookiesStateNoAccount: 'Nincs fiók',
+    cookiesStateError: 'Az ellenőrzés sikertelen',
+    cookiesStateUnknown: 'Még nincs ellenőrizve',
+    cookiesBotCheck: 'robotellenőrzés {when}',
+    cookiesSignedOutHint:
+      'A YouTube már nem fogadja el ezeket a sütiket. Jelentkezz be a YouTube-ra egy privát ablakban, exportálj új cookies.txt fájlt, zárd be az ablakot, és töltsd fel ide a fájlt.',
+    cookiesKeepAliveHint:
+      'A Downtify néhány percenként frissíti ezeket a sütiket, így bejelentkezve maradnak. Privát ablakból exportáld őket, majd zárd be: egy nyitva hagyott böngészőlap lecseréli őket, és kijelentkezteti ezt a másolatot.',
     audioGroup: 'Hang',
     format: 'Formátum',
     formatHint:
@@ -1556,12 +1887,26 @@ export default {
     syncDelay: 'Szünet a szinkronizálás között',
     syncDelayHint:
       'Minden importált köteg után vár (méret = Párhuzamos letöltések), mielőtt dalszöveget, borítót és műfajt keres. Nagy mappáknál elkerüli a korlátokat.',
+    idsGroup: 'Dalazonosítók',
+    isrc: 'ISRC-kódok írása',
+    isrcHint:
+      'Minden új letöltésbe beírja az ISRC-t, egy felvétel azonosító kódját, így ugyanaz a dal más néven is felismerhető. A Deezeren keresi ki; kihagyja, ha nem biztos.',
     artGroup: 'Borító',
     coverArt: 'Borító beágyazása',
     coverArtHint: 'Kapcsold ki a kisebb fájlokért és gyorsabb letöltésért.',
+    coverMin: 'Borító minimális mérete',
+    coverMinHint:
+      'Legalább erre emeli a fenti borítóméret-célt. Kikapcsolva: csak a borítóméret a cél.',
+    coverMinOff: 'Ki',
+    coverLargest: 'Mindig a legnagyobb borító',
+    coverLargestHint:
+      'Minden letöltésnél a Spotify, az iTunes és a YouTube Music is meg lesz kérdezve a kiadás borítójáról, és a legnagyobb kerül a fájlba (gyakran 1200 px az iTunes-ról). Számonként kicsit lassabb. Ki: a szám forrásának borítója, hacsak nem kisebb a minimumnál.',
     coverSize: 'Borító mérete',
     coverSizeHint:
-      'YouTube Music és Deezer borítókhoz. A Spotify borítók mindig a legnagyobb méretűek.',
+      'Az a méret, amelyre minden letöltés borítója törekszik. A kisebbet – a Spotify legnagyobbja 640 px – lecseréli a legnagyobbra, amely a Spotify, az iTunes, a YouTube Music vagy a Deezer kínálatában van ugyanahhoz a dalhoz. A borítókat sosem nagyítja.',
+    coverSizeRaised:
+      'Az alábbi minimális borítóméret ezt {px} px-re emeli, ezért a kisebb méretek szürkék.',
+    coverSizeRaisedShort: 'A minimális borítóméret {px} px-re emeli',
     artistCover: 'Előadófotók automatikus beszerzése',
     artistCoverHint:
       'Letölti az előadó fotóját a .metadata/ArtistImage mappába; olyan szolgáltatásokban is használható, mint a Navidrome.',
@@ -1585,6 +1930,53 @@ export default {
     lyricsLrclibHint: 'Közösségi adatbázis — sima és időzített dalszöveg',
     lyricsNetease: 'NetEase Cloud Music',
     lyricsNeteaseHint: 'Nagy katalógus, általában időzített',
+    lyricsKugou: 'Kugou Music',
+    lyricsKugouHint: 'Nagy katalógus, időzített',
+    lyricsSyncedOnly: 'Csak időzített dalszövegek',
+    lyricsSyncedOnlyHint:
+      'Az időbélyeg nélküli dalszövegeket kihagyja, és a következő szolgáltatót kérdezi. A Könyvtár feljavítása ekkor a csak sima szöveggel rendelkező számokat hiányzónak veszi. A szinkronizált szöveg ezután lecseréli, a fájl saját címkéiben is.',
+    ratingsGroup: 'Értékelések a Deezerről',
+    ratingsHint:
+      'A Navidrome-ban lévő daloknak 0–5 csillagot ad aszerint, mennyire népszerűek a Deezeren, mint a dztnr. A csillagok a fenti Navidrome-fiókhoz tartoznak.',
+    ratingsRepeat: 'Ismétlés',
+    ratingsRepeatOff: 'Ki',
+    ratingsRepeatDaily: 'Naponta',
+    ratingsRepeatWeekly: 'Hetente',
+    ratingsRepeatMonthly: 'Havonta',
+    ratingsSkipRated: 'A már csillagozott dalok kihagyása',
+    ratingsSkipRatedHint:
+      'A saját magad adta csillagok megmaradnak. A későbbi futtatások kihagyják az összes olyan dalt, amelynek már van csillaga.',
+    ratingsSkipStarred: 'Kedvencek kihagyása',
+    ratingsGrading: 'Értékelés',
+    ratingsGradingAbsolute: 'Világszintű népszerűség',
+    ratingsGradingArtist: 'Az előadó legnépszerűbb dalához képest',
+    ratingsGradingAlbum: 'Az album legnépszerűbb dalához képest',
+    ratingsGradingHint:
+      'Az előadó legnépszerűbb dalával összevetve a kevésbé ismert előadók slágerei is 5 csillagot kapnak.',
+    ratingsRun: 'Futtatás most',
+    ratingsPreview: 'Előnézet',
+    ratingsStop: 'Leállítás',
+    ratingsReading: 'A Navidrome-könyvtár beolvasása…',
+    ratingsProgress: '{done} / {total} dal',
+    ratingsLast:
+      'Utolsó futtatás: {when}: {rated} értékelve, {skipped} kihagyva, {notFound} nem található a Deezeren',
+    ratingsLastPreview:
+      'Előnézet {when}: {rated} lenne értékelve, {skipped} kihagyva, {notFound} nem található a Deezeren',
+    ratingsStopped: 'Leállítva',
+    ratingsNext: 'Következő futtatás: {when}',
+    ratingsNextSoon: 'Következő futtatás egy órán belül',
+    ratingsNever: 'Még nem futott',
+    ratingsFailedDeezer:
+      'A Deezer nem érhető el. A már megadott csillagok megmaradnak.',
+    ratingsFailedNavidrome: 'Navidrome-hiba: {message}',
+    ratingsFailed: 'Az értékelés sikertelen: {message}',
+    ratingsNotConfigured: 'Előbb mentsd el a Navidrome-bejelentkezést.',
+    ratingsBusy: 'Már fut egy értékelés.',
+    ratingsColSong: 'Dal',
+    ratingsColRank: 'Deezer-népszerűség',
+    ratingsColStars: 'Csillagok',
+    ratingsUnmatched: 'Nem található a Deezeren ({count})',
+    ratingsFirstRows: 'Az első {count} dal látható.',
     navidromeTitle: 'Navidrome',
     navidromeHint:
       'Tükrözi a letöltött listákat a Navidrome-ba. A zenemappájának tartalmaznia kell a Downtify letöltéseit.',
@@ -1642,6 +2034,13 @@ export default {
     navidromeSync: 'Listák létrehozása a Navidrome-ban',
     navidromeSyncHint:
       'Listaletöltések és figyelő-ellenőrzések után azonos nevű listát tart fenn a Navidrome-ban.',
+    doctor: 'Doktor',
+    navidromeM3uImport: 'A Navidrome importálja az M3U lejátszási listákat',
+    navidromeM3uImportHint:
+      'A Navidrome minden M3U-ból, amit a Downtify ír, borítóval ellátott listát készít. Bekapcsolva a Downtify nem hoz létre másodikat az API-n keresztül.',
+    navidromeScanWhenIdle: 'Olvasás csak akkor, ha senki sem hallgat',
+    navidromeScanWhenIdleHint:
+      'Amíg egy Navidrome-alkalmazás lejátszik, a Downtify letöltések utáni beolvasása vár (percenként ellenőrizve), hogy ne szakítsa meg a lejátszást. Az új dalok a lejátszás végén jelennek meg a Navidrome-ban.',
     navidromePublic: 'Navidrome listák nyilvánossá tétele',
     primaryLibrary: 'Primary library folder',
     primaryLibraryHint:
@@ -1828,6 +2227,12 @@ export default {
     androidUnreleased:
       'Még nem jelent meg egyetlen verzió sem: az alkalmazás még fejlesztés alatt áll, így egyelőre nincs mit telepíteni.',
     androidRepo: 'Tárhely megtekintése',
+    iosGroup: 'Downtify iOS-re',
+    iosHint:
+      'iPhone- és iPad-alkalmazás a kiszolgálón lévő könyvtár böngészéséhez és lejátszásához.',
+    iosBody:
+      'Jelentkezz be a fiókoddal, vagy párosítsd az alkalmazást az ezen az oldalon látható kóddal. Böngészd és játszd le a könyvtáradat, ments dalokat offline hallgatáshoz, és vezéreld a lejátszást a zárolási képernyőről.',
+    iosRepo: 'Tárhely megtekintése',
   },
   replace: {
     menu: 'Hang cseréje…',
@@ -1845,11 +2250,58 @@ export default {
     running: 'A hang cseréje folyamatban…',
     done: 'Hang lecserélve',
     failed: 'Nem sikerült lecserélni a hangot',
+    handReplaced:
+      'Ezt a hangot {date} napon kézzel cserélted le. A letöltések a fájlt változatlanul hagyják.',
+    unprotect: 'A letöltések lecserélhetik',
+    unprotected: 'A letöltések újra lecserélhetik ezt a fájlt',
+    uploading: 'A fájl feltöltése…',
+    fileTitle: 'Vagy használj egy fájlt az eszközödről',
+    fileHint:
+      'Egy {format} fájl változatlanul kerül felhasználásra. Más hangfájlok (MP3, FLAC, M4A, WAV…) {format} formátumra lesznek alakítva.',
+    fileChoose: 'Fájl kiválasztása…',
+    fileOther: 'Másik fájl kiválasztása…',
+    fileConverted: 'Átalakítva: {format}',
     source: {
       'youtube-music': 'YouTube Music',
       youtube: 'YouTube',
       link: 'Link',
     },
+  },
+  backup: {
+    title: 'Biztonsági mentések',
+    hint: 'A beállítások, minden figyelés a beállításaival, és a könyvtár minden számának listája (előadó, cím, album, honnan származik). A zenefájlok nem: ha elvesznek, a visszaállított telepítés tudja, mely számai voltak, és újra letölti őket.',
+    schedule: 'Automatikus mentések',
+    scheduleHint:
+      'A legújabb {keep} mentés marad meg. Az új mentés megírása és ellenőrzése után törlődik csak a legrégebbi.',
+    every0: 'Ki',
+    every24: 'Naponta',
+    every72: '3 naponta',
+    every168: 'Hetente',
+    saved: 'Mentett biztonsági mentések',
+    savedHint:
+      'A settings.json melletti backups mappában vannak. Töltsön le egyet, hogy legyen másolat a szerveren kívül is. A beállításait változatlanul tartalmazza, a jelszavakkal és API-kulcsokkal együtt: kezelje bizalmasan.',
+    now: 'Mentés most',
+    done: 'A mentés elkészült',
+    failed: 'A legutóbbi mentés nem sikerült: {error}',
+    none: 'Még nincs mentés.',
+    counts: 'Figyelések: {watches} · Számok: {songs} · {size}',
+    download: 'Letöltés',
+    restore: 'Visszaállítás',
+    fromFile: 'Visszaállítás fájlból',
+    fromFileHint:
+      'Töltsön be egy mentést ebből vagy egy másik Downtifyból, például egy új telepítésbe. Az itt már meglévő figyelések nem változnak.',
+    part_settings: 'Beállítások',
+    part_watches: 'Figyelések',
+    part_songs: 'A könyvtárból hiányzó számok újbóli letöltése',
+    chooseFile: 'Mentésfájl kiválasztása…',
+    confirmTitle: 'Visszaállítja ezt a mentést?',
+    confirmBody:
+      'Visszakerül: {parts}. A jelenlegi beállításait a mentésben lévők váltják fel.',
+    restored: 'A mentés visszaállítva',
+    resultSettings: 'Beállítások visszaállítva',
+    resultWatches: '{added} figyelés hozzáadva, {present} már megvolt',
+    resultSongs: '{missing} szám hiányzik, {queued} letöltésre vár',
+    resultNoSongs: 'Egy szám sem hiányzott',
   },
   port: {
     label: 'Port',
@@ -2130,6 +2582,10 @@ export default {
     playbackSpeed: 'Lejátszási sebesség',
   },
   confirm: {
+    stopWatchingManyTitle: {
+      one: 'Leállítod {count} figyelést?',
+      other: 'Leállítod {count} figyelést?',
+    },
     deleteTrackTitle: 'Törlöd: „{title}”?',
     deleteTracksTitle: 'Törlöd a(z) {count} számot?',
     deleteTracksBody:
@@ -2200,5 +2656,347 @@ export default {
   },
   source: {
     from: 'Letöltve innen: {source}',
+  },
+  doctor: {
+    title: 'Doktor',
+    intro:
+      'A Downtify újabb verziói onnantól javítják a hibákat, de a régebbi verzió által írt fájlok és listák változatlanok maradnak. A Doktor megkeresi ezeket a maradványokat, és megjavítja, amiről igazolni tudja, hogy biztonságos.',
+    checkup: 'Állapotfelmérés',
+    checkupHint:
+      'Átnézi az slskd-maradványokat, a duplikált dalokat és listákat, és hogy mit mutat a Navidrome. Semmit nem módosít.',
+    lastCheckup: 'Utolsó felmérés: {when}',
+    runCheckup: 'Felmérés most',
+    stop: 'Leállítás',
+    step: {
+      starting: 'Indul…',
+      library: 'Könyvtár beolvasása…',
+      playlists: 'Listák beolvasása…',
+      duplicates: 'Duplikált dalok keresése…',
+      monitor: 'Figyelt listák ellenőrzése…',
+      navidrome: 'A Navidrome lekérdezése…',
+      pausing: 'Várakozás a futó letöltésekre…',
+      listing: 'Az slskd mappájának listázása…',
+      verifying: 'Hang összevetése a könyvtárral…',
+      deleting: 'Eltávolítás…',
+      navidrome_scan: 'Várakozás a Navidrome újraolvasására…',
+      dedupe_check: 'A példányok ellenőrzése…',
+      dedupe_relink: 'Listák, kedvelések és figyelések áthelyezése…',
+      dedupe_remove: 'A többi példány törlése…',
+      merging: 'Listák egyesítése…',
+    },
+    slskdTitle: 'slskd-maradványok',
+    slskdHint:
+      'A régebbi verziók minden Soulseek-fájlt az slskd mappájában hagytak, miután a könyvtárba másolták. Törlésre csak olyan fájl kerül, amelynek hangja azonos egy könyvtárbeli dallal.',
+    slskdLeftovers: 'Fájlok az slskd mappájában',
+    slskdNotChecked: 'Futtasd a felmérést a megszámolásukhoz.',
+    slskdInPlace:
+      'A fájlok az slskd mappájában maradnak, így az a könyvtár része. Nincs mit takarítani.',
+    slskdFound: 'Nem könyvtárbeli dalok: {files} · {size}',
+    slskdCheck: 'Letöltések szüneteltetése és ellenőrzés',
+    slskdCheckTitle: 'Ellenőrzöd az slskd-maradványokat?',
+    slskdCheckBody:
+      'Előbb a letöltések szünetelnek, a futók befejeződnek, hogy összevetés közben semmi ne íródjon. Megerősítés nélkül semmi sem törlődik.',
+    queueHeld:
+      'A letöltések szünetelnek, amíg döntesz. Egy óra múlva maguktól folytatódnak.',
+    slskdKeepResume: 'Megtartás és a letöltések folytatása',
+    status: {
+      verified: 'Azonos a könyvtárban',
+      different: 'Hasonló, nem azonos',
+      unmatched: 'Nincs a könyvtárban',
+      unreadable: 'Olvashatatlan',
+      recent: 'Nemrég változott',
+      missing: 'Eltűnt',
+    },
+    slskdVerifiedHint:
+      'Mindegyik hangja bitre azonos az alatta látható könyvtárbeli fájléval.',
+    showMore: 'Továbbiak',
+    slskdDelete: 'Azonos másolatok törlése ({files} · {size})',
+    slskdDeleteTitle: 'Törlöd az azonos másolatokat?',
+    slskdDeleteBody:
+      'Az slskd mappájából törlendő fájlok: {files} ({size}). Mindegyiket közvetlenül előtte újra ellenőrzi: változatlan, és a könyvtárbeli másolat még megvan. Utána a letöltések folytatódnak.',
+    slskdDeleteConfirm: 'Törlés',
+    slskdCleaned: 'Eltávolítva: {files} · felszabadult: {size}',
+    slskdKeptChanged:
+      'Megtartva, mert megváltozott vagy hiányzott a könyvtárbeli másolat: {files}',
+    checkGone: 'A fájlok eltűntek a lemezről',
+    checkQueueResumed: 'A letöltések folytatódtak',
+    checkNavidromeScan: 'A Navidrome újraolvasott',
+    playlistsTitle: 'Duplikált listák',
+    playlistsHint:
+      'Két M3U-fájl egy listához, például egy, ami ott maradt, ahová egy régi verzió írt. Az egyesítés minden dalt egyszer tart meg, a borítót és egy fájlt. Az eredetiekről előbb mentés készül.',
+    playlistsOk: 'Minden listának egy M3U-fájlja van.',
+    groupReason: {
+      name: 'Azonos név',
+      songs: 'Azonos dalok',
+      manual: 'Saját választás',
+      assistant: 'Az asszisztens választotta',
+    },
+    songsCount: 'Dalok: {count}',
+    hasCover: 'Van borítója',
+    keeps: 'Megmarad',
+    ai: {
+      title: 'MI-segéd',
+      hint: 'Egy MI-asszisztens, például Claude, átnézheti veled, amit a Doctor talált. Mondd el egyszerűen, mit szeretnél: elmagyarázza az egyes csoportokat és javasol, a döntés a tiéd.',
+      helper: 'MI-segéd',
+      offHint:
+        'Kikapcsolva. Indítsd el, ha segítség kell. Magától leáll 2 óra használaton kívüli idő után, és amikor a Downtify újraindul.',
+      connected:
+        'Bekapcsolva · {client} csatlakozott · {minutes} perc használaton kívüli idő után leáll',
+      waitingForAi:
+        'Bekapcsolva · asszisztens csatlakozására vár · {minutes} perc használaton kívüli idő után leáll',
+      start: 'MI-segéd indítása',
+      stop: 'Leállítás',
+      on: 'Bekapcsolva',
+      waitingBadge: '{count} átnézendő',
+      whoTitle: 'Mely MI-alkalmazások csatlakozhatnak',
+      whoCode:
+        'A Claude Code (terminálban vagy a Claude asztali alkalmazásban) olyan gépen, amely eléri ezt a szervert, az otthoni hálózaton vagy Tailscale-en.',
+      whoDesktop:
+        'A Claude Desktop, egy kis hídon át (ehhez Node.js kell azon a gépen).',
+      whoWeb:
+        'A Claude a weben vagy telefonon: csak ha a szerver HTTPS-en elérhető az internetről (például Tailscale Funnel vagy Cloudflare Tunnel segítségével).',
+      whoChatgpt:
+        'A ChatGPT: a fejlesztői mód kell hozzá (nem minden csomagban), és ugyanilyen internetes elérés.',
+      scope:
+        'A Doctor minden részén segít: duplikált listák, duplikált dalok (a remixek és más változatok is, amelyeket az ellenőrzés nem csoportosít), új Spotify-azonosítóval újra letöltött dalok, slskd-maradékok és Navidrome. Megnéz és javasol; semmi sem változik, amíg egy javaslatot nem alkalmaznak.',
+      connectTitle: 'Asszisztens csatlakoztatása',
+      clientCode: 'Claude Code',
+      clientDesktop: 'Claude Desktop',
+      clientOther: 'Más alkalmazások',
+      codeHint:
+        'Futtasd ezt egyszer egy terminálban, aztán indítsd el a Claude Code-ot, és illeszd be az alábbi első üzenetet.',
+      desktopHint:
+        'Add hozzá ezt a claude_desktop_config.json fájlhoz (Settings › Developer › Edit Config), mentsd, és indítsd újra a Claude Desktopot.',
+      otherHint:
+        'Bármely alkalmazás, amely HTTP-n beszél MCP-t: add meg neki ezt a címet és fejlécet.',
+      keyHint:
+        'A kulcs a segéd minden indításakor megváltozik, és leállításkor érvényét veszti. Tartsd meg magadnak: amíg a segéd fut, akinél megvan, módosíthatja a listáidat.',
+      copy: 'Másolás',
+      copied: 'Kimásolva',
+      copyFailed:
+        'Nem sikerült másolni. Jelöld ki a szöveget, és másold kézzel.',
+      firstTitle: 'Első üzenet az asszisztensnek',
+      firstHint:
+        'Kezdésnek illeszd be ezt, aztán mondd el a saját szavaiddal, mit szeretnél.',
+      firstMessage:
+        'Használd a downtify-doctor eszközöket, hogy segíts rendet rakni a Downtify-könyvtáramban. Kezdd a get_overview hívással (futtass ellenőrzést, ha régi), aztán mondd el egyszerűen, mit talált a Doctor az egyes részekben. Egyszerre egy részt nézz át: minden találatnál magyarázd el, mi van benne, mi a különbség, és mit javasolsz. Ne alkalmazz semmit: tegyél javaslatokat, hogy átnézhessem őket a Downtifyban.',
+      canApply: 'Az asszisztens alkalmazhatja, amit a csevegésben jóváhagysz',
+      canApplyHint:
+        'Ki: itt nyomod meg az Alkalmazás gombot. Be: ha a csevegésben igent mondasz, az asszisztens maga alkalmazhatja ezeket a javaslatokat. A segéd minden indításakor újra kikapcsol.',
+      suggestionsTitle: 'Az asszisztens javaslatai',
+      none: 'Még nincs javaslat.',
+      decisionMerge: 'Összevonás',
+      decisionApart: 'Különböző listák',
+      why: 'Miért:',
+      apply: 'Alkalmazás',
+      dismiss: 'Elvetés',
+      applyAll: 'Mind alkalmazása ({count})',
+      clear: 'Befejezettek törlése',
+      state: {
+        queued: 'Sorban áll',
+        waiting: 'Rád vár',
+        applying: 'Alkalmazás…',
+        applied: 'Kész',
+        failed: 'Sikertelen',
+      },
+      decisionKeep: 'Egy példány megtartása',
+      decisionSongsApart: 'Különböző dalok',
+      decisionClean: 'Maradékok törlése',
+      decisionNavidrome: 'Navidrome rendbetétele',
+      songsTrash:
+        'A többi példány a zenei kukába kerül, ahonnan 30 napig visszaállítható. Előtte a listáik, kedveléseik és figyeléseik a megtartott példányra kerülnek.',
+      songsForGood:
+        'A zenei kuka ki van kapcsolva: a többi példány végleg törlődik. Előtte a listáik, kedveléseik és figyeléseik a megtartott példányra kerülnek.',
+      slskdSummary:
+        '{count} fájl · {size}, mindegyik ugyanazzal a hanggal, mint egy könyvtári fájl',
+      andMore: 'és még {count}',
+      ndRemoved: 'Törlődik',
+      ndImport:
+        'Bekapcsolja a „Navidrome importálja az M3U-listákat” beállítást is, hogy a Downtify ne hozzon létre második példányt.',
+      lockedHint:
+        'Egy javítás megváltoztatta ezt a részt. Futtasd újra az ellenőrzést, mielőtt ezeket alkalmazod.',
+      section: {
+        playlists: 'Duplikált listák',
+        songs: 'Duplikált dalok',
+        slskd: 'slskd-maradékok',
+        navidrome: 'Navidrome',
+      },
+      ndKind: {
+        import: 'M3U-ból importálva',
+        downtify: 'A Downtify példánya',
+        other: 'Egyéb',
+      },
+    },
+    outOfDate: 'Elavult',
+    staleHint:
+      'Egy másik szakaszban végzett javítás megváltoztathatta az itt találtakat. Ellenőrizd újra, mielőtt itt bármit módosítasz.',
+    checkAgain: 'Újraellenőrzés',
+    coverOf: '{name} borítója',
+    noCover: 'Nincs borító',
+    decideMerge: 'Egyesítés',
+    decideApart: 'Különböző listák',
+    decideHint: 'Válassz minden csoportnál, aztán alkalmazd egyszerre.',
+    kindLabel: 'Mutasd',
+    kindAll: 'Mind',
+    applyCounts: '{merge} egyesítendő · {apart} külön marad',
+    applyChanges: 'Változások alkalmazása',
+    clearChoices: 'Választás törlése',
+    applyTitle: 'Alkalmazod a változásokat?',
+    applyBody:
+      '{merge} csoport egyesítése, {apart} külön marad. Az eredeti M3U fájlokról előbb mentés készül, a Navidrome pedig a végén egyszer újraolvas.',
+    appliedMerged: '{count} csoport egyesítve.',
+    appliedApart: '{count} csoport külön marad, és többé nem jelenik meg.',
+    appliedFailed: 'Nem sikerült egyesíteni: {names}',
+    playlistsKeptApart:
+      '{count} csoport, amit különböző listának jelöltél, nem jelenik meg',
+    folder: {
+      title: 'Mi van az slskd mappájában',
+      total: '{files} fájl · {size}',
+      files: '{count} fájl',
+      library: 'Könyvtári dalok',
+      libraryHint: 'Amit a tárhelyoldal slskd-dalként számol.',
+      leftover: 'Maradványok',
+      leftoverHint:
+        'Másolatok, amelyeket a fenti slskd-ellenőrzés a könyvtárral vet össze.',
+      unlisted_audio: 'Hang, amit a Downtify nem ismer',
+      unlisted_audioHint:
+        'Soha nem lett importálva, vagy egy sikertelen importálás után megmaradt. Nincs a könyvtárban, és máshol sem számolódik.',
+      other: 'Egyéb fájlok',
+      otherHint: 'Borítók, dalszövegek és minden, ami nem dal.',
+      otherKinds: 'Egyéb fájlok típus szerint:',
+      unlisted_audioList:
+        'A legnagyobb hangfájlok, amelyeket a Downtify nem ismer',
+      otherList: 'A legnagyobb egyéb fájlok',
+      units:
+        'A méretek 1 GB-ot 1024³ bájtnak számolnak; egyes fájlböngészők 1000³-nal számolnak, ezért ott ugyanaz a mappa nagyobbnak tűnhet.',
+    },
+    badge: {
+      notChecked: 'Nincs ellenőrizve',
+      allGood: 'Minden rendben',
+      toDelete: '{count} törlendő',
+      leftovers: '{size} maradvány',
+      off: 'Kikapcsolva',
+      unreachable: 'Nem elérhető',
+      toFix: '{count} javítandó',
+      toMerge: '{count} egyesítendő',
+      toReview: '{count} átnézendő',
+      songsFound: '{count} dal',
+    },
+    mergePlan: 'Eredmény: {songs} dal. A dalaik {overlap}%-a közös.',
+    mergeUnsafe:
+      'A dalok csak {overlap}%-a egyezik; lehet, hogy különböző listák. Nincs egyesítés.',
+    merge: 'Egyesítés',
+    mergeTitle: 'Egyesíted ezeket a listákat?',
+    mergeBody:
+      'A(z) {keeper} tartalmazza majd mind a(z) {songs} dalt és a borítót; a többi fájl mentés után törlődik.',
+    merged: 'A(z) {path} most {songs} dalt tartalmaz.',
+    checkOthersGone: 'A többi M3U-fájl eltűnt',
+    checkCover: 'A borító mellette van',
+    checkNavidromeOne:
+      'A Navidrome egyszer mutatja ezt a listát (talált: {count})',
+    backupAt: 'Mentés: {path}',
+    manualTitle: 'Listák kiválasztása',
+    manualHint:
+      'Válassz két vagy több M3U-fájlt, amelyek egy listát kellene alkossanak. Csak akkor egyesülnek, ha a dalok többsége egyezik.',
+    manualFilter: 'Listák szűrése',
+    manualCompare: 'Összevetés',
+    navidromeHint:
+      'Amit a Navidrome és minden hozzá kapcsolt alkalmazás valóban mutat.',
+    navidromeOff: 'A Navidrome nincs beállítva.',
+    navidromeDown: 'A Navidrome nem válaszolt.',
+    navidromeNoAdmin:
+      'Adj meg rendszergazdai belépést a Beállítások → Navidrome alatt, hogy a Doktor lássa az importált listákat és fájljaikat.',
+    navidromeSummary: 'Listák',
+    navidromeCounts:
+      'Duplikált: {duplicates} · Hiányzó M3U: {orphans} · Hiányzó dalok: {incomplete}',
+    navidromeFix: 'Javítás',
+    navidromeFixTitle: 'Javítod a Navidrome-listákat?',
+    navidromeFixBody:
+      'A „törlésre kerül” jelölésű listák törlődnek ({count}), majd a Navidrome újraolvas.',
+    navidromeFixImport:
+      'A Downtify azt is abbahagyja, hogy saját másolatot készítsen a Navidrome által importált listákról.',
+    navidromeSuggestImport:
+      'A Navidrome importálja a Downtify M3U-fájljait (borítóval), és a Downtify ugyanezeket a listákat az API-n is létrehozza, így mindegyik kétszer jelenik meg.',
+    reason: {
+      m3u_and_api: 'Importált M3U és a Downtify másolata',
+      imports: 'Kétszer importálva',
+      api: 'Kétszer létrehozva',
+      name: 'Azonos név',
+      orphan: 'Hiányzik az M3U-ja',
+    },
+    kind: {
+      import: 'M3U-ból importálva',
+      downtify: 'A Downtify hozta létre',
+      other: 'Egyéb',
+    },
+    willRemove: 'törlésre kerül',
+    wouldLoseSongs:
+      'megmarad: olyan dalai vannak, amelyek az importból hiányoznak',
+    incomplete: 'A Navidrome {songs} dalt mutat az M3U {m3u} dalából.',
+    incompleteOutside: 'Dalok a Navidrome zenemappáján kívül: {count}.',
+    navidromeSongDupes: 'Duplikált dalok a Navidrome-ban',
+    songDupesCounts:
+      'Többször listázott dalok: {groups} · felesleges másolatok: {extra} · slskd mappában: {slskd}',
+    ndRemoved: 'Törölt listák: {count}',
+    ndRemaining: 'Maradt: duplikált {duplicates}, hiányzó M3U {orphans}',
+    duplicatesTitle: 'Duplikált dalok',
+    duplicatesHint:
+      'Könyvtárfájlok ugyanazzal a dallal. Hallgasd meg mindegyik példányt, és tartsd meg a legjobbat: a többi lejátszási listái, kedvelései és figyelései átkerülnek rá, így semmi sem hiányzik, és semmi sem töltődik le újra. Azokat a példányokat, amelyek tényleg különböző változatok, mind megtarthatod.',
+    duplicatesExact: 'Azonos fájl',
+    duplicatesLikely: 'Valószínűleg ugyanaz a dal',
+    duplicatesCounts: 'Dalok: {groups} · felesleges fájlok: {files} · {size}',
+    dupeKeep: 'Ezt a példányt tartom meg',
+    dupeIn: 'Itt: {playlists}',
+    dupeInNone: 'Egyik listában sincs',
+    dupeTags: 'Címkék: {title} · {album}',
+    dupeMerge: 'A kiválasztott példány megtartása',
+    dupeKeepAll: 'Mind megtartása, különbözőek',
+    dupeMergeTitle: 'Csak ez a példány maradjon?',
+    dupeMergeBody:
+      '{keep} marad. A többi példány ({count}) törlődik {where}. Minden lista, kedvelés és figyelés, amely használta őket, mostantól a megtartottat használja, így semmi sem töltődik le újra.',
+    dupeToTrash: 'a zenei lomtárba, 30 napra',
+    dupeForGood: 'véglegesen',
+    dupeMergeConfirm: 'Megtartás és a többi törlése',
+    dupeMerged: 'Megtartva: {keep} · törölt példányok: {count}',
+    dupeMergedPlaylists: 'Frissített listák: {playlists}',
+    dupeCheckClean: 'Már semmi sem mutat a törölt példányokra',
+    dupeLeftovers:
+      'Valami még egy törölt példányra mutat ({where}). Futtasd újra a felmérést.',
+    dupeFailed: 'Nem törölt: {files}',
+    dupeKeptApart: 'Különböző dalként megtartva: {count}',
+    dupeListAgain: 'Mutasd újra',
+    dupeKeptAllDone:
+      'Mind megtartva. Csak akkor jelennek meg újra, ha újabb példány kerül elő.',
+    relinkedTitle: 'Új Spotify-azonosítóval újra letöltve',
+    relinkedHint:
+      'A Spotify néha egy lista dalát ugyanazzal a dallal cseréli új azonosítóval. A figyelt lista ekkor újra letölti.',
+    relinkedLabel: 'Ugyanaz a dal, több azonosító',
+    relinkedCounts: 'Dalok: {songs} · felesleges fájlok: {extra}',
+    error: {
+      ai_not_running: 'Az MI-segéd ki van kapcsolva. Előbb indítsd el.',
+      doctor_busy: 'A Doktor már dolgozik.',
+      rescan_first:
+        'Egy máshol végzett javítás megváltoztatta ezt a szakaszt. Előbb ellenőrizd újra.',
+      m3u_twice:
+        'Egy lista két egyesítendő csoportban is szerepel. Futtasd újra az ellenőrzést.',
+      doctor_failed: 'A Doktor hibával leállt. Lásd a szervernaplót.',
+      queue_busy: 'A futó letöltések nem fejeződtek be időben. Próbáld később.',
+      scan_first: 'Előbb ellenőrizd újra a maradványokat.',
+      m3u_not_found: 'Ez az M3U eltűnt. Futtasd újra a felmérést.',
+      m3u_manual: 'A Könyvtárban létrehozott listák nem egyesülnek.',
+      need_two: 'Válassz legalább két listát.',
+      playlists_differ: 'Túl kevés dal egyezik; különböző listáknak tűnnek.',
+      not_flagged: 'Előbb futtasd újra a felmérést.',
+      dedupe_rescan: 'A lista elavult. Futtasd újra a felmérést.',
+      dedupe_missing: 'Az egyik fájl eltűnt. Futtasd újra a felmérést.',
+      dedupe_invalid: 'Válassz egy megtartandó példányt.',
+      dedupe_trash:
+        'A zenei lomtár nem tudja átvenni az egyik példányt (a mappáját nem fedi le, vagy épp szól). Semmi sem változott.',
+      dedupe_replacement_pending:
+        'A hang cseréje még dolgozik az egyik fájlon.',
+      doctor_not_ready:
+        'A Downtify még indul. Próbáld újra egy pillanat múlva.',
+      navidrome_off: 'A Navidrome nincs beállítva.',
+    },
   },
 }

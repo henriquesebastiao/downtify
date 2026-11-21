@@ -174,7 +174,11 @@ downloads are shared, and files are never stored twice.
 * ``POST /api/library/lookup`` (search/link songs already in the library)
 * ``POST /api/library/playlists`` (create an empty editable playlist)
 * ``POST /api/library/playlists/tracks`` (add or remove tracks on a
-  manual playlist - its owner's, or one shared with you as an editor)
+  manual playlist - its owner's, or one shared with you as an editor;
+  ``allow_duplicates`` adds a song it already has again,
+  ``remove_entries`` takes out one copy of a repeated song)
+* ``PUT  /api/library/playlists/order`` (put a manual playlist's songs in
+  a new order: ``{name, files}``, every song in its new place)
 * ``POST /api/library/playlists/rename`` (rename a manual playlist)
 * ``PUT  /api/library/playlists/visibility`` (share a playlist you own:
   private, with named users - some of them editors of a Library
@@ -201,7 +205,11 @@ downloads are shared, and files are never stored twice.
   to pick from: YouTube Music and YouTube results, or a pasted link) and
   ``POST /api/library/replace`` (body ``{file, video_id}``: replace the
   track's audio with that video in place, as a queue job - see
-  ``downtify/audio_replace.py``)
+  ``downtify/audio_replace.py``); ``POST /api/library/replace/upload``
+  (``?file=&name=``, the raw audio file as the body: replace with an
+  uploaded file), ``GET|DELETE /api/library/replace/protected``
+  (``?file=``: whether downloads leave a hand-replaced file alone, and
+  lifting that - ``downtify/hand_replaced.py``)
 * ``POST /api/library/compilation`` (body ``{files, compilation}``: mark
   or unmark an album as a various-artists compilation - rewrites its
   album-artist tag and compilation flag in place and remembers it for
@@ -242,10 +250,18 @@ downloads are shared, and files are never stored twice.
   fields, ``?path=``)
 * ``POST /api/slskd/test`` and ``POST /api/navidrome/test`` (try the
   connection with the settings as they are in the form, saved or not)
+* ``GET  /api/navidrome/ratings`` (admin: the running or last ratings job,
+  the saved last result and when the next scheduled run is due),
+  ``POST /api/navidrome/ratings/run`` (``preview``, and optional
+  ``skip_rated`` / ``skip_starred`` / ``grading`` over the saved options)
+  and ``POST /api/navidrome/ratings/cancel`` (Deezer-popularity star
+  ratings for the Navidrome library, see downtify/navidrome_ratings.py)
 * ``POST /api/proxy/test`` (admin: test outbound proxy reachability)
 * ``GET  /api/cookies`` (current YouTube cookie configuration)
 * ``POST /api/cookies`` (upload a Netscape cookies.txt as the raw request
   body - no multipart, so no ``python-multipart`` dependency)
+* ``POST /api/cookies/check`` (keep-alive now: rotate and save the session
+  cookies, then report ``health``)
 * ``DELETE /api/cookies`` (remove the uploaded cookies.txt)
 * ``GET|POST /api/monitor/playlists`` and
   ``PATCH|DELETE /api/monitor/playlists/{playlist_id}`` (playlist and
@@ -275,6 +291,17 @@ downloads are shared, and files are never stored twice.
   /api/monitor/artist-suggestions/resolve`` (``?name=``: ``{candidates,
   url}`` - the YouTube Music artist to follow, ``url`` only when exactly
   one is named so) - see ``downtify/artist_suggestions.py``
+* ``GET  /api/monitor/wanted`` (the Wanted list: per enabled artist
+  watch - all for an admin, their own for a user - the releases it
+  downloads that the library has partly or not at all, ``{artists:
+  [{watch, releases, missing, checking}], totals: {tracks, releases,
+  artists, unchecked}, job}``; reads what the sweeps kept, fetches
+  nothing) and ``POST /api/monitor/wanted/(check-all|download-all|stop)``
+  (read every artist's unchecked tracklists, or download every artist's
+  gaps, one artist at a time as one job - ``409 wanted_busy`` while one
+  runs; stop ends download-all after the artist it is on, check-all at
+  the next release it reads) - see
+  ``downtify/wanted_routes.py``
 * ``GET|PUT /api/likes`` and ``POST /api/likes/clear`` (the heart on a
   library track; while any song is liked they are also written out as a
   playlist)
@@ -395,18 +422,22 @@ from fastapi import (
     WebSocket,
     WebSocketDisconnect,
 )
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from loguru import logger
 from starlette.requests import HTTPConnection
 
 from . import (
+    artist_catalogue,
     artist_photo_proxy,
     artist_profile,
     audio_replace,
+    backup,
     catalog_worker,
     compilation,
+    cookie_refresh,
     cover_sources,
     deezer,
+    download_sources,
     integration_check,
     library_import,
     library_only,
@@ -414,6 +445,8 @@ from . import (
     library_visibility,
     lyrics,
     m3u,
+    musicbrainz,
+    navidrome_ratings,
     providers,
     spotify,
     stream,
@@ -433,6 +466,7 @@ from .buy_links import buy_links
 from .cookies import MAX_COOKIES_BYTES, CookiesStore, InvalidCookiesFile
 from .cover_cache import CoverArtCache
 from .cover_thumbs import CoverThumbs
+from .db import runtime as db_runtime
 from .deemix_provider import (
     DEFAULT_SETTINGS as DEEMIX_DEFAULTS,
 )
@@ -521,6 +555,7 @@ from .library_reconcile import (
     reconcile_and_refresh,
     refresh_playlists_after_moves,
 )
+from .library_songs import LibrarySongs
 from .library_sync import LibrarySync
 from .library_usage import (
     UsageSnapshots,
@@ -548,6 +583,7 @@ from .manual_playlists import (
     existing_playlist_names,
     remove_manual_playlist_cover,
     rename_manual_playlist,
+    reorder_manual_playlist,
     save_manual_playlist_cover,
 )
 from .monitor import (
@@ -559,12 +595,14 @@ from .monitor import (
     LibraryStores,
     MonitoredPlaylist,
     PlaylistMonitorDB,
+    check_running,
     check_watch,
     download_playlist_cover,
     fetch_playlist,
     normalize_release_types,
     parse_playlist_url,
     playlist_watch_key,
+    take_inventory,
 )
 from .navidrome import (
     NavidromeClient,
@@ -621,7 +659,11 @@ from .podcasts import (
     search_shows,
 )
 from .server_identity import ServerIdentity
-from .slskd_provider import reset_slskd_parallelism
+from .slskd_misses import SlskdMisses
+from .slskd_provider import (
+    normalize_slskd_quality,
+    reset_slskd_parallelism,
+)
 from .storage_scan import plan_folders, scan_folders
 from .stream import StreamCache
 from .track_index import (
@@ -656,7 +698,9 @@ MIN_TRACK_DURATION_SETTING_SECONDS = 0
 MAX_TRACK_DURATION_SETTING_SECONDS = 6 * 3600
 
 MIN_COVER_RESOLUTION = 300
-MAX_COVER_RESOLUTION = 1200
+MAX_COVER_RESOLUTION = 3000
+#: iTunes serves up to 3000px; nothing larger is ever offered.
+MAX_COVER_MIN_RESOLUTION = 3000
 
 
 def _clamp_retry_budget(value: Any) -> int:
@@ -672,6 +716,8 @@ DEFAULT_SETTINGS: dict[str, Any] = {
     'deemix': dict(DEEMIX_DEFAULTS),
     'lyrics_providers': list(lyrics.PROVIDER_ORDER),
     'download_lyrics': True,
+    # Keep only time-synced lyrics; plain ones count as none found.
+    'lyrics_synced_only': False,
     'lyrics_lrc_beside': True,
     'lyrics_lrc_dir': lyrics.DEFAULT_LYRICS_LRC_DIR,
     'format': 'mp3',
@@ -685,12 +731,31 @@ DEFAULT_SETTINGS: dict[str, Any] = {
     # picker on an artist's Library page never checks these.
     'download_cover_art_artist': True,
     'download_cover_art_artist_banner': False,
+    # Artist Watch also reads Deezer's discography of a watched artist:
+    # YouTube Music's artist page doesn't list every release of every
+    # artist (see ``monitor._artist_discography``).
+    'artist_watch_deezer': True,
+    # ...and MusicBrainz's release groups that neither lists (mixtapes,
+    # older releases), with the secondary types let in by
+    # ``artist_watch_musicbrainz_kinds`` (``musicbrainz.KINDS`` names).
+    'artist_watch_musicbrainz': True,
+    'artist_watch_musicbrainz_kinds': ['mixtape', 'soundtrack'],
     'max_parallel_downloads': 3,
     'download_delay_seconds': 0,
     'download_retry_budget_minutes': 0,
     'max_track_duration_seconds': MAX_TRACK_DURATION_SECONDS,
     'external_sync_delay_seconds': 0,
     'cover_resolution': providers.DEFAULT_COVER_RESOLUTION,
+    # Smallest acceptable cover (px, short side); 0 = off. Below it a
+    # larger one is looked for (downloader._download_cover_meeting).
+    'cover_min_resolution': 0,
+    # Hours between automatic backups (0: off; downtify/backup.py).
+    'backup_interval_hours': 0,
+    # Ask Spotify, iTunes and YouTube Music for every download's cover and
+    # embed the largest (downloader._download_cover_meeting).
+    'cover_largest': False,
+    # Write each download's ISRC, the recording's own code (downtify.isrc).
+    'write_isrc': True,
     'download_cover_art': True,
     'overwrite_existing_files': True,
     'organize_by_artist': True,
@@ -711,6 +776,9 @@ DEFAULT_SETTINGS: dict[str, Any] = {
         'download_dir': '/downloads',
         'source_dir': '/slskd',
         'leave_in_place': True,
+        # Keep the cover an slskd file came with when it is larger than
+        # the one Downtify fetches (downloader._keep_larger_file_cover).
+        'keep_file_cover': False,
         'timeout_seconds': 20,
         'search_retries': 5,
         'search_poll_seconds': 15,
@@ -726,6 +794,12 @@ DEFAULT_SETTINGS: dict[str, Any] = {
         'strict_format_priority': False,
         'extensions_whitelist': False,
         'min_bitrate': 256,
+        # Fine-tune quality (see slskd_provider.normalize_slskd_quality).
+        'advanced': False,
+        'unknown_bitrate': 'auto',
+        'format_min_bitrate': {},
+        'max_bitrate': 0,
+        'prefer_bitrate': False,
     },
     # Navidrome (Subsonic API) playlist sync after playlist downloads.
     'sync_navidrome': True,
@@ -740,14 +814,22 @@ DEFAULT_SETTINGS: dict[str, Any] = {
         'admin_username': '',
         'admin_password': '',
         'public_playlist': False,
+        # Let Navidrome build playlists from the M3U files (see
+        # navidrome.sync_playlist_to_navidrome) instead of creating them.
+        'm3u_import': False,
         'scan_after_download': True,
         'scan_full': False,
+        # Hold Downtify's scans while a Navidrome client is playing.
+        'scan_when_idle': False,
         'scan_wait_seconds': 120,
         'scan_poll_seconds': 5,
         'scan_retry_seconds': 15,
         'client_name': 'Downtify',
         'api_version': '1.16.1',
     },
+    # Deezer-popularity star ratings for the Navidrome library (see
+    # downtify.navidrome_ratings).
+    'navidrome_ratings': dict(navidrome_ratings.DEFAULTS),
     # Folders of already-tagged audio to include in the library (in
     # place). Synced from Settings → Library; see
     # ``downtify.external_library``.
@@ -773,6 +855,7 @@ _NESTED_SETTINGS = (
     'deemix',
     'slskd',
     'navidrome',
+    'navidrome_ratings',
     'library_upgrade',
     'external_library',
 )
@@ -854,21 +937,31 @@ def _clamp_cover_resolution(value: Any) -> int:
     """Coerce and clamp the requested cover art target size, in pixels.
 
     Keeps the setting inside ``[MIN_COVER_RESOLUTION,
-    MAX_COVER_RESOLUTION]``. Affects YouTube Music-sourced cover art
-    (see ``providers.set_cover_resolution``, which resizes a thumbnail
-    URL directly) and Deezer-sourced cover art (see
-    ``deezer._cover_from_images``, which instead picks the smallest of
-    Deezer's four fixed image sizes that still meets it, reading this
-    same value via ``providers.cover_resolution``). Spotify-sourced
-    covers are unaffected: Downtify already uses the largest size
-    Spotify's embed API offers, with no equivalent to resize or pick
-    from.
+    MAX_COVER_RESOLUTION]``. It is the size every download's cover aims
+    for (``downloader.cover_goal``): YouTube Music and iTunes covers are
+    asked for at it (see ``providers.set_cover_resolution``), Deezer's
+    nearest fixed size is picked (``deezer._cover_from_images``), and a
+    track whose own cover is smaller - every Spotify track, whose
+    largest is 640px - gets the largest those sources have.
+    ``MAX_COVER_RESOLUTION`` is the largest master either has been seen
+    to keep.
     """
     try:
         px = int(value)
     except (TypeError, ValueError):
         px = DEFAULT_SETTINGS['cover_resolution']
     return min(MAX_COVER_RESOLUTION, max(MIN_COVER_RESOLUTION, px))
+
+
+def _clamp_cover_min_resolution(value: Any) -> int:
+    """The minimum cover size in pixels: ``0`` (off) up to
+    :data:`MAX_COVER_MIN_RESOLUTION`."""
+
+    try:
+        px = int(value)
+    except (TypeError, ValueError):
+        return 0
+    return min(MAX_COVER_MIN_RESOLUTION, max(0, px))
 
 
 def _setting_int(
@@ -932,6 +1025,7 @@ def _effective_slskd_settings(settings: dict[str, Any]) -> dict[str, Any]:
         'download_dir': download_dir,
         'source_dir': source_dir,
         'leave_in_place': leave_in_place,
+        'keep_file_cover': bool(raw.get('keep_file_cover', False)),
         'extensions': _slskd_extensions(raw),
         'timeout_seconds': bounded('timeout_seconds', 20, 5, 120),
         'search_retries': bounded('search_retries', 5, 1, 20),
@@ -959,6 +1053,7 @@ def _effective_slskd_settings(settings: dict[str, Any]) -> dict[str, Any]:
         ),
         'extensions_whitelist': bool(raw.get('extensions_whitelist', False)),
         'min_bitrate': min_bitrate,
+        **normalize_slskd_quality(raw),
         'max_parallel_downloads': _setting_int(
             settings, 'max_parallel_downloads', 3, minimum=1, maximum=8
         ),
@@ -1220,6 +1315,11 @@ class AppState:
     lyrics_cache: Optional[LyricsLookupCache] = None
     upgrade_runner: Optional[library_upgrade.LibraryUpgradeRunner] = None
     audio_replacements: Any = None
+    # Files whose audio an admin replaced by hand (downtify/hand_replaced.py).
+    hand_replaced: Any = None
+    # Each file's upload and the uploads rejected per song
+    # (downtify/download_sources.py).
+    download_sources: Any = None
     external_sync: Optional[ExternalSyncJob] = None
     likes: Optional[LikedTracks] = None
     track_owners: Optional[TrackOwners] = None
@@ -1232,6 +1332,8 @@ class AppState:
     # How each download ended and the library's size day by day, for the
     # library usage page (downtify/download_log.py, library_usage.py).
     download_log: Optional[DownloadLog] = None
+    # Why slskd wasn't used (downtify/slskd_misses.py).
+    slskd_misses: Optional[SlskdMisses] = None
     usage_snapshots: Optional[UsageSnapshots] = None
     external_playlist_imports: Optional[ExternalPlaylistImports] = None
     loudness_analyzer: Optional[LoudnessAnalyzer] = None
@@ -1299,7 +1401,9 @@ def spawn_task(coro: Any, *, name: Optional[str] = None) -> asyncio.Task[Any]:
         'replace-',
         'monitor-initial-check',
         'monitor-manual-check',
+        'monitor-wanted',
         'queue-restore',
+        'navidrome-ratings',
     )):
         lease = contextlib.ExitStack()
         try:
@@ -1852,24 +1956,6 @@ def require_playlist_visible(
     return entry
 
 
-def claim_manual_playlist(name: str, request: Optional[Request]) -> None:
-    """Record a Library-created playlist's owner (best effort)."""
-
-    user_id = request_user_id(request)
-    if not user_id or state.manual_playlist_owners is None:
-        return
-    try:
-        state.manual_playlist_owners.set_owner(name, user_id)
-        if state.playlist_shares is not None:
-            # A new playlist never inherits what an older one by that name
-            # was shared with.
-            state.playlist_shares.forget(name)
-    except Exception:
-        logger.opt(exception=True).debug(
-            'Could not record owner for playlist {!r}', name
-        )
-
-
 def request_ip(request: Request) -> str:
     return client_ip(request.scope, _TRUSTED_PROXIES)
 
@@ -2074,6 +2160,7 @@ def library_stores() -> LibraryStores:
         playlist_spotify_cache=state.playlist_spotify_cache,
         track_owners=state.track_owners,
         playlist_hidden=state.playlist_hidden,
+        listing=lambda: listing_for_request(library_context()),
     )
 
 
@@ -2789,15 +2876,29 @@ def get_version() -> str:
 
 
 @router.get('/api/health')
-def get_health() -> dict[str, Any]:
+def get_health() -> Any:
     """Liveness probe: the process is up and FastAPI is serving requests.
 
     Deliberately doesn't check the downloader/monitor DB — those are
     only set up once ``main.py``'s startup hook finishes, so gating
     health on them would report unhealthy during the brief, normal
     window right after boot. Docker's ``HEALTHCHECK`` already has a
-    ``--start-period`` for that; this endpoint just needs to answer.
+    ``--start-period`` for that.
+
+    The one exception is a PostgreSQL server that cannot be reached:
+    then the answer is ``503`` (``database_unavailable``). On SQLite
+    ``healthcheck()`` is ``None`` and nothing changes. Runs as a plain
+    ``def`` handler, so FastAPI keeps the ``select 1`` off the loop.
     """
+    try:
+        db_ok = db_runtime.healthcheck()
+    except Exception:
+        logger.opt(exception=True).debug('Database healthcheck failed')
+        db_ok = False
+    if db_ok is False:
+        return JSONResponse(
+            {'status': 'database_unavailable'}, status_code=503
+        )
     return {'status': 'ok', 'version': state.version}
 
 
@@ -3468,6 +3569,7 @@ def record_download_outcome(
     file's size and provider (see :mod:`downtify.download_log`). Runs on
     the download's own thread; never raises."""
 
+    _record_slskd_miss(song, outcome)
     log = state.download_log
     if log is None:
         return
@@ -3489,6 +3591,62 @@ def record_download_outcome(
         logger.opt(exception=True).debug(
             'Could not log the download of {}', song.get('name')
         )
+
+
+def _record_slskd_miss(song: dict[str, Any], outcome: str) -> None:
+    """Keep why slskd had nothing for a download another source fetched,
+    or that failed everywhere (see :mod:`downtify.slskd_misses`)."""
+
+    miss = song.get('slskd_miss')
+    store = state.slskd_misses
+    if not isinstance(miss, dict) or store is None:
+        return
+    provider = str(song.get('download_provider') or '')
+    if outcome == OUTCOME_COMPLETED and provider == 'slskd':
+        return
+    if outcome not in {OUTCOME_COMPLETED, 'failed'}:
+        return
+    try:
+        store.record(
+            str(miss.get('reason') or 'unknown'),
+            detail=str(miss.get('detail') or ''),
+            fallback=provider if outcome == OUTCOME_COMPLETED else '',
+            title=str(song.get('name') or ''),
+            artist=', '.join(str(a) for a in song.get('artists') or []),
+        )
+    except Exception:
+        logger.opt(exception=True).debug(
+            'Could not record why slskd missed {}', song.get('name')
+        )
+
+
+@router.get('/api/slskd/misses')
+def slskd_misses_summary(request: Request) -> dict[str, Any]:
+    """Why downloads didn't come from slskd: counts per reason, what was
+    used instead, and the latest songs (admins only)."""
+
+    if not request_is_admin(request):
+        raise HTTPException(status_code=403, detail='Admins only')
+    store = state.slskd_misses
+    if store is None:
+        return {
+            'total': 0,
+            'since': None,
+            'reasons': [],
+            'fallbacks': {},
+            'recent': [],
+        }
+    return store.summary()
+
+
+@router.delete('/api/slskd/misses')
+def slskd_misses_reset(request: Request) -> dict[str, Any]:
+    """Start the count over (after changing a setting, say)."""
+
+    if not request_is_admin(request):
+        raise HTTPException(status_code=403, detail='Admins only')
+    store = state.slskd_misses
+    return {'removed': store.reset() if store is not None else 0}
 
 
 @router.post('/api/artists/profile/bio')
@@ -6333,6 +6491,153 @@ async def replace_candidates(
     }
 
 
+def _hand_replaced_info(file: str) -> Optional[dict[str, Any]]:
+    store = state.hand_replaced
+    return store.get(file) if store is not None else None
+
+
+def _mark_hand_replaced(file: str, source: str) -> None:
+    if state.hand_replaced is None:
+        return
+    try:
+        state.hand_replaced.mark(file, source)
+    except Exception:
+        logger.opt(exception=True).warning(
+            'Could not remember that {} was replaced by hand', file
+        )
+
+
+def _remember_replacement(
+    file: str, full: Path, entry: dict[str, Any], new_source: str
+) -> None:
+    """*file*'s audio was just replaced with *new_source* (a video id, a
+    SoundCloud track URL, ``''`` for an uploaded file): the upload it came
+    from is rejected for its song, so no later download picks it again,
+    and the new one is remembered as the file's source (best effort)."""
+
+    sources = state.download_sources
+    if sources is None:
+        return
+    summary = _track_summary(file, entry)
+    song: dict[str, Any] = {
+        'name': summary['title'],
+        'artists': [
+            a.strip() for a in summary['artist'].split(',') if a.strip()
+        ],
+        'isrc': str(entry.get('isrc') or ''),
+    }
+    if state.track_index is not None:
+        try:
+            song['spotify_id'] = (
+                state.track_index.spotify_id_for_filename(file) or ''
+            )
+        except Exception:
+            logger.opt(exception=True).debug('No Spotify id for {}', file)
+    try:
+        keys = set(download_sources.track_keys(song))
+        earlier = sources.get(file)
+        keys.update((earlier or {}).get('track_keys') or [])
+        sources.reject_file_source(file, keys, keep=new_source)
+        # Picking a rejected upload again by hand takes the rejection back.
+        sources.allow(new_source, keys)
+        sources.record(file, full, new_source, keys)
+    except Exception:
+        logger.opt(exception=True).warning(
+            'Could not remember the replaced source of {}', file
+        )
+
+
+@router.get('/api/library/replace/protected')
+async def hand_replaced_status(file: str = Query(...)) -> dict[str, Any]:
+    """Whether downloads leave *file* alone because its audio was replaced
+    by hand: ``{file, hand_replaced: {source, replaced_at} | null}``."""
+
+    file = file.strip().replace('\\', '/')
+    return {'file': file, 'hand_replaced': _hand_replaced_info(file)}
+
+
+@router.delete('/api/library/replace/protected')
+async def forget_hand_replaced(file: str = Query(...)) -> dict[str, Any]:
+    """Let downloads overwrite a hand-replaced file again (with
+    "Download again if the file exists" on): ``{file, forgotten}``."""
+
+    file = file.strip().replace('\\', '/')
+    if state.hand_replaced is None:
+        raise HTTPException(status_code=500, detail='Library not ready')
+    forgotten = await asyncio.to_thread(state.hand_replaced.forget, file)
+    return {'file': file, 'forgotten': forgotten}
+
+
+@router.post('/api/library/replace/upload')
+async def replace_track_audio_from_file(
+    request: Request, file: str = Query(...), name: str = Query(...)
+) -> dict[str, Any]:
+    """Replace a library track's audio with an audio file uploaded as the
+    raw request body (``name`` is its file name, for its format):
+    ``{file, duration_before, duration_after, converted,
+    hand_replaced}``. Same format: used as it is; another: converted to
+    the file's own. The file keeps its path and tags, and downloads
+    leave it alone from then on."""
+
+    file = file.strip().replace('\\', '/')
+    try:
+        fmt = audio_replace.upload_format(name)
+    except audio_replace.ReplaceError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    full, entry = await asyncio.to_thread(_replaceable_track, file)
+    if file in _replacing:
+        raise HTTPException(
+            status_code=409, detail='This track is already being replaced'
+        )
+    _replacing.add(file)
+    staged = audio_replace.upload_staging_path(full, fmt)
+    try:
+        size = 0
+        with staged.open('wb') as handle:
+            async for chunk in request.stream():
+                size += len(chunk)
+                if size > audio_replace.MAX_UPLOAD_BYTES:
+                    raise HTTPException(
+                        status_code=413, detail='The file is too large'
+                    )
+                handle.write(chunk)
+        if not size:
+            raise HTTPException(status_code=400, detail='The file is empty')
+        try:
+            old_key = content_key_for(full) or ''
+        except Exception:
+            old_key = ''
+        bitrate = str(getattr(state.downloader, 'audio_bitrate', '') or '320')
+        try:
+            result = await asyncio.to_thread(
+                audio_replace.replace_from_file,
+                full,
+                staged,
+                bitrate=bitrate,
+            )
+        except audio_replace.ReplaceError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+    finally:
+        staged.unlink(missing_ok=True)
+        _replacing.discard(file)
+    await asyncio.to_thread(_after_replacement, file, full, old_key)
+    await asyncio.to_thread(_mark_hand_replaced, file, 'file')
+    await asyncio.to_thread(_remember_replacement, file, full, entry, '')
+    summary = _track_summary(file, entry)
+    await log_activity(
+        request,
+        'audio_replaced',
+        f'{summary["artist"]} - {summary["title"]}'.strip(' -'),
+        {'file': file, 'upload': Path(name).name},
+    )
+    announce_library_changed()
+    return {
+        'file': file,
+        **result,
+        'hand_replaced': _hand_replaced_info(file),
+    }
+
+
 @router.post('/api/library/replace')
 async def replace_track_audio(request: Request) -> dict[str, Any]:
     """Replace a library track's audio with a YouTube video:
@@ -6386,7 +6691,7 @@ async def replace_track_audio(request: Request) -> dict[str, Any]:
         {'file': file, 'video_id': video_id},
     )
     spawn_task(
-        _run_replacement(job_id, song, file, full, video_id),
+        _run_replacement(job_id, song, file, full, video_id, entry),
         name=f'replace-{video_id}',
     )
     return {'job_id': job_id, 'file': file}
@@ -6398,6 +6703,7 @@ async def _run_replacement(
     file: str,
     full: Path,
     video_id: str,
+    entry: Optional[dict[str, Any]] = None,
 ) -> None:
     loop = state.loop or asyncio.get_running_loop()
     job = state.download_jobs[job_id]
@@ -6460,6 +6766,16 @@ async def _run_replacement(
         return
     _replacing.discard(file)
     await asyncio.to_thread(_after_replacement, file, full, old_key)
+    await asyncio.to_thread(
+        _remember_replacement, file, full, entry or {}, video_id
+    )
+    await asyncio.to_thread(
+        _mark_hand_replaced,
+        file,
+        'soundcloud'
+        if providers.parse_soundcloud_url(video_id) is not None
+        else 'youtube',
+    )
     job.update(status='done', progress=100, filename=file, message='Replaced')
     await state.connections.broadcast({
         'song': song,
@@ -6990,12 +7306,18 @@ async def create_library_playlist_endpoint(request: Request) -> dict[str, Any]:
     name = str(payload.get('name') or '').strip()
     ctx = library_context()
     try:
-        result = await asyncio.to_thread(create_manual_playlist, ctx, name)
+        result = await asyncio.to_thread(
+            create_manual_playlist,
+            ctx,
+            name,
+            state.manual_playlist_owners,
+            request_user_id(request),
+            state.playlist_shares,
+        )
     except ManualPlaylistError as exc:
         raise HTTPException(
             status_code=exc.status_code, detail=str(exc)
         ) from exc
-    claim_manual_playlist(str(result.get('name') or name), request)
     invalidate_library_paths_cache()
     return result
 
@@ -7236,6 +7558,7 @@ async def edit_library_playlist_tracks_endpoint(
         if isinstance(payload.get('remove'), list)
         else []
     )
+    remove_entries = _playlist_entry_refs(payload.get('remove_entries'))
     ctx = library_context()
     # Only songs they can see: one an admin hid is as good as missing.
     added = [path for path in (str(item).strip() for item in add) if path]
@@ -7255,6 +7578,8 @@ async def edit_library_playlist_tracks_endpoint(
             name,
             add=[str(item) for item in add],
             remove=[str(item) for item in remove],
+            remove_entries=remove_entries,
+            allow_duplicates=payload.get('allow_duplicates') is True,
         )
     except ManualPlaylistError as exc:
         raise HTTPException(
@@ -7274,6 +7599,63 @@ async def edit_library_playlist_tracks_endpoint(
     invalidate_library_paths_cache()
     if entry.get('visibility', PRIVATE) != PRIVATE:
         # Others have it open: the owner and its other editors.
+        await announce_playlists_changed()
+    return result
+
+
+def _playlist_entry_refs(raw: object) -> list[tuple[str, int]]:
+    """``[{file, occurrence}]`` from a request as ``(file, occurrence)``:
+    one copy of a song a playlist may hold more than once."""
+
+    if not isinstance(raw, list):
+        return []
+    refs: list[tuple[str, int]] = []
+    for item in raw:
+        if not isinstance(item, dict):
+            continue
+        file = str(item.get('file') or '').strip()
+        occurrence = item.get('occurrence', 0)
+        if file and isinstance(occurrence, int) and occurrence >= 0:
+            refs.append((file, occurrence))
+    return refs
+
+
+@router.put('/api/library/playlists/order')
+async def reorder_library_playlist_endpoint(
+    request: Request,
+) -> dict[str, Any]:
+    """Put a manual playlist's songs in a new order: ``{name, files}``,
+    every song the caller sees (repeats included) in its new place. For
+    its owner (or an admin) and its editors; ``409`` when the playlist
+    changed since the caller loaded it."""
+
+    payload = await _json_object(request)
+    name = str(payload.get('name') or '').strip()
+    entry = require_playlist_visible(name, request)
+    if not entry.get('mine', True) and not entry.get('can_edit_tracks'):
+        raise HTTPException(
+            status_code=403,
+            detail='Only the owner can change this playlist',
+        )
+    files = payload.get('files')
+    if not isinstance(files, list):
+        raise HTTPException(status_code=400, detail='Send the new order')
+    try:
+        result = await asyncio.to_thread(
+            reorder_manual_playlist,
+            library_context(),
+            name,
+            [str(item) for item in files],
+            # What the caller was shown: songs hidden from them keep
+            # their places.
+            visible=set(entry.get('files') or []),
+        )
+    except ManualPlaylistError as exc:
+        raise HTTPException(
+            status_code=exc.status_code, detail=str(exc)
+        ) from exc
+    invalidate_library_paths_cache()
+    if entry.get('visibility', PRIVATE) != PRIVATE:
         await announce_playlists_changed()
     return result
 
@@ -7541,12 +7923,19 @@ async def copy_library_playlist_endpoint(request: Request) -> dict[str, Any]:
             new_name = f'{base} {number}'
             number += 1
     try:
-        result = await asyncio.to_thread(copy_playlist, ctx, files, new_name)
+        result = await asyncio.to_thread(
+            copy_playlist,
+            ctx,
+            files,
+            new_name,
+            state.manual_playlist_owners,
+            request_user_id(request),
+            state.playlist_shares,
+        )
     except ManualPlaylistError as exc:
         raise HTTPException(
             status_code=exc.status_code, detail=str(exc)
         ) from exc
-    claim_manual_playlist(str(result.get('name') or new_name), request)
     invalidate_library_paths_cache()
     await announce_playlists_changed()
     return result
@@ -8638,7 +9027,23 @@ async def upload_cookies_endpoint(request: Request) -> dict[str, Any]:
         raise HTTPException(
             status_code=500, detail=f'Could not save the file: {exc}'
         ) from exc
+    # Tell the settings page right away whether the new jar is signed in,
+    # instead of waiting for the next keep-alive run.
+    spawn_task(
+        asyncio.to_thread(cookie_refresh.refresh_cookies, store),
+        name='cookie-check-after-upload',
+    )
     return {**store.status(), 'warnings': warnings}
+
+
+@router.post('/api/cookies/check')
+async def check_cookies_endpoint() -> dict[str, Any]:
+    """Run the cookie keep-alive now: rotate the session cookies, save the
+    new values and report whether YouTube still sees a signed-in account
+    (``health`` in the answer - see ``downtify/cookie_refresh.py``)."""
+    store = _require_cookies_store()
+    await asyncio.to_thread(cookie_refresh.refresh_cookies, store)
+    return store.status()
 
 
 @router.delete('/api/cookies')
@@ -8738,6 +9143,12 @@ async def update_settings_endpoint(
                 state.settings[key] = _clamp_download_delay(raw_value)
             elif key == 'cover_resolution':
                 state.settings[key] = _clamp_cover_resolution(raw_value)
+            elif key == 'cover_min_resolution':
+                state.settings[key] = _clamp_cover_min_resolution(raw_value)
+            elif key == 'backup_interval_hours':
+                state.settings[key] = backup.clamp_interval(raw_value)
+            elif key == 'cover_largest':
+                state.settings[key] = raw_value is True
             elif key == 'ui_language':
                 # Not a language code: the saved one stays.
                 state.settings[key] = _clean_ui_language(raw_value) or (
@@ -8753,6 +9164,10 @@ async def update_settings_endpoint(
                 }
             elif key == 'navidrome':
                 state.settings[key] = navidrome_cfg
+            elif key == 'navidrome_ratings':
+                state.settings[key] = navidrome_ratings.effective_settings(
+                    raw_value
+                )
             elif key == 'deemix':
                 state.settings[key] = deemix_cfg
             elif key == 'external_library':
@@ -8805,6 +9220,10 @@ async def update_settings_endpoint(
                 state.downloader.lyrics_providers = (
                     _effective_lyrics_providers(state.settings)
                 )
+            if 'lyrics_synced_only' in payload:
+                state.downloader.lyrics_synced_only = bool(
+                    state.settings.get('lyrics_synced_only')
+                )
             if 'organize_by_artist' in payload:
                 state.downloader.organize_by_artist = bool(
                     payload['organize_by_artist']
@@ -8816,6 +9235,18 @@ async def update_settings_endpoint(
             if 'download_cover_art' in payload:
                 state.downloader.download_cover_art = bool(
                     payload['download_cover_art']
+                )
+            if 'cover_min_resolution' in payload:
+                state.downloader.cover_min_resolution = state.settings[
+                    'cover_min_resolution'
+                ]
+            if 'cover_largest' in payload:
+                state.downloader.cover_largest = state.settings[
+                    'cover_largest'
+                ]
+            if 'write_isrc' in payload:
+                state.downloader.write_isrc = bool(
+                    state.settings['write_isrc']
                 )
             if 'overwrite_existing_files' in payload:
                 state.downloader.overwrite_existing_files = bool(
@@ -8832,6 +9263,8 @@ async def update_settings_endpoint(
             reset_slskd_parallelism(_effective_slskd_settings(state.settings))
         if 'cover_resolution' in payload:
             providers.set_cover_resolution(state.settings['cover_resolution'])
+        if 'cover_min_resolution' in payload:
+            providers.set_cover_minimum(state.settings['cover_min_resolution'])
         if 'external_library' in payload:
             invalidate_library_paths_cache()
             _unmap_removed_extra_folders(previous, state.settings)
@@ -10060,6 +10493,14 @@ def _youtube_artist_for_name(name: str) -> tuple[str, str]:
     return channel_id, str(best.get('name') or name)
 
 
+#: A Spotify user (listener) link: an account, never an artist's music.
+_SPOTIFY_USER_LINK = re.compile(
+    r'(?:spotify\.com/(?:intl-[a-z]{2}(?:-[a-z]{2})?/)?user/'
+    r'|^\s*spotify:user:)',
+    re.IGNORECASE,
+)
+
+
 async def _resolve_watch_target(url: str) -> tuple[str, str, str]:
     """Resolve a pasted URL into ``(kind, watch_key, display_name)``.
 
@@ -10080,6 +10521,16 @@ async def _resolve_watch_target(url: str) -> tuple[str, str, str]:
             logger.exception('Failed to resolve playlist {}', playlist_id)
             raise HTTPException(status_code=502, detail=str(exc)) from exc
         return KIND_PLAYLIST, playlist_watch_key(source, playlist_id), name
+
+    if _SPOTIFY_USER_LINK.search(url or ''):
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "That is a Spotify user link (a listener's account), not an "
+                'artist link. Use the artist page, open.spotify.com/artist/…, '
+                'or search the artist by name.'
+            ),
+        )
 
     spotify_parsed = spotify.parse_spotify_url(url)
     if spotify_parsed is not None and spotify_parsed[0] == 'artist':
@@ -10379,6 +10830,15 @@ async def update_monitor_playlist(
     # "new releases only" is turned off) instead of waiting for the
     # next scheduled one.
     filters_changed = False
+    if 'musicbrainz_kinds' in payload:
+        if current.kind != KIND_ARTIST:
+            raise HTTPException(
+                status_code=400,
+                detail='Release kinds only apply to artist watches',
+            )
+        kinds = _musicbrainz_kinds_from(payload['musicbrainz_kinds'])
+        filters_changed = kinds != current.musicbrainz_kinds
+        kwargs['musicbrainz_kinds'] = kinds
     if 'release_types' in payload or 'new_only' in payload:
         if current.kind != KIND_ARTIST:
             raise HTTPException(
@@ -10406,6 +10866,75 @@ async def update_monitor_playlist(
     return updated.to_dict()
 
 
+#: Most watches one bulk edit may name.
+MONITOR_BULK_LIMIT = 5000
+
+
+@router.patch('/api/monitor/playlists')
+async def update_monitor_playlists(request: Request) -> dict[str, Any]:
+    """Give several watches the same ``interval_minutes`` and/or
+    ``enabled`` at once (the Monitor page's selection). Watches that
+    don't exist or belong to another account are left out and listed
+    under ``missing``."""
+
+    db = _require_monitor_db()
+    payload = await _json_object(request)
+
+    raw_ids = payload.get('ids')
+    if not isinstance(raw_ids, list) or not raw_ids:
+        raise HTTPException(
+            status_code=400, detail='ids is a non-empty list of watch ids'
+        )
+    if len(raw_ids) > MONITOR_BULK_LIMIT:
+        raise HTTPException(
+            status_code=400,
+            detail=f'At most {MONITOR_BULK_LIMIT} watches at once',
+        )
+    try:
+        ids = list(dict.fromkeys(int(i) for i in raw_ids))
+    except (TypeError, ValueError):
+        raise HTTPException(
+            status_code=400, detail='ids is a non-empty list of watch ids'
+        )
+
+    kwargs: dict[str, Any] = {}
+    if 'interval_minutes' in payload:
+        try:
+            interval = int(payload['interval_minutes'])
+        except (TypeError, ValueError):
+            interval = 0
+        if interval < 1:
+            raise HTTPException(
+                status_code=400,
+                detail='interval_minutes is a positive number of minutes',
+            )
+        kwargs['interval_minutes'] = interval
+    if 'enabled' in payload:
+        kwargs['enabled'] = bool(payload['enabled'])
+    if not kwargs:
+        raise HTTPException(
+            status_code=400,
+            detail='Nothing to change: send interval_minutes or enabled',
+        )
+
+    def _apply() -> tuple[list[dict[str, Any]], list[int]]:
+        updated: list[dict[str, Any]] = []
+        missing: list[int] = []
+        for watch_id in ids:
+            if _monitor_watch_for_request(watch_id, request) is None:
+                missing.append(watch_id)
+                continue
+            watch = db.update_playlist(watch_id, **kwargs)
+            if watch is None:
+                missing.append(watch_id)
+            else:
+                updated.append(watch.to_dict())
+        return updated, missing
+
+    updated, missing = await asyncio.to_thread(_apply)
+    return {'updated': updated, 'missing': missing}
+
+
 @router.delete('/api/monitor/playlists/{playlist_id}')
 async def delete_monitor_playlist(
     playlist_id: int, request: Request
@@ -10424,6 +10953,279 @@ async def delete_monitor_playlist(
             status_code=404, detail='Monitored playlist not found'
         )
     return {'deleted': True, 'id': playlist_id}
+
+
+def _musicbrainz_kinds_from(value: Any) -> Optional[str]:
+    """A watch's ``musicbrainz_kinds`` from a request: ``None`` (follow
+    the setting) or a list of ``musicbrainz.KINDS`` names, stored
+    comma-separated. ``400`` for anything else."""
+
+    if value is None:
+        return None
+    if not isinstance(value, list) or any(
+        str(kind) not in musicbrainz.KINDS for kind in value
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail='musicbrainz_kinds is a list of: '
+            + ', '.join(musicbrainz.KINDS),
+        )
+    return ','.join(k for k in musicbrainz.KINDS if k in set(map(str, value)))
+
+
+async def _artist_watch_for_request(
+    playlist_id: int, request: Request
+) -> MonitoredPlaylist:
+    watch = await asyncio.to_thread(
+        _monitor_watch_for_request, playlist_id, request
+    )
+    if watch is None:
+        raise HTTPException(
+            status_code=404, detail='Monitored playlist not found'
+        )
+    if watch.kind != KIND_ARTIST:
+        raise HTTPException(
+            status_code=400, detail='Only an artist watch has releases'
+        )
+    return watch
+
+
+def _library_songs() -> Any:
+    """The library by song (artist, title, length), to count what it has
+    of an artist's releases; ``None`` when it can't be read."""
+
+    try:
+        return LibrarySongs(listing_for_request(library_context()))
+    except Exception:
+        logger.opt(exception=True).warning(
+            'Could not read the library to compare with an artist catalogue'
+        )
+        return None
+
+
+#: "Check what I have" per artist watch: ``{running, done, total,
+#: checked, failed, started_at, finished_at}``, the last one kept.
+_inventories: dict[int, dict[str, Any]] = {}
+
+
+#: ``_artist_releases``'s "read the library yourself" (``None`` is a
+#: library that couldn't be read).
+_UNSET: Any = object()
+
+
+def _artist_releases(
+    db: PlaylistMonitorDB, watch: MonitoredPlaylist, songs: Any = _UNSET
+) -> dict[str, Any]:
+    if songs is _UNSET:
+        songs = _library_songs()
+    kinds = artist_catalogue.watch_kinds(watch, state.settings)
+    have = artist_catalogue.library_have(
+        db.catalogue.tracks(watch.id),
+        songs,
+        db.releases.counts(watch.id),
+    )
+    releases = artist_catalogue.catalogue_view(
+        db.catalogue.rows(watch.id),
+        have=have,
+        seen=db.catalogue.seen(watch.id),
+        types=set((watch.release_types or ALL_RELEASE_TYPES).split(',')),
+        kinds=kinds,
+    )
+    names = {mb: name for name, mb in musicbrainz.KINDS.items()}
+    return {
+        'watch': watch.to_dict(),
+        'kinds': [names[k] for k in musicbrainz.KINDS.values() if k in kinds],
+        'kinds_default': watch.musicbrainz_kinds is None,
+        'available_kinds': list(musicbrainz.KINDS),
+        'musicbrainz': bool(state.settings.get('artist_watch_musicbrainz')),
+        'releases': releases,
+        'counts': artist_catalogue.counts(releases),
+        'inventory': dict(_inventories.get(watch.id) or {}) or None,
+        'missing': artist_catalogue.missing(releases),
+        'checking': check_running(watch.id),
+    }
+
+
+@router.get('/api/monitor/playlists/{playlist_id}/releases')
+async def artist_watch_releases(
+    playlist_id: int, request: Request
+) -> dict[str, Any]:
+    """An artist watch's whole catalogue, from its last check: one row
+    per release with what the library has of it (``state``: complete,
+    partly, missing, skipped, not_watched, off, not_own), plus the
+    watch's MusicBrainz release kinds. See ``downtify/artist_catalogue.py``."""
+
+    db = _require_monitor_db()
+    watch = await _artist_watch_for_request(playlist_id, request)
+    return await asyncio.to_thread(_artist_releases, db, watch)
+
+
+@router.get('/api/monitor/playlists/{playlist_id}/releases/tracks')
+async def artist_watch_release_tracks(
+    playlist_id: int, request: Request, album_id: list[str] = Query(...)
+) -> dict[str, Any]:
+    """One release's tracklist (of the first of *album_id* - a release's
+    ``album_ids`` - with one kept) and the library file holding each
+    track: ``{album_id, tracks: [{position, name, artists, duration,
+    file}]}``, ``file`` ``null`` when the library doesn't have it.
+    ``tracks`` is empty until a check read the tracklist."""
+
+    db = _require_monitor_db()
+    watch = await _artist_watch_for_request(playlist_id, request)
+
+    def build() -> dict[str, Any]:
+        kept = db.catalogue.tracks(watch.id)
+        chosen = next((a for a in album_id if a in kept), '')
+        if not chosen:
+            return {'album_id': album_id[0], 'tracks': []}
+        recorded = {
+            position: filename
+            for (position, _track), filename in db.releases.tracks(
+                watch.id, chosen
+            ).items()
+        }
+        return {
+            'album_id': chosen,
+            'tracks': artist_catalogue.track_list(
+                kept[chosen], _library_songs(), recorded
+            ),
+        }
+
+    return await asyncio.to_thread(build)
+
+
+@router.post('/api/monitor/playlists/{playlist_id}/releases/inventory')
+async def check_artist_watch_inventory(
+    playlist_id: int, request: Request
+) -> dict[str, Any]:
+    """ "Check what I have": read, in the background, the tracklist of every
+    release of the watch's catalogue that has none kept, so ``GET
+    .../releases`` counts what the library has of each. Downloads
+    nothing. ``{inventory: {running, done, total, ...}}``; a second call
+    while it runs returns the running one."""
+
+    db = _require_monitor_db()
+    watch = await _artist_watch_for_request(playlist_id, request)
+    job = _inventories.get(watch.id)
+    if job and job.get('running'):
+        return {'inventory': dict(job)}
+    job = {
+        'running': True,
+        'done': 0,
+        'total': 0,
+        'checked': 0,
+        'failed': 0,
+        'started_at': datetime.now(timezone.utc).isoformat(),
+        'finished_at': '',
+    }
+    _inventories[watch.id] = job
+
+    def progress(done: int, total: int) -> None:
+        job.update(done=done, total=total)
+
+    async def run() -> None:
+        try:
+            job.update(
+                await asyncio.to_thread(
+                    take_inventory, watch, db, progress=progress
+                )
+            )
+        except Exception:
+            logger.exception(
+                'Checking what the library has of "{}" failed', watch.name
+            )
+            job['error'] = True
+        finally:
+            job.update(
+                running=False,
+                finished_at=datetime.now(timezone.utc).isoformat(),
+            )
+
+    spawn_task(run(), name=f'artist-inventory-{watch.id}')
+    return {'inventory': dict(job)}
+
+
+@router.post('/api/monitor/playlists/{playlist_id}/releases/download-missing')
+async def download_missing_artist_releases(
+    playlist_id: int, request: Request
+) -> dict[str, Any]:
+    """ "Download missing": a check of the watch that goes through every
+    release it downloads again, known or not, and downloads the songs
+    missing from them (linking those the library has under another name)
+    - as the queue shows. Releases the watch doesn't download are left
+    alone; switch one on first. ``{started, missing}``; ``409`` while the
+    watch is being checked."""
+
+    db = _require_monitor_db()
+    watch = await _artist_watch_for_request(playlist_id, request)
+    if state.downloader is None:
+        raise HTTPException(status_code=500, detail='Downloader not ready')
+    if check_running(watch.id):
+        raise HTTPException(
+            status_code=409, detail='This artist is being checked right now'
+        )
+    missing = (await asyncio.to_thread(_artist_releases, db, watch))['missing']
+    loop = state.loop or asyncio.get_running_loop()
+
+    async def run() -> None:
+        try:
+            await check_watch(
+                watch,
+                db,
+                state.downloader,  # type: ignore[arg-type]
+                state.connections.broadcast,
+                loop,
+                state.settings,
+                library_stores(),
+                state.podcasts,
+                fill_missing=True,
+            )
+        except Exception:
+            logger.exception('Downloading what "{}" misses failed', watch.name)
+
+    spawn_task(run(), name=f'artist-missing-{watch.id}')
+    return {'started': True, 'missing': missing}
+
+
+@router.patch('/api/monitor/playlists/{playlist_id}/releases')
+async def switch_artist_watch_releases(
+    playlist_id: int, request: Request
+) -> dict[str, Any]:
+    """Switch releases of an artist watch: ``{album_ids, choice}``, the
+    choice ``on`` (download it even when its type isn't watched or it
+    came out before a "new releases only" watch), ``off`` (never) or
+    ``''`` (follow the watch). Switching on starts a check, so it
+    downloads now. Returns the releases as ``GET`` does."""
+
+    db = _require_monitor_db()
+    watch = await _artist_watch_for_request(playlist_id, request)
+    payload = await _json_object(request)
+    album_ids = payload.get('album_ids')
+    choice = payload.get('choice')
+    if (
+        not isinstance(album_ids, list)
+        or not album_ids
+        or not all(isinstance(a, str) and a for a in album_ids)
+        or choice not in artist_catalogue.CHOICES
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail="Send album_ids and a choice: 'on', 'off' or ''",
+        )
+    changed = await asyncio.to_thread(
+        db.catalogue.set_choice, watch.id, album_ids, choice
+    )
+    if not changed:
+        raise HTTPException(
+            status_code=404, detail='The watch lists no such release'
+        )
+    if choice == 'on':
+        await asyncio.to_thread(
+            db.catalogue.forget_skipped, watch.id, album_ids
+        )
+        if watch.enabled:
+            _start_initial_check(watch, db)
+    return await asyncio.to_thread(_artist_releases, db, watch)
 
 
 @router.post('/api/monitor/playlists/{playlist_id}/check')
@@ -10625,6 +11427,8 @@ def take_usage_snapshot() -> None:
         )
     if state.download_log is not None:
         state.download_log.prune()
+    if state.slskd_misses is not None:
+        state.slskd_misses.prune()
 
 
 async def usage_snapshot_loop(
@@ -10813,6 +11617,26 @@ def _monitor_provenance(
         'watches': watches,
         'others': len(found['holders']) - len(watches),
     }
+
+
+@router.delete('/api/monitor/playlists/{playlist_id}/failures')
+async def monitor_playlist_clear_failures(
+    playlist_id: int, request: Request
+) -> dict[str, Any]:
+    """Forget a watch's failing songs, so its next checks show only what
+    still fails (after a settings change, say). They are tried again on
+    the next check either way."""
+
+    db = _require_monitor_db()
+    watch = await asyncio.to_thread(
+        _monitor_watch_for_request, playlist_id, request
+    )
+    if watch is None:
+        raise HTTPException(
+            status_code=404, detail='Monitored playlist not found'
+        )
+    removed = await asyncio.to_thread(db.history.forget_failures, watch.id)
+    return {'removed': removed}
 
 
 @router.get('/api/monitor/playlists/{playlist_id}/tracks')

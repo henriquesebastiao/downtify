@@ -3,29 +3,35 @@
     <section class="relative overflow-hidden border-b border-line">
       <div
         aria-hidden="true"
-        class="pointer-events-none absolute inset-0 bg-[radial-gradient(60%_80%_at_85%_0%,color-mix(in_srgb,var(--c-accent)_16%,transparent),transparent_70%)]"
+        class="pointer-events-none absolute inset-0 bg-[radial-gradient(55%_60%_at_50%_0%,color-mix(in_srgb,var(--c-accent)_18%,transparent),transparent_72%)]"
       />
       <div
-        class="relative mx-auto flex max-w-[1100px] flex-col items-start gap-6 px-4 pt-12 pb-14 sm:px-6 md:pt-20 md:pb-20 lg:px-10"
+        class="relative mx-auto flex max-w-[1100px] flex-col items-center gap-5 px-4 pt-10 pb-14 text-center sm:px-6 md:pt-14 md:pb-20 lg:px-10"
       >
-        <Logo :size="64" />
-        <div class="flex flex-col gap-4">
-          <p class="eyebrow">{{ hero.eyebrow }}</p>
-          <h1
-            class="text-display text-[44px] leading-[1.02] font-bold sm:text-[64px] md:text-[76px]"
+        <!-- The product, its category and the promise: what the page is
+             about, in one heading, for readers and search engines alike. -->
+        <h1 class="flex flex-col items-center gap-5">
+          <span
+            class="eyebrow rounded-full border border-line-3 bg-surface/60 px-3.5 py-1.5"
+            >Downtify · {{ hero.eyebrow }}</span
           >
-            {{ frontmatter.title }}
-          </h1>
-          <p
-            class="max-w-[640px] text-[17px] leading-relaxed text-fg-3 sm:text-lg"
+          <span
+            class="text-display max-w-[900px] text-[42px] leading-[1.02] font-bold tracking-[-0.03em] sm:text-[58px] md:text-[68px]"
           >
-            <template v-for="(line, i) in hero.lead" :key="i">
-              <br v-if="i" class="max-sm:hidden" />{{ line }}{{ ' ' }}
+            <template v-for="(line, i) in hero.headline" :key="i">
+              <br v-if="i" />
+              <span :class="i ? 'text-accent' : ''">{{ line }}</span>
             </template>
-          </p>
-        </div>
-        <HomeActions :actions="hero.actions" />
-        <p class="flex flex-wrap gap-2">
+          </span>
+        </h1>
+        <p
+          class="max-w-[680px] text-[17px] leading-relaxed text-fg-3 sm:text-lg"
+        >
+          {{ hero.lead }}
+        </p>
+        <p class="text-[15px] font-semibold text-fg">{{ hero.note }}</p>
+        <HomeActions :actions="hero.actions" class="justify-center" />
+        <p class="flex flex-wrap justify-center gap-2">
           <a
             v-for="shield in hero.shields"
             :key="shield.src"
@@ -36,6 +42,11 @@
             <img :src="shield.src" :alt="shield.alt" height="20" class="h-5" />
           </a>
         </p>
+        <HomeVideo
+          v-if="frontmatter.video"
+          :video="frontmatter.video"
+          class="mt-5 md:mt-8"
+        />
       </div>
     </section>
     <div class="mx-auto max-w-[1100px] px-4 pt-4 pb-20 sm:px-6 lg:px-10">
@@ -48,7 +59,7 @@
 import { computed } from 'vue'
 import { useData } from 'vitepress'
 import HomeActions from './HomeActions.vue'
-import Logo from './Logo.vue'
+import HomeVideo from './HomeVideo.vue'
 
 const { frontmatter } = useData()
 const hero = computed(() => frontmatter.value.hero)

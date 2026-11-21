@@ -8,23 +8,48 @@ Docker Compose is the recommended way to run Downtify for persistent home-server
 
 ## Minimal setup
 
-Create a `docker-compose.yml` file:
+Create a `docker-compose.yml` file. It runs Downtify on PostgreSQL, with the database in a `postgres` service next to it (see [Database](../database.md)):
 
 ```yaml
 services:
   downtify:
     container_name: downtify
     image: ghcr.io/henriquesebastiao/downtify:latest
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
     ports:
       - '8000:8000'
     volumes:
       - ./downloads:/downloads
       - downtify_data:/data
+    environment:
+      DATABASE_URL: postgresql://downtify:${POSTGRES_PASSWORD:-downtify}@postgres:5432/downtify
+
+  postgres:
+    container_name: downtify-postgres
+    image: 'postgres:17-alpine'
     restart: unless-stopped
+    environment:
+      POSTGRES_USER: downtify
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-downtify}
+      POSTGRES_DB: downtify
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U downtify -d downtify']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
 
 volumes:
   downtify_data:
+  pgdata:
 ```
+
+Set `POSTGRES_PASSWORD` in a `.env` file next to the Compose file before the first start (see [Environment variables](environment-variables.md#database)). To keep the SQLite files instead, remove `DATABASE_URL`, the `postgres` service and the `depends_on` block.
 
 Start it:
 
@@ -128,11 +153,14 @@ docker compose up -d
 
 Your music and settings are preserved in the volumes.
 
+`latest` always follows the newest release. Every release is also published under its full version and its minor and major lines, so `ghcr.io/henriquesebastiao/downtify:3.12.0` never changes, `:3.12` gets only that line's fixes and `:3` moves to every 3.x release. The same tags exist on Docker Hub (`henriquesebastiao/downtify`).
+
 ## Volumes
 
 | Path inside the compose file | Purpose |
 |------------------------------|---------|
 | `./downloads:/downloads` | Downloaded audio files (local directory) |
-| `downtify_data:/data` | Application database and settings (named volume) |
+| `downtify_data:/data` | Settings, caches and the SQLite files (named volume) |
+| `pgdata:/var/lib/postgresql/data` | The PostgreSQL database, in the `postgres` service |
 
 You can replace the named volume with a local path (`./data:/data`) if you prefer to manage it yourself.

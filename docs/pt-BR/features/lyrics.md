@@ -16,10 +16,19 @@ Os catálogos diferem: uma música que um provedor nunca ouviu falar costuma est
 
 | Provedor | Letras | Observações |
 |----------|--------|-------|
-| **[LRCLIB](https://lrclib.net)** | Simples e sincronizadas | Banco de dados comunitário gratuito, sem chave. Correspondência por título, artista principal, álbum e duração. |
+| **[LRCLIB](https://lrclib.net)** | Simples e sincronizadas | Banco de dados comunitário gratuito, sem chave. Correspondência por título, artista principal, álbum e duração. Se isso não achar nada sincronizado, a busca dele também é tentada; um resultado vale quando título, artista e duração (com poucos segundos de diferença) batem. |
 | **NetEase Cloud Music** | Geralmente sincronizadas | Catálogo grande, forte em lançamentos asiáticos e muitas vezes também em ocidentais. Correspondência por título, artista e duração; um resultado cujo artista é escrito de outra forma (chinês tradicional vs. simplificado, por exemplo) só é aceito quando título e duração coincidem. |
+| **Kugou Music** | Sincronizadas | Catálogo grande, forte em lançamentos chineses e com muitos ocidentais. Correspondência como no NetEase; a linha de título e os créditos de composição do início são removidos. |
 
-Em **Configurações → Tags e letras → Provedores** você pode arrastar os provedores para a ordem que preferir, ou usar as setas, e desligar qualquer um deles. Pelo menos um continua ligado; para parar de buscar letras de vez, use a chave **Baixar letras**.
+Em **Configurações → Tags e letras → Provedores** você pode arrastar os provedores para a ordem que preferir, ou usar as setas, e desligar qualquer um deles. Pelo menos um continua ligado; para parar de buscar letras de vez, use a chave **Baixar letras**. Um provedor adicionado numa atualização começa desligado se você já tinha salvado sua própria lista: ligue-o lá.
+
+### Só letras sincronizadas
+
+**Configurações → Tags e letras → Só letras sincronizadas** (desligado por padrão) mantém só letras com marcação de tempo: um provedor que só tem letra simples para uma música conta como sem nada, e o próximo é consultado. [Melhorar biblioteca](library-upgrade.md) passa a contar como sem letra uma faixa que só tem letra simples. Letras sincronizadas que um arquivo já tem contam sempre: um arquivo `.lrc` ao lado, letras com marcação de tempo nas tags ou um quadro ID3 `SYLT` (como às vezes têm arquivos de outros apps). Com a opção ligada, a letra sincronizada que o Downtify encontra substitui a simples: no arquivo `.lrc` e na tag de letra do próprio arquivo, assim players que só leem as tags também a mostram sincronizada. A varredura também diz quantas das faixas sem letra só tinham letra simples.
+
+### Buscar letras para faixas sem letra
+
+**Biblioteca → Melhorar biblioteca → Escanear e buscar letras** procura na biblioteca faixas sem letra e já busca as letras, com barra de progresso. No fim, mostra quantas faixas ganharam letra, para quantas nada foi encontrado e quantas falharam. Veja [Melhorar biblioteca](library-upgrade.md#while-it-runs).
 
 ::: info E o Genius, o Musixmatch e o AZLyrics?
 Eles não estão disponíveis, e o Downtify não os oferece mais:

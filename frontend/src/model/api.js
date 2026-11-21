@@ -4,7 +4,9 @@ import config from '/src/config.js'
 
 import { v4 as uuidv4 } from 'uuid'
 
+import { restoreParams } from '/src/lib/backups'
 import { coverURL, fileURL, saveName } from '/src/lib/paths'
+import { seedSeenVersion } from '/src/lib/whatsNew'
 
 const API = axios.create({
   baseURL: `${config.PROTOCOL}//${config.BACKEND}:${config.PORT}${config.BASEURL}`,
@@ -47,7 +49,15 @@ function onForbidden(fn) {
   return () => forbiddenListeners.delete(fn)
 }
 
-getVersion()
+// "What's new" starts from the version this browser last ran, before
+// getVersion() overwrites it (lib/whatsNew.js).
+try {
+  seedSeenVersion(localStorage)
+} catch {
+  // No storage: the dialog just never shows.
+}
+// The running version, once known ('0.0.0' when it couldn't be read).
+const versionReady = getVersion()
 
 // ── WebSocket: progress events, reconnecting with backoff ────────────
 const listeners = new Set()
@@ -102,6 +112,15 @@ function ws_onmessage(fn) {
 function ws_onerror(fn) {
   errorListeners.add(fn)
   return () => errorListeners.delete(fn)
+}
+
+// Why downloads didn't come from slskd (admins), and starting it over.
+function getSlskdMisses() {
+  return API.get('/api/slskd/misses')
+}
+
+function resetSlskdMisses() {
+  return API.delete('/api/slskd/misses')
 }
 
 function getVersion() {
@@ -459,6 +478,41 @@ function prepareLibraryArchive(files) {
   return API.post('/api/library/archive', { files })
 }
 
+// ── Backups (Settings > Server; downtify/backup_routes.py) ──────────
+function getBackups() {
+  return API.get('/api/backups')
+}
+
+function createBackup() {
+  return API.post('/api/backups', null, { timeout: 0 })
+}
+
+/** `hours`: 0 (off), 24, 72 or 168. */
+function setBackupSchedule(hours) {
+  return API.put('/api/backups/schedule', { interval_hours: Number(hours) })
+}
+
+function backupDownloadURL(name) {
+  return `/api/backups/${encodeURIComponent(name)}`
+}
+
+/** `parts`: `{settings, watches, songs}` - what to bring back. */
+function restoreBackup(name, parts) {
+  return API.post(`/api/backups/${encodeURIComponent(name)}/restore`, null, {
+    params: restoreParams(parts),
+    timeout: 0,
+  })
+}
+
+// The backup file is sent as the raw request body, like cookies.txt.
+function restoreBackupFile(file, parts) {
+  return API.post('/api/backups/restore', file, {
+    params: restoreParams(parts),
+    headers: { 'Content-Type': 'application/octet-stream' },
+    timeout: 0,
+  })
+}
+
 function libraryArchiveURL(token) {
   return `/api/library/archive/${encodeURIComponent(token)}`
 }
@@ -508,16 +562,32 @@ function controlLoudness(action) {
   return API.post(`/api/library/loudness/${action}`)
 }
 
+// `removeEntries`: [{file, occurrence}], one copy each of a song the
+// playlist repeats (`remove` takes every copy). `allowDuplicates` adds
+// a song the playlist already has again.
 function editLibraryPlaylistTracks(
   name,
-  { add = [], remove = [], sourcePlaylistUrl = '' } = {}
+  {
+    add = [],
+    remove = [],
+    removeEntries = [],
+    allowDuplicates = false,
+    sourcePlaylistUrl = '',
+  } = {}
 ) {
   return API.post('/api/library/playlists/tracks', {
     name,
     add,
     remove,
+    ...(removeEntries.length ? { remove_entries: removeEntries } : {}),
+    ...(allowDuplicates ? { allow_duplicates: true } : {}),
     ...(sourcePlaylistUrl ? { source_playlist_url: sourcePlaylistUrl } : {}),
   })
+}
+
+// Every song of the playlist, repeats included, in its new place.
+function reorderLibraryPlaylist(name, files) {
+  return API.put('/api/library/playlists/order', { name, files })
 }
 
 function renameLibraryPlaylist(name, newName, resetDisplayName = false) {
@@ -738,6 +808,28 @@ function replaceAudio(file, videoId) {
   return API.post('/api/library/replace', { file, video_id: videoId })
 }
 
+// The audio file is sent as the raw request body (no multipart, like
+// uploadArtistArt); its name tells the server its format.
+function replaceAudioFromFile(file, upload, onProgress) {
+  return API.post('/api/library/replace/upload', upload, {
+    params: { file, name: upload.name },
+    headers: { 'Content-Type': 'application/octet-stream' },
+    timeout: 0,
+    onUploadProgress: (event) => {
+      if (onProgress && event.total) onProgress(event.loaded / event.total)
+    },
+  })
+}
+
+// Whether downloads leave a hand-replaced file alone, and lifting that.
+function getHandReplaced(file) {
+  return API.get('/api/library/replace/protected', { params: { file } })
+}
+
+function forgetHandReplaced(file) {
+  return API.delete('/api/library/replace/protected', { params: { file } })
+}
+
 // Mark (or unmark) an album's tracks as a Various Artists compilation:
 // rewrites their album-artist tag and compilation flag in place.
 function setAlbumCompilation(files, compilation) {
@@ -891,6 +983,115 @@ function scanLibraryUsage(refresh = false) {
   return API.get('/api/library/usage/scan', { params: { refresh } })
 }
 
+// ── Navidrome ratings from Deezer (admins) ────────────────────────────
+function navidromeRatingsStatus() {
+  return API.get('/api/navidrome/ratings')
+}
+
+function navidromeRatingsRun(body) {
+  return API.post('/api/navidrome/ratings/run', body)
+}
+
+function navidromeRatingsCancel() {
+  return API.post('/api/navidrome/ratings/cancel')
+}
+
+// ── Doctor (admins): find and repair what older versions left ────────
+function doctorStatus() {
+  return API.get('/api/doctor')
+}
+
+function doctorScan() {
+  return API.post('/api/doctor/scan')
+}
+
+function doctorCancel() {
+  return API.post('/api/doctor/cancel')
+}
+
+// Pauses the download queue, then checks every slskd leftover.
+function doctorSlskdScan() {
+  return API.post('/api/doctor/slskd/scan')
+}
+
+function doctorSlskdFiles(params = {}) {
+  return API.get('/api/doctor/slskd/files', { params })
+}
+
+// Deletes the verified leftovers (all, or `files`) and resumes the queue.
+function doctorSlskdClean(files = []) {
+  return API.post('/api/doctor/slskd/clean', { files })
+}
+
+function doctorSlskdRelease() {
+  return API.post('/api/doctor/slskd/release')
+}
+
+function doctorPreview(paths) {
+  return API.post('/api/doctor/playlists/preview', { paths })
+}
+
+// Duplicate playlists decided on the page: { merge: [[paths]], apart: [[paths]] }.
+function doctorPlaylistsApply(payload) {
+  return API.post('/api/doctor/playlists/apply', payload)
+}
+
+function doctorPlaylistsApartReset() {
+  return API.post('/api/doctor/playlists/apart/reset')
+}
+
+function doctorMerge(paths) {
+  return API.post('/api/doctor/playlists/merge', { paths })
+}
+
+// Keeps `keep` and moves every reference to the copies in `remove` onto
+// it before removing them (to the music trash when it is on).
+function doctorDuplicatesMerge(keep, remove) {
+  return API.post('/api/doctor/duplicates/merge', { keep, remove })
+}
+
+// "Keep all": the files are different songs; not listed again.
+function doctorDuplicatesKeep(files) {
+  return API.post('/api/doctor/duplicates/keep', { files })
+}
+
+function doctorDuplicatesKeepReset() {
+  return API.post('/api/doctor/duplicates/keep/reset')
+}
+
+function doctorNavidromeRepair(payload) {
+  return API.post('/api/doctor/navidrome/repair', payload)
+}
+
+// The Doctor's AI helper (downtify/doctor_ai_routes.py).
+function doctorAiStatus() {
+  return API.get('/api/doctor/ai')
+}
+
+function doctorAiStart() {
+  return API.post('/api/doctor/ai/start')
+}
+
+function doctorAiStop() {
+  return API.post('/api/doctor/ai/stop')
+}
+
+function doctorAiSettings(payload) {
+  return API.put('/api/doctor/ai/settings', payload)
+}
+
+function doctorAiApply(ids) {
+  return API.post('/api/doctor/ai/apply', { ids })
+}
+
+function doctorAiDismiss(ids) {
+  return API.post('/api/doctor/ai/dismiss', { ids })
+}
+
+function doctorAiClear() {
+  return API.post('/api/doctor/ai/clear')
+}
+
 function writePlaylistM3u(payload) {
   return API.post('/api/playlist/m3u', payload)
 }
@@ -941,6 +1142,11 @@ function deleteCookies() {
   return API.delete('/api/cookies')
 }
 
+// Runs the cookie keep-alive now and answers with the status (health).
+function checkCookies() {
+  return API.post('/api/cookies/check')
+}
+
 function getSettings() {
   return API.get('/api/settings', { params: { client_id: sessionID } })
 }
@@ -971,7 +1177,23 @@ function setSettings(settings) {
   })
 }
 
+function metadataLibrary() {
+  return API.get('/api/v1/library')
+}
+
+function editMetadata(trackIds, changes, revisions) {
+  return API.patch('/api/v1/tracks/metadata/batch', {
+    track_ids: trackIds,
+    changes,
+    revisions,
+  })
+}
+
 export default {
+  getSlskdMisses,
+  resetSlskdMisses,
+  metadataLibrary,
+  editMetadata,
   trashCapabilities,
   trashPreview,
   trashConfirm,
@@ -1047,6 +1269,7 @@ export default {
   getLoudnessStatus,
   controlLoudness,
   editLibraryPlaylistTracks,
+  reorderLibraryPlaylist,
   renameLibraryPlaylist,
   setPlaylistVisibility,
   setPlaylistFavorite,
@@ -1099,8 +1322,17 @@ export default {
   renameServer,
   getServerPort,
   setServerPort,
+  getBackups,
+  createBackup,
+  setBackupSchedule,
+  backupDownloadURL,
+  restoreBackup,
+  restoreBackupFile,
   getReplaceCandidates,
   replaceAudio,
+  replaceAudioFromFile,
+  getHandReplaced,
+  forgetHandReplaced,
   setAlbumCompilation,
   getDiscover,
   getDiscoverDeezerCollections,
@@ -1131,6 +1363,31 @@ export default {
   resumeLibraryUpgrade,
   cancelLibraryUpgrade,
   getLibraryUsage,
+  navidromeRatingsStatus,
+  navidromeRatingsRun,
+  navidromeRatingsCancel,
+  doctorStatus,
+  doctorScan,
+  doctorCancel,
+  doctorSlskdScan,
+  doctorSlskdFiles,
+  doctorSlskdClean,
+  doctorSlskdRelease,
+  doctorPreview,
+  doctorMerge,
+  doctorPlaylistsApply,
+  doctorPlaylistsApartReset,
+  doctorDuplicatesMerge,
+  doctorDuplicatesKeep,
+  doctorDuplicatesKeepReset,
+  doctorNavidromeRepair,
+  doctorAiStatus,
+  doctorAiStart,
+  doctorAiStop,
+  doctorAiSettings,
+  doctorAiApply,
+  doctorAiDismiss,
+  doctorAiClear,
   scanLibraryUsage,
   writePlaylistM3u,
   getQueue,
@@ -1149,9 +1406,11 @@ export default {
   getCookiesStatus,
   uploadCookies,
   deleteCookies,
+  checkCookies,
   check_for_update,
   onMessage,
   ws_onmessage,
   ws_onerror,
   getVersion,
+  versionReady,
 }

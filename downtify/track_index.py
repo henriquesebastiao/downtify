@@ -4,16 +4,19 @@ from __future__ import annotations
 
 import re
 import sqlite3
+from contextlib import AbstractContextManager
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
 
+from .db.batching import in_short_transactions
+from .db.config import Dialect
+from .db.core import Connection, Database, as_database
 from .library_cache_keys import file_content_key
 from .library_paths import (
     locate_library_file,
     slskd_dir_from_downloader,
 )
-from .sqlite_utils import connect_sqlite
 
 _SPOTIFY_TRACK_ID = re.compile(r'^[a-zA-Z0-9]{22}$')
 _SPOTIFY_TRACK_URL = re.compile(
@@ -47,16 +50,26 @@ def _now_iso() -> str:
 
 
 class TrackIndex:
-    """SQLite index: one canonical relative path per Spotify track id."""
+    """Index: one canonical relative path per Spotify track id.
 
-    def __init__(self, db_path: Path) -> None:
-        self._path = str(db_path)
+    Stored in the ``library`` database group (SQLite or PostgreSQL).
+    """
+
+    def __init__(self, path_or_db: str | Path | Database) -> None:
+        self.db = as_database(path_or_db, 'library')
+        if isinstance(path_or_db, Database):
+            self._path = str(self.db.path) if self.db.path else None
+        else:
+            self._path = str(path_or_db)
         self._init_db()
 
-    def _connect(self) -> sqlite3.Connection:
-        return connect_sqlite(self._path, row_factory=True)
+    def _connect(self) -> AbstractContextManager[Connection]:
+        return self.db.connect()
 
     def _init_db(self) -> None:
+        # PostgreSQL gets its schema from the migrations.
+        if self.db.dialect is not Dialect.SQLITE:
+            return
         with self._connect() as conn:
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS library_tracks (
@@ -96,6 +109,16 @@ class TrackIndex:
         if not tid:
             return None
         return self.lookup(tid)
+
+    def spotify_ids_by_filename(self) -> dict[str, str]:
+        """``{filename: Spotify track id}`` for every indexed file (a
+        backup records which track each library file was)."""
+
+        with self._connect() as conn:
+            rows = conn.execute(
+                'SELECT spotify_track_id, filename FROM library_tracks'
+            ).fetchall()
+        return {str(r['filename']): str(r['spotify_track_id']) for r in rows}
 
     def spotify_id_for_filename(self, filename: str) -> Optional[str]:
         """The Spotify track a library file was downloaded for, if known.
@@ -214,8 +237,10 @@ class TrackIndex:
     def list_filenames(self) -> list[str]:
         with self._connect() as conn:
             rows = conn.execute(
-                'SELECT filename FROM library_tracks ORDER BY filename'
+                'SELECT filename FROM library_tracks'
             ).fetchall()
+        # Sort in Python: PostgreSQL's collation order differs from SQLite's.
+        rows = sorted(rows, key=lambda row: str(row['filename'] or ''))
         return [
             str(row['filename']).replace('\\', '/')
             for row in rows
@@ -248,23 +273,25 @@ class TrackIndex:
                 (tid,),
             )
 
-    def backfill_from_monitor_db(self, monitor_db_path: Path) -> int:
-        """Import rows from monitored-playlist history (best-effort, idempotent)."""
+    def backfill_from_monitor_db(
+        self, monitor_db_path: Path | Database
+    ) -> int:
+        """Import rows from monitored-playlist history (best-effort, idempotent).
 
-        path = Path(monitor_db_path)
-        if not path.is_file():
-            return 0
+        ``monitor_db_path`` is either the monitor's ``Database`` (any
+        backend) or a legacy SQLite file path.
+        """
+
+        rows = read_monitor_rows(
+            self.db,
+            monitor_db_path,
+            """SELECT track_spotify_id, filename
+               FROM downloaded_tracks
+               WHERE filename IS NOT NULL AND filename != ''""",
+        )
         imported = 0
-        with sqlite3.connect(str(path)) as src:
-            try:
-                rows = src.execute(
-                    """SELECT track_spotify_id, filename
-                       FROM downloaded_tracks
-                       WHERE filename IS NOT NULL AND filename != ''"""
-                ).fetchall()
-            except sqlite3.Error:
-                return 0
-        for track_id, filename in rows:
+        # A few commits instead of one per row (downtify/db/batching.py).
+        for track_id, filename in in_short_transactions(self.db, rows):
             tid = str(track_id or '').strip()
             if not _SPOTIFY_TRACK_ID.fullmatch(tid):
                 continue
@@ -273,6 +300,37 @@ class TrackIndex:
             if before != str(filename):
                 imported += 1
         return imported
+
+
+def read_monitor_rows(
+    store: Database,
+    source: Path | Database,
+    sql: str,
+) -> list[tuple[Any, ...]]:
+    """Run a read-only monitor-history query and return plain tuples.
+
+    A ``Database`` source is queried through its own connections on any
+    backend. A file path is the legacy SQLite monitor history: it is read
+    only when ``store`` is SQLite too (PostgreSQL stores never read it),
+    and a missing file or a failed query yields no rows.
+    """
+
+    if isinstance(source, Database):
+        try:
+            with source.connect() as conn:
+                return [tuple(row) for row in conn.execute(sql).fetchall()]
+        except sqlite3.Error:
+            return []
+    if store.dialect is not Dialect.SQLITE:
+        return []
+    path = Path(source)
+    if not path.is_file():
+        return []
+    try:
+        with sqlite3.connect(str(path)) as src:
+            return [tuple(row) for row in src.execute(sql).fetchall()]
+    except sqlite3.Error:
+        return []
 
 
 def resolve_existing_download(

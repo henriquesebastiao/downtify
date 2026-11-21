@@ -8,23 +8,48 @@ A Docker Compose a Downtify futtatásának ajánlott módja tartós otthoni szer
 
 ## Minimális beállítás
 
-Hozz létre egy `docker-compose.yml` fájlt:
+Hozz létre egy `docker-compose.yml` fájlt. PostgreSQL-en fut a Downtify, az adatbázis pedig a mellette lévő `postgres` szolgáltatásban van (lásd: [Adatbázis](../database.md)):
 
 ```yaml
 services:
   downtify:
     container_name: downtify
     image: ghcr.io/henriquesebastiao/downtify:latest
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
     ports:
       - '8000:8000'
     volumes:
       - ./downloads:/downloads
       - downtify_data:/data
+    environment:
+      DATABASE_URL: postgresql://downtify:${POSTGRES_PASSWORD:-downtify}@postgres:5432/downtify
+
+  postgres:
+    container_name: downtify-postgres
+    image: 'postgres:17-alpine'
     restart: unless-stopped
+    environment:
+      POSTGRES_USER: downtify
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-downtify}
+      POSTGRES_DB: downtify
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U downtify -d downtify']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
 
 volumes:
   downtify_data:
+  pgdata:
 ```
+
+A első indítás előtt állítsd be a `POSTGRES_PASSWORD` értékét a Compose-fájl melletti `.env` fájlban (lásd: [Környezeti változók](environment-variables.md#database)). Ha inkább a SQLite-fájlokat szeretnéd használni, töröld a `DATABASE_URL`-t, a `postgres` szolgáltatást és a `depends_on` blokkot.
 
 Indítsd el:
 
@@ -133,6 +158,7 @@ A zenéd és a beállításaid a kötetekben megmaradnak.
 | Útvonal a compose-fájlban | Cél |
 |------------------------------|---------|
 | `./downloads:/downloads` | Letöltött hangfájlok (helyi könyvtár) |
-| `downtify_data:/data` | Az alkalmazás adatbázisa és beállításai (névvel ellátott kötet) |
+| `downtify_data:/data` | Beállítások, gyorsítótárak és a SQLite-fájlok (névvel ellátott kötet) |
+| `pgdata:/var/lib/postgresql/data` | A PostgreSQL-adatbázis, a `postgres` szolgáltatásban |
 
 A névvel ellátott kötetet lecserélheted helyi útvonalra (`./data:/data`), ha inkább magad kezeled.

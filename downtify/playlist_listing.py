@@ -21,8 +21,8 @@ def list_library_playlists(
     *,
     stale_ok: bool = False,
 ) -> list[dict[str, Any]]:
-    """Every playlist on disk, from the ``.m3u`` files Downtify writes for
-    playlist/album downloads and Playlist Monitor sweeps (see
+    """Every playlist from ``.m3u`` / UTF-8 ``.m3u8`` files under downloads,
+    including playlist/album downloads and Playlist Monitor sweeps (see
     ``downtify/m3u.py``), plus playlists the user created in the Library.
 
     Each M3U file on disk is one playlist, regardless of whether

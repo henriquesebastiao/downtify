@@ -16,6 +16,25 @@ icon: lucide/settings
 | `DOWNTIFY_LOG_LEVEL` | `info` | 应用日志级别（`debug`、`info`、`warning` 等）。 |
 | `TZ` | `UTC` | 本地时区（IANA 名称，例如 `America/Sao_Paulo`），用于解析下方的 `DOWNTIFY_MONITOR_SYNC_TIME`。 |
 
+## 数据库
+
+默认情况下，Downtify 将数据保存在 `DATABASE_DIR` 下的 SQLite 文件中。设置 `DATABASE_URL` 可改用 PostgreSQL；[数据库](../database.md)页面介绍了配置、迁移以及各类数据的存放位置。
+
+| 变量 | 默认值 | 说明 |
+|----------|---------|-----------|
+| `DATABASE_URL` | _(unset)_ | PostgreSQL 连接 URL，格式为 `postgresql://user:password@host:5432/dbname`（也支持 `postgres://`）。未设置：使用 SQLite。设置后：原本以 SQLite 文件保存的存储（媒体库、监控、账号、活动、doctor）改用 PostgreSQL。其他协议的值会被拒绝。错误信息中从不显示该 URL。 |
+| `DB_POOL_MIN` | `2` | PostgreSQL 连接池保持打开的连接数。必须为 `0` 或更大。 |
+| `DB_POOL_MAX` | `20` | PostgreSQL 连接池最多打开的连接数。必须至少为 `1`，且不小于 `DB_POOL_MIN`。 |
+| `DB_POOL_TIMEOUT` | `10` | 请求等待空闲连接的秒数，超时后失败。 |
+| `DB_SEARCH_PATH` | _(unset)_ | 要使用的 PostgreSQL schema，适用于与其他应用共享的数据库。仅允许普通标识符：字母、数字和下划线，且不能以数字开头。未设置：使用服务器默认值（`public`）。 |
+| `DATABASE_DIR` | `/data` | 设置、缓存和 SQLite 文件所在的目录。使用 PostgreSQL 时仍然需要，用于存放所有非数据库表的内容。 |
+| `POSTGRES_PASSWORD` | `downtify` | 仅 Docker Compose 使用（由仓库的 `docker-compose.yml` 读取，服务器不读取）：内置 `postgres` 服务中 `downtify` 用户的密码，`DATABASE_URL` 也使用它。首次启动前将其放入 Compose 文件旁的 `.env` 文件。PostgreSQL 只在创建数据卷时应用该密码，因此之后修改不会改变已有数据库的密码。 |
+
+```yaml
+environment:
+  - DATABASE_URL=postgresql://downtify:change-me@postgres:5432/downtify
+```
+
 ## 播放列表监控
 
 | 变量 | 默认值 | 说明 |
@@ -65,7 +84,7 @@ OIDC 为可选功能。请同时配置 issuer、客户端 ID 和密钥；只配�
 
 ## 健康检查
 
-镜像内置 [Docker `HEALTHCHECK`](https://docs.docker.com/reference/dockerfile/#healthcheck)，无需自定义 `--health-cmd`。它每 30 秒通过容器自身端口轮询 `GET /api/health`（超时 5 秒，启动宽限期 20 秒，连续失败 3 次后标记为不健康）。可通过 `docker ps` 和 `docker inspect` 查看结果，Compose 的 `condition: service_healthy` 或 Watchtower 等工具也可据此采取操作。
+镜像内置 [Docker `HEALTHCHECK`](https://docs.docker.com/reference/dockerfile/#healthcheck)，无需自定义 `--health-cmd`。它每 30 秒通过容器自身端口轮询 `GET /api/health`（超时 5 秒，启动宽限期 20 秒，连续失败 3 次后标记为不健康）。可通过 `docker ps` 和 `docker inspect` 查看结果，Compose 的 `condition: service_healthy` 或 Watchtower 等工具也可据此采取操作。使用 PostgreSQL 时，若无法连接数据库，健康检查也会失败（返回 `503`，参见 [`GET /api/health`](../api-reference.md#get-apihealth)）。
 
 | 变量 | 默认值 | 说明 |
 |----------|---------|-------------|
@@ -86,6 +105,7 @@ YouTube 会定期对自动下载工具发起验证。默认配置失效时，可
 | `DOWNTIFY_YT_PLAYER_CLIENTS` | `ios,android,web_embedded,mweb,web,tv` | 按顺序尝试的 yt-dlp 播放器客户端列表，以逗号分隔。Downtify 默认优先使用无需 JavaScript 运行时的客户端。只有确认特定客户端遭到屏蔽时才建议覆盖此设置。 |
 | `DOWNTIFY_YT_PO_TOKEN` | _(unset)_ | 提供给 yt-dlp 的 Proof-of-Origin token 列表，以逗号分隔，每项格式为 `<client>.<context>+<token>`（例如 `mweb.gvs+ABC123`）。仅当 YouTube 开始要求当前客户端提供 PO Token 时才需要设置。 |
 | `DOWNTIFY_COOKIES_FILE` | _(unset)_ | 容器**内部** Netscape 格式 `cookies.txt` 的路径。让 yt-dlp 使用真实浏览器会话进行身份验证；下载显式内容/年龄限制歌曲或 YouTube 强制登录时需要此项。其优先级高于 Web 界面上传的文件，并会使界面中的 Cookie 区域变为只读。详见 [YouTube Cookie](../features/youtube-cookies.md)。 |
+| `DOWNTIFY_COOKIES_REFRESH_MINUTES` | `15` | Cookie 保活轮换并保存 YouTube 会话 Cookie 的间隔（分钟，`5`–`1440`）。`0` 表示关闭。它会刷新上传的文件，或 `DOWNTIFY_COOKIES_FILE` 指向的文件（可写时）。见[保持 cookies 有效](../features/youtube-cookies.md#keeping-them-working)。 |
 | `DOWNTIFY_COOKIES_FROM_BROWSER` | _(unset)_ | 用于提取 Cookie 的浏览器名称（例如 `chrome`、`firefox`）。容器必须能够访问浏览器 Cookie 存储，因此通常不适用于 Docker。 |
 
 ::: tip 通常无需配置这些变量
@@ -103,7 +123,7 @@ services:
     volumes:
       - ./downloads:/downloads
       - downtify_data:/data
-      - ./cookies.txt:/cookies.txt:ro
+      - ./cookies.txt:/cookies.txt
     environment:
       - DOWNTIFY_FORCE_IPV4=1
       - DOWNTIFY_COOKIES_FILE=/cookies.txt

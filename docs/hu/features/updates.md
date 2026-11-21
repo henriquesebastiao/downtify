@@ -10,6 +10,14 @@ A Downtify óránként egyszer ellenőrzi a saját [GitHub Releases oldalát](ht
 
 Kattints rá, hogy megnyisd a kiadást a GitHubon.
 
+## Újdonságok frissítés után
+
+Amikor a Downtify frissítése után először nyílik meg a webalkalmazás, egy **A Downtify 3.12.0 újdonságai** ablak sorolja fel a verzió legfontosabb újdonságait, egy **Teljes változásnapló** gombbal, amely megnyitja a kiadást a GitHubon, és egy visszafogott sorral, amellyel csillagot adhatsz a tárolónak. Az **Értem** (vagy a bezárás) elrejti a következő frissítésig. A **Beállítások → Névjegy → Újdonságok** újra megnyitja.
+
+- Böngészőnként tárolódik: minden böngésző (és minden benne bejelentkezett személy) frissítésenként egyszer látja. Egy böngésző, amely még sosem nyitotta meg a Downtifyt — egy új telepítés — nem látja.
+- Az újdonságok az alkalmazással együtt érkeznek, így az ablak internet nélkül is működik; csak a két hivatkozás vezet a GitHubra. Egy megírt újdonságok nélküli kiadás csak a változásnaplójára mutató hivatkozást mutatja.
+- Megvárja a bejelentkezést, és nem nyílik meg az alapértelmezett jelszó megváltoztatására figyelmeztető ablak fölött.
+
 ## Hogyan működik
 
 - A backend egy háttérfeladata (`downtify/update_check.py`) induláskor azonnal egyszer, majd óránként lekéri a legújabb kiadást a GitHub API-jából. „Elindítom és elfelejtem” jellegű: a felületen semmi sem vár rá.

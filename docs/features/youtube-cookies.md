@@ -37,10 +37,12 @@ The pre-existing [`DOWNTIFY_COOKIES_FILE`](../getting-started/environment-variab
 services:
   downtify:
     volumes:
-      - ./cookies.txt:/cookies.txt:ro
+      - ./cookies.txt:/cookies.txt
     environment:
       - DOWNTIFY_COOKIES_FILE=/cookies.txt
 ```
+
+Mount it writable (no `:ro`) so the keep-alive can save the rotated cookies into it; a read-only file is still used, but goes stale like before.
 
 When it is set, the settings screen shows the cookie section as locked and refuses uploads and deletions — the deployment owns that configuration, and Downtify must not overwrite a file it doesn't manage. Unset the variable (and recreate the container) to manage cookies from the web UI instead.
 
@@ -48,10 +50,28 @@ When it is set, the settings screen shows the cookie section as locked and refus
 
 ## Keeping them working
 
-- Cookies expire. If age-restricted downloads start failing again, export a fresh file and upload it as a replacement.
-- Exporting from a **private/incognito window** that you then close produces a longer-lived session, because closing a normal window can invalidate the exported session.
+Exported cookies don't expire on a fixed date. Google's session is a set of cookies that keep changing: the browser tab they came from rotates `__Secure-1PSIDTS`, `SIDCC` and friends every few minutes, and a copy that never learns the new values is eventually refused. yt-dlp then logs "The provided YouTube account cookies are no longer valid". On a VPN or datacenter IP YouTube is stricter, so this can happen within a couple of hours.
+
+Downtify keeps the uploaded file signed in by itself:
+
+- **Every download saves the new values.** yt-dlp gets a private copy of the file for each download; when it finishes, the cookies YouTube changed during it are merged back into the stored `cookies.txt`, without undoing a newer value another download saved meanwhile.
+- **A keep-alive refreshes them on a timer.** Every 15 minutes (`DOWNTIFY_COOKIES_REFRESH_MINUTES`, `0` turns it off) Downtify asks Google to rotate the session cookies, the same request the browser makes, opens `youtube.com` with them and saves whatever changed. Even a server that downloads nothing for days keeps a live session.
+- **The settings screen shows the result.** **Settings → YouTube cookies** shows *Signed in*, *Signed out*, *No account* (the file has no Google session, only visitor cookies) or *Check failed*, when it was last checked and when YouTube last asked for a bot check. *Check now* runs the keep-alive right away. A new upload is checked a few seconds after it is saved.
+
+What you still have to do:
+
+- **Export from a private/incognito window and close it.** Sign in to YouTube in a private window, open `youtube.com/robots.txt` in that tab, export the cookies, then close the window. A tab you keep using rotates the session itself, and the copy Downtify has is signed out within minutes. Don't use the same account in a normal browser window at the same time if you can avoid it.
+- **Upload a new file when the screen says *Signed out*.** Google can still end the session (a password change, "sign out of all devices", a security review). The log says so too: `YouTube cookies are signed out`.
 - Some regions require full identity verification on the Google account before YouTube serves age-restricted content at all. Being signed in is not always enough.
 
+::: info Why there is no "Sign in with Google" button
+Downtify can't sign in to Google for you. Google blocks scripted and headless browser logins ("This browser or app may not be secure"), asks for 2-step verification and device prompts, and YouTube no longer accepts OAuth from third-party clients like yt-dlp. A login form in Downtify would also mean handing it your Google password. Keeping an exported session alive is the part that can be automated.
+:::
+
+::: tip Bot checks without an account
+"Sign in to confirm you're not a bot" comes from the IP address, not from missing cookies. If it keeps showing up on a VPN, switching the VPN server or exit country often helps more than new cookies. Cookies used for many downloads also raise the chance of YouTube limiting that account, so a throwaway account is the safer choice.
+:::
+
 ::: warning Treat the file like a password
-A `cookies.txt` contains live session tokens for your Google account. Anyone who can read it can act as you on YouTube. Downtify stores it with owner-only permissions where the filesystem supports it, and never exposes its contents through the API — only whether one is configured, its size and when it changed. Use a throwaway Google account if you'd rather not risk your main one.
+A `cookies.txt` contains live session tokens for your Google account. Anyone who can read it can act as you on YouTube. Downtify stores it with owner-only permissions where the filesystem supports it, and never exposes its contents through the API — only whether one is configured, its size, when it changed and whether YouTube still accepts it. Use a throwaway Google account if you'd rather not risk your main one.
 :::

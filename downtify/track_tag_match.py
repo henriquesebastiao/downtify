@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 import unicodedata
+from functools import lru_cache
 from pathlib import Path
 from typing import Any, Optional
 
@@ -76,6 +77,22 @@ _UNWANTED_REMOTE_VARIANT_KEYWORDS = (
 )
 
 
+_NON_WORD = re.compile(r'[\W_]+')
+
+
+def _spaced_words(text: str) -> str:
+    """*text* as its words between single spaces, padded (`` a b ``)."""
+
+    words = ' '.join(part for part in _NON_WORD.split(text) if part)
+    return f' {words} '
+
+
+# Each modifier as its words, worked out once (`` remix ``, `` live at ``).
+_VARIANT_KEYWORD_WORDS = {
+    kw: _spaced_words(kw) for kw in _UNWANTED_REMOTE_VARIANT_KEYWORDS
+}
+
+
 def remote_adds_unwanted_variant(
     spotify_title: str,
     remote_text: str,
@@ -91,10 +108,17 @@ def remote_adds_unwanted_variant(
     spotify_blob = f'{spotify_title or ""} {artists}'.casefold()
     remote_l = str(remote_text or '').casefold()
     skip = skip_keywords or frozenset()
-    return any(
-        kw not in skip and kw in remote_l and kw not in spotify_blob
-        for kw in _UNWANTED_REMOTE_VARIANT_KEYWORDS
-    )
+    spotify_words = ''
+    for kw in _UNWANTED_REMOTE_VARIANT_KEYWORDS:
+        if kw in skip or kw not in remote_l or kw in spotify_blob:
+            continue
+        # Spotify's own words, so "Song - Remix" allows a "Song (Remix)"
+        # file: a modifier counts as Spotify's when its words are, whatever
+        # the punctuation around them. Only worked out when needed.
+        spotify_words = spotify_words or _spaced_words(spotify_blob)
+        if _VARIANT_KEYWORD_WORDS[kw] not in spotify_words:
+            return True
+    return False
 
 
 def _remote_adds_spam_keyword(spotify_title: str, remote_text: str) -> bool:
@@ -219,6 +243,34 @@ def youtube_probe_title_matches(
     )
 
 
+def fold_accents(text: str) -> str:
+    """*text* without accents: ``Tití Me Preguntó`` -> ``Titi Me Pregunto``
+    (a file name often drops them)."""
+
+    if text.isascii():
+        return text
+    decomposed = unicodedata.normalize('NFKD', text)
+    return ''.join(ch for ch in decomposed if not unicodedata.combining(ch))
+
+
+def plain_name(text: str) -> str:
+    """*text* spelled the way file names usually spell it: symbols inside a
+    word read as the letter they stand for and the rest dropped - ``P!nk``
+    -> ``Pink``, ``A$AP Rocky`` -> ``ASAP Rocky``, ``$uicideboy$`` ->
+    ``Suicideboys``, ``AC/DC`` -> ``ACDC``, ``N.W.A.`` -> ``NWA``,
+    ``JAŸ-Z`` -> ``JAY Z`` (no accents; a hyphen splits words)."""
+
+    words = []
+    for raw in fold_accents(str(text or '')).replace('-', ' ').split():
+        word = re.sub(r'(?<=[^\W\d_])!(?=[^\W\d_])', 'i', raw)
+        word = re.sub(r'(?<=[^\W\d_])@(?=[^\W\d_])', 'a', word)
+        word = re.sub(r'\$(?=[^\W\d_])|(?<=[^\W\d_])\$', 's', word)
+        word = re.sub(r'[^\w]+', '', word)
+        if word:
+            words.append(word)
+    return ' '.join(words)
+
+
 def _normalize_tag(text: str) -> str:
     return unicodedata.normalize('NFC', str(text or '').strip()).casefold()
 
@@ -235,11 +287,99 @@ def _titles_align(expected: str, from_file: str) -> bool:
     file_title_n = _normalize_tag_loose(from_file)
     if not title_n or not file_title_n:
         return True
-    return (
+    if (
         title_n == file_title_n
         or title_n in file_title_n
         or file_title_n in title_n
+    ):
+        return True
+    # The song's own name in both, word for word, however each spells the
+    # rest: "Despacito - Remix" / "Despacito (Official Remix)", "Shook Ones,
+    # Pt. II" / "Shook Ones Part 2", "Tití Me Preguntó" / "Titi Me Pregunto".
+    expected_words = _title_words(expected, core=True)
+    file_words = _title_words(from_file, core=True)
+    if not expected_words or not file_words:
+        return False
+    return _words_within(expected_words, _title_words(from_file)) or (
+        _words_within(file_words, _title_words(expected))
     )
+
+
+def _words_within(words: list[str], others: list[str]) -> bool:
+    """Whether every word of *words* is among *others*; a censored word
+    (``f*kin``) stands for any word it could be (``fuckin``, or ``fkin``
+    when the stars were just dropped)."""
+
+    pool = set(others)
+    for word in words:
+        if '*' in word:
+            pattern = re.compile(
+                r'\w{0,4}'.join(re.escape(p) for p in word.split('*')) + '$'
+            )
+            if not any(pattern.match(other) for other in pool):
+                return False
+        elif word not in pool:
+            return False
+    return True
+
+
+_TAG_CREDIT = re.compile(
+    r'\s*[\(\[]\s*(?:feat\.?|ft\.?|featuring|with|from|official)\b[^\)\]]*[\)\]]'
+    r'|\s+(?:feat\.?|ft\.?|featuring)\s.*$',
+    re.IGNORECASE,
+)
+_TAG_PART = re.compile(
+    r'\b(?:pt|part|vol|volume)\b\.?\s*([ivx]+|\d+)\b', re.IGNORECASE
+)
+_TAG_ROMAN = {
+    'i': '1',
+    'ii': '2',
+    'iii': '3',
+    'iv': '4',
+    'v': '5',
+    'vi': '6',
+    'vii': '7',
+    'viii': '8',
+    'ix': '9',
+    'x': '10',
+}
+
+
+_CENSORED_RUN = re.compile(r'(?<=[^\W\d_])\*+')
+_TITLE_SPLIT = re.compile(r'(?:[^\w\x00]|_)+')
+
+
+@lru_cache(maxsize=4096)
+def _title_words(text: str, *, core: bool = False) -> tuple[str, ...]:
+    """*text*'s words for comparing titles: no accents, case, apostrophes,
+    ``&``/``and``, censored words (``F**kin'``), and ``Part II`` as
+    ``pt 2``. With *core*, only the song's own name: no ``(feat. …)``,
+    ``(from …)`` or `` - …`` part. Remembered per title: a playlist
+    compares the same titles over and over."""
+
+    value = fold_accents(str(text or ''))
+    if core:
+        head = value.split(' - ', 1)[0]
+        value = _TAG_CREDIT.sub('', head) or head
+    value = value.casefold().replace("'", '').replace('\u2019', '')
+    # A censored word ("F**kin'") stays one word, its hidden letters one
+    # "*", matched against the spelled-out word (_words_within).
+    value = _CENSORED_RUN.sub('\x00', value)
+    value = _TAG_PART.sub(
+        lambda m: f' pt {_TAG_ROMAN.get(m.group(1).casefold(), m.group(1))} ',
+        value,
+    )
+    words = _TITLE_SPLIT.split(value)
+    return tuple(w.replace('\x00', '*') for w in words if w and w != 'and')
+
+
+def _artist_key(text: str) -> str:
+    """An artist as tags are compared: letters only, no accents, symbols
+    spelled out (``P!nk`` -> ``pink``), no leading "The" or ``&``/``and``."""
+
+    value = plain_name(text).casefold()
+    value = re.sub(r'^the\s+', '', value)
+    return ''.join(w for w in re.split(r'[\W_]+', value) if w and w != 'and')
 
 
 def _artist_lists_align(expected: list[str], actual: list[str]) -> bool:
@@ -254,6 +394,31 @@ def _artist_lists_align(expected: list[str], actual: list[str]) -> bool:
         for act in actual:
             act_n = _normalize_tag_loose(act)
             if exp_n in act_n or act_n in exp_n:
+                return True
+    # Spelled differently: "P!nk" / "Pink", "Mötley Crüe" / "Motley Crue",
+    # "The Weeknd" / "Weeknd", "Daryl Hall & John Oates" / "Hall & Oates".
+    for exp in expected:
+        exp_k = _artist_key(exp)
+        exp_words = {
+            w
+            for w in re.split(r'[\W_]+', fold_accents(exp).casefold())
+            if len(w) >= 4
+        }
+        for act in actual:
+            act_k = _artist_key(act)
+            if exp_k and act_k and (exp_k in act_k or act_k in exp_k):
+                return True
+            act_words = {
+                w
+                for w in re.split(r'[\W_]+', fold_accents(act).casefold())
+                if len(w) >= 4
+            }
+            # Every name word of one in the other ("Hall & Oates").
+            if (
+                act_words
+                and exp_words
+                and (act_words <= exp_words or exp_words <= act_words)
+            ):
                 return True
     return False
 

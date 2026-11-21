@@ -70,6 +70,9 @@ describe('i18n locale key consistency', () => {
           ).toBe(true)
           expect(value.other, `${code}: "${key}" needs "other"`).toBeTruthy()
           for (const form of forms) {
+            // `one` may drop {count} ("Every hour") or keep it where the
+            // language's `one` also covers 21, 31… (Russian).
+            if (form === 'one') continue
             // Forms that en also has share its placeholders; forms that
             // only this language has share en's `other` placeholders.
             const expected = form in enValue ? enValue[form] : enValue.other

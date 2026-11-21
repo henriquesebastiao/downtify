@@ -27,18 +27,19 @@ from __future__ import annotations
 import bisect
 import json
 import math
-import sqlite3
 from collections import defaultdict
 from collections.abc import Collection, Iterable
+from contextlib import AbstractContextManager
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path, PurePosixPath
 from typing import Any, Optional
 
+from .db.config import Dialect
+from .db.core import Connection, Database, as_database
 from .download_log import OUTCOME_COMPLETED, OUTCOMES
 from .file_providers import guess_provider
 from .library_catalog import entry_content_key, song_key
 from .library_paths import EXTERNAL_LIBRARY_PREFIX, SLSKD_LIBRARY_PREFIX
-from .sqlite_utils import connect_sqlite
 from .watch_stats import (
     DEFAULT_DAYS,
     bucket_days_for,
@@ -394,12 +395,16 @@ def _same_length_runs(rows: list[dict[str, Any]]) -> list[list[str]]:
 
 
 def duplicates(
-    entries: list[dict[str, Any]], providers: dict[str, str]
+    entries: list[dict[str, Any]],
+    providers: dict[str, str],
+    *,
+    limit: Optional[int] = EXAMPLES,
 ) -> dict[str, Any]:
     """Library files holding the same song more than once.
 
     ``bytes`` is what keeping only the biggest file of each group would
-    free. ``groups`` lists the :data:`EXAMPLES` that would free most.
+    free. ``examples`` lists the *limit* groups that would free most
+    (every group with ``None``).
     """
 
     by_file = {norm_path(e.get('file')): e for e in entries}
@@ -448,7 +453,7 @@ def duplicates(
         'bytes': sum(g['bytes'] for g in found),
         'exact': totals['exact'],
         'likely': totals['likely'],
-        'examples': found[:EXAMPLES],
+        'examples': found if limit is None else found[:limit],
     }
 
 
@@ -474,6 +479,12 @@ def _duplicate_group(
                     'provider': provider_of(name, providers),
                     'codec': str(row.get('codec') or ''),
                     'bitrate': int(row.get('bitrate') or 0),
+                    # Each copy's own tags: look-alikes can differ there
+                    # (a parody uploaded under the original's name).
+                    'title': str(row.get('title') or ''),
+                    'artist': str(row.get('artist') or ''),
+                    'album': str(row.get('album') or ''),
+                    'duration': _duration(row),
                 }
                 for name, row, size in zip(names, rows, sizes)
             ),
@@ -637,8 +648,14 @@ def library_snapshot(
 class UsageSnapshots:
     """The library's size once a day (the last reading of the day wins)."""
 
-    def __init__(self, db_path: Path) -> None:
-        self._path = str(db_path)
+    def __init__(self, db_path: str | Path | Database) -> None:
+        self.db = as_database(db_path, 'library')
+        self._path = None if self.db.path is None else str(self.db.path)
+        if self.db.dialect is Dialect.SQLITE:
+            self._init_db()
+
+    def _init_db(self) -> None:
+        # SQLite only: on PostgreSQL the migration made this schema.
         with self._connect() as conn:
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS library_usage_snapshots (
@@ -652,8 +669,8 @@ class UsageSnapshots:
                 )
             """)
 
-    def _connect(self) -> sqlite3.Connection:
-        return connect_sqlite(self._path, row_factory=True)
+    def _connect(self) -> AbstractContextManager[Connection]:
+        return self.db.connect()
 
     def record(self, snapshot: dict[str, Any], now: datetime) -> None:
         detail = {

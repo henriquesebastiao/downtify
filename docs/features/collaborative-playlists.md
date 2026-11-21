@@ -20,6 +20,7 @@ The playlist shows up for them under **Shared with me**, and its page says it is
 
 - **Add songs** from the playlist page or its **⋯** menu, and pick the playlist under **Add to playlist** in any song's menu, after their own playlists.
 - **Remove from playlist** in a song's **⋯** menu on the playlist's page.
+- **Reorder** its songs, and add a song it already has again — see [Playlist order & repeated songs](playlist-order.md).
 
 Renaming, sharing, deleting and the cover art saved from a source link stay with the owner and admins. An editor can still **Save a copy**, like any viewer.
 
@@ -28,6 +29,8 @@ A few things hold for everyone who edits it, the owner included:
 - **Only songs they can see.** Songs come from the shared library; one an admin [hid from users](users.md#hiding-from-users) can't be added by someone it is hidden from.
 - **Changes show up at once** for the owner and the other editors, without reloading the page.
 - **Nobody's songs get lost.** Two people adding songs at the same moment both get theirs in: edits are applied one after the other.
+
+Playlist maintenance follows the same rule. Removing deleted tracks or songs from an unmapped music folder cannot overwrite a concurrent addition or removal, or recreate a playlist that was renamed or deleted. Track order, repeated songs and custom cover art are kept. If maintenance changes the songs while someone is reordering an older list, the reorder is rejected as a conflict: reload the playlist and try again.
 
 ## When editing ends
 

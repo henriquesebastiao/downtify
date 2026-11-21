@@ -38,6 +38,12 @@ function updateMonitoredPlaylist(id, updates) {
   return API.patch(`/api/monitor/playlists/${id}`, updates)
 }
 
+// The same `interval_minutes` and/or `enabled` for several watches:
+// `{ updated: [watch…], missing: [id…] }`.
+function updateMonitoredPlaylists(ids, updates) {
+  return API.patch('/api/monitor/playlists', { ids, ...updates })
+}
+
 function deleteMonitoredPlaylist(id) {
   return API.delete(`/api/monitor/playlists/${id}`)
 }
@@ -61,15 +67,88 @@ function getWatchTracks(id) {
   return API.get(`/api/monitor/playlists/${id}/tracks`)
 }
 
+// Forget a watch's failing songs (they are tried again either way).
+function clearWatchFailures(id) {
+  return API.delete(`/api/monitor/playlists/${id}/failures`)
+}
+
+// An artist watch's whole catalogue, with what the library has of each
+// release, and switching releases on, off or back to the watch's rules.
+function getArtistReleases(id) {
+  return API.get(`/api/monitor/playlists/${id}/releases`)
+}
+
+function switchArtistReleases(id, albumIds, choice) {
+  return API.patch(`/api/monitor/playlists/${id}/releases`, {
+    album_ids: albumIds,
+    choice,
+  })
+}
+
+// "Check what I have": read every release's tracklist in the background.
+function checkArtistInventory(id) {
+  return API.post(`/api/monitor/playlists/${id}/releases/inventory`)
+}
+
+// One release's tracks and which the library has (`albumIds`: the
+// release's `album_ids`, repeated as `album_id`).
+function getArtistReleaseTracks(id, albumIds) {
+  return API.get(`/api/monitor/playlists/${id}/releases/tracks`, {
+    params: { album_id: albumIds },
+    paramsSerializer: { indexes: null },
+  })
+}
+
+// "Download missing": a check that fetches the songs missing from every
+// release the watch downloads.
+function downloadArtistMissing(id) {
+  return API.post(`/api/monitor/playlists/${id}/releases/download-missing`)
+}
+
+// The Wanted tab: what every watched artist is missing, and the jobs
+// that check or download all of it, one artist at a time.
+function getWanted() {
+  return API.get('/api/monitor/wanted')
+}
+
+// Just the job, light enough to poll while it runs.
+function getWantedJob() {
+  return API.get('/api/monitor/wanted/job')
+}
+
+function wantedCheckAll() {
+  return API.post('/api/monitor/wanted/check-all')
+}
+
+function wantedDownloadAll() {
+  return API.post('/api/monitor/wanted/download-all')
+}
+
+function wantedStop() {
+  return API.post('/api/monitor/wanted/stop')
+}
+
 export default {
   artistSuggestions,
+  getWanted,
+  getWantedJob,
+  wantedCheckAll,
+  wantedDownloadAll,
+  wantedStop,
+  downloadArtistMissing,
+  checkArtistInventory,
+  getArtistReleaseTracks,
+  getArtistReleases,
+  switchArtistReleases,
   resolveArtistSuggestion,
   getMonitorStats,
   getTrackProvenance,
   getWatchTracks,
+  clearWatchFailures,
   listMonitoredPlaylists,
   addMonitoredPlaylist,
   updateMonitoredPlaylist,
+  updateMonitoredPlaylists,
   deleteMonitoredPlaylist,
   checkMonitoredPlaylist,
 }

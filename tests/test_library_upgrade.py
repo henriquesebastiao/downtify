@@ -288,6 +288,7 @@ def _stub_cover(monkeypatch: Any, width: Optional[int]) -> None:
         *,
         current: Any = None,
         preference: str = '',
+        px: Optional[int] = None,
     ) -> Any:
         if width is None:
             return None

@@ -7,6 +7,7 @@ picture (~640 px, ~1.6 MB decoded each): scrolling 3,700 albums held
 
 from __future__ import annotations
 
+import os
 import threading
 import time
 from pathlib import Path
@@ -23,12 +24,12 @@ FULL = b'\xff\xd8\xff\xe0' + b'full-size-cover' * 100
 SMALL = b'\xff\xd8\xff\xe0small'
 
 
-def _tagged_mp3(path: Path) -> Path:
+def _tagged_mp3(path: Path, cover: bytes = FULL) -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_bytes(b'\x00' * 1024)
     tags = ID3()
     tags.add(TIT2(encoding=3, text='Roads'))
-    tags.add(APIC(encoding=3, mime='image/jpeg', type=3, data=FULL))
+    tags.add(APIC(encoding=3, mime='image/jpeg', type=3, data=cover))
     tags.save(str(path))
     return path
 
@@ -101,6 +102,36 @@ def test_an_odd_size_rounds_up_and_a_huge_one_is_full_size(client):
 def test_a_sized_cover_of_an_unknown_file_is_404(client):
     missing = client.get('/cover', params={'file': 'nope.mp3', 'size': '150'})
     assert missing.status_code == 404
+
+
+def test_sized_covers_do_not_leak_between_album_directories(
+    client: TestClient, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    covers = (FULL[:-1] + b'A', FULL[:-1] + b'B')
+    names = ('Album A/Intro.mp3', 'Album B/Intro.mp3')
+    paths = [
+        _tagged_mp3(tmp_path / 'downloads' / name, cover)
+        for name, cover in zip(names, covers)
+    ]
+    for path in paths:
+        os.utime(path, ns=(1_700_000_000_000_000_000,) * 2)
+    assert paths[0].stat().st_size == paths[1].stat().st_size
+    assert paths[0].stat().st_mtime_ns == paths[1].stat().st_mtime_ns
+    monkeypatch.setattr(
+        CoverThumbs, '_scale', lambda _self, data, _size: SMALL + data[-1:]
+    )
+
+    first = client.get('/cover', params={'file': names[0], 'size': '300'})
+    second = client.get('/cover', params={'file': names[1], 'size': '300'})
+
+    assert first.status_code == second.status_code == 200
+    assert first.content == SMALL + b'A'
+    assert second.content == SMALL + b'B'
+    assert first.headers['etag'] != second.headers['etag']
+    assert (
+        client.get('/cover', params={'file': names[0], 'size': '300'}).content
+        == first.content
+    )
 
 
 def test_scaling_runs_a_bounded_number_of_ffmpeg_at_once(

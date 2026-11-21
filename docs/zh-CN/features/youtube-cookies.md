@@ -37,10 +37,12 @@ Downtify 从 YouTube 获取音频。大多数情况下可以匿名访问，但�
 services:
   downtify:
     volumes:
-      - ./cookies.txt:/cookies.txt:ro
+      - ./cookies.txt:/cookies.txt
     environment:
       - DOWNTIFY_COOKIES_FILE=/cookies.txt
 ```
+
+请以可写方式挂载（不加 `:ro`），这样保活才能把轮换后的 Cookie 存回文件；只读文件仍会被使用，但会像以前一样过期。
 
 设置此变量后，设置页面会将 cookies 区域显示为锁定状态，并拒绝上传和删除操作，因为此配置由部署环境负责管理，Downtify 不得覆盖它不管理的文件。若要改用 Web 界面管理 cookies，请取消设置该变量并重新创建容器。
 
@@ -48,9 +50,27 @@ services:
 
 ## 保持 cookies 有效
 
-- Cookies 会过期。如果年龄限制内容的下载再次失败，请导出新文件并上传替换。
-- 从之后会关闭的**私人/无痕窗口**导出，通常可以获得更长效的会话，因为关闭普通窗口可能会使导出的会话失效。
-- 某些地区要求 Google 账户完成完整身份验证，YouTube 才会提供年龄限制内容。仅登录账户并不总是足够。
+导出的 Cookie 并不会在固定日期过期。Google 会话是一组不断变化的 Cookie：导出它们的浏览器标签页每隔几分钟就会轮换 `__Secure-1PSIDTS`、`SIDCC` 等，而一份从未获得新值的副本最终会被拒绝。此时 yt-dlp 会记录 "The provided YouTube account cookies are no longer valid"。在 VPN 或数据中心 IP 上 YouTube 更严格，几个小时内就可能发生。
+
+Downtify 会自动让上传的文件保持登录：
+
+- **每次下载都会保存新值。** yt-dlp 每次下载都拿到文件的私有副本；下载结束后，YouTube 在此期间更改的 Cookie 会合并回保存的 `cookies.txt`，并且不会覆盖其他下载在此期间保存的更新值。
+- **保活任务定期刷新。** 每 15 分钟（`DOWNTIFY_COOKIES_REFRESH_MINUTES`，`0` 表示关闭）Downtify 会像浏览器一样请求 Google 轮换会话 Cookie，用它们打开 `youtube.com`，并保存发生变化的部分。即使服务器连续几天什么都不下载，会话也能保持有效。
+- **设置页面显示结果。** **设置 → YouTube Cookies** 会显示*已登录*、*已退出登录*、*无账号*（文件里没有 Google 会话，只有访客 Cookie）或*检查失败*，以及上次检查时间和 YouTube 上次要求机器人验证的时间。*立即检查*会马上运行保活。新上传的文件会在保存几秒后被检查。
+
+仍需要你做的：
+
+- **在无痕窗口中导出并关闭窗口。** 在无痕窗口中登录 YouTube，在同一标签页打开 `youtube.com/robots.txt`，导出 Cookie，然后关闭窗口。继续使用的标签页会自行轮换会话，Downtify 手里的副本几分钟内就会退出登录。如果可以，不要同时在普通窗口里使用同一个账号。
+- **页面显示*已退出登录*时上传新文件。** Google 仍可能结束会话（修改密码、"退出所有设备"、安全审查）。日志也会提示：`YouTube cookies are signed out`。
+- 部分地区要求 Google 账号先完成完整的身份验证，YouTube 才会提供任何年龄限制内容。仅仅登录并不总是足够。
+
+::: info 为什么没有"使用 Google 登录"按钮
+Downtify 无法替你登录 Google。Google 会拦截脚本和无头浏览器的登录（"此浏览器或应用可能不安全"），要求两步验证和设备确认，而 YouTube 已不再接受 yt-dlp 等第三方客户端的 OAuth。在 Downtify 中放一个登录表单，也意味着要把你的 Google 密码交给它。能够自动化的部分，是让导出的会话保持有效。
+:::
+
+::: tip 没有账号时的机器人验证
+"Sign in to confirm you're not a bot" 取决于 IP 地址，而不是缺少 Cookie。如果在 VPN 上反复出现，更换 VPN 服务器或出口国家通常比换新 Cookie 更有效。用于大量下载的 Cookie 也会增加 YouTube 限制该账号的可能，因此使用一次性账号更稳妥。
+:::
 
 ::: warning 请像保护密码一样保护此文件
 `cookies.txt` 包含 Google 账户的有效会话令牌。任何能读取该文件的人都可以在 YouTube 上冒充你。在文件系统支持的情况下，Downtify 会使用仅所有者可读的权限保存文件，并且绝不会通过 API 暴露其内容，只会提供是否已配置、文件大小和修改时间等信息。如果不想让主账户承担风险，可使用专门的 Google 账户。

@@ -1,5 +1,75 @@
 import { describe, expect, it } from 'vitest'
-import { activeLineIndex, parseLrc } from '../lib/lrc.js'
+import {
+  activeLineIndex,
+  countInBeats,
+  lineProgress,
+  parseLrc,
+} from '../lib/lrc.js'
+
+describe('lineProgress', () => {
+  const words = 'x'.repeat(40) // 40 chars: 10 seconds at most
+
+  it('runs from the start of the line to the next one', () => {
+    const lines = [
+      { time: 10, text: words },
+      { time: 14, text: 'next' },
+    ]
+    expect(lineProgress(lines, 0, 10)).toBe(0)
+    expect(lineProgress(lines, 0, 12)).toBe(0.5)
+    expect(lineProgress(lines, 0, 14)).toBe(1)
+  })
+
+  it('does not crawl across an untimed gap after the line', () => {
+    const lines = [
+      { time: 10, text: words },
+      { time: 70, text: 'after the solo' },
+    ]
+    expect(lineProgress(lines, 0, 15)).toBe(0.5)
+    expect(lineProgress(lines, 0, 20)).toBe(1)
+  })
+
+  it('gives a short line time to be sung', () => {
+    const lines = [{ time: 0, text: 'Oh' }]
+    expect(lineProgress(lines, 0, 1.5)).toBe(0.5)
+  })
+
+  it('stays within 0 and 1, and survives bad input', () => {
+    const lines = [
+      { time: 10, text: words },
+      { time: 10, text: 'same time' },
+    ]
+    expect(lineProgress(lines, 0, 5)).toBe(1)
+    expect(lineProgress(lines, 5, 5)).toBe(0)
+    expect(lineProgress([{ time: 10, text: words }], 0, 5)).toBe(0)
+  })
+})
+
+describe('countInBeats', () => {
+  const lines = [
+    { time: 8, text: 'First' },
+    { time: 12, text: '' },
+    { time: 30, text: 'Back in' },
+    { time: 40, text: '' },
+  ]
+
+  it('holds every dot through a long intro, then counts down', () => {
+    expect(countInBeats(lines, 0)).toBe(3)
+    expect(countInBeats(lines, 5.5)).toBe(3)
+    expect(countInBeats(lines, 6.5)).toBe(2)
+    expect(countInBeats(lines, 7.5)).toBe(1)
+  })
+
+  it('counts in after an instrumental gap', () => {
+    expect(countInBeats(lines, 20)).toBe(3)
+    expect(countInBeats(lines, 29.5)).toBe(1)
+  })
+
+  it('shows nothing while a line is sung or when no words are left', () => {
+    expect(countInBeats(lines, 9)).toBe(0)
+    expect(countInBeats(lines, 45)).toBe(0)
+    expect(countInBeats([], 0)).toBe(0)
+  })
+})
 
 const LRC = `[ar:Kenji Aoki]
 [ti:Harbor Lights]

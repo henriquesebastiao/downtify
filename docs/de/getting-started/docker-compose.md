@@ -8,23 +8,48 @@ Docker Compose ist der empfohlene Weg, Downtify für dauerhafte Home-Server-Setu
 
 ## Minimales Setup
 
-Erstelle eine Datei `docker-compose.yml`:
+Erstelle eine Datei `docker-compose.yml`. Sie betreibt Downtify mit PostgreSQL, die Datenbank läuft in einem Dienst `postgres` daneben (siehe [Datenbank](../database.md)):
 
 ```yaml
 services:
   downtify:
     container_name: downtify
     image: ghcr.io/henriquesebastiao/downtify:latest
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
     ports:
       - '8000:8000'
     volumes:
       - ./downloads:/downloads
       - downtify_data:/data
+    environment:
+      DATABASE_URL: postgresql://downtify:${POSTGRES_PASSWORD:-downtify}@postgres:5432/downtify
+
+  postgres:
+    container_name: downtify-postgres
+    image: 'postgres:17-alpine'
     restart: unless-stopped
+    environment:
+      POSTGRES_USER: downtify
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-downtify}
+      POSTGRES_DB: downtify
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U downtify -d downtify']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
 
 volumes:
   downtify_data:
+  pgdata:
 ```
+
+Setze `POSTGRES_PASSWORD` vor dem ersten Start in einer `.env`-Datei neben der Compose-Datei (siehe [Umgebungsvariablen](environment-variables.md#database)). Um stattdessen die SQLite-Dateien zu behalten, entferne `DATABASE_URL`, den Dienst `postgres` und den Block `depends_on`.
 
 Starte es:
 
@@ -133,6 +158,7 @@ Deine Musik und deine Einstellungen bleiben in den Volumes erhalten.
 | Pfad in der Compose-Datei | Zweck |
 |------------------------------|---------|
 | `./downloads:/downloads` | Heruntergeladene Audiodateien (lokales Verzeichnis) |
-| `downtify_data:/data` | Anwendungsdatenbank und Einstellungen (benanntes Volume) |
+| `downtify_data:/data` | Einstellungen, Caches und die SQLite-Dateien (benanntes Volume) |
+| `pgdata:/var/lib/postgresql/data` | Die PostgreSQL-Datenbank, im Dienst `postgres` |
 
 Du kannst das benannte Volume durch einen lokalen Pfad (`./data:/data`) ersetzen, wenn du es lieber selbst verwaltest.

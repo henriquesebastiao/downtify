@@ -9,7 +9,8 @@ import time
 from unittest.mock import MagicMock, patch
 
 import pytest
-from fastapi import HTTPException
+from fastapi import FastAPI, HTTPException
+from fastapi.testclient import TestClient
 from starlette.requests import Request
 
 from downtify import api, stream
@@ -163,9 +164,11 @@ def test_cache_prunes_least_recently_used(tmp_path):
     new.write_bytes(b'123456')
     ancient = time.time() - 100
     os.utime(old, (ancient, ancient))
+    os.utime(new, (ancient + 1, ancient + 1))
+    assert cache.cached_path(old.stem) == old
     assert cache.prune() == 1
-    assert not old.exists()
-    assert new.exists()
+    assert old.exists()
+    assert not new.exists()
 
 
 def test_probed_seconds_is_fail_open_on_garbage(tmp_path):
@@ -241,6 +244,30 @@ def test_stream_file_endpoint_serves_the_cached_file(tmp_path, monkeypatch):
     )
     assert response.status_code == 200
     assert response.media_type == 'audio/mp4'
+
+
+def test_stream_file_endpoint_keeps_etag_across_ranges(tmp_path, monkeypatch):
+    cache = _cache(tmp_path)
+    cache._dir.mkdir()
+    (cache._dir / 'dQw4w9WgXcQ.m4a').write_bytes(b'audio')
+    monkeypatch.setattr(api.state, 'stream_cache', cache)
+    monkeypatch.setattr(stream, 'resolve_cookies_file', lambda store: '')
+    app = FastAPI()
+    app.add_api_route('/api/stream/file', api.stream_file_endpoint)
+    client = TestClient(app)
+    url = '/api/stream/file?video_id=dQw4w9WgXcQ'
+
+    probe = client.get(url, headers={'Range': 'bytes=0-1'})
+    assert probe.status_code == 206
+    assert probe.content == b'au'
+
+    part = client.get(
+        url, headers={'Range': 'bytes=2-4', 'If-Range': probe.headers['etag']}
+    )
+    assert part.status_code == 206
+    assert part.content == b'dio'
+    assert part.headers['content-range'] == 'bytes 2-4/5'
+    assert part.headers['etag'] == probe.headers['etag']
 
 
 def test_stream_file_endpoint_rejects_a_bad_id():

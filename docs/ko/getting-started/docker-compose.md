@@ -8,23 +8,48 @@ Docker Compose는 오래 운영하는 홈 서버 환경에서 Downtify를 실행
 
 ## 최소 구성
 
-`docker-compose.yml` 파일을 만드세요.
+`docker-compose.yml` 파일을 만드세요. 이 구성은 Downtify를 PostgreSQL로 실행하며, 데이터베이스는 옆에 있는 `postgres` 서비스에 들어 있습니다([데이터베이스](../database.md) 참고).
 
 ```yaml
 services:
   downtify:
     container_name: downtify
     image: ghcr.io/henriquesebastiao/downtify:latest
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
     ports:
       - '8000:8000'
     volumes:
       - ./downloads:/downloads
       - downtify_data:/data
+    environment:
+      DATABASE_URL: postgresql://downtify:${POSTGRES_PASSWORD:-downtify}@postgres:5432/downtify
+
+  postgres:
+    container_name: downtify-postgres
+    image: 'postgres:17-alpine'
     restart: unless-stopped
+    environment:
+      POSTGRES_USER: downtify
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-downtify}
+      POSTGRES_DB: downtify
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U downtify -d downtify']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
 
 volumes:
   downtify_data:
+  pgdata:
 ```
+
+처음 실행하기 전에 Compose 파일 옆의 `.env` 파일에 `POSTGRES_PASSWORD`를 설정하세요([환경 변수](environment-variables.md#database) 참고). 대신 SQLite 파일을 쓰려면 `DATABASE_URL`, `postgres` 서비스, `depends_on` 블록을 삭제하세요.
 
 실행합니다.
 
@@ -133,6 +158,7 @@ docker compose up -d
 | compose 파일 안의 경로 | 용도 |
 |------------------------------|---------|
 | `./downloads:/downloads` | 내려받은 오디오 파일(로컬 디렉터리) |
-| `downtify_data:/data` | 애플리케이션 데이터베이스와 설정(이름 있는 볼륨) |
+| `downtify_data:/data` | 설정, 캐시와 SQLite 파일(이름 있는 볼륨) |
+| `pgdata:/var/lib/postgresql/data` | PostgreSQL 데이터베이스(`postgres` 서비스) |
 
 직접 관리하고 싶다면 이름 있는 볼륨을 로컬 경로(`./data:/data`)로 바꿔도 됩니다.

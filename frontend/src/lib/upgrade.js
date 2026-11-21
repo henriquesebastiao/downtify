@@ -3,7 +3,9 @@
 
 /** Categories the backend scans for, in the order they're shown. */
 export const CATEGORIES = ['artwork', 'lyrics', 'metadata']
-const SUPPORTED_CATEGORIES = [...CATEGORIES, 'audio']
+// Opt-in kinds a scan only looks for when asked: ISRCs for older
+// files, and Deemix's replacement audio.
+const SUPPORTED_CATEGORIES = [...CATEGORIES, 'isrc', 'audio']
 
 /** Only explicit catalog tracks can override an old album label. */
 export function deezerRecordingId(value) {
@@ -31,7 +33,7 @@ export function deezerRecordingId(value) {
 export const ARTWORK_SOURCES = ['highest', 'spotify', 'itunes', 'youtube-music']
 
 /** Target sizes offered for "upgrade artwork below". */
-export const ARTWORK_SIZES = [300, 500, 600, 1000, 1200]
+export const ARTWORK_SIZES = [300, 600, 1000, 1200, 1400]
 
 const EMPTY_COUNTS = {
   total: 0,
@@ -66,10 +68,20 @@ export function normalizeStatus(payload) {
       // Tracks the scan didn't read because every category had been
       // looked at recently enough.
       recentlyChecked: Number(data.summary?.recently_checked) || 0,
+      // Of the tracks missing lyrics, those with only unsynced ones
+      // (Time-synced lyrics only).
+      plainLyricsOnly: Number(data.summary?.plain_lyrics_only) || 0,
       libraryTracks: Number(data.summary?.library_tracks) || 0,
       libraryBytes: Number(data.summary?.library_bytes) || 0,
     },
     options: run?.options || {},
+    // How the lyrics part of the run went.
+    lyrics: {
+      added: Number(data.lyrics?.added) || 0,
+      notFound: Number(data.lyrics?.not_found) || 0,
+      failed: Number(data.lyrics?.failed) || 0,
+      pending: Number(data.lyrics?.pending) || 0,
+    },
   }
 }
 

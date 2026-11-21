@@ -31,9 +31,10 @@ Egy még le nem fordított oldal egy megjegyzést és az angol szöveget mutatja
 | `hu` | Magyar | ✓ | ✓ |
 | `bg` | Български | ✓ | ✓ |
 | `de` | Deutsch | ✓ | ✓ |
-| `ru` | Русский | ✓ | ✓ |
 | `ko` | 한국어 | ✓ | ✓ |
+| `ru` | Русский | ✓ | ✓ |
 | `zh-CN` | 简体中文 | ✓ | — |
+| `zh-TW` | 繁體中文 | ✓ | — |
 
 A fejlesztőknek szánt referencia-oldalak — az [API-referencia](../api-reference.md), a [mobilkliens-szerződés](../mobile-client-contract.md) és a változásnapló — minden nyelven angolul maradnak.
 

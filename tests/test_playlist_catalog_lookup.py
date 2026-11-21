@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
-import sqlite3
 from pathlib import Path
 
+from downtify.db.core import Database
 from downtify.library_catalog import LibraryContext, list_library_entries
 from downtify.library_metadata_cache import LibraryMetadataCache
 from downtify.library_reconcile import prune_stale_and_backfill
 from downtify.playlist_catalog import PlaylistCatalog
+from tests.db.helpers import execute
 
 
 def test_playlists_on_list_entries(tmp_path: Path) -> None:
@@ -43,8 +44,10 @@ def test_backfill_from_monitor_db(tmp_path: Path) -> None:
     track.write_bytes(b'audio')
 
     monitor_db = tmp_path / 'monitor.db'
-    with sqlite3.connect(monitor_db) as conn:
-        conn.executescript("""
+    monitor = Database.sqlite(monitor_db)
+    execute(
+        monitor,
+        """
             CREATE TABLE monitored_playlists (
                 id INTEGER PRIMARY KEY,
                 spotify_id TEXT NOT NULL,
@@ -55,21 +58,43 @@ def test_backfill_from_monitor_db(tmp_path: Path) -> None:
                 last_checked TEXT,
                 last_track_count INTEGER DEFAULT 0,
                 created_at TEXT NOT NULL
-            );
+            )
+        """,
+    )
+    execute(
+        monitor,
+        """
             CREATE TABLE downloaded_tracks (
                 id INTEGER PRIMARY KEY,
                 playlist_id INTEGER NOT NULL,
                 track_spotify_id TEXT NOT NULL,
                 downloaded_at TEXT NOT NULL,
                 filename TEXT
-            );
-            INSERT INTO monitored_playlists VALUES (
-                1, 'playlist12345678901234567890', 'Old Mix', 'http://x', 60, 1, NULL, 0, 'now'
-            );
-            INSERT INTO downloaded_tracks VALUES (
-                1, 1, '4uLU6hMCjMI75M1A2tKUQC', 'now', 'Artist - Song.mp3'
-            );
-        """)
+            )
+        """,
+    )
+    execute(
+        monitor,
+        'INSERT INTO monitored_playlists VALUES (?,?,?,?,?,?,?,?,?)',
+        1,
+        'playlist12345678901234567890',
+        'Old Mix',
+        'http://x',
+        60,
+        1,
+        None,
+        0,
+        'now',
+    )
+    execute(
+        monitor,
+        'INSERT INTO downloaded_tracks VALUES (?,?,?,?,?)',
+        1,
+        1,
+        '4uLU6hMCjMI75M1A2tKUQC',
+        'now',
+        'Artist - Song.mp3',
+    )
 
     catalog = PlaylistCatalog(tmp_path / 'library.db')
     count = catalog.backfill_from_monitor_db(

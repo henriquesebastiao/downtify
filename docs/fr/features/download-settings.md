@@ -82,7 +82,7 @@ Contrôle combien de morceaux sont téléchargés en même temps. Choisissez une
 | **8** | Plus rapide pour les grandes playlists |
 | **jusqu’à 30** | Idéal pour les connexions très rapides ; utilise plus de CPU et de bande passante, et augmente le risque que YouTube vous limite. |
 
-La limite s’applique à tout téléchargement par lot — téléchargements de playlists/albums, endpoint de file par lot et [imports de bibliothèque](library-import.md) CSV — et aux recherches de la synchronisation des **[Dossiers de musique existants](external-library.md)** (paroles, pochettes, genre). Elle ne s’applique **pas** aux passages du Suivi de playlists, qui téléchargent les nouveaux morceaux un par un. Modifier cette valeur dans les Paramètres prend effet immédiatement sans redémarrage ; le serveur ramène toute valeur hors de `1–30` dans cet intervalle.
+La limite s’applique à tout téléchargement par lot — téléchargements de playlists/albums, endpoint de file par lot et [imports de bibliothèque](library-import.md) CSV — et aux recherches de la synchronisation des **[Dossiers de musique existants](external-library.md)** (paroles, pochettes, genre). Elle s’applique aussi aux vérifications du [Suivi de playlists](playlist-monitor.md) : les téléchargements d’un suivi attendent une place libre comme les autres et apparaissent en attente dans la file. Ajouter beaucoup de suivis d’un coup, **Vérifier maintenant** ou **Télécharger tout ce qui manque** ne lancent donc jamais plus de téléchargements que cette limite. Modifier cette valeur dans les Paramètres prend effet immédiatement sans redémarrage ; le serveur ramène toute valeur hors de `1–30` dans cet intervalle.
 
 ## Pause entre téléchargements
 
@@ -111,20 +111,17 @@ Ce `cover.jpg` est partagé par tous les morceaux du dossier de l’album. Suppr
 
 ## Résolution des pochettes
 
-Utile seulement quand **Télécharger les pochettes** (ci-dessus) est activé. Définit la taille cible (largeur et hauteur, en pixels) que Downtify demande pour la pochette intégrée provenant de **YouTube Music** ou de **Deezer**. Choisissez une valeur prédéfinie (300, 600, 800, 1000, 1200) ou faites glisser le curseur de **300 à 1200** ; la valeur actuelle en pixels s’affiche à côté. La valeur par défaut est 600.
+Utile seulement quand **Télécharger les pochettes** (ci-dessus) est activé. **Taille de la pochette** est la taille visée par la pochette intégrée de chaque téléchargement, en pixels (largeur et hauteur). Choisissez une valeur prédéfinie (600, 1000, 1200, 1400, 2000) ou saisissez une valeur de **300 à 3000**. La valeur par défaut est 1200.
 
-C’est utile pour alimenter un serveur multimédia comme Plex, qui affiche les pochettes dans une résolution supérieure à celle que Downtify intègre par défaut.
+Quand la pochette proposée par la source du titre est plus petite — la plus grande de Spotify fait 640 px, celle de Deezer 1000 px —, Downtify demande en même temps à Spotify, iTunes, YouTube Music et Deezer la pochette du même titre, chacun à cette taille, et intègre la plus grande. Une pochette ne compte que si l’artiste et le titre correspondent, pour qu’une pochette d’un autre morceau ne soit jamais utilisée.
 
-Les deux sources appliquent le réglage différemment, puisqu’une seule d’entre elles peut réellement être redimensionnée à la demande :
+Les pochettes ne sont jamais agrandies. iTunes et YouTube Music réduisent leur image d’origine à la taille demandée et envoient l’original lui-même quand il est plus petit — la plupart des sorties y font 1400 px ou plus. Deezer ne propose que quatre tailles fixes (56, 250, 500 et 1000 px) ; la plus petite qui atteint la taille est utilisée. Quand aucune source ne l’atteint, la plus grande pochette trouvée est intégrée et le journal l’indique.
 
-- Les miniatures de **YouTube Music** peuvent être redimensionnées en modifiant leur URL — vérifié sur le CDN réel, les valeurs élevées renvoient vraiment plus de détail (pas seulement un agrandissement) pour la plupart des pochettes, jusqu’à la résolution de l’image source elle-même.
-- **Deezer** ne propose que quatre tailles fixes pour la pochette de tout morceau, album, artiste ou playlist (56, 250, 500 et 1000 px) — il n’y a pas de taille intermédiaire à demander. Downtify choisit la plus petite de ces quatre qui soit encore au moins aussi grande que la valeur configurée (demander 300 px donne celle de 500 px, faute de taille exacte de 300 px) ; demander plus de 1000 px donne aussi celle de 1000 px, la plus grande de Deezer.
+**Taille minimale de la pochette** (désactivée par défaut) relève cet objectif : une pochette doit atteindre la plus grande des deux valeurs, et les boutons de **Taille de la pochette** sous le minimum sont grisés.
 
-::: info Les pochettes issues de Spotify ne sont pas concernées
-Downtify intègre déjà la **plus grande** pochette que l’API d’intégration publique de Spotify propose pour les morceaux/albums/playlists résolus par Spotify — il n’y a pas de taille supérieure à demander. Ce réglage ne relève le plafond que pour les morceaux résolus par YouTube Music (recherche en texte libre, URL YouTube, et tout morceau Spotify rapproché de YouTube Music pour l’audio proprement dit) ou par Deezer (un lien Deezer collé, ou un morceau des [Classements](charts.md)).
-:::
+Pour amener à cette taille les pochettes déjà présentes dans votre bibliothèque, lancez **Améliorer la bibliothèque** avec la catégorie des pochettes ; par défaut, elle améliore les pochettes de moins de 1200 px.
 
-Modifier cette valeur dans les Paramètres prend effet immédiatement, y compris pour la page de recherche actuellement ouverte — cela n’oblige pas à retélécharger quoi que ce soit déjà présent sur le disque.
+Modifier cette valeur dans les Réglages prend effet immédiatement — inutile de retélécharger ce qui est déjà sur le disque.
 
 ## Écraser les fichiers existants
 
@@ -208,3 +205,6 @@ Downtify intègre les tags suivants dans chaque fichier téléchargé, quel que 
 | Année | Embed Spotify (récupération au niveau du morceau) |
 | Pochette | Embed Spotify (pochette au niveau du morceau) pour les morceaux résolus par Spotify ; miniature YouTube Music ou pochette Deezer sinon. Facultatif — voir [Télécharger les pochettes](#download-cover-art) et [Résolution des pochettes](#cover-art-resolution) |
 | Paroles | lrclib (si activé) |
+| ISRC | Deezer, seulement quand il est certain. Facultatif — **Écrire les codes ISRC** (voir ci-dessous) |
+
+L’**ISRC** est le code qu’un label attribue à un enregistrement, par exemple `USCM51600061`. Avec **Paramètres → Tags et paroles → Écrire les codes ISRC** activé (par défaut), chaque nouveau téléchargement est recherché sur Deezer : un téléchargement Deezer reprend le code de son propre morceau ; tout autre est cherché par artiste, titre et durée, et le code n’est écrit que si tous les résultats concordent. Un morceau que Deezer ne peut identifier avec certitude n’en reçoit aucun plutôt qu’un mauvais. Le Suivi d’artistes et la détection des doublons comparent d’abord ce code, si bien que le même enregistrement est reconnu même quand deux catalogues le nomment différemment. Les fichiers déjà dans votre bibliothèque ne sont pas modifiés, et Navidrome n’identifie pas les morceaux par l’ISRC : l’écrire n’y change rien.

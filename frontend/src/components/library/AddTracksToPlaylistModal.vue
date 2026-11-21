@@ -20,7 +20,7 @@
       </label>
       <ul class="max-h-80 overflow-y-auto">
         <li
-          v-for="track in visible"
+          v-for="track in hits"
           :key="track.file"
           class="flex h-12 items-center gap-3 rounded-[10px] px-1 hover:bg-surface-2"
         >
@@ -38,6 +38,9 @@
             <p class="truncate text-sm font-semibold">{{ track.title }}</p>
             <p class="truncate text-[13px] text-muted">{{ track.artist }}</p>
           </label>
+          <UiBadge v-if="have.has(track.file)" icon="check">
+            {{ t('playlists.inPlaylist') }}
+          </UiBadge>
         </li>
       </ul>
     </div>
@@ -62,6 +65,7 @@
 import { computed, ref, watch } from 'vue'
 import { watchDebounced } from '@vueuse/core'
 import AppIcon from '../ui/AppIcon.vue'
+import UiBadge from '../ui/UiBadge.vue'
 import UiButton from '../ui/UiButton.vue'
 import UiModal from '../ui/UiModal.vue'
 import { useLibrary } from '/src/model/library'
@@ -84,10 +88,11 @@ const open = computed({
 })
 const playlist = computed(() => actions.addPlaylist.value)
 
-const visible = computed(() => {
-  const have = new Set((playlist.value?.tracks || []).map((item) => item.file))
-  return hits.value.filter((track) => !have.has(track.file))
-})
+// Songs the playlist already has stay pickable, marked: picking one adds
+// it again.
+const have = computed(
+  () => new Set((playlist.value?.tracks || []).map((item) => item.file))
+)
 
 async function searchLibrary(text) {
   hits.value = await library.searchTracks(text, { limit: 80 })
@@ -117,7 +122,10 @@ async function submit() {
   if (!playlist.value || !picked.value.length || saving.value) return
   saving.value = true
   try {
-    await actions.addFiles(playlist.value, picked.value)
+    // A marked song was picked knowing it is there already.
+    await actions.addFiles(playlist.value, picked.value, {
+      allowDuplicates: true,
+    })
     close()
   } finally {
     saving.value = false

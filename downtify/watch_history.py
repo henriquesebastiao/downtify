@@ -19,9 +19,15 @@ same database:
 
 from __future__ import annotations
 
-import sqlite3
+from contextlib import AbstractContextManager
 from datetime import datetime, timezone
-from typing import Any, Callable, Optional
+from typing import TYPE_CHECKING, Any, Callable, Optional
+
+from downtify.db.config import Dialect
+from downtify.db.dialect import days_between_sql
+
+if TYPE_CHECKING:
+    from downtify.db.core import Connection
 
 #: How a track got into a watch: the watch fetched new audio for it, or
 #: the song was already in the library (a file the track index knew, or
@@ -36,6 +42,41 @@ _EVENT_COLUMNS = (
     'filename, provider, initial, happened_at'
 )
 
+_SQLITE_DDL = """
+    CREATE TABLE IF NOT EXISTS watch_events (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        playlist_id INTEGER NOT NULL,
+        watch_key TEXT NOT NULL,
+        watch_name TEXT NOT NULL,
+        user_id INTEGER NOT NULL DEFAULT 0,
+        track_id TEXT NOT NULL,
+        outcome TEXT NOT NULL,
+        filename TEXT,
+        provider TEXT NOT NULL DEFAULT '',
+        initial INTEGER NOT NULL DEFAULT 0,
+        happened_at TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_watch_events_watch
+        ON watch_events (playlist_id, happened_at);
+    CREATE INDEX IF NOT EXISTS idx_watch_events_track
+        ON watch_events (track_id);
+    CREATE INDEX IF NOT EXISTS idx_watch_events_file
+        ON watch_events (filename);
+    CREATE TABLE IF NOT EXISTS watch_failures (
+        playlist_id INTEGER NOT NULL,
+        track_id TEXT NOT NULL,
+        name TEXT NOT NULL DEFAULT '',
+        artists TEXT NOT NULL DEFAULT '',
+        error TEXT NOT NULL DEFAULT '',
+        attempts INTEGER NOT NULL DEFAULT 1,
+        first_failed_at TEXT NOT NULL,
+        last_failed_at TEXT NOT NULL,
+        PRIMARY KEY (playlist_id, track_id),
+        FOREIGN KEY (playlist_id)
+            REFERENCES monitored_playlists(id) ON DELETE CASCADE
+    );
+"""
+
 
 def _now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
@@ -48,50 +89,31 @@ def _marks(values: list[Any]) -> str:
 class WatchHistoryStore:
     """``watch_events`` and ``watch_failures``, beside the watches."""
 
-    def __init__(self, connect: Callable[[], sqlite3.Connection]) -> None:
+    def __init__(
+        self, connect: Callable[[], AbstractContextManager[Connection]]
+    ) -> None:
         self._connect = connect
         with self._connect() as conn:
-            had_events = (
-                conn.execute(
-                    "SELECT 1 FROM sqlite_master WHERE type = 'table' "
-                    "AND name = 'watch_events'"
-                ).fetchone()
-                is not None
-            )
-            conn.executescript("""
-                CREATE TABLE IF NOT EXISTS watch_events (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    playlist_id INTEGER NOT NULL,
-                    watch_key TEXT NOT NULL,
-                    watch_name TEXT NOT NULL,
-                    user_id INTEGER NOT NULL DEFAULT 0,
-                    track_id TEXT NOT NULL,
-                    outcome TEXT NOT NULL,
-                    filename TEXT,
-                    provider TEXT NOT NULL DEFAULT '',
-                    initial INTEGER NOT NULL DEFAULT 0,
-                    happened_at TEXT NOT NULL
-                );
-                CREATE INDEX IF NOT EXISTS idx_watch_events_watch
-                    ON watch_events (playlist_id, happened_at);
-                CREATE INDEX IF NOT EXISTS idx_watch_events_track
-                    ON watch_events (track_id);
-                CREATE INDEX IF NOT EXISTS idx_watch_events_file
-                    ON watch_events (filename);
-                CREATE TABLE IF NOT EXISTS watch_failures (
-                    playlist_id INTEGER NOT NULL,
-                    track_id TEXT NOT NULL,
-                    name TEXT NOT NULL DEFAULT '',
-                    artists TEXT NOT NULL DEFAULT '',
-                    error TEXT NOT NULL DEFAULT '',
-                    attempts INTEGER NOT NULL DEFAULT 1,
-                    first_failed_at TEXT NOT NULL,
-                    last_failed_at TEXT NOT NULL,
-                    PRIMARY KEY (playlist_id, track_id),
-                    FOREIGN KEY (playlist_id)
-                        REFERENCES monitored_playlists(id) ON DELETE CASCADE
-                );
-            """)
+            dialect = getattr(conn, 'dialect', Dialect.SQLITE)
+            if dialect is Dialect.SQLITE:
+                had_events = (
+                    conn.execute(
+                        "SELECT 1 FROM sqlite_master WHERE type = 'table' "
+                        "AND name = 'watch_events'"
+                    ).fetchone()
+                    is not None
+                )
+                conn.executescript(_SQLITE_DDL)
+            else:
+                # The migrations created the tables. Without any event
+                # yet, rows from before the history existed still need
+                # their backfill.
+                had_events = (
+                    conn.execute(
+                        'SELECT 1 FROM watch_events LIMIT 1'
+                    ).fetchone()
+                    is not None
+                )
             if not had_events:
                 _backfill(conn)
 
@@ -211,7 +233,8 @@ class WatchHistoryStore:
                    VALUES (?, ?, ?, ?, ?, 1, ?, ?)
                    ON CONFLICT(playlist_id, track_id) DO UPDATE SET
                    name = excluded.name, artists = excluded.artists,
-                   error = excluded.error, attempts = attempts + 1,
+                   error = excluded.error,
+                   attempts = watch_failures.attempts + 1,
                    last_failed_at = excluded.last_failed_at""",
                 (
                     playlist_id,
@@ -223,6 +246,15 @@ class WatchHistoryStore:
                     now,
                 ),
             )
+
+    def forget_failures(self, playlist_id: int) -> int:
+        """Drop every failure of a watch (the user starts the count over)."""
+
+        with self._connect() as conn:
+            return conn.execute(
+                'DELETE FROM watch_failures WHERE playlist_id = ?',
+                (playlist_id,),
+            ).rowcount
 
     def forget_failures_except(
         self, playlist_id: int, track_ids: set[str]
@@ -270,17 +302,20 @@ class WatchHistoryStore:
             return {int(r['playlist_id']): int(r['n']) for r in rows}
 
 
-def _backfill(conn: sqlite3.Connection) -> None:
+def _backfill(conn: Connection) -> None:
     """Once, when the table is new: the tracks watches recorded before
     events were kept become events of unknown outcome. Those from a
     watch's first day are taken for its first check's backfill."""
 
+    dialect = getattr(conn, 'dialect', Dialect.SQLITE)
+    first_day = (
+        days_between_sql('dt.downloaded_at', 'p.created_at', dialect) + ' <= 1'
+    )
     conn.execute(
         f"""INSERT INTO watch_events ({_EVENT_COLUMNS})
            SELECT dt.playlist_id, p.spotify_id, p.name, p.user_id,
                   dt.track_spotify_id, '{OUTCOME_UNKNOWN}', dt.filename, '',
-                  COALESCE(julianday(dt.downloaded_at)
-                           <= julianday(p.created_at) + 1, 0),
+                  CASE WHEN {first_day} THEN 1 ELSE 0 END,
                   dt.downloaded_at
            FROM downloaded_tracks dt
            JOIN monitored_playlists p ON p.id = dt.playlist_id
