@@ -2159,6 +2159,21 @@ export default {
     noticeChange: 'Then change the password in Settings → General.',
     noticeOk: 'Got it',
   },
+  aurral: {
+    title: 'Aurral',
+    hint: 'Let Aurral download music through Downtify. Optional: nothing changes until you turn it on.',
+    enable: 'Let Aurral download through Downtify',
+    enableHint:
+      "Aurral's Downtify plugin can then search here and get songs and albums. Its downloads go to a folder of their own, not your library, and are deleted once Aurral has them.",
+    key: 'Key for Aurral',
+    keyHint:
+      "Paste it into the Downtify plugin's settings in Aurral, with this server's address. It is listed under Paired apps, where you can revoke it.",
+    makeKey: 'Make a key',
+    plugin: 'The Aurral plugin',
+    keyOnce: "Copy it now: it isn't shown again.",
+    copy: 'Copy',
+    copied: 'Copied',
+  },
   apps: {
     serverGroup: 'This server',
     serverGroupHint: 'How the Downtify apps see this server.',

@@ -1071,6 +1071,11 @@ function doctorNavidromeRepair(payload) {
   return API.post('/api/doctor/navidrome/repair', payload)
 }
 
+// A key for Aurral's Downtify plugin (downtify/aurral_routes.py).
+function aurralKey() {
+  return API.post('/api/aurral/key')
+}
+
 // The Doctor's AI helper (downtify/doctor_ai_routes.py).
 function doctorAiStatus() {
   return API.get('/api/doctor/ai')
@@ -1390,6 +1395,7 @@ export default {
   doctorDuplicatesKeep,
   doctorDuplicatesKeepReset,
   doctorNavidromeRepair,
+  aurralKey,
   doctorAiStatus,
   doctorAiStart,
   doctorAiStop,

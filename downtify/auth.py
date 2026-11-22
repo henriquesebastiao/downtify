@@ -1112,6 +1112,13 @@ RULES: list[tuple[frozenset[str], re.Pattern[str], str]] = [
         (_m('POST'), r'^/api/activity/playback$', CLIENT),
         (_READ, r'^/api/monitor/playlists$', CLIENT),
         (_READ, r'^/api/check_update$', CLIENT),
+        # Aurral's Downtify plugin, with a key made under Settings >
+        # Apps > Aurral (downtify/aurral_routes.py). Each job is its
+        # owner's; making a key needs an admin's browser.
+        (_m('POST'), r'^/api/aurral/key$', ADMIN),
+        (_READ, r'^/api/aurral(/.*)?$', CLIENT),
+        (_m('POST'), r'^/api/aurral/jobs$', CLIENT),
+        (_m('DELETE'), r'^/api/aurral/jobs/[^/]+$', CLIENT),
         # Admin (after the client rules, which carve out exceptions):
         # changes to the library, the queue, watches and profiles.
         (_m('POST', 'PUT', 'DELETE'), r'^/api/artists/(art|profile)', ADMIN),

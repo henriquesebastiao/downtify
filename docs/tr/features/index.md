@@ -81,6 +81,7 @@ Downtify’ın yaptığı her şey, kenar çubuğundaki gibi alanlara göre grup
 | [Deemix](deemix.md) | Kendi Deemix sunucunuzu ve Deezer hesabınızı ses kaynağı olarak kullanın |
 | [slskd ve Navidrome](slskd-navidrome.md) | slskd ile Soulseek’ten indirin, çalma listelerini Navidrome’a yansıtın ve çalma listesi indirmelerini izleyin |
 | [Deezer'dan puanlar](navidrome-ratings.md) | Navidrome şarkılarına Deezer’daki popülerliklerine göre 0 ile 5 arasında yıldız verin |
+| [Aurral](aurral.md) | Aurral'ın Downtify'ı indirme kaynağı olarak kullanmasına izin verin: o ister, Downtify indirir, Aurral sonucu kendi kitaplığına koyar |
 
 ## Sunucu ve hesaplar
 

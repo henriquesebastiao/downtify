@@ -763,6 +763,9 @@ DEFAULT_SETTINGS: dict[str, Any] = {
     'cover_largest': False,
     # Write each download's ISRC, the recording's own code (downtify.isrc).
     'write_isrc': True,
+    # Let Aurral use Downtify as a download source (downtify/aurral.py,
+    # Settings > Apps > Aurral). Off: nothing changes.
+    'aurral_enabled': False,
     'download_cover_art': True,
     'overwrite_existing_files': True,
     'organize_by_artist': True,
@@ -9308,7 +9311,11 @@ async def update_settings_endpoint(
                 state.settings[key] = _clamp_cover_min_resolution(raw_value)
             elif key == 'backup_interval_hours':
                 state.settings[key] = backup.clamp_interval(raw_value)
-            elif key in {'cover_largest', 'artist_watch_complete_albums'}:
+            elif key in {
+                'cover_largest',
+                'artist_watch_complete_albums',
+                'aurral_enabled',
+            }:
                 state.settings[key] = raw_value is True
             elif key == 'ui_language':
                 # Not a language code: the saved one stays.

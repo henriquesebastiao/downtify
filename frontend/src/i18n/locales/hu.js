@@ -2204,6 +2204,21 @@ export default {
       'Utána változtasd meg a jelszót a Beállítások → Általános alatt.',
     noticeOk: 'Értem',
   },
+  aurral: {
+    title: 'Aurral',
+    hint: 'Engedd, hogy az Aurral a Downtifyon keresztül töltsön le zenét. Nem kötelező: semmi sem változik, amíg be nem kapcsolod.',
+    enable: 'Az Aurral tölthessen le a Downtifyon keresztül',
+    enableHint:
+      'Az Aurral Downtify bővítménye ekkor itt kereshet, és dalokat meg albumokat kérhet. A letöltései külön mappába kerülnek, nem a könyvtáradba, és törlődnek, amint az Aurral megkapta őket.',
+    key: 'Kulcs az Aurralhoz',
+    keyHint:
+      'Másold be az Aurralban a Downtify bővítmény beállításaiba, a szerver címével együtt. A Párosított alkalmazások között látszik, ahol vissza is vonhatod.',
+    makeKey: 'Kulcs készítése',
+    plugin: 'Az Aurral bővítmény',
+    keyOnce: 'Másold ki most: többé nem jelenik meg.',
+    copy: 'Másolás',
+    copied: 'Kimásolva',
+  },
   apps: {
     serverGroup: 'Ez a szerver',
     serverGroupHint: 'Hogyan látják ezt a szervert a Downtify alkalmazások.',

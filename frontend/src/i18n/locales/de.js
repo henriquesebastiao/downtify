@@ -2258,6 +2258,21 @@ export default {
       'Ändere anschließend das Passwort unter „Einstellungen → Allgemein“.',
     noticeOk: 'Verstanden',
   },
+  aurral: {
+    title: 'Aurral',
+    hint: 'Lass Aurral Musik über Downtify herunterladen. Optional: Nichts ändert sich, bis du es einschaltest.',
+    enable: 'Aurral über Downtify herunterladen lassen',
+    enableHint:
+      'Das Downtify-Plugin von Aurral kann dann hier suchen und Songs und Alben holen. Seine Downloads landen in einem eigenen Ordner, nicht in deiner Bibliothek, und werden gelöscht, sobald Aurral sie hat.',
+    key: 'Schlüssel für Aurral',
+    keyHint:
+      'Füge ihn in Aurral in den Einstellungen des Downtify-Plugins ein, zusammen mit der Adresse dieses Servers. Er steht unter Gekoppelte Apps, wo du ihn widerrufen kannst.',
+    makeKey: 'Schlüssel erstellen',
+    plugin: 'Das Aurral-Plugin',
+    keyOnce: 'Jetzt kopieren: Er wird nicht noch einmal angezeigt.',
+    copy: 'Kopieren',
+    copied: 'Kopiert',
+  },
   apps: {
     serverGroup: 'Dieser Server',
     serverGroupHint: 'So sehen die Downtify-Apps diesen Server.',

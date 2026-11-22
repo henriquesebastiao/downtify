@@ -2182,6 +2182,21 @@ export default {
     noticeChange: '로그인 후 설정 → 일반에서 비밀번호를 변경하세요.',
     noticeOk: '확인',
   },
+  aurral: {
+    title: 'Aurral',
+    hint: 'Aurral이 Downtify를 통해 음악을 받게 합니다. 선택 사항: 켜기 전에는 아무것도 바뀌지 않습니다.',
+    enable: 'Aurral이 Downtify로 다운로드하도록 허용',
+    enableHint:
+      '그러면 Aurral의 Downtify 플러그인이 여기서 검색하고 곡과 앨범을 받을 수 있습니다. 다운로드는 라이브러리가 아닌 별도 폴더에 저장되고, Aurral이 가져가면 삭제됩니다.',
+    key: 'Aurral용 키',
+    keyHint:
+      'Aurral의 Downtify 플러그인 설정에 이 서버 주소와 함께 붙여 넣으세요. 연결된 앱 목록에 표시되며 거기서 해제할 수 있습니다.',
+    makeKey: '키 만들기',
+    plugin: 'Aurral 플러그인',
+    keyOnce: '지금 복사하세요. 다시 표시되지 않습니다.',
+    copy: '복사',
+    copied: '복사됨',
+  },
   apps: {
     serverGroup: '현재 서버',
     serverGroupHint: 'Downtify 앱에서 이 서버를 식별하는 정보입니다.',
