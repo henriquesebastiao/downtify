@@ -57,6 +57,10 @@ export const NAV = [
         page: 'features/external-library.md',
       },
       { title: 'Upgrade Library', page: 'features/library-upgrade.md' },
+      {
+        title: 'Identify Songs by Sound',
+        page: 'features/acoustid.md',
+      },
       { title: 'Replace Audio', page: 'features/replace-audio.md' },
       {
         title: 'Artist Photo, Banner & Bio',

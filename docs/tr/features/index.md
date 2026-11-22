@@ -34,6 +34,7 @@ Downtify’ın yaptığı her şey, kenar çubuğundaki gibi alanlara göre grup
 | [Kitaplık kataloğu ve yol eşitleme](library-catalog.md) | Downtify’ın kitaplık dosyalarını ve çalma listelerini nasıl izlediği, Kitaplıkta oluşturduğunuz çalma listeleri ve dosyaları taşıdıktan sonra yolların düzeltilmesi |
 | [Mevcut müzik klasörleri](external-library.md) | Downtify’ı zaten sahip olduğunuz ses klasörlerine yöneltin; eşitleme etiketleri okur, sanatçıları eşleştirir ve kitaplıkta zaten olan şarkıları atlar |
 | [Kitaplığı iyileştir](library-upgrade.md) | Zaten indirdiğiniz müziği tarayın ve küçük kapakları, eksik sözleri ve eksik etiketleri onarın |
+| [Şarkıları sesinden tanı](acoustid.md) | Eski dosyaları AcoustID ile seslerinden tanıyın (isteğe bağlı) ve eşleşme kesinse ISRC’lerini ekleyin |
 | [Sesi değiştir](replace-audio.md) | Yanlış şarkı ya da sürüm mü? Doğrusunu YouTube Music veya YouTube’da seçin; dosya adını, etiketlerini ve çalma listelerini korur |
 | [Sanatçı fotoğrafı, afişi ve biyografisi](artist-images.md) | Bir sanatçı için YouTube Music, Deezer, Spotify veya kendi yüklemenizden gerçek bir fotoğraf ve afiş seçin; biyografisini, kökenini ve bağlantılarını Apple Music ve Deezer’dan otomatik ya da isteğe bağlı olarak alın |
 | [Depolama ve kullanım](storage-usage.md) | Kitaplığın ne kadar büyük olduğunu ve ne hızla büyüdüğünü, her parçanın hangi kaynaktan geldiğini, indirmelerin nasıl sonuçlandığını ve yinelenenlerin, slskd kopyalarının ve artıkların ne kadar yer kapladığını görün |

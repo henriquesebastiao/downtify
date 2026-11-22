@@ -88,6 +88,8 @@ Songs downloaded before Downtify wrote ISRCs have none. An ISRC is the recording
 
 A code is only added when Deezer confirms it beyond doubt, by the same rules as for new downloads: the same first artist and title, a length within 3 seconds, and every matching result agreeing on one code. Any other file is left exactly as it is, and isn't asked about again until **Don't check a track again for** has passed. Neither scan looks at artwork, lyrics or tags, and a normal scan never looks for ISRCs.
 
+For files Deezer can't place, [Identify songs by sound](acoustid.md) asks AcoustID instead: it is opt-in and needs your own free API key.
+
 ## While it runs
 
 The progress panel shows tracks done out of the queue, an approximate data figure (`8.4 GB of 51.3 GB`) and how many were upgraded, had nothing to do, or failed. When the run looks for lyrics, a line below counts the tracks that got lyrics, the ones no provider had lyrics for, and the ones that failed. Each track shows what it is doing — _Matching_, _Looking for artwork_, _Looking for lyrics_, _Writing the file_ — and ends with what changed, e.g. `artwork 1200px (itunes)`.

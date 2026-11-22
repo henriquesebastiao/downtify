@@ -107,6 +107,7 @@ export default {
       'features/library-catalog.md': 'Könyvtárkatalógus',
       'features/external-library.md': 'Meglévő zenemappák',
       'features/library-upgrade.md': 'Könyvtár javítása',
+      'features/acoustid.md': 'Dalok felismerése hang alapján',
       'features/storage-usage.md': 'Tárhely és használat',
       'features/music-trash.md': 'Zenekuka',
       'features/doctor.md': 'Doktor',

@@ -107,6 +107,7 @@ export default {
       'features/library-catalog.md': 'Catalogue de la bibliothèque',
       'features/external-library.md': 'Dossiers de musique existants',
       'features/library-upgrade.md': 'Améliorer la bibliothèque',
+      'features/acoustid.md': 'Identifier les titres par le son',
       'features/storage-usage.md': 'Stockage et utilisation',
       'features/music-trash.md': 'Corbeille musicale',
       'features/doctor.md': 'Docteur',

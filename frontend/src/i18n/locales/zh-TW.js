@@ -764,6 +764,18 @@ export default {
       '在 Downtify 開始寫入 ISRC 之前下載的歌曲沒有 ISRC。ISRC 是錄音自己的代碼：Downtify 用它找出重複項，音樂回收桶也用它辨識檔案。只加入 Deezer 確認無誤的代碼（演出者和標題相同，長度相差不超過 3 秒）；其他檔案保持原樣。先查詢一下，查看清單。',
     isrcLookupButton: '查詢 ISRC（不寫入任何內容）',
     isrcAddButton: '加入 ISRC',
+    acoustid: '依聲音加入 ISRC',
+    acoustidHint:
+      '透過聲音（AcoustID）辨識沒有 ISRC 的檔案，僅在比對確定時加入 ISRC。',
+    acoustidQuickTitle: '依聲音辨識歌曲',
+    acoustidQuickHint:
+      '用於 Deezer 找不到的檔案：為每個檔案產生指紋並在 AcoustID 上查詢。只有當 AcoustID 確定檔案就是其標籤所寫的歌曲，且 MusicBrainz 只知道它的一個 ISRC 時，才會加入。被辨識為其他歌曲或無法辨識的檔案保持原樣，也絕不會寫入 MusicBrainz ID。先查詢以檢視清單。',
+    acoustidLookupButton: '依聲音查詢（不寫入任何內容）',
+    acoustidAddButton: '依聲音加入 ISRC',
+    acoustidOff: 'AcoustID 已關閉。',
+    acoustidNoKey: '請先儲存你的 AcoustID API 金鑰。',
+    acoustidNoTool: '伺服器無法產生指紋：請安裝 fpcalc（Chromaprint）。',
+    acoustidOpenSettings: '開啟設定',
     lyricsPlainOnly: '只有非同步歌詞：{count} — 找到同步歌詞後取代',
     lyricsOutcome: '已新增歌詞：{added} · 未找到：{notFound} · 失敗：{failed}',
     completed: '已升級',
@@ -780,6 +792,7 @@ export default {
     stageArtwork: '尋找封面中',
     stageLyrics: '尋找歌詞中',
     stageWriting: '寫入檔案中',
+    stageFingerprint: '正在產生指紋',
     loadFailed: '無法載入媒體庫升級',
   },
   usage: {
@@ -1802,6 +1815,23 @@ export default {
     isrc: '寫入 ISRC 代碼',
     isrcHint:
       '為每個新下載寫入 ISRC（標識一段錄音的代碼），即使名稱不同也能認出同一首歌。從 Deezer 查詢；不確定時不寫入。',
+    acoustid: '依聲音辨識歌曲（AcoustID）',
+    acoustidHint:
+      '讓「資料庫 → 升級資料庫」透過音訊指紋辨識舊檔案，並在比對確定時加入其 ISRC。需要你自己的免費 AcoustID API 金鑰。預設關閉。',
+    acoustidKey: 'AcoustID API 金鑰',
+    acoustidKeyHint:
+      '在 AcoustID 上註冊一個應用程式（免費），並將其 API 金鑰貼到這裡。它與其他設定分開保存，之後不會再完整顯示。',
+    acoustidKeyPlaceholder: '貼上你的 API 金鑰',
+    acoustidBad: '這看起來不像 API 金鑰',
+    acoustidSaveKey: '儲存金鑰',
+    acoustidTest: '測試金鑰',
+    acoustidRemoveKey: '移除金鑰',
+    acoustidKeyWorks: 'AcoustID 已接受該金鑰。',
+    acoustidSaveFailed: '無法連線到伺服器',
+    acoustidToolFpcalc: '使用 fpcalc 產生指紋。',
+    acoustidToolFfmpeg: '使用 FFmpeg 的 Chromaprint 產生指紋。',
+    acoustidToolMissing:
+      '找不到指紋工具：請在伺服器上安裝 fpcalc（Chromaprint）。',
     artGroup: '封面',
     coverArt: '嵌入封面',
     coverArtHint: '關閉後檔案較小、下載較快。',

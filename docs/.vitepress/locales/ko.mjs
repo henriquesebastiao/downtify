@@ -106,6 +106,7 @@ export default {
       'features/library-catalog.md': '라이브러리 카탈로그',
       'features/external-library.md': '기존 음악 폴더',
       'features/library-upgrade.md': '라이브러리 업그레이드',
+      'features/acoustid.md': '소리로 노래 식별',
       'features/storage-usage.md': '저장 공간 및 사용량',
       'features/music-trash.md': '음악 휴지통',
       'features/doctor.md': '닥터',

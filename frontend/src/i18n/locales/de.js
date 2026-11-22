@@ -839,6 +839,19 @@ export default {
       'Songs, die geladen wurden, bevor Downtify ISRCs schrieb, haben keinen. Ein ISRC ist der eigene Code der Aufnahme: Damit erkennt Downtify Duplikate und der Musik-Papierkorb eine Datei. Nur Codes, die Deezer zweifelsfrei bestätigt, werden ergänzt (gleicher Künstler und Titel, Länge auf 3 Sekunden genau); alle anderen Dateien bleiben genau, wie sie sind. Schlag sie zuerst nach, um die Liste zu sehen.',
     isrcLookupButton: 'ISRCs nachschlagen (schreibt nichts)',
     isrcAddButton: 'ISRCs ergänzen',
+    acoustid: 'ISRCs per Klang ergänzen',
+    acoustidHint:
+      'Erkennt Dateien ohne ISRC an ihrem Klang (AcoustID) und ergänzt die ISRC nur bei einem sicheren Treffer.',
+    acoustidQuickTitle: 'Songs am Klang erkennen',
+    acoustidQuickHint:
+      'Für Dateien, die Deezer nicht zuordnen kann: Jede wird per Fingerabdruck bei AcoustID nachgeschlagen. Eine ISRC wird nur ergänzt, wenn AcoustID sicher ist, dass die Datei der Song aus ihren Tags ist, und MusicBrainz genau eine ISRC dafür kennt. Dateien, die als anderer Song oder gar nicht erkannt werden, bleiben unverändert; MusicBrainz-IDs werden nie geschrieben. Schlage sie zuerst nach, um die Liste zu sehen.',
+    acoustidLookupButton: 'Per Klang nachschlagen (schreibt nichts)',
+    acoustidAddButton: 'ISRCs per Klang ergänzen',
+    acoustidOff: 'AcoustID ist ausgeschaltet.',
+    acoustidNoKey: 'Speichere zuerst deinen AcoustID-API-Schlüssel.',
+    acoustidNoTool:
+      'Der Server kann keine Fingerabdrücke erstellen: Installiere fpcalc (Chromaprint).',
+    acoustidOpenSettings: 'Einstellungen öffnen',
     lyricsPlainOnly:
       'Nur nicht synchronisierte Texte: {count} — werden durch synchronisierte ersetzt, sobald gefunden',
     lyricsOutcome:
@@ -858,6 +871,7 @@ export default {
     stageArtwork: 'Cover werden gesucht',
     stageLyrics: 'Songtexte werden gesucht',
     stageWriting: 'Datei wird geschrieben',
+    stageFingerprint: 'Fingerabdruck',
     loadFailed: 'Bibliotheksverbesserung konnte nicht geladen werden',
   },
   usage: {
@@ -1962,6 +1976,24 @@ export default {
     isrc: 'ISRC-Codes schreiben',
     isrcHint:
       'Speichert bei jedem neuen Download den ISRC – den Code einer Aufnahme –, damit derselbe Song auch unter anderem Namen erkannt wird. Wird bei Deezer nachgeschlagen und weggelassen, wenn er nicht sicher ist.',
+    acoustid: 'Songs am Klang erkennen (AcoustID)',
+    acoustidHint:
+      'Lässt Bibliothek → Bibliothek aufwerten ältere Dateien an ihrem Audio-Fingerabdruck erkennen und ihre ISRC bei sicherem Treffer ergänzen. Braucht deinen eigenen kostenlosen AcoustID-API-Schlüssel. Standardmäßig aus.',
+    acoustidKey: 'AcoustID-API-Schlüssel',
+    acoustidKeyHint:
+      'Registriere eine Anwendung bei AcoustID (kostenlos) und füge ihren API-Schlüssel hier ein. Er wird getrennt von den übrigen Einstellungen gespeichert und nie wieder vollständig angezeigt.',
+    acoustidKeyPlaceholder: 'API-Schlüssel einfügen',
+    acoustidBad: 'Das sieht nicht wie ein API-Schlüssel aus',
+    acoustidSaveKey: 'Schlüssel speichern',
+    acoustidTest: 'Schlüssel testen',
+    acoustidRemoveKey: 'Schlüssel entfernen',
+    acoustidKeyWorks: 'AcoustID hat den Schlüssel akzeptiert.',
+    acoustidSaveFailed: 'Server nicht erreichbar',
+    acoustidToolFpcalc: 'Fingerabdrücke werden mit fpcalc erstellt.',
+    acoustidToolFfmpeg:
+      'Fingerabdrücke werden mit Chromaprint aus FFmpeg erstellt.',
+    acoustidToolMissing:
+      'Kein Fingerabdruck-Werkzeug gefunden: Installiere fpcalc (Chromaprint) auf dem Server.',
     artGroup: 'Cover',
     coverArt: 'Cover einbetten',
     coverArtHint:

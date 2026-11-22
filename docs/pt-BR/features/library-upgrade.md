@@ -88,6 +88,8 @@ Músicas baixadas antes de o Downtify gravar ISRC não têm nenhum. O ISRC é o 
 
 Um código só entra quando o Deezer o confirma sem dúvida, pelas mesmas regras dos downloads novos: o mesmo primeiro artista e título, duração com até 3 segundos de diferença e todos os resultados correspondentes concordando em um código. Qualquer outro arquivo fica exatamente como está e não é pesquisado de novo até passar o **Não verificar uma música de novo por**. Nenhuma das duas varreduras olha capas, letras ou tags, e uma varredura normal nunca procura ISRC.
 
+Para arquivos que o Deezer não identifica, [Identificar músicas pelo som](acoustid.md) consulta o AcoustID: é opcional e requer sua própria chave de API gratuita.
+
 ## Enquanto roda
 
 O painel de progresso mostra as faixas concluídas da fila, um valor aproximado de dados (`8.4 GB of 51.3 GB`) e quantas foram melhoradas, não tinham nada a fazer ou falharam. Cada faixa mostra o que está fazendo — _Identificando_, _Procurando capa_, _Procurando letra_, _Gravando o arquivo_ — e termina com o que mudou, por exemplo `artwork 1200px (itunes)`. Quando a execução busca letras, uma linha abaixo conta as faixas que ganharam letra, as que nenhum provedor tinha e as que falharam.

@@ -824,6 +824,19 @@ export default {
       'Las canciones descargadas antes de que Downtify escribiera ISRC no tienen ninguno. El ISRC es el código propio de la grabación: con él Downtify detecta duplicados y la papelera de música reconoce un archivo. Solo se añaden los códigos que Deezer confirma sin duda (mismo artista y título, duración con 3 segundos de margen); los demás archivos quedan exactamente igual. Búscalos primero para ver la lista.',
     isrcLookupButton: 'Buscar ISRC (no escribe nada)',
     isrcAddButton: 'Añadir ISRC',
+    acoustid: 'Añadir ISRC por sonido',
+    acoustidHint:
+      'Identifica los archivos sin ISRC por su sonido (AcoustID) y añade el ISRC solo cuando la coincidencia es segura.',
+    acoustidQuickTitle: 'Identificar canciones por su sonido',
+    acoustidQuickHint:
+      'Para los archivos que Deezer no ubica: se toma la huella de cada uno y se busca en AcoustID. Solo se añade un ISRC cuando AcoustID está seguro de que el archivo es la canción que dicen sus etiquetas y MusicBrainz conoce exactamente un ISRC para ella. Los que identifica como otra canción, o no identifica, quedan tal cual, y nunca se escriben IDs de MusicBrainz. Búscalos primero para ver la lista.',
+    acoustidLookupButton: 'Buscar por sonido (no escribe nada)',
+    acoustidAddButton: 'Añadir ISRC por sonido',
+    acoustidOff: 'AcoustID está desactivado.',
+    acoustidNoKey: 'Guarda primero tu clave de API de AcoustID.',
+    acoustidNoTool:
+      'El servidor no puede crear huellas: instala fpcalc (Chromaprint).',
+    acoustidOpenSettings: 'Abrir Ajustes',
     lyricsPlainOnly:
       'Solo letra sin sincronizar: {count} — se cambia por la sincronizada cuando se encuentra',
     lyricsOutcome:
@@ -843,6 +856,7 @@ export default {
     stageArtwork: 'Buscando portada',
     stageLyrics: 'Buscando letra',
     stageWriting: 'Escribiendo el archivo',
+    stageFingerprint: 'Tomando la huella',
     loadFailed: 'No se pudo cargar la mejora de la biblioteca',
   },
   usage: {
@@ -1934,6 +1948,23 @@ export default {
     isrc: 'Escribir códigos ISRC',
     isrcHint:
       'Guarda el ISRC de cada nueva descarga, el código que identifica una grabación, para reconocer la misma canción aunque tenga otro nombre. Se busca en Deezer; se omite si no es seguro.',
+    acoustid: 'Identificar canciones por su sonido (AcoustID)',
+    acoustidHint:
+      'Permite que Biblioteca → Mejorar biblioteca identifique archivos antiguos por su huella de audio y añada su ISRC cuando la coincidencia es segura. Necesita tu propia clave de API gratuita de AcoustID. Desactivado por defecto.',
+    acoustidKey: 'Clave de API de AcoustID',
+    acoustidKeyHint:
+      'Registra una aplicación en AcoustID (gratis) y pega aquí su clave de API. Se guarda aparte del resto de ajustes y nunca se vuelve a mostrar completa.',
+    acoustidKeyPlaceholder: 'Pega tu clave de API',
+    acoustidBad: 'Eso no parece una clave de API',
+    acoustidSaveKey: 'Guardar clave',
+    acoustidTest: 'Probar clave',
+    acoustidRemoveKey: 'Quitar clave',
+    acoustidKeyWorks: 'AcoustID aceptó la clave.',
+    acoustidSaveFailed: 'No se pudo contactar con el servidor',
+    acoustidToolFpcalc: 'Las huellas se crean con fpcalc.',
+    acoustidToolFfmpeg: 'Las huellas se crean con Chromaprint de FFmpeg.',
+    acoustidToolMissing:
+      'No hay herramienta de huellas: instala fpcalc (Chromaprint) en el servidor.',
     artGroup: 'Portada',
     coverArt: 'Incrustar portada',
     coverArtHint:

@@ -34,6 +34,7 @@ from uvicorn import Config, Server
 from downtify import (
     __version__,
     account_routes,
+    acoustid_routes,
     api,
     auth_routes,
     backup_routes,
@@ -546,6 +547,7 @@ def _open_library_stores(monitor_db_path: Path | Database) -> None:
             audio_replacement=replacement,
             hand_replaced=api.state.hand_replaced,
             download_sources=api.state.download_sources,
+            acoustid_key=acoustid_routes.current_key,
         ),
     )
     api.state.external_sync = ExternalSyncJob(
@@ -943,6 +945,7 @@ def build_app() -> FastAPI:
     app.include_router(doctor_ai_routes.router)
     app.include_router(doctor_ai_routes.mcp_router)
     app.include_router(navidrome_ratings_routes.router)
+    app.include_router(acoustid_routes.router)
     app.include_router(download_policy_routes.router)
     app.include_router(wanted_routes.router)
     app.include_router(backup_routes.router)

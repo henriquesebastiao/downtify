@@ -46,6 +46,7 @@ from typing import Any, Callable, Optional
 from loguru import logger
 from mutagen import File as MutagenFile
 
+from . import acoustid as acoustid_mod
 from . import cover_sources, providers, spotify
 from . import isrc as isrc_mod
 from . import lyrics as lyrics_mod
@@ -91,6 +92,14 @@ CATEGORY_ISRC = 'isrc'
 #: A category, so a paused or restarted run stays look-up only.
 ISRC_LOOKUP_ONLY = 'isrc_lookup'
 _ISRC_MODE = frozenset({CATEGORY_ISRC, ISRC_LOOKUP_ONLY})
+#: Identify files without an ISRC by their sound (:mod:`downtify.acoustid`)
+#: and add the ISRC of the ones confirmed beyond doubt. Opt-in like
+#: ``isrc``, and only once AcoustID is turned on in the settings.
+CATEGORY_ACOUSTID = 'acoustid'
+#: Sent with ``acoustid``: list what each file sounds like, write nothing.
+ACOUSTID_LOOKUP_ONLY = 'acoustid_lookup'
+#: The look-up-only markers: no job's category, they ride along a run.
+_LOOKUP_ONLY = (ISRC_LOOKUP_ONLY, ACOUSTID_LOOKUP_ONLY)
 
 #: Every category a scan reports on, in the order the UI shows them.
 CATEGORIES = (CATEGORY_ARTWORK, CATEGORY_LYRICS, CATEGORY_METADATA)
@@ -107,7 +116,14 @@ def check_key(category: str, synced_only: bool = False) -> str:
     return category
 
 
-SUPPORTED_CATEGORIES = (*CATEGORIES, CATEGORY_ISRC, ISRC_LOOKUP_ONLY, 'audio')
+SUPPORTED_CATEGORIES = (
+    *CATEGORIES,
+    CATEGORY_ISRC,
+    ISRC_LOOKUP_ONLY,
+    CATEGORY_ACOUSTID,
+    ACOUSTID_LOOKUP_ONLY,
+    'audio',
+)
 
 #: How far a rewritten file's duration may drift from the original
 #: before it is rejected. Tag writes don't touch audio, so this only
@@ -165,6 +181,13 @@ def normalize_categories(raw: Any) -> tuple[str, ...]:
     if not isinstance(raw, (list, tuple)):
         return CATEGORIES
     wanted = {str(item) for item in raw}
+    if CATEGORY_ACOUSTID in wanted or ACOUSTID_LOOKUP_ONLY in wanted:
+        # Like ISRCs, a run of its own.
+        return (
+            (CATEGORY_ACOUSTID, ACOUSTID_LOOKUP_ONLY)
+            if (ACOUSTID_LOOKUP_ONLY in wanted)
+            else (CATEGORY_ACOUSTID,)
+        )
     if CATEGORY_ISRC in wanted or ISRC_LOOKUP_ONLY in wanted:
         # ISRCs are a run of their own: nothing else is looked at.
         return (
@@ -242,7 +265,7 @@ def _summarize(
 
     counts = {name: 0 for name in CATEGORIES}
     sizes = {name: 0 for name in CATEGORIES}
-    for extra in ('audio', CATEGORY_ISRC):
+    for extra in ('audio', CATEGORY_ISRC, CATEGORY_ACOUSTID):
         if any(extra in job.get('categories', []) for job in jobs):
             counts[extra] = 0
             sizes[extra] = 0
@@ -482,6 +505,9 @@ class UpgradeDeps:
     # Each file's upload (downtify/download_sources.py): a file swapped on
     # disk since Downtify wrote it is kept like one replaced by hand.
     download_sources: Any = None
+    # The AcoustID application key (downtify/acoustid.py), read when a
+    # run needs it; never kept in the settings.
+    acoustid_key: Optional[Callable[[], str]] = None
 
 
 def resolve_track(stored_path: str, ctx: LibraryContext) -> Optional[Path]:
@@ -704,6 +730,31 @@ def _add_isrc(
         return UpgradeOutcome(
             JOB_SKIPPED, 'No ISRC found for sure; left as it is'
         )
+    return _apply_isrc(
+        stored_path,
+        full,
+        code,
+        deps=deps,
+        ctx=ctx,
+        stage_now=stage_now,
+        category=CATEGORY_ISRC,
+        detail=f'ISRC {code}',
+    )
+
+
+def _apply_isrc(
+    stored_path: str,
+    full: Path,
+    code: str,
+    *,
+    deps: 'UpgradeDeps',
+    ctx: LibraryContext,
+    stage_now: Callable[[str], None],
+    category: str,
+    detail: str,
+) -> UpgradeOutcome:
+    """Write *code* as *full*'s ISRC and let the library follow it."""
+
     stage_now('writing')
     try:
         old_key = file_content_key(full) or ''
@@ -731,7 +782,90 @@ def _add_isrc(
             ctx.metadata_cache.refresh(stored_path, full)
         except Exception:
             logger.debug('Library upgrade: metadata cache refresh failed')
-    return UpgradeOutcome(JOB_DONE, f'ISRC {code}', changed=[CATEGORY_ISRC])
+    return UpgradeOutcome(JOB_DONE, detail, changed=[category])
+
+
+def _acoustid_ready(deps: 'UpgradeDeps') -> tuple[str, str]:
+    """``(key, '')`` when AcoustID may be asked, else ``('', why not)``."""
+
+    if not bool((deps.settings() or {}).get('acoustid_enabled')):
+        return '', 'AcoustID is turned off in Settings'
+    key = deps.acoustid_key() if deps.acoustid_key is not None else ''
+    if not key:
+        return '', 'No AcoustID API key in Settings'
+    if not acoustid_mod.fingerprinter():
+        return '', 'fpcalc (Chromaprint) is not installed'
+    return key, ''
+
+
+def _by_sound(
+    stored_path: str,
+    full: Path,
+    song: dict[str, Any],
+    *,
+    deps: 'UpgradeDeps',
+    ctx: LibraryContext,
+    lookup_only: bool,
+    stage_now: Callable[[str], None],
+) -> UpgradeOutcome:
+    """The AcoustID run for one track: identify it by its sound and add
+    its ISRC only when AcoustID confirms the tags' own song beyond doubt
+    (:func:`downtify.acoustid.identify`). Nothing else is ever written -
+    no MusicBrainz IDs - and every other file is left exactly as it is.
+    *lookup_only* writes nothing and marks nothing as checked."""
+
+    if isrc_mod.read(full):
+        return UpgradeOutcome(JOB_SKIPPED, 'Already has an ISRC')
+    key, why_not = _acoustid_ready(deps)
+    if why_not:
+        return UpgradeOutcome(JOB_SKIPPED, why_not, checked=False)
+    stage_now('fingerprint')
+    try:
+        found = acoustid_mod.identify(full, song, key)
+    except acoustid_mod.InvalidKey:
+        return UpgradeOutcome(
+            JOB_FAILED, 'AcoustID refused the API key', checked=False
+        )
+    except acoustid_mod.AcoustIDError as exc:
+        return UpgradeOutcome(JOB_FAILED, str(exc), checked=False)
+    would = 'would be ' if lookup_only else ''
+    named = ' - '.join(part for part in (found.artist, found.title) if part)
+    percent = f'{round(found.score * 100)}%'
+    if found.verdict == 'unknown':
+        outcome = UpgradeOutcome(
+            JOB_SKIPPED, f'No sure match by sound; {would}left as it is'
+        )
+    elif found.verdict == 'different':
+        outcome = UpgradeOutcome(
+            JOB_SKIPPED,
+            f'Sounds like {named} ({percent}), not what the tags say; '
+            f'{would}left as it is',
+        )
+    elif not found.isrc:
+        outcome = UpgradeOutcome(
+            JOB_SKIPPED,
+            f'Confirmed by sound ({percent}), but no single ISRC; '
+            f'{would}left as it is',
+        )
+    elif lookup_only:
+        outcome = UpgradeOutcome(
+            JOB_DONE,
+            f'Confirmed by sound ({percent}); would add ISRC {found.isrc}',
+        )
+    else:
+        return _apply_isrc(
+            stored_path,
+            full,
+            found.isrc,
+            deps=deps,
+            ctx=ctx,
+            stage_now=stage_now,
+            category=CATEGORY_ACOUSTID,
+            detail=f'Confirmed by sound ({percent}); ISRC {found.isrc}',
+        )
+    if lookup_only:
+        outcome.checked = False
+    return outcome
 
 
 def _outcome_detail(changed: list[str], artwork: _Artwork) -> str:
@@ -776,6 +910,16 @@ def upgrade_track(
         spotify_id=spotify_id,
         refresh_metadata=CATEGORY_METADATA in options.categories,
     )
+    if CATEGORY_ACOUSTID in options.categories:
+        return _by_sound(
+            stored_path,
+            full,
+            song,
+            deps=deps,
+            ctx=ctx,
+            lookup_only=ACOUSTID_LOOKUP_ONLY in options.categories,
+            stage_now=stage_now,
+        )
     if CATEGORY_ISRC in options.categories:
         return _add_isrc(
             stored_path,
@@ -995,6 +1139,17 @@ class LibraryUpgradeRunner:
                 if CATEGORY_ISRC in options.categories:
                     jobs.extend(self._isrc_jobs(entry, checks, options, tally))
                     continue
+                if CATEGORY_ACOUSTID in options.categories:
+                    jobs.extend(
+                        self._isrc_jobs(
+                            entry,
+                            checks,
+                            options,
+                            tally,
+                            category=CATEGORY_ACOUSTID,
+                        )
+                    )
+                    continue
                 due = self._categories_due(
                     checks.get(stored) or {},
                     options.recheck_days,
@@ -1062,15 +1217,17 @@ class LibraryUpgradeRunner:
         checks: dict[str, Any],
         options: UpgradeOptions,
         tally: dict[str, int],
+        category: str = CATEGORY_ISRC,
     ) -> list[dict[str, Any]]:
-        """An ISRC scan's job for *entry* (none or one). Only the tag the
-        listing already read: no file is opened, nothing else looked for."""
+        """An ISRC (or AcoustID) scan's job for *entry* (none or one).
+        Only the tag the listing already read: no file is opened, nothing
+        else looked for."""
 
         if isrc_mod.normalize(entry.get('isrc')):
             return []
         stored = str(entry['file'])
         if check_is_fresh(
-            (checks.get(stored) or {}).get(CATEGORY_ISRC),
+            (checks.get(stored) or {}).get(category),
             app_version=self.deps.version,
             max_age_days=options.recheck_days,
         ):
@@ -1080,7 +1237,7 @@ class LibraryUpgradeRunner:
         return [
             {
                 'file': stored,
-                'categories': [CATEGORY_ISRC],
+                'categories': [category],
                 'size': int(entry.get('size') or 0),
                 'title': str(entry.get('title') or ''),
                 'artist': str(entry.get('artist') or ''),
@@ -1154,6 +1311,11 @@ class LibraryUpgradeRunner:
             ):
                 # A "look up only" scan never turns into a writing run.
                 categories = (CATEGORY_ISRC, ISRC_LOOKUP_ONLY)
+            if (
+                ACOUSTID_LOOKUP_ONLY in scanned.categories
+                and CATEGORY_ACOUSTID in categories
+            ):
+                categories = (CATEGORY_ACOUSTID, ACOUSTID_LOOKUP_ONLY)
             # Remembered so a resume after a restart runs the same
             # categories the user picked, not everything the scan found.
             self.db.set_categories(run_id, list(categories))
@@ -1294,7 +1456,7 @@ class LibraryUpgradeRunner:
                         + tuple(
                             name
                             for name in options.categories
-                            if name == ISRC_LOOKUP_ONLY
+                            if name in _LOOKUP_ONLY
                         ),
                         artwork_min_px=options.artwork_min_px,
                         artwork_source=options.artwork_source,

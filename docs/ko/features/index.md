@@ -34,6 +34,7 @@ Downtify가 하는 모든 일을 사이드바와 같은 영역별로 묶었습�
 | [라이브러리 카탈로그와 경로 동기화](library-catalog.md) | Downtify가 라이브러리 파일과 재생목록을 추적하는 방식, 라이브러리에서 만드는 재생목록, 파일을 옮긴 뒤의 경로 수정 |
 | [기존 음악 폴더](external-library.md) | 이미 가지고 있는 오디오 폴더를 Downtify에 지정. 동기화가 태그를 읽고 아티스트를 매칭하며 라이브러리에 이미 있는 곡은 건너뜀 |
 | [라이브러리 업그레이드](library-upgrade.md) | 이미 내려받은 음악을 스캔해 작은 커버, 없는 가사, 불완전한 태그를 수리 |
+| [소리로 노래 식별](acoustid.md) | AcoustID로 오래된 파일을 소리로 식별(선택)하고 일치가 확실할 때 ISRC 추가 |
 | [음원 교체](replace-audio.md) | 곡이나 버전이 틀렸나요? YouTube Music이나 YouTube에서 맞는 것을 고르세요. 파일은 이름, 태그, 재생목록을 유지합니다 |
 | [아티스트 사진, 배너, 소개](artist-images.md) | YouTube Music, Deezer, Spotify 또는 직접 업로드한 실제 사진과 배너를 아티스트에 지정하고, Apple Music과 Deezer에서 소개, 출신지, 링크를 자동 또는 수동으로 가져오기 |
 | [저장 공간 및 사용량](storage-usage.md) | 라이브러리 크기와 증가 속도, 각 부분의 출처, 다운로드 결과, 그리고 중복 파일·slskd 사본·남은 파일이 차지하는 공간을 확인합니다 |

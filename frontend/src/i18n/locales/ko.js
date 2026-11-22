@@ -810,6 +810,19 @@ export default {
       'Downtify가 ISRC를 기록하기 전에 받은 노래에는 ISRC가 없습니다. ISRC는 녹음 고유의 코드로, Downtify가 중복을 찾고 음악 휴지통이 파일을 알아보는 데 쓰입니다. Deezer가 확실히 확인한 코드만 추가하며(같은 아티스트와 제목, 길이 차이 3초 이내), 나머지 파일은 그대로 둡니다. 먼저 조회해서 목록을 확인하세요.',
     isrcLookupButton: 'ISRC 조회 (아무것도 기록하지 않음)',
     isrcAddButton: 'ISRC 추가',
+    acoustid: '소리로 ISRC 추가',
+    acoustidHint:
+      'ISRC가 없는 파일을 소리(AcoustID)로 식별하고, 일치가 확실할 때만 ISRC를 추가합니다.',
+    acoustidQuickTitle: '소리로 노래 식별',
+    acoustidQuickHint:
+      'Deezer가 찾지 못하는 파일용: 각 파일의 지문을 만들어 AcoustID에서 찾습니다. AcoustID가 파일이 태그에 적힌 그 노래라고 확신하고 MusicBrainz가 그 노래의 ISRC를 정확히 하나만 알 때만 ISRC를 추가합니다. 다른 노래로 식별되거나 식별되지 않은 파일은 그대로 두며, MusicBrainz ID는 절대 쓰지 않습니다. 먼저 조회해서 목록을 확인하세요.',
+    acoustidLookupButton: '소리로 조회 (아무것도 쓰지 않음)',
+    acoustidAddButton: '소리로 ISRC 추가',
+    acoustidOff: 'AcoustID가 꺼져 있습니다.',
+    acoustidNoKey: '먼저 AcoustID API 키를 저장하세요.',
+    acoustidNoTool:
+      '서버에서 지문을 만들 수 없습니다: fpcalc(Chromaprint)를 설치하세요.',
+    acoustidOpenSettings: '설정 열기',
     lyricsPlainOnly:
       '동기화되지 않은 가사만 있음: {count} — 동기화 가사를 찾으면 바뀝니다',
     lyricsOutcome:
@@ -829,6 +842,7 @@ export default {
     stageArtwork: '커버 아트 검색 중',
     stageLyrics: '가사 검색 중',
     stageWriting: '파일 기록 중',
+    stageFingerprint: '지문 생성 중',
     loadFailed: '라이브러리 업그레이드 정보를 불러오지 못했습니다',
   },
   usage: {
@@ -1894,6 +1908,23 @@ export default {
     isrc: 'ISRC 코드 쓰기',
     isrcHint:
       '새로 받은 곡마다 녹음 하나를 가리키는 ISRC 코드를 저장해, 같은 곡이 다른 이름이어도 알아봅니다. Deezer에서 찾으며 확실하지 않으면 쓰지 않습니다.',
+    acoustid: '소리로 노래 식별 (AcoustID)',
+    acoustidHint:
+      '라이브러리 → 라이브러리 업그레이드에서 오래된 파일을 오디오 지문으로 식별하고, 일치가 확실할 때 ISRC를 추가합니다. 본인의 무료 AcoustID API 키가 필요합니다. 기본값은 꺼짐입니다.',
+    acoustidKey: 'AcoustID API 키',
+    acoustidKeyHint:
+      'AcoustID에서 애플리케이션을 등록(무료)하고 API 키를 여기에 붙여 넣으세요. 다른 설정과 따로 보관되며 다시는 전체가 표시되지 않습니다.',
+    acoustidKeyPlaceholder: 'API 키 붙여 넣기',
+    acoustidBad: 'API 키처럼 보이지 않습니다',
+    acoustidSaveKey: '키 저장',
+    acoustidTest: '키 테스트',
+    acoustidRemoveKey: '키 삭제',
+    acoustidKeyWorks: 'AcoustID가 키를 받아들였습니다.',
+    acoustidSaveFailed: '서버에 연결할 수 없습니다',
+    acoustidToolFpcalc: 'fpcalc로 지문을 만듭니다.',
+    acoustidToolFfmpeg: 'FFmpeg의 Chromaprint로 지문을 만듭니다.',
+    acoustidToolMissing:
+      '지문 도구가 없습니다: 서버에 fpcalc(Chromaprint)를 설치하세요.',
     artGroup: '커버 아트',
     coverArt: '커버 아트 포함',
     coverArtHint:

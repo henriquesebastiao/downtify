@@ -889,6 +889,16 @@
                   :aria-label="t('settings.isrc')"
                 />
               </SettingRow>
+              <SettingRow
+                :label="t('settings.acoustid')"
+                :description="t('settings.acoustidHint')"
+              >
+                <UiSwitch
+                  v-model="s.acoustid_enabled"
+                  :aria-label="t('settings.acoustid')"
+                />
+              </SettingRow>
+              <AcoustidSettings v-if="s.acoustid_enabled" />
             </SettingGroup>
           </template>
 
@@ -1245,6 +1255,7 @@ import UiSwitch from '/src/components/ui/UiSwitch.vue'
 import ExperimentalBadge from '/src/components/ui/ExperimentalBadge.vue'
 import PageHeader from '/src/components/library/PageHeader.vue'
 import CookiesCard from '/src/components/settings/CookiesCard.vue'
+import AcoustidSettings from '/src/components/settings/AcoustidSettings.vue'
 import ConnectionTest from '/src/components/settings/ConnectionTest.vue'
 import ExternalLibrarySettings from '/src/components/settings/ExternalLibrarySettings.vue'
 import PathSuggestInput from '/src/components/settings/PathSuggestInput.vue'

@@ -34,6 +34,7 @@ Everything Downtify does, grouped by area as in the sidebar. Every feature has i
 | [Library catalog & path sync](library-catalog.md) | How Downtify tracks library files and playlists, playlists you create in the Library, and fixing paths after moving files |
 | [Existing music folders](external-library.md) | Point Downtify at folders of audio you already have; Sync reads tags, matches artists and skips songs already in the library |
 | [Upgrade library](library-upgrade.md) | Scan music you already downloaded and repair small covers, missing lyrics and incomplete tags |
+| [Identify Songs by Sound](acoustid.md) | Recognise older files by their audio with AcoustID (opt-in) and add their ISRC when the match is certain |
 | [Replace Audio](replace-audio.md) | Wrong song or version? Pick the right one on YouTube Music or YouTube; the file keeps its name, tags and playlists |
 | [Artist photo, banner & bio](artist-images.md) | Pick a real photo and banner for an artist from YouTube Music, Deezer, Spotify or your own upload, and fetch their bio, origin and links from Apple Music and Deezer, automatically or on demand |
 | [Storage & Usage](storage-usage.md) | See how big the library is and how fast it grows, which source each part came from, how downloads ended, and what duplicates, slskd copies and leftovers take up |

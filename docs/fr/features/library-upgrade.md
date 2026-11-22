@@ -88,6 +88,8 @@ Les morceaux téléchargés avant que Downtify n'écrive les ISRC n'en ont pas. 
 
 Un code n'est ajouté que si Deezer le confirme sans aucun doute, selon les mêmes règles que pour les nouveaux téléchargements : même premier artiste et titre, durée à 3 secondes près, et tous les résultats correspondants d'accord sur un seul code. Tout autre fichier reste exactement tel quel et n'est pas réinterrogé avant que **Ne pas revérifier un morceau pendant** soit écoulé. Aucune des deux analyses ne regarde les pochettes, les paroles ni les tags, et une analyse normale ne cherche jamais d'ISRC.
 
+Pour les fichiers que Deezer ne sait pas placer, [Identifier les titres par le son](acoustid.md) interroge AcoustID : c’est facultatif et il faut votre propre clé d’API gratuite.
+
 ## Pendant l’exécution
 
 Le panneau de progression montre les morceaux traités sur la file, un chiffre approximatif de données (`8.4 GB of 51.3 GB`) et combien ont été améliorés, n’avaient rien à faire ou ont échoué. Chaque morceau indique ce qu’il fait — _Identification_, _Recherche de la pochette_, _Recherche des paroles_, _Écriture du fichier_ — et se termine par ce qui a changé, par ex. `artwork 1200px (itunes)`. Quand le passage cherche des paroles, une ligne en dessous compte les titres qui ont reçu des paroles, ceux pour lesquels aucun fournisseur n’en avait et ceux qui ont échoué.

@@ -763,6 +763,10 @@ DEFAULT_SETTINGS: dict[str, Any] = {
     'cover_largest': False,
     # Write each download's ISRC, the recording's own code (downtify.isrc).
     'write_isrc': True,
+    # Identify songs by their sound with AcoustID (downtify/acoustid.py).
+    # Off until an admin turns it on and saves their own API key, which
+    # is kept apart from these settings.
+    'acoustid_enabled': False,
     'download_cover_art': True,
     'overwrite_existing_files': True,
     'organize_by_artist': True,

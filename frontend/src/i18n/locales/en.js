@@ -804,6 +804,19 @@ export default {
       'Songs downloaded before Downtify wrote ISRCs have none. An ISRC is the recording’s own code: it lets Downtify spot duplicates and the music trash recognise a file. Only codes Deezer confirms beyond doubt are added (same artist and title, length within 3 seconds); every other file is left exactly as it is. Look them up first to see the list.',
     isrcLookupButton: 'Look up ISRCs (writes nothing)',
     isrcAddButton: 'Add ISRCs',
+    acoustid: 'Add ISRCs by sound',
+    acoustidHint:
+      'Identifies files without an ISRC by their sound (AcoustID) and adds the ISRC only when the match is certain.',
+    acoustidQuickTitle: 'Identify songs by sound',
+    acoustidQuickHint:
+      'For files Deezer can’t place: each one is fingerprinted and looked up on AcoustID. An ISRC is added only when AcoustID is sure the file is the song its tags name and MusicBrainz knows exactly one ISRC for it. Files it places as another song, or not at all, are left exactly as they are, and no MusicBrainz IDs are written. Look them up first to see the list.',
+    acoustidLookupButton: 'Look up by sound (writes nothing)',
+    acoustidAddButton: 'Add ISRCs by sound',
+    acoustidOff: 'AcoustID is turned off.',
+    acoustidNoKey: 'Save your AcoustID API key first.',
+    acoustidNoTool:
+      'The server can’t make fingerprints: install fpcalc (Chromaprint).',
+    acoustidOpenSettings: 'Open Settings',
     lyricsPlainOnly:
       'Only unsynced lyrics: {count} — swapped for synced ones when found',
     lyricsOutcome:
@@ -822,6 +835,7 @@ export default {
     stageArtwork: 'Looking for artwork',
     stageLyrics: 'Looking for lyrics',
     stageWriting: 'Writing the file',
+    stageFingerprint: 'Fingerprinting',
     loadFailed: "Couldn't load the library upgrade",
   },
   usage: {
@@ -1876,6 +1890,23 @@ export default {
     isrc: 'Write ISRC codes',
     isrcHint:
       'Saves each new download’s ISRC, the code that names one recording, so the same song is recognised even under another name. Looked up on Deezer; left out when it isn’t certain.',
+    acoustid: 'Identify songs by sound (AcoustID)',
+    acoustidHint:
+      'Lets Library → Upgrade library identify older files by their audio fingerprint and add their ISRC when the match is certain. Needs your own free AcoustID API key. Off by default.',
+    acoustidKey: 'AcoustID API key',
+    acoustidKeyHint:
+      'Register an application on AcoustID (free) and paste its API key here. It is kept apart from the other settings and never shown again in full.',
+    acoustidKeyPlaceholder: 'Paste your API key',
+    acoustidBad: 'That doesn’t look like an API key',
+    acoustidSaveKey: 'Save key',
+    acoustidTest: 'Test key',
+    acoustidRemoveKey: 'Remove key',
+    acoustidKeyWorks: 'AcoustID accepted the key.',
+    acoustidSaveFailed: 'Could not reach the server',
+    acoustidToolFpcalc: 'Fingerprints are made with fpcalc.',
+    acoustidToolFfmpeg: 'Fingerprints are made with FFmpeg’s Chromaprint.',
+    acoustidToolMissing:
+      'No fingerprint tool found: install fpcalc (Chromaprint) on the server.',
     artGroup: 'Cover art',
     coverArt: 'Embed cover art',
     coverArtHint: 'Turn off for smaller files and faster downloads.',

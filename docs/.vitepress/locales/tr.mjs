@@ -107,6 +107,7 @@ export default {
       'features/library-catalog.md': 'Kitaplık kataloğu',
       'features/external-library.md': 'Mevcut müzik klasörleri',
       'features/library-upgrade.md': 'Kitaplığı iyileştir',
+      'features/acoustid.md': 'Şarkıları sesinden tanı',
       'features/storage-usage.md': 'Depolama ve kullanım',
       'features/music-trash.md': 'Müzik çöp kutusu',
       'features/doctor.md': 'Doktor',
