@@ -34,6 +34,10 @@ The downloaded audio is encoded at the bitrate you pick, for every lossy format.
 YouTube's audio tops out at roughly **128–160 kbps** (AAC or Opus), and Downtify always downloads the best stream available. Encoding it at 256 or 320 kbps gives larger files that preserve that source faithfully, but can't restore detail the source never had. Pick a lower bitrate if file size matters more to you.
 :::
 
+## Formats to avoid
+
+Downloads never bring a file in these formats into your library, whatever the source. slskd leaves out files in them when it picks one, whatever its own format list and **Only allow listed formats** say, and a source that hands one over anyway (Deemix, or a file slskd already had) counts as having found nothing, so the next source is tried. YouTube and SoundCloud downloads are converted to the **Format** above, so they never produce one. The Downloads format itself can't be avoided. Files already in the library are converted by the Doctor's **Formats to convert**.
+
 ## Output filename template
 
 The default filename template is:

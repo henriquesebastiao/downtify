@@ -530,6 +530,18 @@
                   "
                 />
               </SettingRow>
+              <SettingRow
+                :label="t('settings.avoidFormats')"
+                :description="t('settings.avoidFormatsHint')"
+                stacked
+              >
+                <FormatPicker
+                  v-model="s.avoid_formats"
+                  :locked="lockedAvoidFormats"
+                  :locked-hint="t('settings.avoidFormatsLocked')"
+                  :label="t('settings.avoidFormats')"
+                />
+              </SettingRow>
             </SettingGroup>
 
             <SettingGroup :title="t('settings.filesGroup')">
@@ -1245,6 +1257,8 @@ import UiSwitch from '/src/components/ui/UiSwitch.vue'
 import ExperimentalBadge from '/src/components/ui/ExperimentalBadge.vue'
 import PageHeader from '/src/components/library/PageHeader.vue'
 import CookiesCard from '/src/components/settings/CookiesCard.vue'
+import FormatPicker from '/src/components/settings/FormatPicker.vue'
+import { downloadsFormat } from '/src/lib/audioFormats'
 import ConnectionTest from '/src/components/settings/ConnectionTest.vue'
 import ExternalLibrarySettings from '/src/components/settings/ExternalLibrarySettings.vue'
 import PathSuggestInput from '/src/components/settings/PathSuggestInput.vue'
@@ -1298,6 +1312,11 @@ const whatsNew = useWhatsNew()
 
 const hasTrack = computed(() => !!player.currentTrack.value)
 const s = sm.settings
+// The Downloads format can't be one to avoid (the server drops it too).
+const lockedAvoidFormats = computed(() => {
+  const own = downloadsFormat(s.value.format)
+  return own ? [own] : []
+})
 // The minimum cover size raises the first cover request too (capped at
 // the largest cover size), so cover sizes below it make no difference.
 const coverFloor = computed(() =>

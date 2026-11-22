@@ -34,6 +34,10 @@ Kayıplı biçimler (MP3, M4A, OGG, OPUS) için kullanılabilir. FLAC bu ayarı 
 YouTube’un sesi en fazla yaklaşık **128–160 kbps**’e (AAC veya Opus) çıkar ve Downtify her zaman mevcut en iyi akışı indirir. Bunu 256 veya 320 kbps ile kodlamak, o kaynağı sadakatle koruyan daha büyük dosyalar verir ama kaynağın hiç sahip olmadığı ayrıntıyı geri getiremez. Dosya boyutu sizin için daha önemliyse daha düşük bir bit hızı seçin.
 :::
 
+## Kaçınılacak biçimler
+
+İndirmeler, kaynak ne olursa olsun, bu biçimlerdeki bir dosyayı kütüphaneye asla getirmez. slskd, kendi biçim listesi ve **Yalnızca listelenen biçimlere izin ver** ne derse desin, seçerken bu dosyaları dışarıda bırakır; yine de böyle bir dosya veren kaynak (Deemix ya da slskd’de zaten olan bir dosya) hiçbir şey bulamamış sayılır ve sıradaki kaynak denenir. YouTube ve SoundCloud indirmeleri yukarıdaki **Biçim**e dönüştürülür, bu yüzden asla böyle dosya çıkarmaz. İndirme biçiminin kendisinden kaçınılamaz. Kütüphanede zaten olan dosyalar, Doctor’daki **Dönüştürülecek biçimler** ile dönüştürülür.
+
 ## Çıktı dosya adı şablonu
 
 Varsayılan dosya adı şablonu şudur:
