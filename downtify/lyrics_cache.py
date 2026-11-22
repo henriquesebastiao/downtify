@@ -16,7 +16,8 @@ from typing import Any, Optional
 
 from loguru import logger
 
-from .sqlite_utils import connect_sqlite
+from .db.config import Dialect
+from .db.core import Database, as_database
 
 #: How long a "this provider has nothing" answer is trusted.
 DEFAULT_MISS_TTL_DAYS = 30
@@ -60,16 +61,25 @@ class LyricsLookupCache:
     """Remembers, per song and provider, whether lyrics were found."""
 
     def __init__(
-        self, db_path: Path, miss_ttl_days: int = DEFAULT_MISS_TTL_DAYS
+        self,
+        db_path: str | Path | Database,
+        miss_ttl_days: int = DEFAULT_MISS_TTL_DAYS,
     ) -> None:
-        self._path = str(db_path)
+        self.db = as_database(db_path, 'library')
+        if isinstance(db_path, Database):
+            self._path = str(self.db.path) if self.db.path else None
+        else:
+            self._path = str(db_path)
         self.miss_ttl = timedelta(days=miss_ttl_days)
         self._init_db()
 
     def _connect(self):
-        return connect_sqlite(self._path, row_factory=True)
+        return self.db.connect()
 
     def _init_db(self) -> None:
+        # PostgreSQL gets its schema from the migrations.
+        if self.db.dialect is not Dialect.SQLITE:
+            return
         with self._connect() as conn:
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS lyrics_lookups (

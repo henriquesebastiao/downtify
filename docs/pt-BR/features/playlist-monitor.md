@@ -28,7 +28,7 @@ O Downtify mantém uma tarefa em segundo plano rodando a cada 60 segundos. A cad
 3. Baixa as faixas novas pelo mesmo pipeline de um download manual
 4. Atualiza o arquivo M3U da playlist (se a geração de M3U estiver ativada)
 
-A primeira verificação, que começa assim que você adiciona o monitoramento, baixa tudo o que já está na playlist; as seguintes baixam só o que foi acrescentado desde então. "Já baixado" é registrado em um pequeno banco SQLite (`downtify_monitor.db` em `/data`), e não conferindo a pasta de downloads — então mover um arquivo baixado para outro lugar do disco (para a sua própria organização de biblioteca, outro disco, onde for) **não** faz o Downtify achar que ele sumiu e baixá-lo de novo na próxima verificação.
+A primeira verificação, que começa assim que você adiciona o monitoramento, baixa tudo o que já está na playlist; as seguintes baixam só o que foi acrescentado desde então. "Já baixado" é registrado em um pequeno banco SQLite (`downtify_monitor.db` em `/data`; com PostgreSQL, no banco PostgreSQL), e não conferindo a pasta de downloads — então mover um arquivo baixado para outro lugar do disco (para a sua própria organização de biblioteca, outro disco, onde for) **não** faz o Downtify achar que ele sumiu e baixá-lo de novo na próxima verificação.
 
 Uma varredura separada roda a cada hora e confere se o arquivo de cada faixa baixada ainda está lá. Arquivos realmente excluídos (e não movidos) são esquecidos nesse momento, então a faixa volta a ser elegível para download — na próxima verificação do monitoramento depois dessa varredura horária, não na hora.
 
@@ -144,11 +144,12 @@ Depois que o servidor adiciona o monitoramento, o botão vira um link para o **M
 | A cada 6 horas | 360 | |
 | A cada 12 horas | 720 | |
 | Todo dia | 1 440 | Playlists que mudam devagar |
+| A cada 3 dias | 4 320 | |
 | Toda semana | 10 080 | Playlists atualizadas semanalmente |
 | A cada 2 semanas | 20 160 | |
 | Todo mês | 43 200 | Arquivo ou playlists raramente atualizadas |
 
-Você pode mudar o intervalo de uma playlist existente a qualquer momento pelo cartão do monitor, sem removê-la e adicioná-la de novo.
+Você pode mudar o intervalo de uma playlist existente a qualquer momento pelo cartão do monitor, sem removê-la e adicioná-la de novo. Ou para muitos monitoramentos de uma vez: veja [Alterar muitos monitoramentos de uma vez](#changing-many-watches-at-once).
 
 ## Gerenciando playlists monitoradas
 
@@ -170,6 +171,17 @@ Em cada linha:
 - **⋯** — **Atividade e músicas** (a página do monitoramento), pausar/retomar, copiar o link, abrir o original ou **Parar de monitorar** (o registro é excluído; os arquivos baixados são mantidos)
 
 **Atividade** e **Armazenamento** são colunas como as outras: esconda ou redimensione em **Colunas**.
+
+### Alterar muitos monitoramentos de uma vez
+
+Clique em **Selecionar** acima da lista para mostrar uma caixa em cada linha. Marque os monitoramentos (Shift+clique marca todos entre dois cliques) ou use **Selecionar todos os exibidos**, que respeita a busca e o filtro **Todos / Pausados**. A barra acima da lista aplica uma mesma mudança a todos os marcados:
+
+- **Mudar verificações para…** — o mesmo intervalo para todos
+- **Pausar** / **Retomar**
+- **Verificar agora** — verifica os ativos na hora
+- **Parar de monitorar** — após confirmação; os arquivos baixados ficam
+
+Funciona do mesmo jeito nas abas **Playlists** e **Artistas**. Os marcados continuam marcados quando a busca muda. **Concluir** (ou **Esc**) sai da seleção; trocar de aba a limpa.
 
 ### Editando um monitoramento
 
@@ -248,7 +260,7 @@ Se um arquivo realmente some — você o tirou da pasta de downloads, ou o exclu
 
 ## Armazenamento
 
-O estado do monitor fica em um banco SQLite em `/data/downtify_monitor.db`. O banco registra:
+O estado do monitor fica em um banco SQLite em `/data/downtify_monitor.db`, o backend padrão. Com PostgreSQL ([Banco de dados](../database.md)), os mesmos registros ficam no banco PostgreSQL. O banco registra:
 
 - Cada monitoramento (tipo, ID de playlist do Spotify ou do YouTube Music ou ID de canal do YouTube Music, nome, URL, intervalo, estado ativo, hora da última verificação). Se um monitoramento é do Spotify ou do YouTube Music é lido do URL guardado, então não é preciso uma coluna extra.
 - Cada faixa baixada com sucesso por monitoramento, incluindo o nome do arquivo no disco
@@ -288,7 +300,23 @@ O id do monitoramento (`#12`) aparece ao lado do nome, então dois monitoramento
 
 A página de um acompanhamento de artista também lista todo o catálogo dele na última verificação: cada lançamento que YouTube Music, Deezer e MusicBrainz listam (o mesmo álbum vindo de duas fontes aparece uma vez), em álbuns, mixtapes, EPs, singles e lançamentos ao vivo, coletâneas e remixes. Cada um mostra o que a biblioteca tem dele: **Completo** com o número de faixas, **Em parte**, **Para baixar**, **Anterior ao acompanhamento** (um acompanhamento com **Só lançamentos novos** o pulou), **Não acompanhado** (um tipo ou categoria que o acompanhamento não baixa) ou **Desativado**. Participações e bootlegs têm o próprio filtro e nunca são baixados.
 
+**Verificar o que eu tenho** lê a lista de faixas de cada lançamento e compara com toda a biblioteca, do jeito que o acompanhamento de artistas compara músicas (mesmo artista e título, mesma duração), não importa quem as baixou. Assim, um álbum que você tinha antes do acompanhamento aparece como **Completo**, e a seta ao lado de um lançamento lista as faixas, cada uma marcada como na sua biblioteca ou faltando. Nada é baixado. Roda em segundo plano e é lento para artistas grandes, já que o MusicBrainz permite uma requisição por segundo. As listas ficam guardadas, então uma verificação posterior só lê os lançamentos ainda não lidos; uma verificação normal também guarda as listas dos lançamentos que baixa.
+
+**Baixar o que falta** então baixa as músicas que você não tem de cada lançamento que o acompanhamento baixa (ativado, ou de um tipo e categoria acompanhados), mesmo os já processados, como uma verificação que você acompanha na **fila**. Antes pergunta, com o número de músicas. As músicas que já estão na sua biblioteca são vinculadas, não baixadas de novo, e os lançamentos que o acompanhamento não baixa ficam como estão: ative um antes para incluí-lo.
+
 O interruptor ao lado de um lançamento tem prioridade sobre o acompanhamento, como o monitoramento por álbum do Lidarr. Ligado, baixa o lançamento mesmo que o tipo não seja acompanhado ou que tenha saído antes do início do acompanhamento, e uma verificação começa na hora. Desligado, deixa de baixá-lo. As músicas que já estão na biblioteca ficam nos dois casos. **Do MusicBrainz, baixar também** escolhe, só para este artista, quais categorias de lançamento que só o MusicBrainz distingue são baixadas: mixtapes e trilhas sonoras por padrão; álbuns ao vivo, coletâneas, remixes, mixes de DJ e demos quando ativados.
+
+### Procurados
+
+A aba **Procurados** da página Monitor, ao lado de **Playlists** e **Artistas**, é uma única lista de tudo o que seus acompanhamentos de artistas deveriam baixar e a biblioteca ainda não tem por inteiro. Para cada acompanhamento de artista seu (um administrador vê os de todos), lista cada lançamento que o acompanhamento baixa (ativado, ou de um tipo e categoria acompanhados) e que está **Em parte** ou **Para baixar**, com quantas músicas a biblioteca tem dele (“tenho de total”). Acompanhamentos pausados ficam de fora, assim como um lançamento cujo interruptor você desliga. Os lançamentos são agrupados por artista, cada grupo com um link para a página do acompanhamento e o **Baixar o que falta** desse artista. No topo, um resumo conta as músicas que faltam e os lançamentos a que pertencem, e quantos lançamentos ainda não foram verificados. Uma caixa de busca e um filtro de tipo restringem a lista.
+
+Um lançamento com o selo **Ainda não verificado** é um cuja lista de faixas ainda não foi lida (por **Verificar o que eu tenho**, veja [Os lançamentos de um artista](#an-artists-releases)), então seu tamanho não é conhecido: mesmo que o catálogo informe um número de faixas, ele pode já estar na sua biblioteca. Mostra o selo em vez de um número, não entra nas músicas que faltam, e seu artista é citado numa linha **Ainda não verificados** acima da lista (os primeiros nomes e depois “e mais 85”). O **Baixar o que falta** de um artista fica disponível quando ele tem músicas que se sabe que faltam ou lançamentos ainda não verificados.
+
+**Verificar todos os artistas** executa **Verificar o que eu tenho** em cada um desses artistas, um por vez, em segundo plano. É lento para artistas grandes, já que o MusicBrainz permite uma requisição por segundo. **Parar** encerra a leitura do artista atual no próximo lançamento dele: o que foi lido fica guardado, e um **Verificar todos os artistas** posterior continua dali.
+
+**Baixar tudo o que falta** pergunta antes, com o número de músicas (e, se houver lançamentos ainda não verificados, avisando que o que falta neles se soma: **Verificar todos os artistas** antes dá um número exato), e então executa o **Baixar o que falta** de cada artista, um por vez. As músicas são baixadas na **fila**. **Parar** deixa o artista em andamento terminar e então para.
+
+Só um dos dois roda por vez, e a execução de outra conta também bloqueia a sua. Você vê o andamento da sua própria execução (um administrador vê qualquer uma), e ambos ficam bloqueados no modo só biblioteca. A linha de andamento conta o artista em curso (“Verificando 1 de 87: Ace”) e mostra “Parando…” depois de **Parar**, até a execução terminar.
 
 ## De onde veio uma música
 

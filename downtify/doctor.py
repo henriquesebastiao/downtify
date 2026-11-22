@@ -56,6 +56,36 @@ MAX_CANDIDATES = 8
 #: two playlists are merged.
 MIN_OVERLAP = 0.8
 
+#: The Doctor's sections. The health check looks at all of them but
+#: ``slskd``, which has its own (slower) check.
+SECTIONS = ('slskd', 'playlists', 'navidrome', 'duplicates', 'relinked')
+HEALTH_SECTIONS = frozenset(SECTIONS) - {'slskd'}
+#: The sections each check finds again.
+CHECKS = {'health': HEALTH_SECTIONS, 'slskd': frozenset({'slskd'})}
+#: The sections whose findings each repair can change. Merging duplicate
+#: songs rewrites M3Us and removes library files a verified slskd
+#: leftover may match; deleting slskd leftovers changes the songs the
+#: duplicate and Navidrome checks counted; merging playlists changes the
+#: M3Us the slskd check counts as references. Merging duplicates leaves
+#: its own list usable - the server takes the merged copies out of it.
+REPAIR_IMPACT = {
+    'slskd_clean': frozenset({'slskd', 'duplicates', 'navidrome', 'relinked'}),
+    'merge': frozenset({'slskd', 'playlists', 'navidrome', 'duplicates'}),
+    'playlists': frozenset({'slskd', 'playlists', 'navidrome', 'duplicates'}),
+    'navidrome': frozenset({'navidrome'}),
+    'dedupe': frozenset({'slskd', 'playlists', 'navidrome', 'relinked'}),
+}
+
+
+def stale_after(stale: Collection[str], kind: str) -> set[str]:
+    """The sections out of date once a *kind* job has finished: a check
+    brings its own sections up to date, a repair puts the ones it can
+    change out of date until they are checked again."""
+
+    now = set(stale) - CHECKS.get(kind, frozenset())
+    return now | REPAIR_IMPACT.get(kind, frozenset())
+
+
 STATUS_VERIFIED = 'verified'
 STATUS_DIFFERENT = 'different'
 STATUS_UNMATCHED = 'unmatched'
@@ -283,6 +313,87 @@ def summarize_copies(results: Iterable[CopyResult]) -> dict[str, Any]:
     return out
 
 
+#: Files of each kind the slskd folder breakdown lists by name.
+FOLDER_EXAMPLES = 25
+#: Kinds of file in slskd's folder (:func:`slskd_folder_breakdown`).
+FOLDER_LIBRARY = 'library'
+FOLDER_LEFTOVER = 'leftover'
+FOLDER_UNLISTED = 'unlisted_audio'
+FOLDER_OTHER = 'other'
+FOLDER_KINDS = (FOLDER_LIBRARY, FOLDER_LEFTOVER, FOLDER_UNLISTED, FOLDER_OTHER)
+
+
+def slskd_folder_breakdown(
+    files: Iterable[tuple[str, int]],
+    *,
+    library: Collection[str],
+    leftovers: Collection[str],
+    audio_extensions: Collection[str],
+    examples: int = FOLDER_EXAMPLES,
+) -> dict[str, Any]:
+    """What slskd's folder holds, next to what Downtify counts.
+
+    *files* are ``(stored path, size)`` for every file on disk under
+    slskd's folder (``slskd/...``). Each is a library song (in
+    *library*), a leftover the slskd check looks at (in *leftovers*),
+    audio Downtify's listing doesn't know (never imported, or kept after
+    a failed import), or another kind of file (covers, lyrics, slskd's
+    own files). Library and leftovers are what the storage page counts;
+    the other two explain why the folder looks bigger on disk.
+    """
+
+    audio = {e.lower().lstrip('.') for e in audio_extensions}
+    lib = {norm(f) for f in library}
+    left = {norm(f) for f in leftovers}
+    totals = {kind: {'files': 0, 'bytes': 0} for kind in FOLDER_KINDS}
+    by_ext: dict[str, dict[str, int]] = defaultdict(
+        lambda: {'files': 0, 'bytes': 0}
+    )
+    listed: dict[str, list[tuple[int, str]]] = {
+        FOLDER_UNLISTED: [],
+        FOLDER_OTHER: [],
+    }
+    for raw, raw_size in files:
+        name = norm(raw)
+        size = max(0, int(raw_size or 0))
+        ext = PurePosixPath(name).suffix.lstrip('.').lower()
+        if name in lib:
+            kind = FOLDER_LIBRARY
+        elif name in left:
+            kind = FOLDER_LEFTOVER
+        elif ext in audio:
+            kind = FOLDER_UNLISTED
+        else:
+            kind = FOLDER_OTHER
+            bucket = by_ext[ext or '']
+            bucket['files'] += 1
+            bucket['bytes'] += size
+        totals[kind]['files'] += 1
+        totals[kind]['bytes'] += size
+        if kind in listed:
+            listed[kind].append((size, name))
+    return {
+        'total': {
+            'files': sum(t['files'] for t in totals.values()),
+            'bytes': sum(t['bytes'] for t in totals.values()),
+        },
+        'kinds': totals,
+        'other_by_extension': sorted(
+            ({'extension': ext, **row} for ext, row in by_ext.items()),
+            key=lambda row: (-row['bytes'], row['extension']),
+        )[:10],
+        'examples': {
+            kind: [
+                {'file': name, 'bytes': size}
+                for size, name in sorted(rows, key=lambda r: (-r[0], r[1]))[
+                    :examples
+                ]
+            ]
+            for kind, rows in listed.items()
+        },
+    }
+
+
 def prune_empty_dirs(start: Path, stop: Path) -> int:
     """Remove *start* and its empty parents, never *stop* or above."""
 
@@ -403,64 +514,78 @@ class PlaylistGroup:
         }
 
 
-class _Union:
-    def __init__(self) -> None:
-        self.parent: dict[str, str] = {}
+def name_key(name: str) -> str:
+    """:func:`playlist_key` without spaces: a name and the file name
+    written for it compare equal however their punctuation was dropped
+    (``DAMNN...its already 3am🥵`` and ``DAMNNits already 3am``,
+    ``Rajju patel's playlist`` and ``Rajju patels playlist``)."""
 
-    def find(self, item: str) -> str:
-        self.parent.setdefault(item, item)
-        while self.parent[item] != item:
-            self.parent[item] = self.parent[self.parent[item]]
-            item = self.parent[item]
-        return item
+    return playlist_key(name).replace(' ', '')
 
-    def join(self, a: str, b: str) -> None:
-        self.parent[self.find(a)] = self.find(b)
+
+def same_songs(a: Collection[str], b: Collection[str]) -> bool:
+    """Whether two playlists hold nearly the same songs: at least
+    :data:`MIN_OVERLAP` of *each* one is in the other, and at least 5.
+
+    Both ways, not just the smaller one: a 50-song mix is almost all
+    inside a 7,000-song liked-songs backup, but they aren't one
+    playlist.
+    """
+
+    first, second = set(a), set(b)
+    if min(len(first), len(second)) < 5:
+        return False
+    shared = len(first & second)
+    return shared >= MIN_OVERLAP * len(first) and shared >= MIN_OVERLAP * len(
+        second
+    )
 
 
 def m3u_duplicate_groups(infos: Sequence[M3UInfo]) -> list[PlaylistGroup]:
     """M3U files that look like one playlist.
 
-    Same name (:func:`playlist_key`) groups them; so does holding nearly
-    the same songs (at least :data:`MIN_OVERLAP` of the smaller one, and
-    at least 5 songs) under different names - a playlist renamed on
-    Spotify. Playlists you created in the Library are left out: they
-    are yours, not a sync's.
+    Same name (:func:`name_key`) groups them; so does holding nearly
+    the same songs under different names (:func:`same_songs`) - a
+    playlist renamed on Spotify. A playlist joins a songs group only
+    when it holds nearly the same songs as *every* playlist already in
+    it, so one huge playlist can't chain unrelated ones together.
+    Playlists you created in the Library are left out: they are yours,
+    not a sync's.
     """
 
     auto = [m for m in infos if not m.manual and m.entries]
-    union = _Union()
     by_name: dict[str, list[M3UInfo]] = defaultdict(list)
     for info in auto:
-        union.find(info.path)
-        by_name[playlist_key(info.name)].append(info)
-    for members in by_name.values():
-        for other in members[1:]:
-            union.join(members[0].path, other.path)
-    named = {m.path for ms in by_name.values() if len(ms) > 1 for m in ms}
-    for i, first in enumerate(auto):
-        for second in auto[i + 1 :]:
-            small, large = sorted(
-                (first, second), key=lambda m: len(m.entries)
-            )
-            if (
-                len(small.entries) >= 5
-                and overlap(small.entries, large.entries) >= MIN_OVERLAP
-            ):
-                union.join(first.path, second.path)
-    grouped: dict[str, list[M3UInfo]] = defaultdict(list)
-    for info in auto:
-        grouped[union.find(info.path)].append(info)
+        by_name[name_key(info.name)].append(info)
     groups: list[PlaylistGroup] = []
-    for members in grouped.values():
-        if len(members) < 2:
+    placed: set[str] = set()
+    for members in by_name.values():
+        if len(members) > 1:
+            groups.append(_group(members, 'name'))
+            placed.update(m.path for m in members)
+    rest = sorted(
+        (m for m in auto if m.path not in placed),
+        key=lambda m: (-len(m.entries), m.path),
+    )
+    for i, first in enumerate(rest):
+        if first.path in placed:
             continue
-        members.sort(key=lambda m: m.path)
-        reason = 'name' if all(m.path in named for m in members) else 'songs'
-        key = 'm3u:' + members[0].path
-        groups.append(PlaylistGroup(key, members, reason))
+        members = [first]
+        for second in rest[i + 1 :]:
+            if second.path in placed:
+                continue
+            if all(same_songs(m.entries, second.entries) for m in members):
+                members.append(second)
+        if len(members) > 1:
+            groups.append(_group(members, 'songs'))
+            placed.update(m.path for m in members)
     groups.sort(key=lambda g: g.key)
     return groups
+
+
+def _group(members: list[M3UInfo], reason: str) -> PlaylistGroup:
+    members = sorted(members, key=lambda m: m.path)
+    return PlaylistGroup('m3u:' + members[0].path, members, reason)
 
 
 def parse_extinf(extinf: str) -> dict[str, Any]:

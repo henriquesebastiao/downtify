@@ -71,6 +71,36 @@
       </span>
     </div>
 
+    <div
+      v-if="status.configured"
+      class="flex flex-wrap items-center gap-2 text-[13px]"
+    >
+      <UiBadge :tone="health.tone" :icon="health.icon">{{
+        health.label
+      }}</UiBadge>
+      <span v-if="health.detail" class="text-muted">{{ health.detail }}</span>
+      <UiButton
+        variant="ghost"
+        size="sm"
+        icon="refresh"
+        :loading="checking"
+        @click="cookies.check"
+      >
+        {{ t('settings.cookiesCheck') }}
+      </UiButton>
+    </div>
+    <p
+      v-if="status.configured && status.health?.state === 'signed_out'"
+      class="flex items-start gap-2 text-[13px] text-danger"
+    >
+      <AppIcon name="alert" :size="15" class="mt-0.5" />{{
+        t('settings.cookiesSignedOutHint')
+      }}
+    </p>
+    <p v-if="status.configured" class="text-xs text-pretty text-muted">
+      {{ t('settings.cookiesKeepAliveHint') }}
+    </p>
+
     <p v-if="error" class="text-[13px] text-danger">{{ error }}</p>
     <p
       v-for="warning in warnings"
@@ -83,7 +113,7 @@
 </template>
 
 <script setup>
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import AppIcon from '../ui/AppIcon.vue'
 import UiBadge from '../ui/UiBadge.vue'
 import UiButton from '../ui/UiButton.vue'
@@ -96,7 +126,38 @@ const { t, locale } = useI18n()
 const cookies = useCookiesManager()
 const ui = useUi()
 const picker = ref(null)
-const { status, busy, error, warnings } = cookies
+const { status, busy, checking, error, warnings } = cookies
+
+// One line for the last keep-alive result (GET /api/cookies → health).
+const health = computed(() => {
+  const h = status.value.health || {}
+  const ago = (iso) => (iso ? timeAgo(iso, locale.value) : '')
+  const checked = h.checked_at
+    ? t('settings.cookiesChecked', { when: ago(h.checked_at) })
+    : ''
+  const states = {
+    valid: { tone: 'accent', icon: 'check', key: 'cookiesStateValid' },
+    signed_out: { tone: 'danger', icon: 'alert', key: 'cookiesStateSignedOut' },
+    no_account: { tone: 'neutral', icon: 'info', key: 'cookiesStateNoAccount' },
+    error: { tone: 'warn', icon: 'alert', key: 'cookiesStateError' },
+  }
+  const s = states[h.state] || {
+    tone: 'neutral',
+    icon: 'clock',
+    key: 'cookiesStateUnknown',
+  }
+  const parts = [checked]
+  if (h.state === 'error' && h.message) parts.push(h.message)
+  if (h.bot_check_at) {
+    parts.push(t('settings.cookiesBotCheck', { when: ago(h.bot_check_at) }))
+  }
+  return {
+    tone: s.tone,
+    icon: s.icon,
+    label: t(`settings.${s.key}`),
+    detail: parts.filter(Boolean).join(' · '),
+  }
+})
 
 onMounted(cookies.refresh)
 

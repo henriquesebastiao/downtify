@@ -4,10 +4,10 @@ from __future__ import annotations
 
 import base64
 import contextlib
+import functools
 import os
 import re
 import shutil
-import tempfile
 import threading
 from concurrent.futures import Future, ThreadPoolExecutor
 from pathlib import Path
@@ -40,6 +40,7 @@ from yt_dlp.postprocessor.ffmpeg import FFmpegExtractAudioPP
 
 from . import cover_sources
 from . import deezer as deezer_mod
+from . import isrc as isrc_mod
 from . import lyrics as lyrics_mod
 from . import spotify as spotify_mod
 from .album_artist import VARIOUS_ARTISTS, filing_artist
@@ -48,7 +49,9 @@ from .content_advisory import (
     ADVISORY_TAG,
     MP4_ADVISORY_ATOM,
 )
-from .cookies import CookiesStore
+from .cookie_refresh import note_ytdlp_message
+from .cookies import CookiesStore, private_cookiefile
+from .cover_art import extract_embedded_cover
 from .deemix_provider import download_from_deemix, normalize_settings
 from .download_log import (
     OUTCOME_COMPLETED,
@@ -56,13 +59,17 @@ from .download_log import (
     OUTCOME_SKIPPED,
 )
 from .download_policy import DownloadPolicyBlocked
+from .download_sources import track_keys
 from .file_naming import sanitize_file_name
 from .image_size import image_short_side
 from .itunes import fetch_genre as _fetch_itunes_genre
 from .library_paths import library_stored_path, slskd_dir_from_downloader
 from .m3u import sanitize_playlist_name
 from .providers import (
+    cover_resolution,
     enrich_from_match,
+    excluded_source,
+    excluding_sources,
     find_match,
     find_match_for_video,
     find_match_soundcloud,
@@ -71,7 +78,11 @@ from .providers import (
     soundcloud_track_url,
 )
 from .release_files import matches_release
-from .slskd_provider import download_from_slskd, normalize_slskd_quality
+from .slskd_provider import (
+    download_from_slskd,
+    normalize_slskd_quality,
+)
+from .slskd_provider import take_miss as take_slskd_miss
 
 # Extensions that count as "this song is already downloaded". Deliberately
 # excludes sidecars written next to the audio (.lrc, cover.jpg, .m3u) so a
@@ -310,11 +321,13 @@ class _YtdlpLogger:
 
     @staticmethod
     def warning(msg: str) -> None:
+        note_ytdlp_message(msg)
         if not any(frag in msg for frag in _SUPPRESSED_YT_WARNING_FRAGMENTS):
             logger.warning('yt-dlp: {}', msg)
 
     @staticmethod
     def error(msg: str) -> None:
+        note_ytdlp_message(msg)
         logger.error('yt-dlp: {}', msg)
 
 
@@ -388,6 +401,11 @@ def _translate_download_error(
     )
 
 
+#: Why slskd had nothing for the download running on this thread (set
+#: when it falls through to the next source, reported with the outcome).
+_SLSKD_MISS = threading.local()
+
+
 class Downloader:
     """Wraps ``yt-dlp`` plus ``mutagen`` tagging."""
 
@@ -415,6 +433,15 @@ class Downloader:
     #: the app (``main.py``, see ``compilation.CompilationMarks``). Whatever
     #: it raises is logged and the song keeps its source's values.
     album_override: Optional[Callable[[dict[str, Any]], dict[str, Any]]] = None
+    #: Each new file's source, and the sources rejected per song
+    #: (:class:`downtify.download_sources.DownloadSources`), set by the
+    #: app: a rejected upload is never picked again for its song, and a
+    #: file swapped on disk is kept like one replaced through Replace
+    #: audio.
+    download_sources: Any = None
+    #: Files whose audio an admin replaced by hand
+    #: (:class:`downtify.hand_replaced.HandReplacedFiles`), set by the app.
+    hand_replaced: Any = None
 
     def __init__(
         self,
@@ -428,6 +455,8 @@ class Downloader:
         organize_by_album: bool = False,
         download_cover_art: bool = True,
         cover_min_resolution: int = 0,
+        cover_largest: bool = False,
+        write_isrc: bool = True,
         overwrite_existing_files: bool = True,
         cookies_store: Optional[CookiesStore] = None,
         audio_providers: Optional[list[str]] = None,
@@ -440,6 +469,11 @@ class Downloader:
         # The smallest cover (short side, px) worth embedding; 0 = take
         # what the track's source offers (see _download_cover_meeting).
         self.cover_min_resolution = max(0, int(cover_min_resolution or 0))
+        # Look for a larger cover on every download, not only below the
+        # minimum (see _download_cover_meeting).
+        self.cover_largest = bool(cover_largest)
+        # Write each download's ISRC (downtify.isrc).
+        self.write_isrc = bool(write_isrc)
         self.deemix_settings = normalize_settings(deemix_settings)
         self.audio_providers = self._normalize_audio_providers(audio_providers)
         self.slskd_settings = self._normalize_slskd_settings(slskd_settings)
@@ -453,6 +487,9 @@ class Downloader:
         self.audio_bitrate = audio_bitrate
         self.output_template = output_template
         self.lyrics_providers = list(lyrics_providers or [])
+        #: Keep only time-synced lyrics (the ``lyrics_synced_only``
+        #: setting): plain lyrics count as none found.
+        self.lyrics_synced_only = False
         # Optional LyricsLookupCache: skips providers that already came
         # back empty for a song.
         self.lyrics_cache = lyrics_cache
@@ -539,6 +576,7 @@ class Downloader:
             'min_bitrate': _int(raw.get('min_bitrate'), 256, 0, 10000),
             **normalize_slskd_quality(raw),
             'leave_in_place': bool(raw.get('leave_in_place', True)),
+            'keep_file_cover': bool(raw.get('keep_file_cover', False)),
             'max_parallel_downloads': _int(
                 raw.get('max_parallel_downloads'), 3, 1, 8
             ),
@@ -570,6 +608,8 @@ class Downloader:
         ):
             known_video_id = song.get('song_id')
         known_soundcloud_url = soundcloud_track_url(song)
+        if excluded_source(known_soundcloud_url):
+            known_soundcloud_url = None
 
         youtube_searched = False
         for provider in self.audio_providers:
@@ -598,6 +638,11 @@ class Downloader:
                 )
                 if local is not None:
                     return None, None, 'slskd', local
+                # Why: told with the outcome (see _report_outcome).
+                _SLSKD_MISS.value = take_slskd_miss() or {
+                    'reason': 'unknown',
+                    'detail': '',
+                }
                 logger.info(
                     'Audio provider slskd: no match for {!r}', song.get('name')
                 )
@@ -933,18 +978,44 @@ class Downloader:
         existing is ever overwritten."""
 
         store = getattr(self, 'hand_replaced', None)
-        if store is None:
+        sources = getattr(self, 'download_sources', None)
+        if store is None and sources is None:
             return None
         try:
             existing = self.existing_filename_for(song, subdir)
-            return (
-                existing
-                if existing is not None and store.protected(existing)
-                else None
-            )
+            if existing is None:
+                return None
+            if store is not None and store.protected(existing):
+                return existing
+            if self._replaced_on_disk(existing, song):
+                return existing
+            return None
         except Exception:
             logger.opt(exception=True).debug('Hand-replaced check failed')
             return None
+
+    def _replaced_on_disk(self, existing: str, song: dict[str, Any]) -> bool:
+        """Whether *existing* (a file Downtify wrote) was swapped on disk
+        since: its audio isn't what was written. Such a file is then
+        remembered as replaced by hand, and the upload it came from is
+        rejected for the song (issue #582)."""
+
+        sources = getattr(self, 'download_sources', None)
+        if sources is None:
+            return False
+        full = self.download_dir / existing
+        if not sources.replaced_on_disk(existing, full):
+            return False
+        logger.info(
+            '{} was replaced outside Downtify (its audio changed); keeping it',
+            existing,
+        )
+        store = getattr(self, 'hand_replaced', None)
+        if store is not None:
+            store.mark(existing, 'disk')
+        sources.reject_file_source(existing, track_keys(song))
+        sources.record(existing, full, '', track_keys(song))
+        return True
 
     def _skip_hand_replaced(
         self,
@@ -1041,6 +1112,8 @@ class Downloader:
             if progress_cb:
                 progress_cb(*args)
 
+        _SLSKD_MISS.value = None
+
         try:
             if cancel_check:
                 return self._download(song, progress, subdir, cancel_check)
@@ -1090,6 +1163,13 @@ class Downloader:
         # Known-long tracks are refused before any search or fetch.
         reject_overlong_song(song, self.max_track_duration_seconds)
 
+        # Uploads found wrong for this song before are never picked again.
+        rejected = self._rejected_sources(song)
+        if song.get('youtube_id') in rejected or (
+            song.get('source') == 'youtube' and song.get('song_id') in rejected
+        ):
+            song = {**song, '_match_by_metadata': True}
+
         known_video_id = (
             None if song.get('_match_by_metadata') else song.get('youtube_id')
         )
@@ -1108,11 +1188,12 @@ class Downloader:
             song = deezer_mod.enrich_track_from_deezer_if_sparse(song)
         # A known video is a candidate for an enabled YouTube provider,
         # not permission to bypass earlier sources or disabled providers.
-        video_id, match, provider, local_source = self._resolve_source(
-            song,
-            progress_cb,
-            **({'cancel_check': cancel_check} if cancel_check else {}),
-        )
+        with excluding_sources(rejected):
+            video_id, match, provider, local_source = self._resolve_source(
+                song,
+                progress_cb,
+                **({'cancel_check': cancel_check} if cancel_check else {}),
+            )
         if cancel_check:
             cancel_check()
         if (
@@ -1175,6 +1256,7 @@ class Downloader:
                     song, video_id, progress_cb, subdir, provider
                 ),
                 provider,
+                source_id=video_id,
             )
 
         # Re-check after enrichment while the target lock is still held,
@@ -1186,6 +1268,7 @@ class Downloader:
             song,
             self._fetch_and_tag(song, video_id, progress_cb, subdir, provider),
             provider,
+            source_id=video_id,
         )
 
     def _with_album_override(self, song: dict[str, Any]) -> dict[str, Any]:
@@ -1209,15 +1292,20 @@ class Downloader:
         filename: str,
         provider: Optional[str] = None,
         source: Optional[Path] = None,
+        source_id: Optional[str] = None,
     ) -> str:
         """Tell :attr:`on_downloaded` that *filename* is new (which
-        *provider* fetched it, and the *source* file it was copied from,
-        if any); returns it. A hook that fails is logged and ignored: the
-        file is already there."""
+        *provider* fetched it, the *source* file it was copied from, if
+        any, and the upload - *source_id*, a YouTube video id or a
+        SoundCloud track URL); returns it. A hook that fails is logged and
+        ignored: the file is already there."""
 
         song = {**song, 'download_provider': provider or ''}
         if source is not None:
             song['download_source'] = str(source)
+        if source_id:
+            song['download_source_id'] = str(source_id)
+        self._record_source(song, filename, source_id)
         hook = self.on_downloaded
         if hook is not None:
             try:
@@ -1229,14 +1317,51 @@ class Downloader:
         self._report_outcome(song, OUTCOME_COMPLETED, filename)
         return filename
 
+    def _rejected_sources(self, song: dict[str, Any]) -> set[str]:
+        """Uploads rejected for *song* (best effort: none on error)."""
+
+        sources = getattr(self, 'download_sources', None)
+        if sources is None:
+            return set()
+        try:
+            return sources.rejected_for(song)
+        except Exception:
+            logger.opt(exception=True).debug('Rejected-source lookup failed')
+            return set()
+
+    def _record_source(
+        self, song: dict[str, Any], filename: str, source_id: Optional[str]
+    ) -> None:
+        """Remember the upload *filename* was written from, and what its
+        audio is, so a later swap on disk is noticed (best effort)."""
+
+        sources = getattr(self, 'download_sources', None)
+        if sources is None or not filename:
+            return
+        full = self.download_dir / filename
+        if not full.is_file():
+            # Left in place in slskd's folder: not a file Downtify wrote.
+            return
+        try:
+            sources.record(filename, full, source_id or '', track_keys(song))
+        except Exception:
+            logger.opt(exception=True).debug(
+                'Could not record the source of {}', filename
+            )
+
     def _report_outcome(
         self, song: dict[str, Any], outcome: str, filename: str = ''
     ) -> None:
         """Tell :attr:`on_outcome` how a download ended (best effort)."""
 
         hook = self.on_outcome
+        miss = getattr(_SLSKD_MISS, 'value', None)
+        _SLSKD_MISS.value = None
         if hook is None:
             return
+        if miss is not None:
+            # slskd was asked first and had nothing: say why.
+            song = {**song, 'slskd_miss': miss}
         try:
             hook(song, outcome, filename)
         except Exception:
@@ -1303,10 +1428,19 @@ class Downloader:
 
         if found.lyrics is not None:
             try:
-                embed_lyrics(final_path, found.lyrics)
+                embed_lyrics(
+                    final_path,
+                    found.lyrics,
+                    embed_synced=self.lyrics_synced_only,
+                )
             except Exception:
                 succeeded = False
                 logger.exception('Failed to embed lyrics into {}', final_path)
+
+        # The recording's own ID (see downtify.isrc); a file without one
+        # is no less a download.
+        if found.isrc:
+            isrc_mod.write(final_path, found.isrc)
         return succeeded
 
     def _remove_slskd_source_after_import(
@@ -1423,6 +1557,8 @@ class Downloader:
             found = lookups.collect()
         finally:
             lookups.cancel()
+        if provider == 'slskd' and self.slskd_settings.get('keep_file_cover'):
+            found = _keep_larger_file_cover(found, source_path)
 
         # Never drop a cover.jpg into slskd's own folders.
         tagged = self._tag_file(
@@ -1570,31 +1706,13 @@ class Downloader:
         return ydl_opts, bool(cookies_file or cookies_browser)
 
     @staticmethod
-    @contextlib.contextmanager
-    def _private_cookiefile(ydl_opts: dict[str, Any]):
-        """Point ``cookiefile`` at a per-download copy of the cookie jar.
+    def _private_cookiefile(
+        ydl_opts: dict[str, Any],
+    ) -> contextlib.AbstractContextManager[None]:
+        """Per-download copy of the cookie jar, rotated cookies merged
+        back afterwards - see :func:`downtify.cookies.private_cookiefile`."""
 
-        yt-dlp rewrites ``cookiefile`` on exit (truncate then write), so
-        when a playlist runs several downloads in parallel they all
-        clobber the one shared cookies.txt and a concurrent reader hits a
-        half-written file ("does not look like a Netscape format cookies
-        file"). A private copy keeps the save-back off the shared path.
-        """
-
-        shared = ydl_opts.get('cookiefile')
-        if not shared or not os.path.isfile(shared):
-            yield
-            return
-        fd, tmp = tempfile.mkstemp(prefix='cookies-', suffix='.txt')
-        os.close(fd)
-        try:
-            shutil.copyfile(shared, tmp)
-            ydl_opts['cookiefile'] = tmp
-            yield
-        finally:
-            ydl_opts['cookiefile'] = shared
-            with contextlib.suppress(OSError):
-                os.remove(tmp)
+        return private_cookiefile(ydl_opts)
 
     def fetch_audio(
         self,
@@ -1701,14 +1819,17 @@ class _LookupResults:
         genre: Optional[str],
         cover_bytes: Optional[bytes],
         lyrics: Any,
+        isrc: Optional[str] = None,
     ) -> None:
         self.genre = genre
         self.cover_bytes = cover_bytes
         self.lyrics = lyrics
+        self.isrc = isrc
 
 
 class _MetadataLookups:
-    """Genre, cover-art and lyrics lookups for one song, run in parallel.
+    """Genre, cover-art, lyrics and ISRC lookups for one song, run in
+    parallel.
 
     They depend only on the song's metadata, not on the audio file, so
     callers start them while the audio itself is being fetched. The cover
@@ -1718,7 +1839,12 @@ class _MetadataLookups:
     def __init__(self, downloader: Downloader, song: dict[str, Any]) -> None:
         self._song = song
         self._pool = ThreadPoolExecutor(
-            max_workers=3, thread_name_prefix='downtify-metadata'
+            max_workers=4, thread_name_prefix='downtify-metadata'
+        )
+        self._isrc = (
+            self._pool.submit(isrc_mod.lookup, song)
+            if getattr(downloader, 'write_isrc', True)
+            else None
         )
         self._genre = (
             None
@@ -1729,14 +1855,17 @@ class _MetadataLookups:
             self._pool.submit(
                 _download_cover_meeting,
                 song,
-                getattr(downloader, 'cover_min_resolution', 0),
+                cover_goal(getattr(downloader, 'cover_min_resolution', 0)),
             )
             if downloader.download_cover_art
             else None
         )
         self._lyrics = (
             self._pool.submit(
-                lyrics_mod.fetch,
+                # The keyword only when it's on: the call stays as it was.
+                functools.partial(lyrics_mod.fetch, synced_only=True)
+                if getattr(downloader, 'lyrics_synced_only', False)
+                else lyrics_mod.fetch,
                 song,
                 downloader.lyrics_providers,
                 downloader.lyrics_cache,
@@ -1756,6 +1885,7 @@ class _MetadataLookups:
             lyrics=_lookup_result(
                 self._lyrics, 'Lyrics fetch', self._song, error=True
             ),
+            isrc=_lookup_result(self._isrc, 'ISRC lookup', self._song),
         )
 
     def cancel(self) -> None:
@@ -1798,8 +1928,21 @@ def _lookup_result(
 
 
 def _download_cover(url: str) -> Optional[bytes]:
+    """The cover at *url*. A small Spotify cover (300 or 64 px) is asked
+    for at Spotify's 640 px size first, and at *url* as given only when
+    that fails."""
+
     if not url:
         return None
+    largest = spotify_mod.largest_cover_url(url)
+    if largest != url:
+        data = _fetch_cover(largest)
+        if data:
+            return data
+    return _fetch_cover(url)
+
+
+def _fetch_cover(url: str) -> Optional[bytes]:
     try:
         response = httpx.get(url, timeout=15)
         response.raise_for_status()
@@ -1809,8 +1952,18 @@ def _download_cover(url: str) -> Optional[bytes]:
     return response.content
 
 
+def cover_goal(minimum: int) -> int:
+    """The cover size a download aims for: the "Cover size" setting
+    (1200px by default), or the "Minimum cover size" when larger. A
+    track's own cover below it is swapped for the largest the cover
+    sources have (:func:`_download_cover_meeting`) - Spotify's largest
+    is 640px, so a Spotify track's cover is always looked for."""
+
+    return max(int(minimum or 0), cover_resolution())
+
+
 def _download_cover_meeting(
-    song: dict[str, Any], minimum: int
+    song: dict[str, Any], minimum: int, *, largest: bool = False
 ) -> Optional[bytes]:
     """The track's cover, or a larger one when it is under *minimum*.
 
@@ -1821,13 +1974,18 @@ def _download_cover_meeting(
     largest image wins - the minimum is a floor, not a fixed size. When
     no source reaches it, the largest found is still embedded rather
     than none.
+
+    With *largest* (the "Always use the largest cover" setting) those
+    sources are asked on every download, whatever the minimum: a YouTube
+    Music cover tops out around 1200 px and a Spotify one at 640 px,
+    while iTunes usually has the same release at 1200 px.
     """
 
     data = _download_cover(song.get('cover_url', ''))
-    if minimum <= 0:
+    if minimum <= 0 and not largest:
         return data
     have = image_short_side(data) if data else 0
-    if have >= minimum:
+    if have >= minimum and not largest:
         return data
     current = (
         cover_sources.CoverCandidate(source='download', data=data, width=have)
@@ -1939,6 +2097,38 @@ def _release_type_for_tags(song: dict[str, Any]) -> str:
     ``RELEASETYPE`` / the MP4 freeform equivalent)."""
 
     return str(song.get('release_type') or '').strip().lower()
+
+
+def _keep_larger_file_cover(
+    found: '_LookupResults', source: Path
+) -> '_LookupResults':
+    """*found* with the cover the downloaded file came with, when that
+    one is larger than the fetched cover (the slskd ``keep_file_cover``
+    setting): shared files often carry the release's full-size artwork,
+    larger than YouTube Music's or Spotify's. A file without a cover, or
+    with a smaller or unreadable one, changes nothing."""
+
+    try:
+        data, _mime = extract_embedded_cover(source)
+    except Exception:
+        logger.opt(exception=True).debug(
+            'Could not read the cover of {}', source
+        )
+        return found
+    if not data:
+        return found
+    own = image_short_side(data)
+    fetched = image_short_side(found.cover_bytes) if found.cover_bytes else 0
+    if own <= fetched:
+        return found
+    logger.info(
+        "Keeping the file's own {}px cover over the fetched {}px one: {}",
+        own,
+        fetched,
+        source.name,
+    )
+    found.cover_bytes = data
+    return found
 
 
 def embed_metadata(
@@ -2392,8 +2582,12 @@ def embed_lyrics(
     lyrics: 'lyrics_mod.Lyrics',
     *,
     sidecar: Optional[Path] = None,
+    embed_synced: bool = False,
 ) -> None:
     """Embed plain lyrics into the audio tag and write a .lrc sidecar
-    when synced lyrics are available."""
+    when synced lyrics are available; with *embed_synced*, the tag gets
+    the synced text too."""
 
-    lyrics_mod.write_to_file(path, lyrics, sidecar=sidecar)
+    lyrics_mod.write_to_file(
+        path, lyrics, sidecar=sidecar, embed_synced=embed_synced
+    )

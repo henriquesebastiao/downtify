@@ -10,6 +10,14 @@ Downtify consulte sa propre [page de Releases GitHub](https://github.com/henriqu
 
 Cliquez dessus pour ouvrir cette version sur GitHub.
 
+## Nouveautés après une mise à jour
+
+La première fois que l’application web s’ouvre après une mise à jour de Downtify, une fenêtre **Nouveautés de Downtify 3.12.0** présente les points forts de la version, avec un bouton **Journal des modifications complet** qui ouvre la version sur GitHub et une ligne discrète pour mettre une étoile au dépôt. **Compris** (ou la fermer) la masque jusqu’à la prochaine mise à jour. **Paramètres → À propos → Nouveautés** la rouvre.
+
+- C’est mémorisé par navigateur : chaque navigateur (et chaque personne connectée dessus) la voit une fois par mise à jour. Un navigateur qui n’a jamais ouvert Downtify — une nouvelle installation — ne la voit pas.
+- Les points forts sont inclus dans l’application, la fenêtre fonctionne donc sans internet ; seuls les deux liens mènent à GitHub. Une version sans points forts rédigés n’affiche que le lien vers son journal des modifications.
+- Elle attend la connexion et ne s’ouvre pas par-dessus l’invite à changer le mot de passe par défaut.
+
 ## Fonctionnement
 
 - Une tâche d’arrière-plan du backend (`downtify/update_check.py`) récupère la dernière version via l’API de GitHub une fois dès le démarrage, puis toutes les heures. C’est du « lancer et oublier » : rien dans l’interface ne l’attend.

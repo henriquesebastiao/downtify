@@ -41,491 +41,647 @@
       </p>
     </SettingGroup>
 
-    <!-- slskd leftovers -->
-    <SettingGroup
-      :title="t('doctor.slskdTitle')"
-      :description="t('doctor.slskdHint')"
-    >
-      <SettingRow
-        :label="t('doctor.slskdLeftovers')"
-        :description="slskdSummaryText"
+    <div class="flex flex-col gap-3">
+      <!-- An AI assistant that looks at the findings with you -->
+      <AiHelper :busy="busy" :stale="stale" @applied="refresh" />
+
+      <!-- slskd leftovers -->
+      <DoctorSection
+        id="slskd"
+        :title="t('doctor.slskdTitle')"
+        :description="t('doctor.slskdHint')"
+        :status="slskdBadge.text"
+        :status-tone="slskdBadge.tone"
+        :stale="slskdStale"
+        :busy="busy"
+        @recheck="runSlskdScan"
       >
-        <UiButton
-          icon="search"
-          :loading="runningKind === 'slskd'"
-          :disabled="busy || health?.slskd?.in_place"
-          @click="runSlskdScan"
+        <SettingRow
+          :label="t('doctor.slskdLeftovers')"
+          :description="slskdSummaryText"
         >
-          {{ t('doctor.slskdCheck') }}
-        </UiButton>
-      </SettingRow>
-      <div
-        v-if="holdingQueue"
-        class="flex flex-wrap items-center justify-between gap-3 bg-warn/8 px-5 py-3 text-[13px] text-warn"
-      >
-        <span>{{ t('doctor.queueHeld') }}</span>
-        <UiButton variant="ghost" size="sm" @click="releaseSlskd">
-          {{ t('doctor.slskdKeepResume') }}
-        </UiButton>
-      </div>
-      <template v-if="slskd">
-        <div class="flex flex-wrap gap-2 px-5 py-4">
-          <UiBadge
-            v-for="(bucket, status) in slskd.summary"
-            :key="status"
-            :tone="status === 'verified' ? 'accent' : 'neutral'"
-          >
-            {{ t(`doctor.status.${status}`) }} · {{ bucket.files }} ·
-            {{ formatBytes(bucket.bytes) }}
-          </UiBadge>
-        </div>
-        <div v-if="verifiedFiles.length" class="px-5 pb-4">
-          <p class="mb-2 text-[13px] text-muted">
-            {{ t('doctor.slskdVerifiedHint') }}
-          </p>
-          <ul class="flex flex-col gap-1.5 text-[13px]">
-            <li
-              v-for="file in verifiedFiles"
-              :key="file.file"
-              class="flex flex-col rounded-control bg-surface-2 px-3 py-2"
-            >
-              <span class="truncate text-fg">{{ file.file }}</span>
-              <span class="truncate text-muted">
-                = {{ file.match }} · {{ formatBytes(file.bytes) }}
-              </span>
-            </li>
-          </ul>
           <UiButton
-            v-if="verifiedTotal > verifiedFiles.length"
-            class="mt-2"
-            variant="plain"
-            size="sm"
-            @click="loadVerified(verifiedFiles.length)"
+            icon="search"
+            :loading="runningKind === 'slskd'"
+            :disabled="busy || health?.slskd?.in_place"
+            @click="runSlskdScan"
           >
-            {{ t('doctor.showMore') }}
+            {{ t('doctor.slskdCheck') }}
           </UiButton>
-        </div>
-        <div class="flex flex-wrap gap-2 px-5 py-4">
-          <UiButton
-            variant="danger"
-            icon="trash"
-            :disabled="busy || !verifiedCount"
-            @click="cleanSlskd"
-          >
-            {{
-              t('doctor.slskdDelete', {
-                files: verifiedCount,
-                size: formatBytes(verifiedBytes),
-              })
-            }}
-          </UiButton>
-          <UiButton variant="ghost" :disabled="busy" @click="releaseSlskd">
+        </SettingRow>
+        <SlskdFolderBreakdown
+          v-if="health?.slskd?.folder"
+          :folder="health.slskd.folder"
+        />
+        <div
+          v-if="holdingQueue"
+          class="flex flex-wrap items-center justify-between gap-3 bg-warn/8 px-5 py-3 text-[13px] text-warn"
+        >
+          <span>{{ t('doctor.queueHeld') }}</span>
+          <UiButton variant="ghost" size="sm" @click="releaseSlskd">
             {{ t('doctor.slskdKeepResume') }}
           </UiButton>
         </div>
-      </template>
-      <div v-if="cleaned" class="flex flex-col gap-1 px-5 py-4 text-[13px]">
-        <p class="text-fg">
-          {{
-            t('doctor.slskdCleaned', {
-              files: cleaned.deleted,
-              size: formatBytes(cleaned.bytes),
-            })
-          }}
-        </p>
-        <CheckLine :ok="cleaned.verified_gone" :text="t('doctor.checkGone')" />
-        <CheckLine
-          :ok="!cleaned.queue?.paused"
-          :text="t('doctor.checkQueueResumed')"
-        />
-        <CheckLine
-          v-if="cleaned.navidrome?.enabled"
-          :ok="cleaned.navidrome.scan_complete"
-          :text="t('doctor.checkNavidromeScan')"
-        />
-        <p v-if="cleaned.kept?.length" class="text-muted">
-          {{ t('doctor.slskdKeptChanged', { files: cleaned.kept.length }) }}
-        </p>
-      </div>
-    </SettingGroup>
-
-    <template v-if="health">
-      <!-- Playlists -->
-      <SettingGroup
-        :title="t('doctor.playlistsTitle')"
-        :description="t('doctor.playlistsHint')"
-      >
-        <div
-          v-if="!health.playlists.groups.length"
-          class="px-5 py-4 text-[13px] text-muted"
-        >
-          <CheckLine :ok="true" :text="t('doctor.playlistsOk')" />
-        </div>
-        <PlaylistGroupCard
-          v-for="group in health.playlists.groups"
-          :key="group.id"
-          :group="group"
-          :busy="busy"
-          @merge="mergePlaylists"
-        />
-        <div class="flex flex-col gap-3 px-5 py-4">
-          <p class="text-sm font-semibold text-fg">
-            {{ t('doctor.manualTitle') }}
-          </p>
-          <p class="text-[13px] text-muted">{{ t('doctor.manualHint') }}</p>
-          <UiInput
-            v-model.trim="filter"
-            :placeholder="t('doctor.manualFilter')"
-            icon="search"
-          />
-          <ul class="flex max-h-72 flex-col gap-1 overflow-y-auto text-[13px]">
-            <li v-for="item in filteredM3us" :key="item.path">
-              <label
-                class="flex cursor-pointer items-center gap-2 rounded-control px-2 py-1.5 hover:bg-surface-2"
+        <template v-if="slskd">
+          <div class="flex flex-wrap gap-2 px-5 py-4">
+            <UiBadge
+              v-for="(bucket, status) in slskd.summary"
+              :key="status"
+              :tone="status === 'verified' ? 'accent' : 'neutral'"
+            >
+              {{ t(`doctor.status.${status}`) }} · {{ bucket.files }} ·
+              {{ formatBytes(bucket.bytes) }}
+            </UiBadge>
+          </div>
+          <div v-if="verifiedFiles.length" class="px-5 pb-4">
+            <p class="mb-2 text-[13px] text-muted">
+              {{ t('doctor.slskdVerifiedHint') }}
+            </p>
+            <ul class="flex flex-col gap-1.5 text-[13px]">
+              <li
+                v-for="file in verifiedFiles"
+                :key="file.file"
+                class="flex flex-col rounded-control bg-surface-2 px-3 py-2"
               >
-                <input
-                  v-model="picked"
-                  type="checkbox"
-                  :value="item.path"
-                  :disabled="item.manual"
-                />
-                <span class="min-w-0 flex-1 truncate">{{ item.path }}</span>
-                <span class="tabular text-muted">{{ item.songs }}</span>
-                <AppIcon
-                  v-if="item.cover"
-                  name="image"
-                  :size="14"
-                  class="text-muted"
-                />
-              </label>
-            </li>
-          </ul>
-          <div>
-            <UiButton :disabled="picked.length < 2 || busy" @click="preview">
-              {{ t('doctor.manualCompare') }}
+                <span class="truncate text-fg">{{ file.file }}</span>
+                <span class="truncate text-muted">
+                  = {{ file.match }} · {{ formatBytes(file.bytes) }}
+                </span>
+              </li>
+            </ul>
+            <UiButton
+              v-if="verifiedTotal > verifiedFiles.length"
+              class="mt-2"
+              variant="plain"
+              size="sm"
+              @click="loadVerified(verifiedFiles.length)"
+            >
+              {{ t('doctor.showMore') }}
             </UiButton>
           </div>
-          <PlaylistGroupCard
-            v-if="manualGroup"
-            :group="manualGroup"
-            :busy="busy"
-            @merge="mergePlaylists"
-          />
-        </div>
-        <div v-if="merged" class="flex flex-col gap-1 px-5 py-4 text-[13px]">
+          <div class="flex flex-wrap gap-2 px-5 py-4">
+            <UiButton
+              variant="danger"
+              icon="trash"
+              :disabled="busy || !verifiedCount || slskdStale"
+              @click="cleanSlskd"
+            >
+              {{
+                t('doctor.slskdDelete', {
+                  files: verifiedCount,
+                  size: formatBytes(verifiedBytes),
+                })
+              }}
+            </UiButton>
+            <UiButton variant="ghost" :disabled="busy" @click="releaseSlskd">
+              {{ t('doctor.slskdKeepResume') }}
+            </UiButton>
+          </div>
+        </template>
+        <div v-if="cleaned" class="flex flex-col gap-1 px-5 py-4 text-[13px]">
           <p class="text-fg">
             {{
-              t('doctor.merged', {
-                path: merged.keeper,
-                songs: merged.songs,
+              t('doctor.slskdCleaned', {
+                files: cleaned.deleted,
+                size: formatBytes(cleaned.bytes),
               })
             }}
           </p>
           <CheckLine
-            :ok="merged.check.others_gone"
-            :text="t('doctor.checkOthersGone')"
+            :ok="cleaned.verified_gone"
+            :text="t('doctor.checkGone')"
           />
           <CheckLine
-            :ok="merged.check.keeper_cover"
-            :text="t('doctor.checkCover')"
+            :ok="!cleaned.queue?.paused"
+            :text="t('doctor.checkQueueResumed')"
           />
           <CheckLine
-            v-if="merged.navidrome?.enabled"
-            :ok="merged.navidrome.now?.length === 1"
-            :text="
-              t('doctor.checkNavidromeOne', {
-                count: merged.navidrome.now?.length || 0,
-              })
-            "
+            v-if="cleaned.navidrome?.enabled"
+            :ok="cleaned.navidrome.scan_complete"
+            :text="t('doctor.checkNavidromeScan')"
           />
-          <p class="text-muted">
-            {{ t('doctor.backupAt', { path: merged.backup }) }}
+          <p v-if="cleaned.kept?.length" class="text-muted">
+            {{ t('doctor.slskdKeptChanged', { files: cleaned.kept.length }) }}
           </p>
         </div>
-      </SettingGroup>
+      </DoctorSection>
 
-      <!-- Navidrome -->
-      <SettingGroup title="Navidrome" :description="t('doctor.navidromeHint')">
-        <div
-          v-if="!nd.enabled || nd.reachable === false"
-          class="px-5 py-4 text-[13px] text-muted"
+      <template v-if="health">
+        <!-- Playlists -->
+        <DoctorSection
+          id="playlists"
+          :title="t('doctor.playlistsTitle')"
+          :description="t('doctor.playlistsHint')"
+          :status="countBadge(health.playlists.groups.length, 'toMerge')"
+          :status-tone="health.playlists.groups.length ? 'warn' : 'accent'"
+          :stale="isStale('playlists')"
+          :busy="busy"
+          @recheck="runHealth"
         >
-          {{
-            nd.enabled ? t('doctor.navidromeDown') : t('doctor.navidromeOff')
-          }}
-        </div>
-        <template v-else>
-          <div v-if="!nd.native" class="px-5 py-3 text-[13px] text-warn">
-            {{ t('doctor.navidromeNoAdmin') }}
+          <div
+            v-if="!health.playlists.groups.length"
+            class="px-5 py-4 text-[13px] text-muted"
+          >
+            <CheckLine :ok="true" :text="t('doctor.playlistsOk')" />
+          </div>
+          <div
+            v-if="health.playlists.groups.length"
+            class="flex flex-wrap items-center justify-between gap-3 px-5 py-3"
+          >
+            <UiSegmented
+              v-model="playlistKind"
+              :options="playlistKindOptions"
+              show-labels
+              :aria-label="t('doctor.kindLabel')"
+            />
+            <p class="text-[13px] text-muted">{{ t('doctor.decideHint') }}</p>
+          </div>
+          <PlaylistGroupCard
+            v-for="group in visiblePlaylistGroups"
+            :key="group.id"
+            :group="group"
+            :busy="busy || isStale('playlists')"
+            :cover-version="health.scanned_at"
+            decidable
+            :decision="decisions[group.id] || ''"
+            @decide="(value) => setDecision(group.id, value)"
+          />
+          <div
+            v-if="decidedCount"
+            class="sticky bottom-0 z-10 flex flex-wrap items-center justify-between gap-3 border-t border-line-2 bg-surface/95 px-5 py-3 backdrop-blur"
+          >
+            <p class="text-[13px] text-fg">
+              {{
+                t('doctor.applyCounts', {
+                  merge: decidedMerge.length,
+                  apart: decidedApart.length,
+                })
+              }}
+            </p>
+            <div class="flex gap-2">
+              <UiButton variant="ghost" size="sm" @click="clearDecisions">
+                {{ t('doctor.clearChoices') }}
+              </UiButton>
+              <UiButton
+                variant="primary"
+                size="sm"
+                icon="check"
+                :disabled="busy || isStale('playlists')"
+                @click="applyDecisions"
+              >
+                {{ t('doctor.applyChanges') }}
+              </UiButton>
+            </div>
+          </div>
+          <div v-if="applied" class="flex flex-col gap-1 px-5 py-4 text-[13px]">
+            <CheckLine
+              :ok="!applied.failed?.length"
+              :text="
+                t('doctor.appliedMerged', {
+                  count: applied.merged?.length || 0,
+                })
+              "
+            />
+            <p v-if="applied.apart" class="text-muted">
+              {{ t('doctor.appliedApart', { count: applied.apart }) }}
+            </p>
+            <p v-if="applied.failed?.length" class="text-warn">
+              {{
+                t('doctor.appliedFailed', {
+                  names: applied.failed.map((f) => f.keeper).join(', '),
+                })
+              }}
+            </p>
+            <CheckLine
+              v-if="applied.others_gone !== undefined"
+              :ok="applied.others_gone"
+              :text="t('doctor.checkOthersGone')"
+            />
+            <CheckLine
+              v-if="applied.navidrome?.enabled"
+              :ok="applied.navidrome.scan_complete"
+              :text="t('doctor.checkNavidromeScan')"
+            />
+            <p v-if="applied.backup" class="text-muted">
+              {{ t('doctor.backupAt', { path: applied.backup }) }}
+            </p>
           </div>
           <SettingRow
-            :label="t('doctor.navidromeSummary')"
-            :description="
-              t('doctor.navidromeCounts', {
-                duplicates: nd.duplicates.length,
-                orphans: nd.orphans.length,
-                incomplete: nd.incomplete.length,
+            v-if="health.playlists.kept_apart"
+            :label="
+              t('doctor.playlistsKeptApart', {
+                count: health.playlists.kept_apart,
               })
             "
           >
             <UiButton
-              variant="primary"
-              icon="check"
-              :disabled="busy || !navidromePlan.delete.length"
-              @click="repairNavidrome"
+              size="sm"
+              variant="ghost"
+              :disabled="busy"
+              @click="listPlaylistsAgain"
             >
-              {{ t('doctor.navidromeFix') }}
+              {{ t('doctor.dupeListAgain') }}
             </UiButton>
           </SettingRow>
-          <div
-            v-if="nd.suggest_m3u_import"
-            class="px-5 py-3 text-[13px] text-fg-3"
-          >
-            {{ t('doctor.navidromeSuggestImport') }}
-          </div>
-          <ul
-            v-if="nd.duplicates.length || nd.orphans.length"
-            class="flex flex-col gap-2 px-5 py-4 text-[13px]"
-          >
-            <li
-              v-for="dup in nd.duplicates"
-              :key="dup.id"
-              class="rounded-control bg-surface-2 px-3 py-2"
+          <div class="flex flex-col gap-3 px-5 py-4">
+            <p class="text-sm font-semibold text-fg">
+              {{ t('doctor.manualTitle') }}
+            </p>
+            <p class="text-[13px] text-muted">{{ t('doctor.manualHint') }}</p>
+            <UiInput
+              v-model.trim="filter"
+              :placeholder="t('doctor.manualFilter')"
+              icon="search"
+            />
+            <ul
+              class="flex max-h-72 flex-col gap-1 overflow-y-auto text-[13px]"
             >
-              <p class="font-semibold text-fg">
-                {{ dup.name }}
-                <UiBadge tone="warn" class="ml-1">
-                  {{ t(`doctor.reason.${dup.reason}`) }}
-                </UiBadge>
-              </p>
-              <p
-                v-for="member in dup.members"
-                :key="member.id"
-                class="mt-1 flex flex-wrap gap-x-2 text-muted"
+              <li v-for="item in filteredM3us" :key="item.path">
+                <label
+                  class="flex cursor-pointer items-center gap-2 rounded-control px-2 py-1.5 hover:bg-surface-2"
+                >
+                  <input
+                    v-model="picked"
+                    type="checkbox"
+                    :value="item.path"
+                    :disabled="item.manual"
+                  />
+                  <span class="min-w-0 flex-1 truncate">{{ item.path }}</span>
+                  <span class="tabular text-muted">{{ item.songs }}</span>
+                  <img
+                    v-if="item.cover"
+                    :src="coverOf(item.path, health.scanned_at)"
+                    :alt="t('doctor.hasCover')"
+                    :title="t('doctor.hasCover')"
+                    loading="lazy"
+                    class="size-6 shrink-0 rounded-[3px] object-cover"
+                  />
+                </label>
+              </li>
+            </ul>
+            <div>
+              <UiButton
+                :disabled="picked.length < 2 || busy || isStale('playlists')"
+                @click="preview"
               >
-                <span>{{ t(`doctor.kind.${member.kind}`) }}</span>
-                <span class="tabular">· {{ member.songs }}</span>
-                <span v-if="member.owner">· {{ member.owner }}</span>
-                <span
-                  v-if="navidromePlan.delete.includes(member.id)"
-                  class="text-danger"
-                  >· {{ t('doctor.willRemove') }}</span
-                >
-                <span
-                  v-else-if="navidromePlan.blocked.includes(member.id)"
-                  class="text-warn"
-                  >· {{ t('doctor.wouldLoseSongs') }}</span
-                >
-              </p>
-            </li>
-            <li
-              v-for="orphan in nd.orphans"
-              :key="orphan.id"
-              class="rounded-control bg-surface-2 px-3 py-2"
-            >
-              <p class="font-semibold text-fg">
-                {{ orphan.name }}
-                <UiBadge tone="warn" class="ml-1">
-                  {{ t('doctor.reason.orphan') }}
-                </UiBadge>
-              </p>
-              <p class="mt-1 text-muted">{{ orphan.m3u }}</p>
-            </li>
-          </ul>
-          <ul
-            v-if="nd.incomplete.length"
-            class="flex flex-col gap-2 px-5 py-4 text-[13px]"
-          >
-            <li
-              v-for="gap in nd.incomplete"
-              :key="gap.id"
-              class="rounded-control bg-surface-2 px-3 py-2"
-            >
-              <p class="font-semibold text-fg">{{ gap.name }}</p>
-              <p class="text-muted">
-                {{
-                  t('doctor.incomplete', {
-                    songs: gap.songs,
-                    m3u: gap.m3u_songs,
-                  })
-                }}
-                <template v-if="gap.outside">
-                  {{ t('doctor.incompleteOutside', { count: gap.outside }) }}
-                </template>
-              </p>
-            </li>
-          </ul>
-          <SettingRow
-            :label="t('doctor.navidromeSongDupes')"
-            :description="
-              t('doctor.songDupesCounts', {
-                groups: nd.song_duplicates.groups,
-                extra: nd.song_duplicates.extra_copies,
-                slskd: nd.song_duplicates.slskd_copies,
-              })
-            "
-          />
-          <div
-            v-if="ndResult"
-            class="flex flex-col gap-1 px-5 py-4 text-[13px]"
-          >
+                {{ t('doctor.manualCompare') }}
+              </UiButton>
+            </div>
+            <PlaylistGroupCard
+              v-if="manualGroup"
+              :group="manualGroup"
+              :busy="busy || isStale('playlists')"
+              :cover-version="health.scanned_at"
+              @merge="mergePlaylists"
+            />
+          </div>
+          <div v-if="merged" class="flex flex-col gap-1 px-5 py-4 text-[13px]">
+            <p class="text-fg">
+              {{
+                t('doctor.merged', {
+                  path: merged.keeper,
+                  songs: merged.songs,
+                })
+              }}
+            </p>
             <CheckLine
-              :ok="!ndResult.still_listed.length && !ndResult.failed.length"
-              :text="t('doctor.ndRemoved', { count: ndResult.deleted.length })"
+              :ok="merged.check.others_gone"
+              :text="t('doctor.checkOthersGone')"
             />
             <CheckLine
-              :ok="ndResult.scan_complete"
-              :text="t('doctor.checkNavidromeScan')"
+              :ok="merged.check.keeper_cover"
+              :text="t('doctor.checkCover')"
             />
             <CheckLine
-              :ok="!ndResult.remaining.duplicates"
+              v-if="merged.navidrome?.enabled"
+              :ok="merged.navidrome.now?.length === 1"
               :text="
-                t('doctor.ndRemaining', {
-                  duplicates: ndResult.remaining.duplicates,
-                  orphans: ndResult.remaining.orphans,
+                t('doctor.checkNavidromeOne', {
+                  count: merged.navidrome.now?.length || 0,
                 })
               "
             />
+            <p class="text-muted">
+              {{ t('doctor.backupAt', { path: merged.backup }) }}
+            </p>
           </div>
-        </template>
-      </SettingGroup>
+        </DoctorSection>
 
-      <!-- Duplicate songs (Downtify) -->
-      <SettingGroup
-        :title="t('doctor.duplicatesTitle')"
-        :description="t('doctor.duplicatesHint')"
-      >
-        <SettingRow
-          :label="t('doctor.duplicatesExact')"
-          :description="dupeText('exact')"
-        />
-        <SettingRow
-          :label="t('doctor.duplicatesLikely')"
-          :description="dupeText('likely')"
-        />
-        <div v-if="deduped" class="flex flex-col gap-1.5 px-5 py-4 text-[13px]">
-          <p class="text-fg">
-            {{
-              t('doctor.dupeMerged', {
-                keep: deduped.kept,
-                count: deduped.removed.length,
-              })
-            }}
-          </p>
-          <p v-if="deduped.playlists.length" class="text-muted">
-            {{
-              t('doctor.dupeMergedPlaylists', {
-                playlists: deduped.playlists.join(', '),
-              })
-            }}
-          </p>
-          <CheckLine
-            :ok="!deduped.leftovers.length"
-            :text="
-              deduped.leftovers.length
-                ? t('doctor.dupeLeftovers', {
-                    where: deduped.leftovers.join(', '),
-                  })
-                : t('doctor.dupeCheckClean')
-            "
-          />
-          <p v-if="deduped.failed.length" class="text-warn">
-            {{
-              t('doctor.dupeFailed', {
-                files: deduped.failed.map((f) => f.file).join(', '),
-              })
-            }}
-          </p>
-        </div>
-        <DuplicateGroupCard
-          v-for="group in health.duplicates.groups.slice(0, dupesShown)"
-          :key="group.files.map((f) => f.file).join('|')"
-          :group="group"
+        <!-- Navidrome -->
+        <DoctorSection
+          id="navidrome"
+          title="Navidrome"
+          :description="t('doctor.navidromeHint')"
+          :status="navidromeBadge.text"
+          :status-tone="navidromeBadge.tone"
+          :stale="isStale('navidrome')"
           :busy="busy"
-          @merge="mergeDuplicates"
-          @keep-all="keepAllDuplicates"
-        />
-        <div
-          v-if="health.duplicates.groups.length > dupesShown"
-          class="px-5 pb-4"
+          @recheck="runHealth"
         >
-          <UiButton variant="plain" size="sm" @click="dupesShown += 10">
-            {{ t('doctor.showMore') }}
-          </UiButton>
-        </div>
-        <SettingRow
-          v-if="health.duplicates.kept_apart"
-          :label="
-            t('doctor.dupeKeptApart', { count: health.duplicates.kept_apart })
-          "
-        >
-          <UiButton
-            size="sm"
-            variant="ghost"
-            :disabled="busy"
-            @click="listKeptAgain"
+          <div
+            v-if="!nd.enabled || nd.reachable === false"
+            class="px-5 py-4 text-[13px] text-muted"
           >
-            {{ t('doctor.dupeListAgain') }}
-          </UiButton>
-        </SettingRow>
-      </SettingGroup>
+            {{
+              nd.enabled ? t('doctor.navidromeDown') : t('doctor.navidromeOff')
+            }}
+          </div>
+          <template v-else>
+            <div v-if="!nd.native" class="px-5 py-3 text-[13px] text-warn">
+              {{ t('doctor.navidromeNoAdmin') }}
+            </div>
+            <SettingRow
+              :label="t('doctor.navidromeSummary')"
+              :description="
+                t('doctor.navidromeCounts', {
+                  duplicates: nd.duplicates.length,
+                  orphans: nd.orphans.length,
+                  incomplete: nd.incomplete.length,
+                })
+              "
+            >
+              <UiButton
+                variant="primary"
+                icon="check"
+                :disabled="
+                  busy || !navidromePlan.delete.length || isStale('navidrome')
+                "
+                @click="repairNavidrome"
+              >
+                {{ t('doctor.navidromeFix') }}
+              </UiButton>
+            </SettingRow>
+            <div
+              v-if="nd.suggest_m3u_import"
+              class="px-5 py-3 text-[13px] text-fg-3"
+            >
+              {{ t('doctor.navidromeSuggestImport') }}
+            </div>
+            <ul
+              v-if="nd.duplicates.length || nd.orphans.length"
+              class="flex flex-col gap-2 px-5 py-4 text-[13px]"
+            >
+              <li
+                v-for="dup in nd.duplicates"
+                :key="dup.id"
+                class="rounded-control bg-surface-2 px-3 py-2"
+              >
+                <p class="font-semibold text-fg">
+                  {{ dup.name }}
+                  <UiBadge tone="warn" class="ml-1">
+                    {{ t(`doctor.reason.${dup.reason}`) }}
+                  </UiBadge>
+                </p>
+                <p
+                  v-for="member in dup.members"
+                  :key="member.id"
+                  class="mt-1 flex flex-wrap gap-x-2 text-muted"
+                >
+                  <span>{{ t(`doctor.kind.${member.kind}`) }}</span>
+                  <span class="tabular">· {{ member.songs }}</span>
+                  <span v-if="member.owner">· {{ member.owner }}</span>
+                  <span
+                    v-if="navidromePlan.delete.includes(member.id)"
+                    class="text-danger"
+                    >· {{ t('doctor.willRemove') }}</span
+                  >
+                  <span
+                    v-else-if="navidromePlan.blocked.includes(member.id)"
+                    class="text-warn"
+                    >· {{ t('doctor.wouldLoseSongs') }}</span
+                  >
+                </p>
+              </li>
+              <li
+                v-for="orphan in nd.orphans"
+                :key="orphan.id"
+                class="rounded-control bg-surface-2 px-3 py-2"
+              >
+                <p class="font-semibold text-fg">
+                  {{ orphan.name }}
+                  <UiBadge tone="warn" class="ml-1">
+                    {{ t('doctor.reason.orphan') }}
+                  </UiBadge>
+                </p>
+                <p class="mt-1 text-muted">{{ orphan.m3u }}</p>
+              </li>
+            </ul>
+            <ul
+              v-if="nd.incomplete.length"
+              class="flex flex-col gap-2 px-5 py-4 text-[13px]"
+            >
+              <li
+                v-for="gap in nd.incomplete"
+                :key="gap.id"
+                class="rounded-control bg-surface-2 px-3 py-2"
+              >
+                <p class="font-semibold text-fg">{{ gap.name }}</p>
+                <p class="text-muted">
+                  {{
+                    t('doctor.incomplete', {
+                      songs: gap.songs,
+                      m3u: gap.m3u_songs,
+                    })
+                  }}
+                  <template v-if="gap.outside">
+                    {{ t('doctor.incompleteOutside', { count: gap.outside }) }}
+                  </template>
+                </p>
+              </li>
+            </ul>
+            <SettingRow
+              :label="t('doctor.navidromeSongDupes')"
+              :description="
+                t('doctor.songDupesCounts', {
+                  groups: nd.song_duplicates.groups,
+                  extra: nd.song_duplicates.extra_copies,
+                  slskd: nd.song_duplicates.slskd_copies,
+                })
+              "
+            />
+            <div
+              v-if="ndResult"
+              class="flex flex-col gap-1 px-5 py-4 text-[13px]"
+            >
+              <CheckLine
+                :ok="!ndResult.still_listed.length && !ndResult.failed.length"
+                :text="
+                  t('doctor.ndRemoved', { count: ndResult.deleted.length })
+                "
+              />
+              <CheckLine
+                :ok="ndResult.scan_complete"
+                :text="t('doctor.checkNavidromeScan')"
+              />
+              <CheckLine
+                :ok="!ndResult.remaining.duplicates"
+                :text="
+                  t('doctor.ndRemaining', {
+                    duplicates: ndResult.remaining.duplicates,
+                    orphans: ndResult.remaining.orphans,
+                  })
+                "
+              />
+            </div>
+          </template>
+        </DoctorSection>
 
-      <!-- Repeat downloads -->
-      <SettingGroup
-        :title="t('doctor.relinkedTitle')"
-        :description="t('doctor.relinkedHint')"
-      >
-        <SettingRow
-          :label="t('doctor.relinkedLabel')"
-          :description="
-            t('doctor.relinkedCounts', {
-              songs: health.relinked.songs,
-              extra: health.relinked.extra_files,
-            })
-          "
-        />
-        <ul
-          v-if="health.relinked.examples.length"
-          class="flex flex-col gap-1.5 px-5 py-4 text-[13px]"
+        <!-- Duplicate songs (Downtify) -->
+        <DoctorSection
+          id="duplicates"
+          :title="t('doctor.duplicatesTitle')"
+          :description="t('doctor.duplicatesHint')"
+          :status="countBadge(health.duplicates.groups.length, 'toReview')"
+          :status-tone="health.duplicates.groups.length ? 'warn' : 'accent'"
+          :stale="isStale('duplicates')"
+          :busy="busy"
+          @recheck="runHealth"
         >
-          <li
-            v-for="item in health.relinked.examples.slice(0, 10)"
-            :key="item.playlist + item.files[0]"
-            class="rounded-control bg-surface-2 px-3 py-2"
+          <SettingRow
+            :label="t('doctor.duplicatesExact')"
+            :description="dupeText('exact')"
+          />
+          <SettingRow
+            :label="t('doctor.duplicatesLikely')"
+            :description="dupeText('likely')"
+          />
+          <div
+            v-if="deduped"
+            class="flex flex-col gap-1.5 px-5 py-4 text-[13px]"
           >
             <p class="text-fg">
-              {{ item.artist }} — {{ item.title }}
-              <span class="text-muted">· {{ item.playlist }}</span>
+              {{
+                t('doctor.dupeMerged', {
+                  keep: deduped.kept,
+                  count: deduped.removed.length,
+                })
+              }}
             </p>
-            <p
-              v-for="file in item.files"
-              :key="file"
-              class="truncate text-muted"
+            <p v-if="deduped.playlists.length" class="text-muted">
+              {{
+                t('doctor.dupeMergedPlaylists', {
+                  playlists: deduped.playlists.join(', '),
+                })
+              }}
+            </p>
+            <CheckLine
+              :ok="!deduped.leftovers.length"
+              :text="
+                deduped.leftovers.length
+                  ? t('doctor.dupeLeftovers', {
+                      where: deduped.leftovers.join(', '),
+                    })
+                  : t('doctor.dupeCheckClean')
+              "
+            />
+            <p v-if="deduped.failed.length" class="text-warn">
+              {{
+                t('doctor.dupeFailed', {
+                  files: deduped.failed.map((f) => f.file).join(', '),
+                })
+              }}
+            </p>
+          </div>
+          <DuplicateGroupCard
+            v-for="group in health.duplicates.groups.slice(0, dupesShown)"
+            :key="group.files.map((f) => f.file).join('|')"
+            :group="group"
+            :busy="busy || isStale('duplicates')"
+            @merge="mergeDuplicates"
+            @keep-all="keepAllDuplicates"
+          />
+          <div
+            v-if="health.duplicates.groups.length > dupesShown"
+            class="px-5 pb-4"
+          >
+            <UiButton variant="plain" size="sm" @click="dupesShown += 10">
+              {{ t('doctor.showMore') }}
+            </UiButton>
+          </div>
+          <SettingRow
+            v-if="health.duplicates.kept_apart"
+            :label="
+              t('doctor.dupeKeptApart', { count: health.duplicates.kept_apart })
+            "
+          >
+            <UiButton
+              size="sm"
+              variant="ghost"
+              :disabled="busy"
+              @click="listKeptAgain"
             >
-              {{ file }}
-            </p>
-          </li>
-        </ul>
-      </SettingGroup>
-    </template>
+              {{ t('doctor.dupeListAgain') }}
+            </UiButton>
+          </SettingRow>
+        </DoctorSection>
+
+        <!-- Repeat downloads -->
+        <DoctorSection
+          id="relinked"
+          :title="t('doctor.relinkedTitle')"
+          :description="t('doctor.relinkedHint')"
+          :status="countBadge(health.relinked.songs, 'songsFound')"
+          :status-tone="health.relinked.songs ? 'warn' : 'accent'"
+          :stale="isStale('relinked')"
+          :busy="busy"
+          @recheck="runHealth"
+        >
+          <SettingRow
+            :label="t('doctor.relinkedLabel')"
+            :description="
+              t('doctor.relinkedCounts', {
+                songs: health.relinked.songs,
+                extra: health.relinked.extra_files,
+              })
+            "
+          />
+          <ul
+            v-if="health.relinked.examples.length"
+            class="flex flex-col gap-1.5 px-5 py-4 text-[13px]"
+          >
+            <li
+              v-for="item in health.relinked.examples.slice(0, 10)"
+              :key="item.playlist + item.files[0]"
+              class="rounded-control bg-surface-2 px-3 py-2"
+            >
+              <p class="text-fg">
+                {{ item.artist }} — {{ item.title }}
+                <span class="text-muted">· {{ item.playlist }}</span>
+              </p>
+              <p
+                v-for="file in item.files"
+                :key="file"
+                class="truncate text-muted"
+              >
+                {{ file }}
+              </p>
+            </li>
+          </ul>
+        </DoctorSection>
+      </template>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 
 import API from '/src/model/api'
 import { useI18n } from '/src/i18n'
 import { useUi } from '/src/model/ui'
 import { formatBytes } from '/src/lib/format'
-import AppIcon from '/src/components/ui/AppIcon.vue'
 import UiBadge from '/src/components/ui/UiBadge.vue'
 import UiButton from '/src/components/ui/UiButton.vue'
 import UiInput from '/src/components/ui/UiInput.vue'
 import UiProgress from '/src/components/ui/UiProgress.vue'
+import UiSegmented from '/src/components/ui/UiSegmented.vue'
 import SettingGroup from '/src/components/settings/SettingGroup.vue'
 import SettingRow from '/src/components/settings/SettingRow.vue'
 import CheckLine from '/src/components/settings/doctor/CheckLine.vue'
+import DoctorSection from '/src/components/settings/doctor/DoctorSection.vue'
+import AiHelper from '/src/components/settings/doctor/AiHelper.vue'
+import SlskdFolderBreakdown from '/src/components/settings/doctor/SlskdFolderBreakdown.vue'
+import { playlistCoverOf } from '/src/components/settings/doctor/covers'
 import PlaylistGroupCard from '/src/components/settings/doctor/PlaylistGroupCard.vue'
 import DuplicateGroupCard from '/src/components/settings/doctor/DuplicateGroupCard.vue'
 
@@ -547,6 +703,15 @@ const filter = ref('')
 const picked = ref([])
 const manualGroup = ref(null)
 const dupesShown = ref(10)
+// Sections a repair changed since they were last checked: their repairs
+// stay locked until the section is checked again (the server enforces
+// it too, see doctor_routes._require_fresh).
+const stale = ref([])
+// Duplicate playlists: what to do with each group, chosen while looking
+// through them and applied together ({ [group id]: 'merge' | 'apart' }).
+const decisions = reactive({})
+const playlistKind = ref('all')
+const applied = ref(null)
 let timer = null
 
 const busy = computed(() => job.value?.state === 'running')
@@ -569,6 +734,137 @@ const slskdSummaryText = computed(() => {
     size: formatBytes(info.bytes),
   })
 })
+const slskdBadge = computed(() => {
+  const info = health.value?.slskd
+  if (slskd.value) {
+    const count = verifiedCount.value
+    return {
+      text: count
+        ? t('doctor.badge.toDelete', { count })
+        : t('doctor.badge.allGood'),
+      tone: count ? 'warn' : 'accent',
+    }
+  }
+  if (!info) return { text: t('doctor.badge.notChecked'), tone: 'neutral' }
+  if (info.in_place) return { text: t('doctor.badge.allGood'), tone: 'accent' }
+  return info.leftovers
+    ? {
+        text: t('doctor.badge.leftovers', { size: formatBytes(info.bytes) }),
+        tone: 'warn',
+      }
+    : { text: t('doctor.badge.allGood'), tone: 'accent' }
+})
+const navidromeBadge = computed(() => {
+  if (!nd.value.enabled) return { text: t('doctor.badge.off'), tone: 'neutral' }
+  if (nd.value.reachable === false) {
+    return { text: t('doctor.badge.unreachable'), tone: 'warn' }
+  }
+  const count =
+    (nd.value.duplicates?.length || 0) + (nd.value.orphans?.length || 0)
+  return {
+    text: countBadge(count, 'toFix'),
+    tone: count ? 'warn' : 'accent',
+  }
+})
+
+// The slskd findings only matter while a check's results are on screen
+// to act on; the next check finds everything again anyway.
+const slskdStale = computed(() => isStale('slskd') && Boolean(slskd.value))
+
+const playlistGroups = computed(() => health.value?.playlists?.groups || [])
+const playlistKindOptions = computed(() => {
+  const count = (reason) =>
+    playlistGroups.value.filter((g) => g.reason === reason).length
+  return [
+    {
+      value: 'all',
+      label: `${t('doctor.kindAll')} (${playlistGroups.value.length})`,
+    },
+    {
+      value: 'name',
+      label: `${t('doctor.groupReason.name')} (${count('name')})`,
+    },
+    {
+      value: 'songs',
+      label: `${t('doctor.groupReason.songs')} (${count('songs')})`,
+    },
+  ]
+})
+const visiblePlaylistGroups = computed(() =>
+  playlistKind.value === 'all'
+    ? playlistGroups.value
+    : playlistGroups.value.filter((g) => g.reason === playlistKind.value)
+)
+const decidedGroups = (value) =>
+  playlistGroups.value.filter((g) => decisions[g.id] === value)
+const decidedMerge = computed(() => decidedGroups('merge'))
+const decidedApart = computed(() => decidedGroups('apart'))
+const decidedCount = computed(
+  () => decidedMerge.value.length + decidedApart.value.length
+)
+
+function setDecision(id, value) {
+  if (value) decisions[id] = value
+  else delete decisions[id]
+}
+
+function clearDecisions() {
+  for (const id of Object.keys(decisions)) delete decisions[id]
+}
+
+const memberPaths = (group) => group.members.map((m) => m.path)
+
+async function applyDecisions() {
+  const merge = decidedMerge.value
+  const apart = decidedApart.value
+  const ok = await ui.confirm({
+    title: t('doctor.applyTitle'),
+    body: t('doctor.applyBody', { merge: merge.length, apart: apart.length }),
+    confirmLabel: t('doctor.applyChanges'),
+  })
+  if (!ok) return
+  jobError.value = ''
+  try {
+    const { data } = await API.doctorPlaylistsApply({
+      merge: merge.map(memberPaths),
+      apart: apart.map(memberPaths),
+    })
+    clearDecisions()
+    if (data.job) {
+      applied.value = null
+      applyJob(data.job)
+      schedule()
+    } else {
+      applied.value = { apart: data.apart }
+      reloadHealth()
+    }
+  } catch (err) {
+    ui.toast(errorOf(err), { kind: 'error' })
+  }
+}
+
+async function listPlaylistsAgain() {
+  try {
+    await API.doctorPlaylistsApartReset()
+  } catch (err) {
+    ui.toast(errorOf(err), { kind: 'error' })
+    return
+  }
+  runHealth()
+}
+
+function isStale(section) {
+  return stale.value.includes(section)
+}
+
+function countBadge(count, key) {
+  return count ? t(`doctor.badge.${key}`, { count }) : t('doctor.badge.allGood')
+}
+
+function coverOf(path, version) {
+  return playlistCoverOf(path, version)
+}
+
 const verifiedCount = computed(() => slskd.value?.summary?.verified?.files || 0)
 const verifiedBytes = computed(() => slskd.value?.summary?.verified?.bytes || 0)
 
@@ -679,6 +975,7 @@ function applyJob(current) {
     }
   }
   if (current.kind === 'merge') merged.value = result
+  if (current.kind === 'playlists') applied.value = result
   if (current.kind === 'navidrome') ndResult.value = result
   if (current.kind === 'dedupe') {
     // The server took the merged copies out of its last health check.
@@ -687,7 +984,7 @@ function applyJob(current) {
   }
   // A repair changes what the health check found: look again, once the
   // repair's own result is on screen.
-  if (fresh && (current.kind === 'merge' || current.kind === 'navidrome')) {
+  if (fresh && ['merge', 'playlists', 'navidrome'].includes(current.kind)) {
     setTimeout(runHealth, 0)
   }
 }
@@ -696,6 +993,7 @@ async function refresh() {
   try {
     const { data } = await API.doctorStatus()
     holdingQueue.value = data.holding_queue
+    stale.value = data.stale || []
     if (!health.value && data.last?.health) {
       health.value = data.last.health.result
     }
@@ -811,6 +1109,7 @@ async function mergePlaylists(group) {
 async function reloadHealth() {
   try {
     const { data } = await API.doctorStatus()
+    stale.value = data.stale || []
     if (data.last?.health) health.value = data.last.health.result
   } catch {
     // The next poll tries again.

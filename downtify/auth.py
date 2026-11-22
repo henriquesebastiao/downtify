@@ -47,6 +47,7 @@ URLs and the same-site check keep working.
 
 from __future__ import annotations
 
+import asyncio
 import base64
 import hashlib
 import hmac
@@ -54,11 +55,17 @@ import json
 import os
 import re
 import secrets
-import sqlite3
 import threading
 import time
 from collections import deque
-from collections.abc import Awaitable, Callable, Iterable, MutableMapping
+from collections.abc import (
+    Awaitable,
+    Callable,
+    Iterable,
+    Iterator,
+    MutableMapping,
+)
+from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from http.cookies import SimpleCookie
@@ -69,7 +76,8 @@ from urllib.parse import parse_qsl, urlencode
 
 from loguru import logger
 
-from .sqlite_utils import connect_sqlite
+from .db.config import Dialect
+from .db.core import Connection, Database, as_database
 from .users import ROLE_ADMIN, UserStore, public_user
 
 # ── Scopes and principals ───────────────────────────────────────────────
@@ -219,7 +227,7 @@ class PairingStore:
     def _prune(self, now: float) -> None:
         for pid, entry in list(self._sessions.items()):
             # A claimed one stays a little longer so the page sees it.
-            if entry['expires'] + (60 if entry['device'] else 0) < now:
+            if entry['expires'] + (60 if entry['device'] else 0) <= now:
                 del self._sessions[pid]
 
     def create(self, user_id: int = 0) -> dict[str, Any]:
@@ -228,8 +236,8 @@ class PairingStore:
 
         code = new_pairing_code()
         pairing_id = secrets.token_urlsafe(12)
-        now = time.monotonic()
         with self._lock:
+            now = time.monotonic()
             self._prune(now)
             self._sessions[pairing_id] = {
                 'code_hash': _sha256(normalize_pairing_code(code)),
@@ -251,11 +259,11 @@ class PairingStore:
         if not canonical:
             return None
         wanted = _sha256(canonical)
-        now = time.monotonic()
         with self._lock:
+            now = time.monotonic()
             self._prune(now)
             for pid, entry in self._sessions.items():
-                if entry['device'] is not None or entry['expires'] < now:
+                if entry['device'] is not None or entry['expires'] <= now:
                     continue
                 if hmac.compare_digest(entry['code_hash'], wanted):
                     # Used up at once, before the token is even made.
@@ -280,15 +288,15 @@ class PairingStore:
     def status(self, pairing_id: str) -> dict[str, Any]:
         """``{status: pending|paired|expired, device?, expires_in?}``."""
 
-        now = time.monotonic()
         with self._lock:
+            now = time.monotonic()
             self._prune(now)
             entry = self._sessions.get(pairing_id)
             if entry is None:
                 return {'status': 'expired'}
             if entry['device']:
                 return {'status': 'paired', 'device': entry['device']}
-            if entry['expires'] < now:
+            if entry['expires'] <= now:
                 return {'status': 'expired'}
             return {
                 'status': 'pending',
@@ -310,10 +318,10 @@ class TicketStore:
 
     def create(self, principal: Principal) -> str:
         ticket = secrets.token_urlsafe(24)
-        now = time.monotonic()
         with self._lock:
+            now = time.monotonic()
             for key, (expires, _p) in list(self._tickets.items()):
-                if expires < now:
+                if expires <= now:
                     del self._tickets[key]
             self._tickets[_sha256(ticket)] = (now + self._ttl, principal)
         return ticket
@@ -321,7 +329,7 @@ class TicketStore:
     def claim(self, ticket: str) -> Optional[Principal]:
         with self._lock:
             found = self._tickets.pop(_sha256(str(ticket or '')), None)
-        if found is None or found[0] < time.monotonic():
+        if found is None or found[0] <= time.monotonic():
             return None
         return found[1]
 
@@ -416,6 +424,11 @@ def _header(scope: MutableMapping[str, Any], name: str) -> str:
 # ── The store ───────────────────────────────────────────────────────────
 
 
+#: Returned by ``AuthStore.peek_*`` when a credential isn't in the sign-in
+#: cache: the caller must then check it against the database.
+MISS: Any = object()
+
+
 class _SignInCache:
     """Recently checked credentials: ``key -> (deadline, user dict)``.
 
@@ -479,19 +492,20 @@ class AuthStore:
 
     def __init__(
         self,
-        db_path: Path,
+        db_path: str | Path | Database,
         secret_path: Path,
         *,
         existing_install: bool = False,
         auth_disabled: bool = False,
     ) -> None:
-        self._path = str(db_path)
+        self.db = as_database(db_path, 'auth')
+        self._path = None if self.db.path is None else str(self.db.path)
         #: ``DOWNTIFY_DISABLE_AUTH``: no sign-in, one user (the admin).
         self.auth_disabled = auth_disabled
         self._lock = threading.Lock()
         self._signed_in = _SignInCache(SIGN_IN_CACHE_SECONDS)
         self._init_db()
-        self.users = UserStore(db_path)
+        self.users = UserStore(self.db)
         self.users.add_change_listener(self._signed_in.clear)
         if self.users.ensure_default_admin(existing_install=existing_install):
             # Sessions from before accounts belong to nobody.
@@ -500,10 +514,20 @@ class AuthStore:
 
     # Storage
 
-    def _connect(self) -> sqlite3.Connection:
-        return connect_sqlite(self._path, row_factory=True)
+    @contextmanager
+    def _connect(self) -> Iterator[Connection]:
+        with self.db.connect() as conn:
+            if conn.dialect is Dialect.POSTGRES:
+                # First statement of the transaction (SET LOCAL lasts
+                # until it ends): a slow database fails the check
+                # instead of hanging sign-in.
+                conn.execute("SET LOCAL statement_timeout = '2s'")
+            yield conn
 
     def _init_db(self) -> None:
+        # PostgreSQL gets its schema from the migrations.
+        if self.db.dialect is not Dialect.SQLITE:
+            return
         with self._connect() as conn:
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS auth_devices (
@@ -610,6 +634,24 @@ class AuthStore:
             max_age=(expires - now).total_seconds(),
         )
         return user
+
+    def peek_session(self, token: str) -> Any:
+        """What :meth:`session_user` would answer from the sign-in cache,
+        without the database: the user, ``None`` for a token that can't
+        be valid, or :data:`MISS`. Safe to call on the event loop."""
+
+        if not token or len(token) > 128:
+            return None
+        cached = self._signed_in.get('s:' + _sha256(token))
+        return MISS if cached is None else cached
+
+    def peek_device(self, token: str) -> Any:
+        """Like :meth:`peek_session` for :meth:`verify_device_token`."""
+
+        if not _TOKEN_RE.match(token or ''):
+            return None
+        cached = self._signed_in.get('d:' + _sha256(token))
+        return MISS if cached is None else cached
 
     def end_session(self, token: str) -> None:
         with self._connect() as conn:
@@ -955,6 +997,9 @@ RULES: list[tuple[frozenset[str], re.Pattern[str], str]] = [
         (_m('POST'), r'^/api/auth/logout$', PUBLIC),
         (_m('POST'), r'^/api/auth/pair$', PUBLIC),
         (_m('POST'), r'^/api/auth/token$', PUBLIC),
+        # The Doctor's AI helper: an assistant has no account; the
+        # endpoint checks the helper's own key (downtify/doctor_ai.py).
+        (_m('GET', 'POST', 'DELETE'), r'^/api/doctor/ai/mcp$', PUBLIC),
         # Any signed-in user: their own account, devices and pairing
         # (the routes check whose), and a WebSocket ticket.
         (_m('POST'), r'^/api/auth/ws-ticket$', CLIENT),
@@ -983,16 +1028,31 @@ RULES: list[tuple[frozenset[str], re.Pattern[str], str]] = [
         # Where a song came from and what each watch added (own
         # watches; every one for an admin).
         (_READ, r'^/api/monitor/(stats|provenance)$', USER),
-        (_READ, r'^/api/monitor/playlists/\d+/(tracks|releases)$', USER),
+        (
+            _READ,
+            r'^/api/monitor/playlists/\d+/(tracks|releases|releases/tracks)$',
+            USER,
+        ),
         # Artists to suggest following, from one's own listens.
         (_READ, r'^/api/monitor/artist-suggestions(/resolve)?$', USER),
+        # What the artist watches still miss (own watches; every one for
+        # an admin).
+        (_READ, r'^/api/monitor/wanted(/job)?$', USER),
+        (
+            _m('POST'),
+            r'^/api/monitor/wanted/(check-all|download-all|stop)$',
+            USER,
+        ),
         # Admin: signing everyone out, settings and credentials.
         (_ALL, r'^/api/auth/', ADMIN),
         (_ALL, r'^/api/server(/port)?$', ADMIN),
         (_ALL, r'^/api/settings', ADMIN),
+        (_ALL, r'^/api/backups(/.*)?$', ADMIN),
         (_READ, r'^/api/fs/dirs$', ADMIN),
-        (_ALL, r'^/api/cookies$', ADMIN),
+        (_ALL, r'^/api/cookies(/check)?$', ADMIN),
         (_ALL, r'^/api/(slskd|navidrome|deemix)/test$', ADMIN),
+        # Why downloads didn't come from slskd (downtify/slskd_misses.py).
+        (_ALL, r'^/api/slskd/misses$', ADMIN),
         (_ALL, r'^/api/proxy/test$', ADMIN),
         (_ALL, r'^/api/similar/test$', ADMIN),
         (_READ, r'^/api/library/summary$', CLIENT),
@@ -1157,35 +1217,70 @@ def identify(
 
     auth = _header(scope, 'authorization')
     if auth[:7].lower() == 'bearer ':
-        device = store.verify_device_token(auth[7:].strip(), ip)
-        if device is None:
-            return None, True
-        return (
-            Principal(
-                'device',
-                CLIENT,
-                device['id'],
-                device['user_id'],
-                device['username'],
-                device['role'],
-            ),
-            False,
+        return _device_identity(
+            store.verify_device_token(auth[7:].strip(), ip)
         )
     session = _cookie(scope, SESSION_COOKIE)
-    user = store.session_user(session) if session else None
-    if user is not None:
-        return (
-            Principal(
-                'session',
-                ADMIN if user['role'] == ROLE_ADMIN else USER,
-                '',
-                user['id'],
-                user['username'],
-                user['role'],
-            ),
-            False,
-        )
-    return None, False
+    return _session_identity(store.session_user(session) if session else None)
+
+
+async def identify_offloop(
+    scope: MutableMapping[str, Any], store: AuthStore, ip: str = ''
+) -> tuple[Optional[Principal], bool]:
+    """:func:`identify` for the event loop. A credential in the sign-in
+    cache is answered in place; a miss does its database read on a
+    worker thread, so a slow database never stalls other requests."""
+
+    auth = _header(scope, 'authorization')
+    if auth[:7].lower() == 'bearer ':
+        token = auth[7:].strip()
+        device = store.peek_device(token)
+        if device is MISS:
+            device = await asyncio.to_thread(
+                store.verify_device_token, token, ip
+            )
+        return _device_identity(device)
+    session = _cookie(scope, SESSION_COOKIE)
+    user = store.peek_session(session)
+    if user is MISS:
+        user = await asyncio.to_thread(store.session_user, session)
+    return _session_identity(user)
+
+
+def _device_identity(
+    device: Optional[dict[str, Any]],
+) -> tuple[Optional[Principal], bool]:
+    if device is None:
+        return None, True
+    return (
+        Principal(
+            'device',
+            CLIENT,
+            device['id'],
+            device['user_id'],
+            device['username'],
+            device['role'],
+        ),
+        False,
+    )
+
+
+def _session_identity(
+    user: Optional[dict[str, Any]],
+) -> tuple[Optional[Principal], bool]:
+    if user is None:
+        return None, False
+    return (
+        Principal(
+            'session',
+            ADMIN if user['role'] == ROLE_ADMIN else USER,
+            '',
+            user['id'],
+            user['username'],
+            user['role'],
+        ),
+        False,
+    )
 
 
 def open_principal(store: AuthStore) -> Optional[Principal]:
@@ -1275,9 +1370,11 @@ class AuthMiddleware:
             return
 
         ip = client_ip(scope, self._trusted)
-        principal, bad_token = self._authenticate(scope, store, ip, method)
-        if principal is None and not bad_token:
-            principal = open_principal(store)
+        principal, bad_token = await self._authenticate(
+            scope, store, ip, method
+        )
+        if principal is None and not bad_token and store.auth_disabled:
+            principal = await asyncio.to_thread(open_principal, store)
         scope.setdefault('state', {})['principal'] = principal
 
         if bad_token:
@@ -1306,7 +1403,7 @@ class AuthMiddleware:
             return
         await self.app(scope, receive, send)
 
-    def _authenticate(
+    async def _authenticate(
         self,
         scope: MutableMapping[str, Any],
         store: AuthStore,
@@ -1314,16 +1411,17 @@ class AuthMiddleware:
         method: str,
     ) -> tuple[Optional[Principal], bool]:
         """``(principal, bad_token)``: who made the request, and whether
-        it sent a device token that's no good."""
+        it sent a device token that's no good. Database reads run on a
+        worker thread (see :func:`identify_offloop`)."""
 
-        principal, bad_token = identify(scope, store, ip)
+        principal, bad_token = await identify_offloop(scope, store, ip)
         if principal is not None or bad_token:
             return principal, bad_token
 
         query = (scope.get('query_string') or b'').decode('latin-1')
         if 'sig=' in query and method in {'GET', 'HEAD'}:
-            device_id = store.signer.verify_signed(
-                method, scope['path'], query
+            device_id = await asyncio.to_thread(
+                store.signer.verify_signed, method, scope['path'], query
             )
             if device_id:
                 return Principal('signed', CLIENT, device_id), False
@@ -1333,7 +1431,9 @@ class AuthMiddleware:
             principal = tickets.claim(ticket) if tickets else None
             if principal is not None and (
                 not principal.device_id
-                or store.device_active(principal.device_id)
+                or await asyncio.to_thread(
+                    store.device_active, principal.device_id
+                )
             ):
                 return principal, False
         return None, False

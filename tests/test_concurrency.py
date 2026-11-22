@@ -561,6 +561,7 @@ def _entry(stored, full):
         'genre': '',
         'explicit': False,
         'compilation': False,
+        'isrc': '',
         'has_cover': False,
         'cover_px': 0,
         'added': int(full.stat().st_mtime),

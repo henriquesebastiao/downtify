@@ -4,6 +4,106 @@ icon: lucide/history
 
 # Changelog
 
+## [3.12.0](https://github.com/henriquesebastiao/downtify/tree/3.12.0) (2026-11-20)
+
+[Full Changelog](https://github.com/henriquesebastiao/downtify/compare/3.11.0...3.12.0)
+
+**Implemented enhancements:**
+
+- A song I replaced or deleted comes back: Downtify downloads it again \(and what Doctor duplicate cleanup needs\) [\#582](https://github.com/henriquesebastiao/downtify/issues/582)
+- Automatic Cookie Puller [\#569](https://github.com/henriquesebastiao/downtify/issues/569)
+- Playlist Monitor sweeps \(and other queue additions\) should respect the Parallel downloads limit [\#548](https://github.com/henriquesebastiao/downtify/issues/548)
+
+**Merged pull requests:**
+
+- fix\(covers\): every download aims for 1200px covers from four sources [\#632](https://github.com/henriquesebastiao/downtify/pull/632) ([BigBrownMF69](https://github.com/BigBrownMF69))
+- feat: backup and restore [\#630](https://github.com/henriquesebastiao/downtify/pull/630) ([BigBrownMF69](https://github.com/BigBrownMF69))
+- fix\(monitor\): watch downloads share the Parallel downloads limit [\#629](https://github.com/henriquesebastiao/downtify/pull/629) ([BigBrownMF69](https://github.com/BigBrownMF69))
+- feat\(covers\): option to always embed the largest cover [\#628](https://github.com/henriquesebastiao/downtify/pull/628) ([BigBrownMF69](https://github.com/BigBrownMF69))
+- feat\(queue\): show why slskd wasn't used, and clear a watch's failures [\#627](https://github.com/henriquesebastiao/downtify/pull/627) ([BigBrownMF69](https://github.com/BigBrownMF69))
+- feat\(slskd\): keep a shared file's own cover when it's bigger [\#626](https://github.com/henriquesebastiao/downtify/pull/626) ([BigBrownMF69](https://github.com/BigBrownMF69))
+- feat\(settings\): say what each audio source needs [\#625](https://github.com/henriquesebastiao/downtify/pull/625) ([BigBrownMF69](https://github.com/BigBrownMF69))
+- feat\(lyrics\): Kugou, LRCLIB search, synced-only, and "Scan and find lyrics" [\#624](https://github.com/henriquesebastiao/downtify/pull/624) ([BigBrownMF69](https://github.com/BigBrownMF69))
+- feat\(monitor\): show announced releases and download them on release day [\#623](https://github.com/henriquesebastiao/downtify/pull/623) ([BigBrownMF69](https://github.com/BigBrownMF69))
+- feat\(queue\): show which Monitor watch is downloading each song [\#622](https://github.com/henriquesebastiao/downtify/pull/622) ([BigBrownMF69](https://github.com/BigBrownMF69))
+- feat\(monitor\): a click on a watch's row opens its page [\#621](https://github.com/henriquesebastiao/downtify/pull/621) ([BigBrownMF69](https://github.com/BigBrownMF69))
+- Navidrome: optionally hold library scans while someone is listening [\#619](https://github.com/henriquesebastiao/downtify/pull/619) ([BigBrownMF69](https://github.com/BigBrownMF69))
+- Doctor: fix 'Same songs' grouping; decide on each playlist group, then apply at once [\#618](https://github.com/henriquesebastiao/downtify/pull/618) ([BigBrownMF69](https://github.com/BigBrownMF69))
+- Doctor: show what's in slskd's folder next to what Downtify counts [\#617](https://github.com/henriquesebastiao/downtify/pull/617) ([BigBrownMF69](https://github.com/BigBrownMF69))
+- Monitor: find an artist by name, and warn about Spotify user links [\#616](https://github.com/henriquesebastiao/downtify/pull/616) ([BigBrownMF69](https://github.com/BigBrownMF69))
+- Covers: the minimum cover size raises the first request, and smaller cover sizes are greyed out [\#615](https://github.com/henriquesebastiao/downtify/pull/615) ([BigBrownMF69](https://github.com/BigBrownMF69))
+- Doctor: fold-out sections, playlist covers, and check again after a repair [\#614](https://github.com/henriquesebastiao/downtify/pull/614) ([BigBrownMF69](https://github.com/BigBrownMF69))
+- feat\(cookies\): keep the YouTube cookies.txt signed in automatically [\#613](https://github.com/henriquesebastiao/downtify/pull/613) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- feat\(library\): never pick a replaced upload again; keep files swapped on disk [\#612](https://github.com/henriquesebastiao/downtify/pull/612) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- ci\(docker\): tag releases with their major and minor lines too [\#611](https://github.com/henriquesebastiao/downtify/pull/611) ([henriquesebastiao](https://github.com/henriquesebastiao))
+
+## [3.11.0](https://github.com/henriquesebastiao/downtify/tree/3.11.0) (2026-11-17)
+
+[Full Changelog](https://github.com/henriquesebastiao/downtify/compare/3.10.0...3.11.0)
+
+**Implemented enhancements:**
+
+- Add a karaoke view to the full-screen player [\#558](https://github.com/henriquesebastiao/downtify/issues/558)
+- Permanent Delete and block action with companion Android support [\#553](https://github.com/henriquesebastiao/downtify/issues/553)
+
+**Fixed bugs:**
+
+- Random "ERROR: '/data/cookies.txt' does not look like a Netscape format cookies file" [\#570](https://github.com/henriquesebastiao/downtify/issues/570)
+- No apparent way to close the in-app audio player [\#567](https://github.com/henriquesebastiao/downtify/issues/567)
+
+**Closed issues:**
+
+- Optional PostgreSQL backend: database layer, pooling and versioned migrations [\#609](https://github.com/henriquesebastiao/downtify/issues/609)
+- SQLite write contention, blocking auth checks and a database-aware health check [\#608](https://github.com/henriquesebastiao/downtify/issues/608)
+- Ship PostgreSQL in Docker Compose, with make targets, docs and CI [\#607](https://github.com/henriquesebastiao/downtify/issues/607)
+- Migrate an existing SQLite install to PostgreSQL with a verified copy [\#606](https://github.com/henriquesebastiao/downtify/issues/606)
+- Run every store and the server on SQLite or PostgreSQL [\#605](https://github.com/henriquesebastiao/downtify/issues/605)
+- Minimum cover size instead of a fixed cover size [\#574](https://github.com/henriquesebastiao/downtify/issues/574)
+- Doctor: repair what older Downtify versions left behind \(slskd leftovers, duplicate playlists and songs\) [\#572](https://github.com/henriquesebastiao/downtify/issues/572)
+
+**Merged pull requests:**
+
+- Add an optional PostgreSQL backend \(DATABASE\_URL\), with a verified SQLite migration [\#610](https://github.com/henriquesebastiao/downtify/pull/610) ([michaelmoskie](https://github.com/michaelmoskie))
+- Monitor: a Wanted tab — every artist's missing releases, with Check all and Download all [\#604](https://github.com/henriquesebastiao/downtify/pull/604) ([BigBrownMF69](https://github.com/BigBrownMF69))
+- Fix: Preserve Original Cover Art When Replacing FLAC Audio [\#603](https://github.com/henriquesebastiao/downtify/pull/603) ([pakhozako](https://github.com/pakhozako))
+- Monitor: change many watches at once, and check every 3 days [\#602](https://github.com/henriquesebastiao/downtify/pull/602) ([BigBrownMF69](https://github.com/BigBrownMF69))
+- Fix concurrent edits being overwritten during manual playlist maintenance [\#601](https://github.com/henriquesebastiao/downtify/pull/601) ([pakhozako](https://github.com/pakhozako))
+- Fix cover thumbnail cache isolation across library directories [\#600](https://github.com/henriquesebastiao/downtify/pull/600) ([pakhozako](https://github.com/pakhozako))
+- Fix stream cache cancellation and concurrency control [\#599](https://github.com/henriquesebastiao/downtify/pull/599) ([pakhozako](https://github.com/pakhozako))
+- feat: Ratings from Deezer \(dztnr in Downtify\) [\#598](https://github.com/henriquesebastiao/downtify/pull/598) ([BigBrownMF69](https://github.com/BigBrownMF69))
+- feat: write ISRC codes into downloads and match songs by them first [\#597](https://github.com/henriquesebastiao/downtify/pull/597) ([BigBrownMF69](https://github.com/BigBrownMF69))
+- Artist Watch: check what the library has of each release, and download what's missing [\#596](https://github.com/henriquesebastiao/downtify/pull/596) ([BigBrownMF69](https://github.com/BigBrownMF69))
+- Update French translation for 'queue' term [\#595](https://github.com/henriquesebastiao/downtify/pull/595) ([jbdesbas](https://github.com/jbdesbas))
+- Fix expiration handling for pairing codes and WebSocket tickets [\#594](https://github.com/henriquesebastiao/downtify/pull/594) ([pakhozako](https://github.com/pakhozako))
+- Fix podcast enclosure selection when feeds contain multiple attachments [\#593](https://github.com/henriquesebastiao/downtify/pull/593) ([pakhozako](https://github.com/pakhozako))
+- Fix local M3U8 playlist discovery and maintenance [\#592](https://github.com/henriquesebastiao/downtify/pull/592) ([pakhozako](https://github.com/pakhozako))
+- Fix external-library track reconciliation in hourly monitoring [\#591](https://github.com/henriquesebastiao/downtify/pull/591) ([pakhozako](https://github.com/pakhozako))
+- Fix ZIP export for audio files over 2 GiB [\#590](https://github.com/henriquesebastiao/downtify/pull/590) ([pakhozako](https://github.com/pakhozako))
+- Artist Watch: a catalogue of the artist's releases, with a switch per release [\#589](https://github.com/henriquesebastiao/downtify/pull/589) ([BigBrownMF69](https://github.com/BigBrownMF69))
+- Read Artist Watch discographies from MusicBrainz too [\#588](https://github.com/henriquesebastiao/downtify/pull/588) ([BigBrownMF69](https://github.com/BigBrownMF69))
+- Replace audio from a file; downloads keep hand-replaced files [\#587](https://github.com/henriquesebastiao/downtify/pull/587) ([BigBrownMF69](https://github.com/BigBrownMF69))
+- Preserve transcoded stream validators on cache hits [\#586](https://github.com/henriquesebastiao/downtify/pull/586) ([michaelmoskie](https://github.com/michaelmoskie))
+- docs: complete Simplified Chinese feature translations and fix iOS links [\#585](https://github.com/henriquesebastiao/downtify/pull/585) ([pakhozako](https://github.com/pakhozako))
+- Doctor: merge duplicate songs, keep both, listen before deciding [\#584](https://github.com/henriquesebastiao/downtify/pull/584) ([BigBrownMF69](https://github.com/BigBrownMF69))
+- Read Artist Watch discographies from Deezer too [\#583](https://github.com/henriquesebastiao/downtify/pull/583) ([BigBrownMF69](https://github.com/BigBrownMF69))
+- fix\(player\): add a close button to the player bar [\#580](https://github.com/henriquesebastiao/downtify/pull/580) ([monarchsofchaos004-gif](https://github.com/monarchsofchaos004-gif))
+- Stop Artist Watch from downloading songs the library already has [\#579](https://github.com/henriquesebastiao/downtify/pull/579) ([BigBrownMF69](https://github.com/BigBrownMF69))
+- Add CodSpeed performance benchmarks [\#578](https://github.com/henriquesebastiao/downtify/pull/578) ([codspeed[bot]](https://github.com/apps/codspeed))
+- Stop concurrent downloads corrupting the shared cookies.txt [\#577](https://github.com/henriquesebastiao/downtify/pull/577) ([chiliec](https://github.com/chiliec))
+- Add a minimum cover size setting [\#576](https://github.com/henriquesebastiao/downtify/pull/576) ([BigBrownMF69](https://github.com/BigBrownMF69))
+- Add a Doctor settings tab to repair what older versions left behind [\#575](https://github.com/henriquesebastiao/downtify/pull/575) ([BigBrownMF69](https://github.com/BigBrownMF69))
+- Add fine-tune quality controls for the slskd source [\#571](https://github.com/henriquesebastiao/downtify/pull/571) ([BigBrownMF69](https://github.com/BigBrownMF69))
+- Keep catalog stream ETags stable across range requests [\#565](https://github.com/henriquesebastiao/downtify/pull/565) ([michaelmoskie](https://github.com/michaelmoskie))
+- Search for audio when retrying downloads without a URL [\#563](https://github.com/henriquesebastiao/downtify/pull/563) ([michaelmoskie](https://github.com/michaelmoskie))
+- feat-allow-metadata-modification [\#562](https://github.com/henriquesebastiao/downtify/pull/562) ([michaelmoskie](https://github.com/michaelmoskie))
+- build\(deps\): bump zeroconf from 0.153.0 to 0.154.0 [\#561](https://github.com/henriquesebastiao/downtify/pull/561) ([dependabot[bot]](https://github.com/apps/dependabot))
+- feat\(player\): add a karaoke view with a projected window [\#559](https://github.com/henriquesebastiao/downtify/pull/559) ([fvidals](https://github.com/fvidals))
+- feat\(player\): make desktop playback controls resizable [\#557](https://github.com/henriquesebastiao/downtify/pull/557) ([michaelmoskie](https://github.com/michaelmoskie))
+- Add playlist editing endpoints for connected clients [\#556](https://github.com/henriquesebastiao/downtify/pull/556) ([michaelmoskie](https://github.com/michaelmoskie))
+- build\(deps\): bump docker/login-action from 4.7.0 to 4.8.0 [\#555](https://github.com/henriquesebastiao/downtify/pull/555) ([dependabot[bot]](https://github.com/apps/dependabot))
+- Add iOS App Source Link [\#549](https://github.com/henriquesebastiao/downtify/pull/549) ([michaelmoskie](https://github.com/michaelmoskie))
+- Add Traditional Chinese \(zh-TW\) translation [\#545](https://github.com/henriquesebastiao/downtify/pull/545) ([monarchsofchaos004-gif](https://github.com/monarchsofchaos004-gif))
+
 ## [3.10.0](https://github.com/henriquesebastiao/downtify/tree/3.10.0) (2026-11-06)
 
 [Full Changelog](https://github.com/henriquesebastiao/downtify/compare/3.9.0...3.10.0)

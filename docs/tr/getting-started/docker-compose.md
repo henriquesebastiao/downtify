@@ -8,23 +8,48 @@ Docker Compose, kalıcı ev sunucusu kurulumlarında Downtify’ı çalıştırm
 
 ## Asgari kurulum
 
-Bir `docker-compose.yml` dosyası oluşturun:
+Bir `docker-compose.yml` dosyası oluşturun. Downtify’ı PostgreSQL ile çalıştırır; veritabanı yanındaki bir `postgres` hizmetinde bulunur (bkz. [Veritabanı](../database.md)):
 
 ```yaml
 services:
   downtify:
     container_name: downtify
     image: ghcr.io/henriquesebastiao/downtify:latest
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
     ports:
       - '8000:8000'
     volumes:
       - ./downloads:/downloads
       - downtify_data:/data
+    environment:
+      DATABASE_URL: postgresql://downtify:${POSTGRES_PASSWORD:-downtify}@postgres:5432/downtify
+
+  postgres:
+    container_name: downtify-postgres
+    image: 'postgres:17-alpine'
     restart: unless-stopped
+    environment:
+      POSTGRES_USER: downtify
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-downtify}
+      POSTGRES_DB: downtify
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U downtify -d downtify']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
 
 volumes:
   downtify_data:
+  pgdata:
 ```
+
+İlk başlatmadan önce Compose dosyasının yanındaki bir `.env` dosyasına `POSTGRES_PASSWORD` değerini yazın (bkz. [Ortam değişkenleri](environment-variables.md#database)). Bunun yerine SQLite dosyalarını kullanmak için `DATABASE_URL`, `postgres` hizmetini ve `depends_on` bloğunu kaldırın.
 
 Başlatın:
 
@@ -133,6 +158,7 @@ Müziğiniz ve ayarlarınız birimlerde korunur.
 | Compose dosyasındaki yol | Amaç |
 |------------------------------|---------|
 | `./downloads:/downloads` | İndirilen ses dosyaları (yerel dizin) |
-| `downtify_data:/data` | Uygulama veritabanı ve ayarları (adlandırılmış birim) |
+| `downtify_data:/data` | Ayarlar, önbellekler ve SQLite dosyaları (adlandırılmış birim) |
+| `pgdata:/var/lib/postgresql/data` | `postgres` hizmetindeki PostgreSQL veritabanı |
 
 Kendiniz yönetmeyi tercih ederseniz adlandırılmış birimi yerel bir yolla (`./data:/data`) değiştirebilirsiniz.

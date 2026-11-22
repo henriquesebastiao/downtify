@@ -22,12 +22,13 @@ library usage page (``downtify/library_usage.py``) tells apart.
 
 from __future__ import annotations
 
-import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
 
+from .db.config import Dialect
+from .db.core import Database, as_database
 from .library_paths import EXTERNAL_LIBRARY_PREFIX, SLSKD_LIBRARY_PREFIX
-from .sqlite_utils import connect_sqlite
 
 #: Not a download at all: a file from an extra music folder.
 FOLDER = 'folder'
@@ -57,21 +58,28 @@ def _chunked(values: list[str], size: int = 400):
         yield values[index : index + size]
 
 
-def _details(row: sqlite3.Row) -> dict[str, str]:
+def _details(row: Any) -> dict[str, str]:
     return {'provider': row['provider'], 'recorded_at': row['recorded_at']}
 
 
 class FileProviders:
     """``content key -> provider`` (plus the path), in the library database."""
 
-    def __init__(self, db_path: Path) -> None:
-        self._path = str(db_path)
+    def __init__(self, path_or_db: str | Path | Database) -> None:
+        self.db = as_database(path_or_db, 'library')
+        if isinstance(path_or_db, Database):
+            self._path = str(self.db.path) if self.db.path else None
+        else:
+            self._path = str(path_or_db)
         self._init_db()
 
-    def _connect(self) -> sqlite3.Connection:
-        return connect_sqlite(self._path, row_factory=True)
+    def _connect(self):
+        return self.db.connect()
 
     def _init_db(self) -> None:
+        # The Postgres schema is created by migrations; only SQLite needs DDL.
+        if self.db.dialect is not Dialect.SQLITE:
+            return
         with self._connect() as conn:
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS file_providers (
@@ -193,8 +201,15 @@ class FileProviders:
         if not old or not new or old == new:
             return 0
         with self._connect() as conn:
+            # SQLite's ``UPDATE OR REPLACE``, spelled portably: drop the row
+            # already under the new key, but only when the old one exists.
+            conn.execute(
+                'DELETE FROM file_providers WHERE content_key = ? AND '
+                'EXISTS (SELECT 1 FROM file_providers WHERE content_key = ?)',
+                (new, old),
+            )
             cur = conn.execute(
-                'UPDATE OR REPLACE file_providers SET content_key = ?, '
+                'UPDATE file_providers SET content_key = ?, '
                 "path = COALESCE(NULLIF(?, ''), path) WHERE content_key = ?",
                 (new, _norm_path(stored_path), old),
             )

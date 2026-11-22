@@ -23,7 +23,7 @@ the Doctor stops listing them.
 
 from __future__ import annotations
 
-import sqlite3
+import contextlib
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from itertools import combinations
@@ -33,6 +33,8 @@ from typing import Any, Optional
 from loguru import logger
 
 from . import m3u
+from .db.config import Dialect
+from .db.core import Connection, Database, as_database
 from .deemix_upgrade_playlists import digest, rewrite_playlists
 from .deemix_upgrade_store import AudioReplacementStore
 from .library_cache_keys import file_content_key
@@ -70,6 +72,10 @@ def _now() -> str:
 # ---------------------------------------------------------------------------
 
 
+#: How a playlist (its M3U) is named among the pairs kept apart.
+PLAYLIST_PREFIX = 'm3u:'
+
+
 class KeptApart:
     """Library files an admin said are different songs, by pairs.
 
@@ -78,21 +84,23 @@ class KeptApart:
     group back (with the new file to decide on).
     """
 
-    def __init__(self, path: Path) -> None:
-        self._path = Path(path)
-        self._path.parent.mkdir(parents=True, exist_ok=True)
-        with self._connect() as conn:
-            conn.execute("""
-                CREATE TABLE IF NOT EXISTS kept_apart (
-                    a TEXT NOT NULL,
-                    b TEXT NOT NULL,
-                    kept_at TEXT NOT NULL,
-                    PRIMARY KEY (a, b)
-                )
-            """)
+    def __init__(self, path_or_db: str | Path | Database) -> None:
+        self.db = as_database(path_or_db, 'doctor_dupes')
+        self._path = self.db.path
+        if self.db.dialect is Dialect.SQLITE:
+            # Postgres already has the table from the migration.
+            with self._connect() as conn:
+                conn.execute("""
+                    CREATE TABLE IF NOT EXISTS kept_apart (
+                        a TEXT NOT NULL,
+                        b TEXT NOT NULL,
+                        kept_at TEXT NOT NULL,
+                        PRIMARY KEY (a, b)
+                    )
+                """)
 
-    def _connect(self) -> sqlite3.Connection:
-        return sqlite3.connect(self._path)
+    def _connect(self) -> contextlib.AbstractContextManager[Connection]:
+        return self.db.connect()
 
     @staticmethod
     def _pairs(files: list[str]) -> list[tuple[str, str]]:
@@ -103,20 +111,24 @@ class KeptApart:
         """Record *files* as different songs; returns the new pairs."""
 
         pairs = self._pairs(files)
+        if not pairs:
+            return 0
         now = _now()
         with self._connect() as conn:
-            before = conn.total_changes
-            conn.executemany(
-                'INSERT OR IGNORE INTO kept_apart VALUES (?, ?, ?)',
+            cursor = conn.executemany(
+                'INSERT INTO kept_apart VALUES (?, ?, ?) '
+                'ON CONFLICT DO NOTHING',
                 [(a, b, now) for a, b in pairs],
             )
-            return conn.total_changes - before
+            return cursor.rowcount
 
     def pairs(self) -> set[tuple[str, str]]:
         with self._connect() as conn:
             return {
                 (str(a), str(b))
-                for a, b in conn.execute('SELECT a, b FROM kept_apart')
+                for a, b in conn.execute(
+                    'SELECT a, b FROM kept_apart'
+                ).fetchall()
             }
 
     def settled(
@@ -128,11 +140,17 @@ class KeptApart:
         wanted = self._pairs(files)
         return bool(wanted) and all(pair in known for pair in wanted)
 
-    def forget(self) -> int:
-        """Forget every decision: all groups are listed again."""
+    def forget(self, *, playlists: bool = False) -> int:
+        """Forget every decision about songs (or, with *playlists*, about
+        playlists - their M3Us are kept as ``m3u:<path>``): all those
+        groups are listed again."""
 
+        op = 'LIKE' if playlists else 'NOT LIKE'
         with self._connect() as conn:
-            return conn.execute('DELETE FROM kept_apart').rowcount
+            return conn.execute(
+                f'DELETE FROM kept_apart WHERE a {op} ?',
+                (f'{PLAYLIST_PREFIX}%',),
+            ).rowcount
 
     def forget_files(self, files: list[str]) -> None:
         """Drop the decisions about files that are gone (merged)."""

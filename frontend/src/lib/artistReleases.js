@@ -10,6 +10,7 @@ export const SECTIONS = ['album', 'mixtape', 'ep', 'single', 'other']
 export const FILTERS = [
   'all',
   'missing',
+  'upcoming',
   'partly',
   'complete',
   'not_watched',
@@ -22,6 +23,7 @@ const TONES = {
   complete: 'accent',
   partly: 'warn',
   missing: 'neutral',
+  upcoming: 'accent',
   skipped: 'neutral',
   not_watched: 'neutral',
   off: 'neutral',
@@ -32,9 +34,12 @@ export function stateTone(state) {
   return TONES[state] || 'neutral'
 }
 
-// Whether a release is downloaded by the watch: its switch.
+// Whether the watch downloads a release: its switch. The server says
+// (`wanted`) - what the library has of it is another matter (`state`):
+// an album owned before the watch started is complete, not watched.
 export function isOn(release) {
-  return ['complete', 'partly', 'missing'].includes(release.state)
+  if (typeof release.wanted === 'boolean') return release.wanted
+  return ['complete', 'partly', 'missing', 'upcoming'].includes(release.state)
 }
 
 // Whether a release has a switch at all (guest spots and bootlegs never
@@ -73,6 +78,44 @@ export function sectioned(releases, filter = 'all') {
       )
       .sort((a, b) => String(b.year || '').localeCompare(String(a.year || ''))),
   })).filter((section) => section.releases.length)
+}
+
+// When an announced release comes out, as short as the date allows:
+// "5 Dec" this year, "5 Dec 2027" another, "Dec 2026" or "2027" when a
+// catalogue only gives the month or the year. `''` without a date.
+export function comingDate(day, locale = 'en', today = new Date()) {
+  const match = /^(\d{4})(?:-(\d{2}))?(?:-(\d{2}))?/.exec(String(day || ''))
+  if (!match) return ''
+  const [, year, month, date] = match
+  if (!month) return year
+  const when = new Date(Number(year), Number(month) - 1, Number(date || 1))
+  const options = date
+    ? { day: 'numeric', month: 'short' }
+    : { month: 'short', year: 'numeric' }
+  if (date && Number(year) !== today.getFullYear()) options.year = 'numeric'
+  try {
+    return new Intl.DateTimeFormat(locale, options).format(when)
+  } catch {
+    return new Intl.DateTimeFormat('en', options).format(when)
+  }
+}
+
+// A release's badge text: its state, with what the library has of it or,
+// for an announced one, when it comes out.
+export function stateLabel(release, t, locale = 'en') {
+  if (release.state === 'complete' || release.state === 'partly') {
+    return t(`artistReleases.state.${release.state}`, {
+      have: release.have,
+      total: release.total || '?',
+    })
+  }
+  if (release.state === 'upcoming') {
+    const date = comingDate(release.release_date, locale)
+    return date
+      ? t('artistReleases.state.upcoming', { date })
+      : t('artistReleases.state.upcomingNoDate')
+  }
+  return t(`artistReleases.state.${release.state}`)
 }
 
 // Display names of the catalogues a release is listed by.

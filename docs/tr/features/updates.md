@@ -10,6 +10,14 @@ Downtify, kendi [GitHub Releases sayfasını](https://github.com/henriquesebasti
 
 Bu sürümü GitHub’da açmak için üzerine tıklayın.
 
+## Güncellemeden sonra yenilikler
+
+Downtify güncellendikten sonra web uygulaması ilk açıldığında, **Downtify 3.12.0 sürümündeki yenilikler** penceresi sürümün öne çıkanlarını listeler; sürümü GitHub'da açan bir **Tüm değişiklik günlüğü** düğmesi ve depoya yıldız vermek için göze batmayan bir satır içerir. **Anladım** (veya kapatmak) onu bir sonraki güncellemeye kadar gizler. **Ayarlar → Hakkında → Yenilikler** onu yeniden açar.
+
+- Tarayıcı başına hatırlanır: her tarayıcı (ve onda oturum açan her kişi) onu her güncellemede bir kez görür. Downtify'ı hiç açmamış bir tarayıcı — yeni bir kurulum — onu görmez.
+- Öne çıkanlar uygulamayla birlikte gelir, bu yüzden pencere internet olmadan çalışır; yalnızca iki bağlantı GitHub'a gider. Öne çıkanları yazılmamış bir sürüm yalnızca değişiklik günlüğünün bağlantısını gösterir.
+- Oturum açılmasını bekler ve varsayılan parolayı değiştirme isteminin üzerine açılmaz.
+
 ## Nasıl çalışır
 
 - Arka uçtaki bir arka plan görevi (`downtify/update_check.py`) en son sürümü GitHub API’sinden başlangıçta hemen bir kez, ardından her saat alır. “Gönder ve unut” türündedir: arayüzdeki hiçbir şey onu beklemez.

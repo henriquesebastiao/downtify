@@ -2,15 +2,17 @@
 
 from __future__ import annotations
 
-import sqlite3
+from contextlib import AbstractContextManager
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
 
+from .db.batching import in_short_transactions
+from .db.config import Dialect
+from .db.core import Connection, Database, as_database
 from .library_cache_keys import file_content_key
 from .library_paths import locate_library_file
-from .sqlite_utils import connect_sqlite
-from .track_index import normalize_spotify_track_id
+from .track_index import normalize_spotify_track_id, read_monitor_rows
 
 
 def _now_iso() -> str:
@@ -48,17 +50,30 @@ def _chunked(values: list[str], size: int):
             yield chunk
 
 
+def _text_order(dialect: Dialect) -> str:
+    """ORDER BY suffix for text columns that sorts bytewise, like SQLite.
+
+    PostgreSQL sorts by the database collation (case and punctuation
+    aware); the ``"C"`` collation is PostgreSQL-only, so SQLite gets none.
+    """
+    return ' COLLATE "C"' if dialect is Dialect.POSTGRES else ''
+
+
 class PlaylistCatalog:
     """Maps playlist names to ordered track identities and library paths."""
 
-    def __init__(self, db_path: Path) -> None:
-        self._path = str(db_path)
+    def __init__(self, path_or_db: str | Path | Database) -> None:
+        self.db = as_database(path_or_db, 'library')
+        self._path = str(self.db.path) if self.db.path is not None else None
         self._init_db()
 
-    def _connect(self) -> sqlite3.Connection:
-        return connect_sqlite(self._path, row_factory=True)
+    def _connect(self) -> AbstractContextManager[Connection]:
+        return self.db.connect()
 
     def _init_db(self) -> None:
+        if self.db.dialect is not Dialect.SQLITE:
+            # The migrations already created the final schema.
+            return
         with self._connect() as conn:
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS playlists (
@@ -190,29 +205,29 @@ class PlaylistCatalog:
 
     def backfill_from_monitor_db(
         self,
-        monitor_db_path: Path,
+        monitor_db_path: Path | Database,
         *,
         download_dir: Path,
         slskd_dir: Optional[Path] = None,
     ) -> int:
-        """Import playlist membership from monitor history (older downloads)."""
+        """Import playlist membership from monitor history (older downloads).
 
-        path = Path(monitor_db_path)
-        if not path.is_file():
-            return 0
-        try:
-            with sqlite3.connect(str(path)) as src:
-                rows = src.execute(
-                    """SELECT p.name, p.spotify_id, dt.track_spotify_id, dt.filename
-                       FROM downloaded_tracks dt
-                       JOIN monitored_playlists p ON p.id = dt.playlist_id
-                       WHERE dt.filename IS NOT NULL AND dt.filename != ''"""
-                ).fetchall()
-        except sqlite3.Error:
-            return 0
+        ``monitor_db_path`` is either the monitor's ``Database`` (any
+        backend) or a legacy SQLite file path.
+        """
+
+        rows = read_monitor_rows(
+            self.db,
+            monitor_db_path,
+            """SELECT p.name, p.spotify_id, dt.track_spotify_id, dt.filename
+               FROM downloaded_tracks dt
+               JOIN monitored_playlists p ON p.id = dt.playlist_id
+               WHERE dt.filename IS NOT NULL AND dt.filename != ''""",
+        )
 
         linked = 0
-        for row in rows:
+        # A few commits instead of three per row (downtify/db/batching.py).
+        for row in in_short_transactions(self.db, rows):
             pl_name = str(row[0] or '').strip()
             spotify_id = str(row[1] or '').strip() or None
             tid = str(row[2] or '').strip()
@@ -228,9 +243,10 @@ class PlaylistCatalog:
         return linked
 
     def list_playlist_names(self) -> list[str]:
+        order = _text_order(self.db.dialect)
         with self._connect() as conn:
             rows = conn.execute(
-                'SELECT name FROM playlists ORDER BY name'
+                f'SELECT name FROM playlists ORDER BY name{order}'
             ).fetchall()
         return [str(row['name']) for row in rows]
 
@@ -246,14 +262,15 @@ class PlaylistCatalog:
     def list_playlists_with_spotify_id(self) -> list[dict[str, Any]]:
         """Playlists in the catalog that have a linked Spotify playlist id."""
 
+        order = _text_order(self.db.dialect)
         with self._connect() as conn:
             rows = conn.execute(
-                """SELECT p.name, p.spotify_id,
+                f"""SELECT p.name, p.spotify_id,
                           (SELECT COUNT(*) FROM playlist_tracks pt
                            WHERE pt.playlist_name = p.name) AS track_count
                    FROM playlists p
                    WHERE p.spotify_id IS NOT NULL AND TRIM(p.spotify_id) != ''
-                   ORDER BY p.name"""
+                   ORDER BY p.name{order}"""
             ).fetchall()
         return [
             {
@@ -268,12 +285,13 @@ class PlaylistCatalog:
         pl_name = str(playlist_name or '').strip()
         if not pl_name:
             return []
+        order = _text_order(self.db.dialect)
         with self._connect() as conn:
             rows = conn.execute(
-                """SELECT track_spotify_id, content_key, filename, track_order
+                f"""SELECT track_spotify_id, content_key, filename, track_order
                    FROM playlist_tracks
                    WHERE playlist_name = ?
-                   ORDER BY track_order ASC, track_spotify_id ASC""",
+                   ORDER BY track_order ASC, track_spotify_id{order} ASC""",
                 (pl_name,),
             ).fetchall()
         return [
@@ -292,9 +310,11 @@ class PlaylistCatalog:
         tid = str(spotify_track_id or '').strip()
         if not tid:
             return []
+        order = _text_order(self.db.dialect)
         with self._connect() as conn:
             rows = conn.execute(
-                """SELECT DISTINCT playlist_name FROM playlist_tracks
+                f"""SELECT DISTINCT playlist_name{order} AS playlist_name
+                   FROM playlist_tracks
                    WHERE track_spotify_id = ?
                    ORDER BY playlist_name""",
                 (tid,),
@@ -343,13 +363,14 @@ class PlaylistCatalog:
         if not keys:
             return {}
         result: dict[str, list[str]] = {k: [] for k in keys}
+        order = _text_order(self.db.dialect)
         with self._connect() as conn:
             for chunk in _chunked(keys, 400):
                 placeholders = ','.join('?' * len(chunk))
                 rows = conn.execute(
                     f"""SELECT content_key, playlist_name FROM playlist_tracks
                         WHERE content_key IN ({placeholders})
-                        ORDER BY playlist_name""",
+                        ORDER BY playlist_name{order}""",
                     chunk,
                 ).fetchall()
                 for row in rows:
@@ -366,13 +387,14 @@ class PlaylistCatalog:
         if not names:
             return {}
         result: dict[str, list[str]] = {n: [] for n in names}
+        order = _text_order(self.db.dialect)
         with self._connect() as conn:
             for chunk in _chunked(names, 400):
                 placeholders = ','.join('?' * len(chunk))
                 rows = conn.execute(
                     f"""SELECT filename, playlist_name FROM playlist_tracks
                         WHERE filename IN ({placeholders})
-                        ORDER BY playlist_name""",
+                        ORDER BY playlist_name{order}""",
                     chunk,
                 ).fetchall()
                 for row in rows:
@@ -448,6 +470,12 @@ class PlaylistCatalog:
                     if row['filename']
                 )
             )
+            # Children first. PostgreSQL's ON DELETE CASCADE would do this
+            # too, but SQLite does not enforce foreign keys here.
+            conn.execute(
+                'DELETE FROM playlist_tracks WHERE playlist_name = ?',
+                (pl_name,),
+            )
             conn.execute('DELETE FROM playlists WHERE name = ?', (pl_name,))
         return filenames
 
@@ -499,14 +527,18 @@ class ManualPlaylistOwners:
     (pre-feature) ones are admins-only, like everywhere else.
     """
 
-    def __init__(self, db_path: Path) -> None:
-        self._path = str(db_path)
+    def __init__(self, path_or_db: str | Path | Database) -> None:
+        self.db = as_database(path_or_db, 'library')
+        self._path = str(self.db.path) if self.db.path is not None else None
         self._init_db()
 
-    def _connect(self) -> sqlite3.Connection:
-        return connect_sqlite(self._path, row_factory=True)
+    def _connect(self) -> AbstractContextManager[Connection]:
+        return self.db.connect()
 
     def _init_db(self) -> None:
+        if self.db.dialect is not Dialect.SQLITE:
+            # The migrations already created the final schema.
+            return
         with self._connect() as conn:
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS manual_playlist_owners (
@@ -544,8 +576,9 @@ class ManualPlaylistOwners:
             return False
         with self._connect() as conn:
             cursor = conn.execute(
-                """INSERT OR IGNORE INTO manual_playlist_owners
-                   (name_key, name, user_id) VALUES (?, ?, ?)""",
+                """INSERT INTO manual_playlist_owners
+                   (name_key, name, user_id) VALUES (?, ?, ?)
+                   ON CONFLICT DO NOTHING""",
                 (key, str(name or '').strip(), int(user_id)),
             )
         return cursor.rowcount == 1

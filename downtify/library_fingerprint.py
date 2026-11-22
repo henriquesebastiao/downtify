@@ -99,7 +99,7 @@ def _hash_tree(
 
 
 def playlist_listing_fingerprint(download_dir: Path) -> str:
-    """Hash of every ``.m3u`` under *download_dir* (name + mtime)."""
+    """Hash of every ``.m3u`` / ``.m3u8`` (name + mtime)."""
 
     digest = hashlib.sha256()
     base = Path(download_dir)
@@ -111,7 +111,7 @@ def playlist_listing_fingerprint(download_dir: Path) -> str:
     found: list[tuple[str, int]] = []
     for dirpath, _dirnames, filenames in os.walk(base, followlinks=False):
         for name in filenames:
-            if not name.lower().endswith('.m3u'):
+            if not name.lower().endswith(('.m3u', '.m3u8')):
                 continue
             path = os.path.join(dirpath, name)
             try:

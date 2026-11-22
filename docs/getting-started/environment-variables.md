@@ -16,6 +16,25 @@ All environment variables are optional. Downtify works out of the box without an
 | `DOWNTIFY_LOG_LEVEL` | `info` | Application log level (`debug`, `info`, `warning`, …). |
 | `TZ` | `UTC` | Local timezone (IANA name, e.g. `America/Sao_Paulo`), used to interpret `DOWNTIFY_MONITOR_SYNC_TIME` below. |
 
+## Database
+
+By default Downtify keeps its data in SQLite files under `DATABASE_DIR`. Set `DATABASE_URL` to use PostgreSQL instead; the [Database](../database.md) page covers setup, migrations and what is stored where.
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `DATABASE_URL` | _(unset)_ | PostgreSQL connection URL, `postgresql://user:password@host:5432/dbname` (`postgres://` works too). Unset: SQLite. Set: the stores that would otherwise be SQLite files (library, monitor, accounts, activity, doctor) use PostgreSQL. A value with any other scheme is rejected. The URL is never echoed in error messages. |
+| `DB_POOL_MIN` | `2` | Connections the PostgreSQL pool keeps open. Must be `0` or more. |
+| `DB_POOL_MAX` | `20` | Most connections the PostgreSQL pool opens. Must be at least `1` and at least `DB_POOL_MIN`. |
+| `DB_POOL_TIMEOUT` | `10` | Seconds a request waits for a free connection before it fails. |
+| `DB_SEARCH_PATH` | _(unset)_ | PostgreSQL schema to use, for a database shared with other applications. A plain identifier only: letters, digits and underscores, not starting with a digit. Unset: the server's default (`public`). |
+| `DATABASE_DIR` | `/data` | Directory for settings, caches and the SQLite files. It is still used with PostgreSQL, for everything that isn't a database table. |
+| `POSTGRES_PASSWORD` | `downtify` | Docker Compose only (read by the repository's `docker-compose.yml`, not by the server): the password of the `downtify` user in the bundled `postgres` service, which `DATABASE_URL` uses too. Put it in a `.env` file next to the Compose file before the first start. PostgreSQL applies it only when it creates its data volume, so changing it later doesn't change an existing database's password. |
+
+```yaml
+environment:
+  - DATABASE_URL=postgresql://downtify:change-me@postgres:5432/downtify
+```
+
 ## Playlist Monitor
 
 | Variable | Default | Description |
@@ -50,7 +69,7 @@ See [Mobile Apps](../features/mobile-apps.md) and [Users & Sign-in](../features/
 | `DOWNTIFY_TRANSCODE_CACHE_MB` | `2048` | Largest size, in MB, the cache of transcoded copies (`/data/transcode_cache`) is kept under; least recently played copies go first. |
 | `DOWNTIFY_TRANSCODE_CONCURRENCY` | `2` | How many songs are transcoded at once for the apps' smaller streaming qualities. |
 | `DOWNTIFY_STREAM_CACHE_MB` | `1024` | Largest size, in MB, the cache of streamed audio (`/data/stream_cache`) is kept under; least recently played copies go first. Streaming through the server is what plays undownloaded tracks where the browser itself can't reach YouTube. |
-| `DOWNTIFY_STREAM_CONCURRENCY` | `2` | How many stream downloads may run at once. |
+| `DOWNTIFY_STREAM_CONCURRENCY` | `2` | How many stream downloads may run at once, including already-running downloads whose callers were cancelled. These finish into the cache before releasing their slot; a queued download with no remaining callers is cancelled. |
 
 OIDC is optional. Configure the issuer, client ID and secret together; partial configuration prevents startup. The provider must allow the callback URL `https://<your-public-host>/api/auth/oidc/callback`. See [OpenID Connect](../features/users.md#openid-connect) for account linking, group mapping and a full explanation of local login options.
 
@@ -65,7 +84,7 @@ See [Music Trash](../features/music-trash.md). Off unless one of these is set.
 
 ## Health check
 
-The image has a built-in [Docker `HEALTHCHECK`](https://docs.docker.com/reference/dockerfile/#healthcheck) — no custom `--health-cmd` needed. It polls `GET /api/health` on the container's own port every 30 seconds (5 second timeout, 20 second start-up grace period, 3 retries before the container is marked unhealthy). `docker ps` and `docker inspect` show the result, and tools like Compose's `condition: service_healthy` or Watchtower can act on it.
+The image has a built-in [Docker `HEALTHCHECK`](https://docs.docker.com/reference/dockerfile/#healthcheck) — no custom `--health-cmd` needed. It polls `GET /api/health` on the container's own port every 30 seconds (5 second timeout, 20 second start-up grace period, 3 retries before the container is marked unhealthy). `docker ps` and `docker inspect` show the result, and tools like Compose's `condition: service_healthy` or Watchtower can act on it. With PostgreSQL, the check also fails while the database can't be reached (`503`, see [`GET /api/health`](../api-reference.md#get-apihealth)).
 
 | Variable | Default | Description |
 |----------|---------|-------------|
@@ -86,6 +105,7 @@ YouTube periodically challenges automated downloaders. These variables give you 
 | `DOWNTIFY_YT_PLAYER_CLIENTS` | `ios,android,web_embedded,mweb,web,tv` | Comma-separated list of yt-dlp player clients to try, in order. Downtify's default list already favours clients that work without a JavaScript runtime. Override this only if you know a specific client is being blocked. |
 | `DOWNTIFY_YT_PO_TOKEN` | _(unset)_ | Comma-separated Proof-of-Origin tokens for yt-dlp, each in the form `<client>.<context>+<token>` (e.g. `mweb.gvs+ABC123`). Required only if YouTube starts demanding PO Tokens for the clients you're using. |
 | `DOWNTIFY_COOKIES_FILE` | _(unset)_ | Path to a Netscape-format `cookies.txt` **inside the container**. Lets yt-dlp authenticate as a real browser session — needed for explicit/age-restricted tracks and whenever YouTube enforces a login wall. Takes precedence over a file uploaded in the web UI, and makes that UI section read-only. See [YouTube Cookies](../features/youtube-cookies.md). |
+| `DOWNTIFY_COOKIES_REFRESH_MINUTES` | `15` | How often the cookie keep-alive rotates and saves the YouTube session cookies, in minutes (`5`–`1440`). `0` turns it off. It refreshes the uploaded file or the `DOWNTIFY_COOKIES_FILE` one (when that file is writable). See [Keeping them working](../features/youtube-cookies.md#keeping-them-working). |
 | `DOWNTIFY_COOKIES_FROM_BROWSER` | _(unset)_ | Browser name to extract cookies from (e.g. `chrome`, `firefox`). Requires the browser's cookie store to be accessible inside the container, so it's rarely usable in Docker. |
 
 ::: tip You probably don't need these
@@ -103,7 +123,7 @@ services:
     volumes:
       - ./downloads:/downloads
       - downtify_data:/data
-      - ./cookies.txt:/cookies.txt:ro
+      - ./cookies.txt:/cookies.txt
     environment:
       - DOWNTIFY_FORCE_IPV4=1
       - DOWNTIFY_COOKIES_FILE=/cookies.txt
@@ -112,7 +132,7 @@ services:
 
 ## Getting a cookies.txt
 
-Use a browser extension such as [Get cookies.txt LOCALLY](https://chrome.google.com/webstore/detail/get-cookiestxt-locally/cclelndahbckbenkjhflpdbgdldlbecc) (Chrome) or [cookies.txt](https://addons.mozilla.org/en-US/firefox/addon/cookies-txt/) (Firefox). Export from `youtube.com` while logged into a real Google account, then either upload it in **Settings → YouTube cookies** or mount it into the container as shown above.
+Use a browser extension such as [Get cookies.txt LOCALLY](https://chrome.google.com/webstore/detail/get-cookiestxt-locally/cclelndahbckbenkjhflpdbgdldlbecc) (Chrome) or [cookies.txt](https://addons.mozilla.org/en-US/firefox/addon/cookies-txt/) (Firefox). Export from `youtube.com` in a private window logged into a real Google account (then close the window, so the browser doesn't rotate the cookies away), then either upload it in **Settings → YouTube cookies** or mount it into the container as shown above.
 
 See [YouTube Cookies](../features/youtube-cookies.md) for the full walkthrough, and [Troubleshooting](../troubleshooting.md) when downloads still fail.
 

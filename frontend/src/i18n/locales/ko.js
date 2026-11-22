@@ -251,6 +251,17 @@ export default {
     noMatch: '일치하는 항목 없음',
     noMatchHint: '다른 단어나 다른 필터를 사용해 보세요.',
   },
+  whatsNew: {
+    title: 'Downtify {version}의 새로운 기능',
+    intro: 'Downtify가 {version}(으)로 업데이트되었습니다. 변경 사항:',
+    noHighlights:
+      'Downtify가 {version}(으)로 업데이트되었습니다. 전체 변경 사항은 GitHub에 있습니다.',
+    changelog: '전체 변경 로그',
+    gotIt: '확인',
+    star: 'Downtify가 마음에 드시나요? GitHub에서 별을 눌러 주세요',
+    reopen: '새로운 기능',
+    reopenHint: '이 버전의 주요 변경 사항과 전체 변경 로그 링크입니다.',
+  },
   common: {
     cancel: '취소',
     confirm: '확인',
@@ -497,6 +508,57 @@ export default {
     playCountSpotify: 'Spotify 재생 횟수',
     playCountYoutubeMusic: 'YouTube Music 재생 횟수 (근사치)',
   },
+  slskdMisses: {
+    title: 'slskd를 쓰지 못한 이유',
+    hint: 'slskd에 없어서 다른 소스가 받았거나 아무 데서도 찾지 못한 곡입니다. 이유를 누르면 예시와 바꿀 설정이 나옵니다.',
+    reset: '초기화',
+    resetTitle: '집계를 처음부터 다시 할까요?',
+    resetBody:
+      '지금까지 기록된 이유를 모두 지워, 다음 다운로드로 설정 변경이 도움이 됐는지 볼 수 있게 합니다. 곡과 파일은 건드리지 않습니다.',
+    empty:
+      '아직 없음: 마지막 초기화 이후 slskd가 요청받은 모든 다운로드를 처리했습니다.',
+    since: '{when}부터 {count}곡',
+    usedInstead: '대신 사용:',
+    nothingFound: '찾지 못함',
+    reason: {
+      not_configured: 'slskd 미설정',
+      unreachable: 'slskd에 연결 못 함',
+      search_failed: '검색이 시작되지 않음',
+      search_timeout: '검색 시간 초과',
+      no_results: '공유한 사람이 없음',
+      no_match: '맞는 파일 없음',
+      low_confidence: '최소 점수 미달',
+      quality_filtered: '품질 규칙에 막힘',
+      timeout: '다운로드 시간 초과',
+      transfer_failed: '전송 실패',
+      tag_mismatch: '파일 속 곡이 다름',
+      unknown: '알 수 없음',
+    },
+    fix: {
+      not_configured: '설정 → 오디오 소스에서 서버 URL과 API 키를 입력하세요.',
+      unreachable:
+        '그때 slskd가 꺼져 있거나 연결되지 않았습니다. 실행 중인지, URL이 맞는지 확인하세요.',
+      search_failed:
+        'slskd가 검색을 거부했습니다. Soulseek 네트워크에 아직 연결하는 중일 때가 많습니다.',
+      search_timeout:
+        '검색이 제한 시간을 넘었습니다. 설정 → 오디오 소스에서 전체 제한 시간을 늘리세요.',
+      no_results:
+        '업로드 슬롯이 빈 사용자 중 이 곡을 가진 사람이 없었습니다. 드문 곡은 Soulseek에 없을 때가 많고, 나중에 다시 시도하면 찾을 수 있습니다.',
+      no_match:
+        '파일은 왔지만 제목, 아티스트, 길이가 충분히 맞는 파일이 없었습니다.',
+      low_confidence:
+        '비슷한 파일이 있었지만 잘못된 곡(리믹스, 라이브)을 막는 기준 점수에 못 미쳤습니다.',
+      quality_filtered:
+        '맞는 파일은 있었지만 형식과 비트레이트 규칙을 통과한 파일이 없었습니다. 형식을 더 허용하거나, 최소 비트레이트를 낮추거나, 비트레이트 표시가 없는 파일을 허용하면 통과합니다.',
+      timeout:
+        '파일을 골랐지만 제때 도착하지 않았습니다. 전체 또는 대기열 제한 시간을 늘리세요.',
+      transfer_failed:
+        '고른 파일이 모두 거부되었거나 끝까지 받지 못했습니다(상대가 오프라인, 긴 대기열). 후보 시도 횟수를 늘리면 더 많은 파일을 시도합니다.',
+      tag_mismatch:
+        '받은 파일의 태그가 다른 곡을 가리켜 slskd 폴더에 따로 두었습니다.',
+      unknown: '이유 없이 기록됨.',
+    },
+  },
   queue: {
     globalPause: '다운로드 및 모니터링 일시 중지',
     globalResume: '다운로드 및 모니터링 재개',
@@ -566,6 +628,13 @@ export default {
       '올바른 YouTube 영상 또는 SoundCloud 트랙 링크 형식이 아닙니다.',
     playlistDownloads: '재생목록 다운로드',
     sources: '다운로드 출처',
+    fromWatch: '{name}에서',
+    fromWatchTitle: '모니터가 {name} 때문에 내려받고 있습니다. 감시를 엽니다.',
+    watches: '감시별 다운로드',
+    watchesHint:
+      '이 대기열의 노래가 어느 모니터 감시에서 왔는지 보여 줍니다. 열어서 일시 중지하거나 감시를 멈추세요.',
+    watchWaiting: '{count}곡 남음',
+    openWatchOriginal: '원본 열기',
     noSourcesYet: '완료된 다운로드의 출처가 여기에 표시됩니다.',
     importTitle: '라이브러리 가져오기',
     importHint: 'Soundiiz, TuneMyMusic, Exportify 등에서 내보낸 CSV 파일.',
@@ -729,6 +798,22 @@ export default {
     ofBytes: '{done} / {total}',
     longJob:
       '라이브러리 용량이 큰 경우 시간이 걸릴 수 있습니다. 이 페이지를 벗어나도 무방하며, 서버를 재시작해도 대기열을 이어서 작업합니다.',
+    lyricsQuickTitle: '없는 가사',
+    lyricsQuickHint:
+      '가사가 없는 곡을 찾아 바로 가사를 검색합니다. 중간에 고를 필요가 없으며, 다른 업그레이드는 다음 실행으로 남깁니다.',
+    lyricsQuickButton: '스캔하고 가사 찾기',
+    isrc: 'ISRC 추가',
+    isrcHint:
+      'ISRC가 없는 파일에 녹음의 ISRC를 추가합니다. Deezer가 확실히 확인한 경우에만 추가합니다.',
+    isrcQuickTitle: '오래된 노래의 ISRC',
+    isrcQuickHint:
+      'Downtify가 ISRC를 기록하기 전에 받은 노래에는 ISRC가 없습니다. ISRC는 녹음 고유의 코드로, Downtify가 중복을 찾고 음악 휴지통이 파일을 알아보는 데 쓰입니다. Deezer가 확실히 확인한 코드만 추가하며(같은 아티스트와 제목, 길이 차이 3초 이내), 나머지 파일은 그대로 둡니다. 먼저 조회해서 목록을 확인하세요.',
+    isrcLookupButton: 'ISRC 조회 (아무것도 기록하지 않음)',
+    isrcAddButton: 'ISRC 추가',
+    lyricsPlainOnly:
+      '동기화되지 않은 가사만 있음: {count} — 동기화 가사를 찾으면 바뀝니다',
+    lyricsOutcome:
+      '가사 추가: {added} · 찾지 못함: {notFound} · 실패: {failed}',
     completed: '업그레이드 완료',
     skipped: '작업 불필요',
     failed: '실패',
@@ -1149,6 +1234,25 @@ export default {
       '이퀄라이저를 시작할 수 없습니다. 이퀄라이저 없이 재생을 계속합니다.',
   },
   monitor: {
+    select: '선택',
+    selectDone: '완료',
+    selectAllShown: '표시된 항목 모두 선택',
+    selectWatch: '{name} 선택',
+    selectedCount: { one: '{count}개 선택됨', other: '{count}개 선택됨' },
+    selectRangeHint: 'Shift+클릭으로 범위 선택',
+    bulkInterval: '확인 주기 변경…',
+    bulkUpdated: {
+      one: '감시 {count}개 변경됨',
+      other: '감시 {count}개 변경됨',
+    },
+    bulkChecking: {
+      one: '감시 {count}개 확인 중…',
+      other: '감시 {count}개 확인 중…',
+    },
+    bulkStopped: {
+      one: '감시 {count}개 중지됨',
+      other: '감시 {count}개 중지됨',
+    },
     tableColumns: '열',
     resetTableColumns: '열 초기화',
     releaseTypes: '다운로드할 종류',
@@ -1174,6 +1278,47 @@ export default {
     filterAll: '전체',
     filterPlaylists: '재생목록',
     filterArtists: '아티스트',
+    filterWanted: '필요한 곡',
+    wantedSummary: '{releases}에서 {songs} 없음',
+    wantedSongs: { one: '{count}곡', other: '{count}곡' },
+    wantedReleases: { one: '발매작 {count}개', other: '발매작 {count}개' },
+    wantedUpcoming: '발매 예정 {count}개',
+    wantedUnchecked: {
+      one: '아직 확인 안 된 발매작 {count}개',
+      other: '아직 확인 안 된 발매작 {count}개',
+    },
+    wantedCheckAll: '모든 아티스트 확인',
+    wantedDownloadAll: '없는 곡 모두 다운로드',
+    wantedConfirmTitle: {
+      one: '없는 곡 {count}개를 다운로드할까요?',
+      other: '없는 곡 {count}개를 다운로드할까요?',
+    },
+    wantedConfirmUnchecked: {
+      one: '아직 확인 안 된 발매작 {count}개에서 빠진 곡도 함께 받습니다. 정확한 개수를 보려면 먼저 모든 아티스트를 확인하세요.',
+      other:
+        '아직 확인 안 된 발매작 {count}개에서 빠진 곡도 함께 받습니다. 정확한 개수를 보려면 먼저 모든 아티스트를 확인하세요.',
+    },
+    wantedConfirmBody:
+      '없는 곡은 아티스트별로 한 명씩 다운로드됩니다. 대기열에서 진행 상황을 볼 수 있습니다.',
+    wantedStop: '중지',
+    wantedChecking: '확인 중 {done}/{total}: {name}',
+    wantedDownloading: '다운로드 중 {done}/{total}: {name}',
+    wantedFinished: {
+      one: '완료: 아티스트 {count}명',
+      other: '완료: 아티스트 {count}명',
+    },
+    wantedFailed: { one: '{count}개 실패', other: '{count}개 실패' },
+    wantedSkipped: { one: '{count}개 건너뜀', other: '{count}개 건너뜀' },
+    wantedStopped: '중지됨',
+    wantedStoppingDownload: '{name} 이후 중지하는 중…',
+    wantedStoppingCheck: '중지하는 중…',
+    wantedBusy: '전체 확인 또는 전체 다운로드가 이미 실행 중입니다.',
+    wantedNotChecked: '아직 확인 안 됨: {names}',
+    wantedMore: { one: '외 {count}명', other: '외 {count}명' },
+    wantedUncheckedBadge: '아직 확인 안 됨',
+    wantedEmpty: '빠진 곡이 없습니다: 팔로우 중인 모든 아티스트가 완전합니다.',
+    wantedSearch: '아티스트 또는 발매작 검색',
+    wantedAllTypes: '모든 유형',
     filterPaused: '일시정지됨',
     sortAdded: '추가일순',
     sortName: '이름순',
@@ -1204,8 +1349,19 @@ export default {
     urlLabelArtist: '아티스트 링크',
     urlPlaceholderPlaylist:
       'Spotify, Deezer 또는 YouTube Music 재생목록 링크를 붙여넣으세요',
-    urlPlaceholderArtist:
-      'Spotify 또는 YouTube Music 아티스트 링크를 붙여넣으세요',
+    urlPlaceholderArtist: '아티스트 링크를 붙여넣거나 이름을 입력하세요',
+    searchArtists: '검색',
+    searchArtistsFor: '“{name}” 이름의 아티스트',
+    searchArtistsHelp:
+      '사진을 확인하고 확실하지 않으면 프로필을 열어 본 뒤 맞는 아티스트를 팔로우하세요.',
+    userLinkTitle: 'Spotify 사용자 링크이며 아티스트 링크가 아닙니다',
+    userLinkBody:
+      'open.spotify.com/user/…는 청취자 계정으로, 누군가 만든 플레이리스트이지 아티스트의 음악이 아닙니다. Downtify는 이를 감시할 수 없습니다. 아티스트의 발매작은 Spotify에 음악이 있는 모든 아티스트가 가진 아티스트 페이지(open.spotify.com/artist/…)에 있습니다.',
+    userLinkYours: '입력한 링크',
+    userLinkArtist: '아티스트 링크',
+    userLinkHint: '대신 아티스트 이름을 검색해 사진으로 골라 보세요.',
+    userLinkBack: '아니요, 돌아가기',
+    userLinkSearch: '아티스트 찾기',
     watchPlaylist: '재생목록 모니터링',
     watchArtist: '아티스트 모니터링',
     explainerPlaylists:
@@ -1257,7 +1413,7 @@ export default {
     hint: '마지막 확인 시점에 YouTube Music, Deezer, MusicBrainz가 이 아티스트에 대해 보여 주는 모든 발매작과, 각각 라이브러리에 있는 양입니다. 유형을 지켜보지 않아도 받으려면 켜고, 더 받지 않으려면 끄세요(이미 있는 파일은 남습니다).',
     empty: '아직 발매작이 없습니다',
     emptyHint: '다음 확인 후에 표시됩니다.',
-    summary: '완료 {complete} · 일부 {partly} · 받을 예정 {missing}',
+    summary: '완료 {complete} · 일부 {partly} · 아직 없음 {missing}',
     kinds: 'MusicBrainz에서 함께 받기',
     kindsHint:
       'MusicBrainz만 구분하는 발매 종류입니다. 믹스테이프와 사운드트랙은 아티스트 자신의 음악이고, 라이브 앨범·컴필레이션·리믹스는 대부분 같은 곡의 반복입니다. 이 아티스트에만 적용됩니다.',
@@ -1266,6 +1422,33 @@ export default {
     switchedOn: '{name} 켬',
     switchedOff: '{name} 끔',
     noneHere: '여기에는 없습니다.',
+    check: '가진 곡 확인',
+    checking: '트랙 목록 읽는 중: {total}개 중 {done}개…',
+    checkDone: '완료: 트랙 목록 {count}개 읽음, {failed}개 실패',
+    checkHint:
+      '각 발매작의 트랙 목록을 읽어 라이브러리 전체와 비교하므로, 감시 전에 갖고 있던 앨범도 집계됩니다. 아무것도 다운로드하지 않습니다. 큰 아티스트는 느립니다. MusicBrainz는 초당 한 번의 요청만 허용합니다.',
+    tracks: '{name}의 트랙',
+    tracksNotRead: '아직 트랙 목록을 읽지 않았습니다. 가진 곡 확인을 누르세요.',
+    trackHave: '라이브러리에 있음',
+    trackMissing: '없음',
+    downloadMissing: '없는 곡 받기',
+    downloadMissingCount: '없는 곡 {count}개 받기',
+    missingTitle: '없는 곡을 받을까요?',
+    missingBody: {
+      one: '없는 곡 {tracks}곡, 감시가 받는 발매작 {count}개에서. 이미 라이브러리에 있는 곡은 다시 받지 않고 연결합니다.',
+      other:
+        '없는 곡 {tracks}곡, 감시가 받는 발매작 {count}개에서. 이미 라이브러리에 있는 곡은 다시 받지 않고 연결합니다.',
+    },
+    missingBodyUnread: {
+      one: '없는 곡 {tracks}곡, 감시가 받는 발매작 {count}개에서, 그리고 아직 트랙 목록을 읽지 않은 발매작({unread}개)의 곡. 이미 라이브러리에 있는 곡은 다시 받지 않고 연결합니다.',
+      other:
+        '없는 곡 {tracks}곡, 감시가 받는 발매작 {count}개에서, 그리고 아직 트랙 목록을 읽지 않은 발매작({unread}개)의 곡. 이미 라이브러리에 있는 곡은 다시 받지 않고 연결합니다.',
+    },
+    missingConfirm: '받기',
+    missingStarted: '없는 곡을 받는 중: 대기열에서 확인하세요',
+    busy: '이 아티스트를 확인하는 중입니다. 대기열에서 확인하세요.',
+    missingHint:
+      '없는 곡 받기는 켜진 모든 발매작을 살펴 없는 곡을 받습니다. 포함하려면 먼저 발매작을 켜세요.',
     kind: {
       mixtape: '믹스테이프',
       soundtrack: '사운드트랙',
@@ -1285,6 +1468,7 @@ export default {
     filter: {
       all: '전체',
       missing: '받을 예정',
+      upcoming: '발매 예정',
       partly: '일부',
       complete: '완료',
       not_watched: '지켜보지 않음',
@@ -1295,6 +1479,8 @@ export default {
       complete: '완료 · {have}/{total}',
       partly: '일부 · {have}/{total}',
       missing: '받을 예정',
+      upcoming: '{date} 발매 예정',
+      upcomingNoDate: '곧 발매',
       skipped: '감시 전에 발매',
       not_watched: '지켜보지 않음',
       off: '꺼짐',
@@ -1378,6 +1564,9 @@ export default {
       one: '{count}곡이 계속 실패함',
       other: '{count}곡이 계속 실패함',
     },
+    failuresClear: '지우기',
+    failuresClearHint:
+      '설정을 바꾼 뒤 지우기로 목록을 새로 시작하세요. 계속 실패하는 곡은 다음 확인 때 다시 나타납니다.',
     attempts: { one: '{count}회 시도', other: '{count}회 시도' },
     lastTried: '마지막 시도 {when}',
     songsTitle: '이 모니터링의 곡',
@@ -1527,6 +1716,17 @@ export default {
     sourceSoundcloud: 'SoundCloud',
     sourceSoundcloudHint:
       '다른 곳에 없는 업로드, 그리고 SoundCloud 링크의 원래 트랙',
+    sourceNeedsTitle: '소스별로 필요한 것',
+    sourceNeedsSlskd:
+      'slskd: 무료 Soulseek 네트워크에 연결된 자신의 slskd 서버. 구독 없음. 음질은 사람들이 공유한 그대로이며 FLAC나 MP3 320인 경우가 많습니다.',
+    sourceNeedsDeemix:
+      'Deemix: 자신의 Deemix 서버와 자신의 Deezer 계정. 무료 계정은 MP3 128kbps만 받습니다. MP3 320과 FLAC는 유료 Deezer 요금제가 필요합니다. Downtify는 요금제를 제공하거나 우회하지 않습니다.',
+    sourceNeedsYoutube:
+      'YouTube Music과 YouTube: 설정할 것 없음. 오디오는 손실 압축입니다(약 128–160kbps).',
+    sourceNeedsSoundcloud:
+      'SoundCloud: 설정할 것도, 계정도 필요 없습니다. 스트림은 보통 128–160kbps입니다.',
+    sourceNeedsCover:
+      '어느 소스든 파일에 넣는 커버는 Downtify가 곡을 위해 가져온 것입니다(설정 → 다운로드 → 커버 크기).',
     deemixTitle: 'Deemix',
     deemixHint:
       'Download from your own Deemix server. Requested quality requires the matching Deezer entitlement.',
@@ -1594,6 +1794,9 @@ export default {
     slskdInPlace: 'slskd 폴더에 파일 그대로 유지',
     slskdInPlaceHint:
       '켜짐: 원래 위치에서 태그를 작성하고 파일을 유지합니다. 꺼짐: 다운로드 폴더로 복사하고 태그를 작성한 뒤 가져오기가 성공해야 원본을 삭제합니다. 실패하면 원본을 유지합니다.',
+    slskdKeepCover: '파일 자체 커버가 더 크면 유지',
+    slskdKeepCoverHint:
+      '공유 파일에는 앨범의 원본 크기 커버가 들어 있는 경우가 많습니다. 켜면: slskd 파일의 자체 커버가 Downtify가 가져온 커버(Spotify, YouTube Music)보다 크면 그대로 둡니다. 끄면: 가져온 커버로 항상 바꿉니다.',
     youtubeTitle: 'YouTube',
     cookies: 'YouTube 쿠키',
     cookiesHint:
@@ -1607,6 +1810,18 @@ export default {
     cookiesLocked: 'DOWNTIFY_COOKIES_FILE 환경 변수에 의해 지정되었습니다.',
     cookiesEnvMissing:
       '컨테이너 내부에서 해당 파일을 찾을 수 없습니다 — 볼륨 마운트와 경로를 확인하세요.',
+    cookiesCheck: '지금 확인',
+    cookiesChecked: '{when} 확인함',
+    cookiesStateValid: '로그인됨',
+    cookiesStateSignedOut: '로그아웃됨',
+    cookiesStateNoAccount: '계정 없음',
+    cookiesStateError: '확인 실패',
+    cookiesStateUnknown: '아직 확인 안 함',
+    cookiesBotCheck: '{when} 봇 확인',
+    cookiesSignedOutHint:
+      'YouTube가 더 이상 이 쿠키를 받지 않습니다. 시크릿 창에서 YouTube에 로그인해 새 cookies.txt를 내보내고, 창을 닫은 뒤 여기에 파일을 업로드하세요.',
+    cookiesKeepAliveHint:
+      'Downtify는 몇 분마다 이 쿠키를 갱신해 로그인 상태를 유지합니다. 시크릿 창에서 내보낸 뒤 창을 닫으세요. 브라우저 탭을 열어 두면 쿠키가 교체되어 이 사본이 로그아웃됩니다.',
     audioGroup: '오디오',
     format: '포맷',
     formatHint: 'YouTube에서 다운로드한 파일은 이 포맷으로 변환됩니다.',
@@ -1649,17 +1864,27 @@ export default {
     syncDelay: '동기화 조회 간격',
     syncDelayHint:
       '가져온 트랙 묶음(동시 다운로드 수 단위)마다 가사, 커버, 장르를 조회하기 전 잠시 대기합니다. 대규모 폴더 처리 시 API 요청 제한(Rate Limit)을 방지합니다.',
+    idsGroup: '곡 ID',
+    isrc: 'ISRC 코드 쓰기',
+    isrcHint:
+      '새로 받은 곡마다 녹음 하나를 가리키는 ISRC 코드를 저장해, 같은 곡이 다른 이름이어도 알아봅니다. Deezer에서 찾으며 확실하지 않으면 쓰지 않습니다.',
     artGroup: '커버 아트',
     coverArt: '커버 아트 포함',
     coverArtHint:
       '비활성화하면 파일 크기가 줄어들고 다운로드 속도가 빨라집니다.',
     coverMin: '최소 커버 크기',
     coverMinHint:
-      '이보다 작으면 Spotify, iTunes, YouTube Music에 같은 발매의 더 큰 커버를 요청하고 가장 큰 것을 씁니다. 끄면 곡 출처의 커버를 그대로 씁니다.',
+      '위의 커버 크기 목표를 최소 이 값으로 올립니다. 끄면 커버 크기만 목표가 됩니다.',
     coverMinOff: '끔',
+    coverLargest: '항상 가장 큰 커버 사용',
+    coverLargestHint:
+      '다운로드할 때마다 Spotify, iTunes, YouTube Music에 해당 앨범 커버를 요청하고 가장 큰 것을 넣습니다(iTunes에서 1200 px인 경우가 많음). 곡마다 조금 느려집니다. 끄면: 최소 크기보다 작지 않은 한 곡 출처의 커버를 씁니다.',
     coverSize: '커버 해상도',
     coverSizeHint:
-      'YouTube Music 및 Deezer에서 가져오는 커버에 적용됩니다. Spotify 커버는 항상 사용 가능한 최대 해상도로 저장됩니다.',
+      '모든 다운로드의 커버가 목표로 하는 크기입니다. 이보다 작은 커버(Spotify의 최대 크기는 640px)는 Spotify, iTunes, YouTube Music, Deezer에 있는 같은 곡의 가장 큰 커버로 바뀝니다. 커버를 확대하지는 않습니다.',
+    coverSizeRaised:
+      '아래의 최소 커버 크기 때문에 {px}px로 올라가므로 더 작은 크기는 흐리게 표시됩니다.',
+    coverSizeRaisedShort: '최소 커버 크기 때문에 {px}px로 올라감',
     artistCover: '아티스트 사진 자동 다운로드',
     artistCoverHint:
       '아티스트 사진을 .metadata/ArtistImage 경로에 다운로드하며, Navidrome 같은 서비스에서도 활용할 수 있습니다.',
@@ -1684,6 +1909,53 @@ export default {
       '커뮤니티 기반 데이터베이스 — 일반 가사 및 싱크 가사 제공',
     lyricsNetease: 'NetEase Cloud Music (왕이윈)',
     lyricsNeteaseHint: '방대한 데이터베이스 보유, 대부분 싱크 가사 지원',
+    lyricsKugou: 'Kugou Music',
+    lyricsKugouHint: '큰 카탈로그, 싱크 가사',
+    lyricsSyncedOnly: '싱크 가사만',
+    lyricsSyncedOnlyHint:
+      '타임스탬프가 없는 가사는 건너뛰고 다음 제공자에게 묻습니다. 라이브러리 업그레이드도 일반 가사만 있는 곡을 가사 없음으로 셉니다. 그런 곡은 동기화 가사로 바뀌며, 파일 자체의 태그에도 들어갑니다.',
+    ratingsGroup: 'Deezer 기반 별점',
+    ratingsHint:
+      'Deezer에서의 인기도에 따라 Navidrome의 곡에 0~5개의 별을 매깁니다. dztnr과 같은 방식입니다. 별점은 위의 Navidrome 계정에 저장됩니다.',
+    ratingsRepeat: '반복',
+    ratingsRepeatOff: '끔',
+    ratingsRepeatDaily: '매일',
+    ratingsRepeatWeekly: '매주',
+    ratingsRepeatMonthly: '매월',
+    ratingsSkipRated: '별점이 있는 곡 건너뛰기',
+    ratingsSkipRatedHint:
+      '직접 준 별점은 그대로 유지됩니다. 이후 실행에서는 이미 별점이 있는 곡을 모두 건너뜁니다.',
+    ratingsSkipStarred: '즐겨찾기 건너뛰기',
+    ratingsGrading: '평가 기준',
+    ratingsGradingAbsolute: '전 세계 인기도',
+    ratingsGradingArtist: '아티스트의 대표곡 기준',
+    ratingsGradingAlbum: '앨범의 대표곡 기준',
+    ratingsGradingHint:
+      '아티스트의 대표곡과 비교하면 마이너 아티스트의 히트곡도 별 5개를 받을 수 있습니다.',
+    ratingsRun: '지금 실행',
+    ratingsPreview: '미리보기',
+    ratingsStop: '중지',
+    ratingsReading: 'Navidrome 라이브러리를 읽는 중…',
+    ratingsProgress: '{total}곡 중 {done}곡',
+    ratingsLast:
+      '마지막 실행 {when}: {rated}곡 평가, {skipped}곡 건너뜀, Deezer에서 {notFound}곡 찾지 못함',
+    ratingsLastPreview:
+      '미리보기 {when}: {rated}곡 평가 예정, {skipped}곡 건너뜀, Deezer에서 {notFound}곡 찾지 못함',
+    ratingsStopped: '중지됨',
+    ratingsNext: '다음 실행 {when}',
+    ratingsNextSoon: '한 시간 안에 다음 실행',
+    ratingsNever: '아직 실행하지 않음',
+    ratingsFailedDeezer:
+      'Deezer에 연결할 수 없습니다. 이미 준 별점은 그대로 유지됩니다.',
+    ratingsFailedNavidrome: 'Navidrome 오류: {message}',
+    ratingsFailed: '별점 실행에 실패했습니다: {message}',
+    ratingsNotConfigured: '먼저 Navidrome 로그인 정보를 저장하세요.',
+    ratingsBusy: '별점 실행이 이미 진행 중입니다.',
+    ratingsColSong: '곡',
+    ratingsColRank: 'Deezer 인기도',
+    ratingsColStars: '별점',
+    ratingsUnmatched: 'Deezer에서 찾지 못함 ({count})',
+    ratingsFirstRows: '처음 {count}곡을 표시합니다.',
     navidromeTitle: 'Navidrome',
     navidromeHint:
       '다운로드한 재생목록을 Navidrome에 미러링합니다. Navidrome의 음악 폴더에 Downtify 다운로드 경로가 포함되어 있어야 합니다.',
@@ -1746,6 +2018,9 @@ export default {
     navidromeM3uImport: 'Navidrome이 M3U 재생목록을 가져오게 하기',
     navidromeM3uImportHint:
       'Navidrome은 Downtify가 쓰는 각 M3U를 커버가 있는 재생목록으로 만듭니다. 켜면 Downtify가 API로 두 번째 재생목록을 만들지 않습니다.',
+    navidromeScanWhenIdle: '아무도 듣지 않을 때까지 스캔 대기',
+    navidromeScanWhenIdleHint:
+      'Navidrome 앱에서 재생 중이면 Downtify가 다운로드 뒤에 시작하는 스캔이 기다립니다(1분마다 확인). 재생이 끊기지 않으며, 새 노래는 재생이 멈추면 Navidrome에 나타납니다.',
     navidromePublic: 'Navidrome 재생목록 공개 설정',
     primaryLibrary: 'Primary library folder',
     primaryLibraryHint:
@@ -1966,6 +2241,41 @@ export default {
       youtube: 'YouTube',
       link: '링크',
     },
+  },
+  backup: {
+    title: '백업',
+    hint: '설정, 옵션을 포함한 모든 감시, 라이브러리의 모든 곡 목록(아티스트, 제목, 앨범, 출처)을 저장합니다. 음악 파일은 저장하지 않습니다. 파일을 잃어도 복원된 설치는 어떤 곡이 있었는지 알고 다시 다운로드합니다.',
+    schedule: '자동 백업',
+    scheduleHint:
+      '가장 최근 백업 {keep}개를 보관합니다. 새 백업을 쓰고 확인한 다음에야 가장 오래된 백업을 지웁니다.',
+    every0: '끔',
+    every24: '매일',
+    every72: '3일마다',
+    every168: '매주',
+    saved: '저장된 백업',
+    savedHint:
+      'settings.json 옆의 backups 폴더에 보관됩니다. 이 서버 밖에 사본을 두려면 다운로드하세요. 비밀번호와 API 키를 포함한 설정이 그대로 들어 있으니 비공개로 보관하세요.',
+    now: '지금 백업',
+    done: '백업을 저장했습니다',
+    failed: '마지막 백업이 실패했습니다: {error}',
+    none: '아직 백업이 없습니다.',
+    counts: '감시: {watches} · 곡: {songs} · {size}',
+    download: '다운로드',
+    restore: '복원',
+    fromFile: '백업 파일 복원',
+    fromFileHint:
+      '이 Downtify나 다른 Downtify의 백업을 불러옵니다(예: 새로 설치한 곳). 이미 있는 감시는 그대로 둡니다.',
+    part_settings: '설정',
+    part_watches: '감시',
+    part_songs: '라이브러리에 없는 곡 다시 다운로드',
+    chooseFile: '백업 파일 선택…',
+    confirmTitle: '이 백업을 복원할까요?',
+    confirmBody: '복원 항목: {parts}. 현재 설정은 백업의 설정으로 바뀝니다.',
+    restored: '백업을 복원했습니다',
+    resultSettings: '설정을 복원했습니다',
+    resultWatches: '감시 {added}개 추가, {present}개는 이미 있음',
+    resultSongs: '없는 곡 {missing}개, {queued}개 다운로드 대기',
+    resultNoSongs: '없는 곡이 없습니다',
   },
   port: {
     label: '포트',
@@ -2239,6 +2549,10 @@ export default {
     playbackSpeed: '재생 속도',
   },
   confirm: {
+    stopWatchingManyTitle: {
+      one: '감시 {count}개를 중지할까요?',
+      other: '감시 {count}개를 중지할까요?',
+    },
     deleteTrackTitle: '“{title}” 트랙을 삭제하시겠습니까?',
     deleteTracksTitle: '트랙 {count}개를 삭제하시겠습니까?',
     deleteTracksBody:
@@ -2381,10 +2695,155 @@ export default {
       name: '같은 이름',
       songs: '같은 노래',
       manual: '직접 선택',
+      assistant: '어시스턴트가 고름',
     },
     songsCount: '노래: {count}',
     hasCover: '커버 있음',
     keeps: '유지',
+    ai: {
+      title: 'AI 도우미',
+      hint: 'Claude 같은 AI 어시스턴트가 Doctor가 찾은 내용을 함께 살펴보게 하세요. 원하는 것을 쉬운 말로 알려 주면 각 그룹을 설명하고 할 일을 제안하며, 결정은 직접 합니다.',
+      helper: 'AI 도우미',
+      offHint:
+        '꺼짐. 도움이 필요할 때 시작하세요. 2시간 동안 사용하지 않거나 Downtify가 다시 시작되면 저절로 멈춥니다.',
+      connected:
+        '켜짐 · {client} 연결됨 · {minutes}분 동안 사용하지 않으면 멈춤',
+      waitingForAi:
+        '켜짐 · 어시스턴트 연결을 기다리는 중 · {minutes}분 동안 사용하지 않으면 멈춤',
+      start: 'AI 도우미 시작',
+      stop: '멈추기',
+      on: '켜짐',
+      waitingBadge: '검토할 항목 {count}개',
+      whoTitle: '연결할 수 있는 AI 앱',
+      whoCode:
+        '이 서버에 접근할 수 있는 컴퓨터(홈 네트워크 또는 Tailscale)의 Claude Code(터미널 또는 Claude 데스크톱 앱).',
+      whoDesktop:
+        'Claude Desktop, 작은 브리지를 통해 연결(그 컴퓨터에 Node.js 필요).',
+      whoWeb:
+        '웹이나 휴대폰의 Claude: 이 서버가 인터넷에서 HTTPS로 접근 가능한 경우에만(예: Tailscale Funnel, Cloudflare Tunnel).',
+      whoChatgpt:
+        'ChatGPT: 개발자 모드(모든 요금제에 있지는 않음)와 같은 인터넷 접근이 필요합니다.',
+      scope:
+        'Doctor의 모든 항목에서 도와줍니다: 중복 재생목록, 중복 노래(검사가 묶지 않는 리믹스와 다른 버전 포함), 새 Spotify ID로 다시 받은 노래, slskd 잔여 파일, Navidrome. 살펴보고 제안만 하며, 제안을 적용하기 전에는 아무것도 바뀌지 않습니다.',
+      connectTitle: '어시스턴트 연결',
+      clientCode: 'Claude Code',
+      clientDesktop: 'Claude Desktop',
+      clientOther: '다른 앱',
+      codeHint:
+        '터미널에서 한 번 실행한 뒤 Claude Code를 시작하고 아래 첫 메시지를 붙여 넣으세요.',
+      desktopHint:
+        'claude_desktop_config.json(Settings › Developer › Edit Config)에 추가하고 저장한 뒤 Claude Desktop을 다시 시작하세요.',
+      otherHint: 'HTTP로 MCP를 지원하는 앱이라면 이 주소와 헤더를 알려 주세요.',
+      keyHint:
+        '키는 도우미를 시작할 때마다 바뀌고, 멈추면 더 이상 쓸 수 없습니다. 다른 사람과 공유하지 마세요. 도우미가 켜져 있는 동안 키를 가진 사람은 재생목록을 바꿀 수 있습니다.',
+      copy: '복사',
+      copied: '복사됨',
+      copyFailed: '복사하지 못했습니다. 텍스트를 선택해 직접 복사하세요.',
+      firstTitle: '어시스턴트에게 보낼 첫 메시지',
+      firstHint:
+        '시작할 때 이것을 붙여 넣고, 원하는 것을 자신의 말로 알려 주세요.',
+      firstMessage:
+        'downtify-doctor 도구를 사용해서 내 Downtify 라이브러리 정리를 도와줘. get_overview부터 시작하고(검사가 오래됐으면 다시 실행), Doctor가 각 항목에서 무엇을 찾았는지 쉬운 말로 알려 줘. 한 번에 한 항목씩 살펴보면서, 찾은 것마다 무엇이 들어 있는지, 무엇이 다른지, 무엇을 추천하는지 설명해 줘. 아무것도 적용하지 말고 제안만 해 줘. Downtify에서 검토할게.',
+      canApply: '채팅에서 동의한 내용을 어시스턴트가 적용하도록 허용',
+      canApplyHint:
+        '꺼짐: 여기서 적용을 누릅니다. 켜짐: 채팅에서 동의하면 어시스턴트가 그 제안을 직접 적용할 수 있습니다. 도우미를 시작할 때마다 다시 꺼집니다.',
+      suggestionsTitle: '어시스턴트의 제안',
+      none: '아직 제안이 없습니다.',
+      decisionMerge: '합치기',
+      decisionApart: '다른 재생목록',
+      why: '이유:',
+      apply: '적용',
+      dismiss: '버리기',
+      applyAll: '모두 적용 ({count})',
+      clear: '끝난 항목 지우기',
+      state: {
+        queued: '대기 중',
+        waiting: '확인 대기',
+        applying: '적용 중…',
+        applied: '완료',
+        failed: '실패',
+      },
+      decisionKeep: '한 개만 유지',
+      decisionSongsApart: '서로 다른 노래',
+      decisionClean: '잔여 파일 삭제',
+      decisionNavidrome: 'Navidrome 정리',
+      songsTrash:
+        '나머지 사본은 음악 휴지통으로 가며 30일 동안 복원할 수 있습니다. 그 전에 재생목록, 좋아요, 지켜보기가 남기는 사본으로 옮겨집니다.',
+      songsForGood:
+        '음악 휴지통이 꺼져 있어 나머지 사본은 영구 삭제됩니다. 그 전에 재생목록, 좋아요, 지켜보기가 남기는 사본으로 옮겨집니다.',
+      slskdSummary:
+        '파일 {count}개 · {size}, 모두 라이브러리 파일과 같은 오디오',
+      andMore: '외 {count}개',
+      ndRemoved: '삭제됨',
+      ndImport:
+        '“Navidrome이 M3U 재생목록을 가져오게 하기”도 켜서 Downtify가 두 번째 사본을 만들지 않게 합니다.',
+      lockedHint:
+        '수리로 이 항목이 바뀌었습니다. 적용하기 전에 검사를 다시 실행하세요.',
+      section: {
+        playlists: '중복 재생목록',
+        songs: '중복 노래',
+        slskd: 'slskd 잔여 파일',
+        navidrome: 'Navidrome',
+      },
+      ndKind: {
+        import: 'M3U에서 가져옴',
+        downtify: 'Downtify 사본',
+        other: '기타',
+      },
+    },
+    outOfDate: '오래됨',
+    staleHint:
+      '다른 섹션의 복구로 여기서 찾은 내용이 바뀌었을 수 있습니다. 여기서 변경하기 전에 다시 확인하세요.',
+    checkAgain: '다시 확인',
+    coverOf: '{name} 커버',
+    noCover: '커버 없음',
+    decideMerge: '합치기',
+    decideApart: '다른 플레이리스트',
+    decideHint: '그룹마다 선택한 뒤 한 번에 적용하세요.',
+    kindLabel: '보기',
+    kindAll: '전체',
+    applyCounts: '합칠 그룹 {merge}개 · 그대로 둘 그룹 {apart}개',
+    applyChanges: '변경 사항 적용',
+    clearChoices: '선택 지우기',
+    applyTitle: '이 변경 사항을 적용할까요?',
+    applyBody:
+      '{merge}개 그룹을 합치고 {apart}개 그룹은 그대로 둡니다. 원본 M3U 파일은 먼저 백업되고, Navidrome은 마지막에 한 번만 다시 스캔합니다.',
+    appliedMerged: '{count}개 그룹을 합쳤습니다.',
+    appliedApart: '{count}개 그룹은 따로 두며 다시 표시하지 않습니다.',
+    appliedFailed: '합치지 못함: {names}',
+    playlistsKeptApart:
+      '다른 플레이리스트로 표시한 {count}개 그룹은 표시하지 않습니다',
+    folder: {
+      title: 'slskd 폴더에 있는 것',
+      total: '파일 {files}개 · {size}',
+      files: '파일 {count}개',
+      library: '라이브러리 노래',
+      libraryHint: '저장 공간 페이지가 slskd 노래로 세는 것입니다.',
+      leftover: '남은 사본',
+      leftoverHint: '위의 slskd 확인이 라이브러리와 비교하는 사본입니다.',
+      unlisted_audio: 'Downtify가 모르는 오디오',
+      unlisted_audioHint:
+        '가져온 적이 없거나 가져오기에 실패한 뒤 남은 파일입니다. 라이브러리에 없고 다른 곳에서도 세지 않습니다.',
+      other: '기타 파일',
+      otherHint: '커버, 가사 등 노래가 아닌 모든 것.',
+      otherKinds: '종류별 기타 파일:',
+      unlisted_audioList: 'Downtify가 모르는 가장 큰 오디오 파일',
+      otherList: '가장 큰 기타 파일',
+      units:
+        '크기는 1GB를 1024³바이트로 셉니다. 일부 파일 탐색기는 1000³으로 세므로 같은 폴더가 더 크게 보일 수 있습니다.',
+    },
+    badge: {
+      notChecked: '확인 안 함',
+      allGood: '문제 없음',
+      toDelete: '삭제할 항목 {count}개',
+      leftovers: '남은 파일 {size}',
+      off: '꺼짐',
+      unreachable: '연결 안 됨',
+      toFix: '고칠 항목 {count}개',
+      toMerge: '합칠 항목 {count}개',
+      toReview: '검토할 항목 {count}개',
+      songsFound: '노래 {count}곡',
+    },
     mergePlan: '결과: 노래 {songs}곡. 노래의 {overlap}%가 겹칩니다.',
     mergeUnsafe:
       '노래의 {overlap}%만 겹쳐서 서로 다른 재생목록일 수 있습니다. 합치지 않습니다.',
@@ -2474,7 +2933,12 @@ export default {
     relinkedLabel: '같은 노래, 여러 ID',
     relinkedCounts: '노래: {songs} · 여분 파일: {extra}',
     error: {
+      ai_not_running: 'AI 도우미가 꺼져 있습니다. 먼저 시작하세요.',
       doctor_busy: '닥터가 이미 작업 중입니다.',
+      rescan_first:
+        '다른 곳의 복구로 이 섹션이 바뀌었습니다. 먼저 다시 확인하세요.',
+      m3u_twice:
+        '한 플레이리스트가 합칠 그룹 두 곳에 있습니다. 상태 확인을 다시 실행하세요.',
       doctor_failed: '닥터가 오류로 멈췄습니다. 서버 로그를 확인하세요.',
       queue_busy:
         '진행 중인 다운로드가 제때 끝나지 않았습니다. 나중에 다시 시도하세요.',

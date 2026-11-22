@@ -8,23 +8,48 @@ Docker Compose е препоръчителният начин да пускат�
 
 ## Минимална настройка
 
-Създайте файл `docker-compose.yml`:
+Създайте файл `docker-compose.yml`. Той пуска Downtify върху PostgreSQL, като базата данни е в услуга `postgres` до него (вижте [База данни](../database.md)):
 
 ```yaml
 services:
   downtify:
     container_name: downtify
     image: ghcr.io/henriquesebastiao/downtify:latest
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
     ports:
       - '8000:8000'
     volumes:
       - ./downloads:/downloads
       - downtify_data:/data
+    environment:
+      DATABASE_URL: postgresql://downtify:${POSTGRES_PASSWORD:-downtify}@postgres:5432/downtify
+
+  postgres:
+    container_name: downtify-postgres
+    image: 'postgres:17-alpine'
     restart: unless-stopped
+    environment:
+      POSTGRES_USER: downtify
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-downtify}
+      POSTGRES_DB: downtify
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U downtify -d downtify']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
 
 volumes:
   downtify_data:
+  pgdata:
 ```
+
+Задайте `POSTGRES_PASSWORD` във файл `.env` до файла Compose преди първото стартиране (вижте [Променливи на средата](environment-variables.md#database)). За да запазите SQLite файловете, премахнете `DATABASE_URL`, услугата `postgres` и блока `depends_on`.
 
 Стартирайте го:
 
@@ -133,6 +158,7 @@ docker compose up -d
 | Път във файла compose | Предназначение |
 |------------------------------|---------|
 | `./downloads:/downloads` | Изтеглени аудио файлове (локална директория) |
-| `downtify_data:/data` | База данни и настройки на приложението (именуван том) |
+| `downtify_data:/data` | Настройки, кешове и SQLite файловете (именуван том) |
+| `pgdata:/var/lib/postgresql/data` | PostgreSQL базата данни, в услугата `postgres` |
 
 Можете да замените именувания том с локален път (`./data:/data`), ако предпочитате сами да го управлявате.

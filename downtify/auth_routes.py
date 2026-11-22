@@ -23,7 +23,7 @@ from .auth import (
     Principal,
     clean_device_name,
     client_ip,
-    identify,
+    identify_offloop,
     open_principal,
     session_cookie,
     trusted_proxies_from_env,
@@ -262,8 +262,36 @@ async def set_server_port(request: Request) -> dict[str, Any]:
 # ── Status, sign in and out ─────────────────────────────────────────────
 
 
+def _status_reads(
+    store: AuthStore, principal: Optional[Principal], bad: bool
+) -> tuple[
+    Optional[Principal],
+    Optional[dict[str, Any]],
+    Optional[dict[str, Any]],
+    Any,
+]:
+    """The database reads ``GET /api/auth/status`` needs, run on a worker
+    thread: who the request is when sign-in is off, the account, the
+    paired device's name and the signed-out notice."""
+
+    if principal is None and not bad:
+        principal = open_principal(store)
+    user = None
+    device = None
+    if principal is not None:
+        user = store.users.get(principal.user_id)
+        if principal.kind == 'device':
+            found = store.get_device(principal.device_id)
+            device = {
+                'id': principal.device_id,
+                'name': (found or {}).get('name'),
+            }
+    notice = None if principal or store.auth_disabled else store.users.notice()
+    return principal, user, device, notice
+
+
 @router.get('/api/auth/status')
-def auth_status(request: Request) -> dict[str, Any]:
+async def auth_status(request: Request) -> dict[str, Any]:
     """Who this request is signed in as.
 
     ``signed_in`` is what the web app checks before showing the sign-in
@@ -276,19 +304,10 @@ def auth_status(request: Request) -> dict[str, Any]:
     """
 
     store = _store()
-    principal, bad = identify(request.scope, store, _ip(request))
-    if principal is None and not bad:
-        principal = open_principal(store)
-    device = None
-    user = None
-    if principal is not None:
-        user = store.users.get(principal.user_id)
-        if principal.kind == 'device':
-            found = store.get_device(principal.device_id)
-            device = {
-                'id': principal.device_id,
-                'name': (found or {}).get('name'),
-            }
+    principal, bad = await identify_offloop(request.scope, store, _ip(request))
+    principal, user, device, notice = await asyncio.to_thread(
+        _status_reads, store, principal, bad
+    )
     return {
         'require_sign_in': not store.auth_disabled,
         'auth_disabled': store.auth_disabled,
@@ -304,9 +323,7 @@ def auth_status(request: Request) -> dict[str, Any]:
         'via': principal.kind if principal else None,
         'user': user,
         'device': device,
-        'notice': None
-        if principal or store.auth_disabled
-        else store.users.notice(),
+        'notice': notice,
     }
 
 
@@ -522,13 +539,14 @@ def list_devices(request: Request) -> list[dict[str, Any]]:
 @router.patch('/api/auth/devices/{device_id}')
 async def rename_device(device_id: str, request: Request) -> dict[str, Any]:
     store = _store()
-    _own_device(request, device_id)
+    await asyncio.to_thread(_own_device, request, device_id)
     payload = await _json(request)
     if not await asyncio.to_thread(
         store.rename_device, device_id, str(payload.get('name') or '')
     ):
         raise HTTPException(status_code=404, detail='Device not found')
-    return store.get_device(device_id) or {}
+    found = await asyncio.to_thread(store.get_device, device_id)
+    return found or {}
 
 
 @router.delete('/api/auth/devices/{device_id}')
@@ -537,7 +555,7 @@ async def revoke_device(device_id: str, request: Request) -> dict[str, Any]:
     WebSocket is closed."""
 
     store = _store()
-    device = _own_device(request, device_id)
+    device = await asyncio.to_thread(_own_device, request, device_id)
     if not await asyncio.to_thread(store.revoke_device, device_id):
         raise HTTPException(status_code=404, detail='Device not found')
     await api.state.connections.close_device(device_id)
@@ -620,7 +638,9 @@ async def pair(request: Request) -> dict[str, Any]:
     owner = (
         api.state.pairing.owner(pairing_id) if pairing_id is not None else None
     )
-    user = store.users.get(owner) if owner else None
+    user = None
+    if owner:
+        user = await asyncio.to_thread(store.users.get, owner)
     if pairing_id is None or user is None:
         api.state.pair_limiter.fail(ip)
         logger.warning('Pairing: wrong or expired code from {}', ip)

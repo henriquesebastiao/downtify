@@ -57,10 +57,8 @@
             ><template v-else>{{ artist.name }}</template></template
           >
         </template>
-        <template v-else>{{ artists }}</template><span
-          v-if="song.album_name"
-          class="lg:hidden"
-        >
+        <template v-else>{{ artists }}</template
+        ><span v-if="song.album_name" class="lg:hidden">
           ·
           <RouterLink
             v-if="albumTo"
@@ -68,9 +66,8 @@
             class="hover:text-fg hover:underline"
             @click.stop
             @dblclick.stop
-            >{{ song.album_name }}</RouterLink><template v-else>{{
-            song.album_name
-          }}</template></span
+            >{{ song.album_name }}</RouterLink
+          ><template v-else>{{ song.album_name }}</template></span
         >
       </p>
     </div>
@@ -81,9 +78,8 @@
         class="hover:text-fg hover:underline"
         @click.stop
         @dblclick.stop
-        >{{ song.album_name }}</RouterLink><template v-else>{{
-        song.album_name
-      }}</template>
+        >{{ song.album_name }}</RouterLink
+      ><template v-else>{{ song.album_name }}</template>
     </span>
     <span
       class="tabular hidden w-12 text-right text-[13px] text-muted sm:block"

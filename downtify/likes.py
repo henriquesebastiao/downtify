@@ -28,11 +28,13 @@ from typing import Any, Optional
 from loguru import logger
 
 from . import m3u
+from .db.config import Dialect
+from .db.core import Database, as_database
+from .db.dialect import column_names, insertion_order_col
 from .library_cache_keys import file_content_key
 from .library_catalog import LibraryContext
 from .library_paths import locate_library_file
 from .library_reconcile import build_disk_content_index
-from .sqlite_utils import connect_sqlite
 
 #: The M3U's name: reserved, so no downloaded playlist can write over it.
 LIKED_PLAYLIST_NAME = 'Downtify Liked Songs'
@@ -70,15 +72,23 @@ class LikedTracks:
     never show up in another user's library folder.
     """
 
-    def __init__(self, db_path: Path) -> None:
-        self._path = str(db_path)
+    def __init__(self, path_or_db: str | Path | Database) -> None:
+        self.db = as_database(path_or_db, 'library')
+        if isinstance(path_or_db, Database):
+            self._path = str(self.db.path) if self.db.path else None
+        else:
+            self._path = str(path_or_db)
         self._init_db()
 
     def _connect(self):
-        return connect_sqlite(self._path, row_factory=True)
+        return self.db.connect()
 
     def _init_db(self) -> None:
-        with self._connect() as conn:
+        # On PostgreSQL the library_b migration already created the final
+        # table (with its ``id`` column) and there is nothing to rebuild.
+        if self.db.dialect is not Dialect.SQLITE:
+            return
+        with self.db.transaction(lock=True) as conn:
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS liked_tracks (
                     stored_path TEXT PRIMARY KEY,
@@ -89,41 +99,34 @@ class LikedTracks:
                     liked_at TEXT NOT NULL
                 )
             """)
-            columns = {
-                row[1]
-                for row in conn.execute('PRAGMA table_info(liked_tracks)')
-            }
-            if 'user_id' not in columns:
-                conn.execute('BEGIN IMMEDIATE')
-                try:
-                    conn.execute("""
-                        CREATE TABLE liked_tracks_new (
-                            stored_path TEXT NOT NULL,
-                            user_id INTEGER NOT NULL DEFAULT 0,
-                            content_key TEXT NOT NULL DEFAULT '',
-                            title TEXT NOT NULL DEFAULT '',
-                            artist TEXT NOT NULL DEFAULT '',
-                            duration REAL NOT NULL DEFAULT 0,
-                            liked_at TEXT NOT NULL,
-                            PRIMARY KEY (user_id, stored_path)
-                        )
-                    """)
-                    conn.execute("""
-                        INSERT INTO liked_tracks_new
-                        (stored_path, user_id, content_key, title, artist,
-                         duration, liked_at)
-                        SELECT stored_path, 0, content_key, title, artist,
-                               duration, liked_at
-                        FROM liked_tracks ORDER BY rowid
-                    """)
-                    conn.execute('DROP TABLE liked_tracks')
-                    conn.execute(
-                        'ALTER TABLE liked_tracks_new RENAME TO liked_tracks'
+            if 'user_id' not in column_names(conn, 'liked_tracks'):
+                # Rebuild to the per-user primary key. The transaction
+                # (BEGIN IMMEDIATE, COMMIT or ROLLBACK) is the session's.
+                order = insertion_order_col(conn.dialect)
+                conn.execute("""
+                    CREATE TABLE liked_tracks_new (
+                        stored_path TEXT NOT NULL,
+                        user_id INTEGER NOT NULL DEFAULT 0,
+                        content_key TEXT NOT NULL DEFAULT '',
+                        title TEXT NOT NULL DEFAULT '',
+                        artist TEXT NOT NULL DEFAULT '',
+                        duration REAL NOT NULL DEFAULT 0,
+                        liked_at TEXT NOT NULL,
+                        PRIMARY KEY (user_id, stored_path)
                     )
-                    conn.execute('COMMIT')
-                except Exception:
-                    conn.execute('ROLLBACK')
-                    raise
+                """)
+                conn.execute(f"""
+                    INSERT INTO liked_tracks_new
+                    (stored_path, user_id, content_key, title, artist,
+                     duration, liked_at)
+                    SELECT stored_path, 0, content_key, title, artist,
+                           duration, liked_at
+                    FROM liked_tracks ORDER BY {order}
+                """)
+                conn.execute('DROP TABLE liked_tracks')
+                conn.execute(
+                    'ALTER TABLE liked_tracks_new RENAME TO liked_tracks'
+                )
 
     def like(
         self,
@@ -223,21 +226,23 @@ class LikedTracks:
         return {int(row['user_id']): int(row['n']) for row in rows}
 
     def rows(self, user_id: Optional[int] = None) -> list[dict[str, Any]]:
+        # ``rowid`` on SQLite, the ``id`` identity column on PostgreSQL.
+        order = insertion_order_col(self.db.dialect)
         with self._connect() as conn:
             if user_id is None:
                 found = conn.execute(
-                    """SELECT stored_path, user_id, content_key, title,
-                              artist, duration, liked_at
-                       FROM liked_tracks
-                       ORDER BY liked_at DESC, rowid DESC"""
+                    f"""SELECT stored_path, user_id, content_key, title,
+                               artist, duration, liked_at
+                        FROM liked_tracks
+                        ORDER BY liked_at DESC, {order} DESC"""
                 ).fetchall()
             else:
                 found = conn.execute(
-                    """SELECT stored_path, user_id, content_key, title,
-                              artist, duration, liked_at
-                       FROM liked_tracks
-                       WHERE user_id = ?
-                       ORDER BY liked_at DESC, rowid DESC""",
+                    f"""SELECT stored_path, user_id, content_key, title,
+                               artist, duration, liked_at
+                        FROM liked_tracks
+                        WHERE user_id = ?
+                        ORDER BY liked_at DESC, {order} DESC""",
                     (int(user_id),),
                 ).fetchall()
         return [
@@ -289,7 +294,20 @@ class LikedTracks:
         args: tuple[Any, ...] = (
             (new_path,) if user_id is None else (new_path, int(user_id))
         )
-        with self._connect() as conn:
+        old_args: tuple[Any, ...] = (
+            (old_path,) if user_id is None else (old_path, int(user_id))
+        )
+        # Check-then-write: one write transaction (BEGIN IMMEDIATE on
+        # SQLite). On PostgreSQL the old rows are locked first so a
+        # concurrent unlike or repoint of the same like waits its turn.
+        lock = ' FOR UPDATE' if self.db.dialect is Dialect.POSTGRES else ''
+        with self.db.transaction(lock=True) as conn:
+            conn.execute(
+                'SELECT 1 FROM liked_tracks WHERE stored_path = ? '
+                + scope
+                + lock,
+                old_args,
+            ).fetchone()
             if conn.execute(
                 'SELECT 1 FROM liked_tracks WHERE stored_path = ? ' + scope,
                 args,
@@ -297,21 +315,13 @@ class LikedTracks:
                 # Already liked there: the old row is just a duplicate.
                 conn.execute(
                     'DELETE FROM liked_tracks WHERE stored_path = ? ' + scope,
-                    (
-                        (old_path,)
-                        if user_id is None
-                        else (old_path, int(user_id))
-                    ),
+                    old_args,
                 )
                 return True
             cur = conn.execute(
                 'UPDATE liked_tracks SET stored_path = ? '
                 'WHERE stored_path = ? ' + scope,
-                (
-                    (new_path, old_path)
-                    if user_id is None
-                    else (new_path, old_path, int(user_id))
-                ),
+                (new_path,) + old_args,
             )
             return cur.rowcount > 0
 

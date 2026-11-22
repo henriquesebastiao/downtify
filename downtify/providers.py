@@ -7,7 +7,10 @@ import os
 import re
 import time
 import zlib
+from collections.abc import Iterable, Iterator
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import contextmanager
+from contextvars import ContextVar
 from datetime import datetime, timezone
 from difflib import SequenceMatcher
 from threading import Lock
@@ -226,17 +229,24 @@ def _act_span(
     return None
 
 
-DEFAULT_COVER_RESOLUTION = 600
+DEFAULT_COVER_RESOLUTION = 1200
 
 # Mutable module-level target, set from Settings (see
 # set_cover_resolution) so every function below that resolves a YouTube
 # Music thumbnail through _upgrade_thumbnail picks it up without each of
 # them needing to accept and thread a resolution parameter through their
-# own callers. Verified against the live CDN that requesting larger
-# than the hardcoded 600px default actually returns more real detail
-# (not just upscaling) up to roughly 1200-1400px depending on the
-# source image.
+# own callers. Verified against the live CDN: YouTube Music resizes the
+# release's master image to the size asked for, and sends the master
+# itself - 1400 to 2400px for the releases measured - when asked for
+# more, never an enlarged copy.
 _cover_resolution = DEFAULT_COVER_RESOLUTION
+# The "Minimum cover size" setting (0 = off). A first request smaller
+# than it would only be thrown away for a larger cover from another
+# source (downloader._download_cover_meeting), so the first request asks
+# for at least this much - up to _MAX_FIRST_REQUEST, the largest master
+# YouTube Music or iTunes has been seen to keep.
+_cover_minimum = 0
+_MAX_FIRST_REQUEST = 3000
 
 
 def set_cover_resolution(pixels: int) -> None:
@@ -252,13 +262,23 @@ def set_cover_resolution(pixels: int) -> None:
     _cover_resolution = pixels
 
 
+def set_cover_minimum(pixels: int) -> None:
+    """Set the "Minimum cover size" (0 = off) the cover size is raised
+    to (see :func:`cover_resolution`)."""
+
+    global _cover_minimum
+    _cover_minimum = max(0, int(pixels or 0))
+
+
 def cover_resolution() -> int:
-    """The currently configured cover-size target (see
-    set_cover_resolution). downtify.deezer reads this too, picking the
-    smallest of Deezer's four fixed image sizes that still meets it,
-    since a Deezer image can't be resized by editing its URL the way a
-    YouTube Music thumbnail can (see deezer._cover_from_images)."""
-    return _cover_resolution
+    """The cover size to ask YouTube Music and Deezer for: the "Cover
+    size" setting (see set_cover_resolution), raised to the minimum
+    cover size when that is larger (capped at _MAX_FIRST_REQUEST).
+    downtify.deezer reads this too, picking the smallest of Deezer's four
+    fixed image sizes that still meets it, since a Deezer image can't be
+    resized by editing its URL the way a YouTube Music thumbnail can (see
+    deezer._cover_from_images)."""
+    return max(_cover_resolution, min(_cover_minimum, _MAX_FIRST_REQUEST))
 
 
 def _resize_thumbnail(url: str, size: int) -> str:
@@ -269,10 +289,16 @@ def _resize_thumbnail(url: str, size: int) -> str:
     return re.sub(r'=w\d+-h\d+.*$', f'=w{size}-h{size}-l90-rj', url)
 
 
+def resize_thumbnail(url: str, size: int) -> str:
+    """*url* (a YouTube Music cover) asked for at *size* pixels."""
+
+    return _resize_thumbnail(url, size)
+
+
 def _upgrade_thumbnail(url: str) -> str:
     """Replace the size suffix on a YT thumbnail with a larger one."""
 
-    return _resize_thumbnail(url, _cover_resolution)
+    return _resize_thumbnail(url, cover_resolution())
 
 
 # Playlist (not per-track) cover art always targets this size, independent
@@ -1376,6 +1402,33 @@ _YOUTUBE_MAX_DURATION_DIFF = 30
 _YOUTUBE_SEARCH_LIMIT = 10
 
 
+#: Sources (YouTube video ids, SoundCloud track URLs) the match being
+#: made must not pick: uploads found wrong for this song before (see
+#: ``downtify/download_sources.py``). Set with :func:`excluding_sources`.
+_EXCLUDED_SOURCES: ContextVar[frozenset[str]] = ContextVar(
+    'downtify_excluded_sources', default=frozenset()
+)
+
+
+@contextmanager
+def excluding_sources(sources: Iterable[str]) -> Iterator[None]:
+    """Within the block, no matcher picks any of *sources*."""
+
+    token = _EXCLUDED_SOURCES.set(
+        frozenset(str(s) for s in sources if s) | _EXCLUDED_SOURCES.get()
+    )
+    try:
+        yield
+    finally:
+        _EXCLUDED_SOURCES.reset(token)
+
+
+def excluded_source(source: Any) -> bool:
+    """Whether *source* was rejected for the song being matched."""
+
+    return bool(source) and str(source) in _EXCLUDED_SOURCES.get()
+
+
 def find_match(
     song: dict[str, Any],
 ) -> tuple[Optional[str], Optional[dict[str, Any]]]:
@@ -1607,6 +1660,7 @@ def _search_youtube_music_match(
         # the artist (title collisions across unrelated artists happen).
         if (
             result.get('videoId')
+            and not excluded_source(result.get('videoId'))
             and (not title or _titles_match(title, result.get('title')))
             and _artists_overlap(artists, result)
         ):
@@ -1991,7 +2045,7 @@ def find_match_soundcloud(song: dict[str, Any]) -> Optional[str]:
     for entry in (info or {}).get('entries') or []:
         if isinstance(entry, dict):
             score = _soundcloud_candidate_score(title, artist, duration, entry)
-            if score is not None:
+            if score is not None and not excluded_source(score[1]):
                 candidates.append(score)
     if not candidates:
         return None
@@ -2817,7 +2871,7 @@ def _find_match_via_album(
         if not isinstance(track, dict):
             continue
         video_id = _row_video_id(track)
-        if not video_id:
+        if not video_id or excluded_source(video_id):
             continue
         if _titles_match(title, track.get('title')):
             logger.info(
@@ -3085,7 +3139,7 @@ def _pick_best(
     best: Optional[dict[str, Any]] = None
     best_score: float = float('inf')
     for result in results:
-        if not result.get('videoId'):
+        if not result.get('videoId') or excluded_source(result.get('videoId')):
             continue
 
         candidate_title = (result.get('title') or '').lower()

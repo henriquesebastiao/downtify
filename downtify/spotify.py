@@ -233,7 +233,35 @@ def _embed_row_track(item: dict[str, Any]) -> Optional[dict[str, Any]]:
     return item if isinstance(item, dict) else None
 
 
+#: Spotify publishes an album cover at 640, 300 and 64 px under one image
+#: id, the size picked by a fixed prefix - so any of them can be pointed
+#: at the 640 px one without another request.
+_SMALL_COVER_PREFIXES = ('ab67616d00001e02', 'ab67616d00004851')
+LARGEST_COVER_PREFIX = 'ab67616d0000b273'
+#: Spotify's image hosts: the older i.scdn.co, and the
+#: image-cdn-<region>.spotifycdn.com ones its embeds now return.
+_IMAGE_URL = re.compile(
+    r'^https?://(?:i\.scdn\.co|image-cdn-[a-z0-9]+\.spotifycdn\.com)/image/'
+)
+
+
+def largest_cover_url(url: str) -> str:
+    """*url* (a Spotify album cover) at the largest size Spotify publishes;
+    anything else comes back unchanged."""
+
+    if not url or not _IMAGE_URL.match(url):
+        return url
+    for prefix in _SMALL_COVER_PREFIXES:
+        if prefix in url:
+            return url.replace(prefix, LARGEST_COVER_PREFIX)
+    return url
+
+
 def _largest_image(sources: list[dict[str, Any]]) -> str:
+    """The largest of *sources* - an album cover always at its 640 px size
+    (:func:`largest_cover_url`), even when the list offers only smaller
+    ones: an embed sometimes lists just the 300 and 64 px variants."""
+
     if not sources:
         return ''
     sized = [s for s in sources if isinstance(s, dict) and s.get('url')]
@@ -247,7 +275,7 @@ def _largest_image(sources: list[dict[str, Any]]) -> str:
         key=lambda s: int(s.get('width') or s.get('maxWidth') or 0),
         reverse=True,
     )
-    return sized[0]['url']
+    return largest_cover_url(sized[0]['url'])
 
 
 def _cover_url(entity: dict[str, Any]) -> str:

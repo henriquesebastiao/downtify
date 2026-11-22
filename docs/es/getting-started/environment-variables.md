@@ -16,6 +16,25 @@ Todas las variables de entorno son opcionales. Downtify funciona de inmediato si
 | `DOWNTIFY_LOG_LEVEL` | `info` | Nivel de log de la aplicación (`debug`, `info`, `warning`, …). |
 | `TZ` | `UTC` | Zona horaria local (nombre IANA, p. ej. `America/Sao_Paulo`), usada para interpretar `DOWNTIFY_MONITOR_SYNC_TIME` más abajo. |
 
+## Base de datos
+
+De forma predeterminada, Downtify guarda sus datos en archivos SQLite bajo `DATABASE_DIR`. Define `DATABASE_URL` para usar PostgreSQL; la página [Base de datos](../database.md) explica la configuración, las migraciones y qué se guarda y dónde.
+
+| Variable | Valor por defecto | Descripción |
+|----------|---------|-------------|
+| `DATABASE_URL` | _(sin definir)_ | URL de conexión a PostgreSQL, `postgresql://usuario:contraseña@host:5432/nombre_bd` (`postgres://` también funciona). Sin definir: SQLite. Definida: los almacenes que serían archivos SQLite (biblioteca, monitor, cuentas, actividad, doctor) usan PostgreSQL. Un valor con cualquier otro esquema se rechaza. La URL nunca aparece en los mensajes de error. |
+| `DB_POOL_MIN` | `2` | Conexiones que el pool de PostgreSQL mantiene abiertas. Debe ser `0` o más. |
+| `DB_POOL_MAX` | `20` | Máximo de conexiones que abre el pool de PostgreSQL. Debe ser al menos `1` y al menos `DB_POOL_MIN`. |
+| `DB_POOL_TIMEOUT` | `10` | Segundos que una petición espera una conexión libre antes de fallar. |
+| `DB_SEARCH_PATH` | _(sin definir)_ | Esquema de PostgreSQL que se usa, para una base de datos compartida con otras aplicaciones. Solo un identificador simple: letras, dígitos y guiones bajos, sin empezar por un dígito. Sin definir: el valor por defecto del servidor (`public`). |
+| `DATABASE_DIR` | `/data` | Directorio para ajustes, cachés y los archivos SQLite. Sigue usándose con PostgreSQL, para todo lo que no sea una tabla de base de datos. |
+| `POSTGRES_PASSWORD` | `downtify` | Solo Docker Compose (lo lee el `docker-compose.yml` del repositorio, no el servidor): la contraseña del usuario `downtify` en el servicio `postgres` incluido, que también usa `DATABASE_URL`. Ponla en un archivo `.env` junto al archivo Compose antes del primer arranque. PostgreSQL la aplica solo al crear su volumen de datos, así que cambiarla después no cambia la contraseña de una base de datos existente. |
+
+```yaml
+environment:
+  - DATABASE_URL=postgresql://downtify:change-me@postgres:5432/downtify
+```
+
 ## Monitor de playlists
 
 | Variable | Valor por defecto | Descripción |
@@ -65,7 +84,7 @@ Consulta [Papelera de música](../features/music-trash.md). Desactivada salvo qu
 
 ## Comprobación de estado
 
-La imagen incluye un [`HEALTHCHECK` de Docker](https://docs.docker.com/reference/dockerfile/#healthcheck) integrado — no hace falta un `--health-cmd` propio. Consulta `GET /api/health` en el puerto del propio contenedor cada 30 segundos (timeout de 5 segundos, 20 segundos de margen en el arranque, 3 reintentos antes de marcar el contenedor como no saludable). `docker ps` y `docker inspect` muestran el resultado, y herramientas como el `condition: service_healthy` de Compose o Watchtower pueden actuar en consecuencia.
+La imagen incluye un [`HEALTHCHECK` de Docker](https://docs.docker.com/reference/dockerfile/#healthcheck) integrado — no hace falta un `--health-cmd` propio. Consulta `GET /api/health` en el puerto del propio contenedor cada 30 segundos (timeout de 5 segundos, 20 segundos de margen en el arranque, 3 reintentos antes de marcar el contenedor como no saludable). `docker ps` y `docker inspect` muestran el resultado, y herramientas como el `condition: service_healthy` de Compose o Watchtower pueden actuar en consecuencia. Con PostgreSQL, la comprobación también falla mientras no se pueda acceder a la base de datos (`503`, consulta [`GET /api/health`](../api-reference.md#get-apihealth)).
 
 | Variable | Valor por defecto | Descripción |
 |----------|---------|-------------|
@@ -86,6 +105,7 @@ YouTube desafía periódicamente a los descargadores automatizados. Estas variab
 | `DOWNTIFY_YT_PLAYER_CLIENTS` | `ios,android,web_embedded,mweb,web,tv` | Lista, separada por comas, de los clientes de reproductor de yt-dlp que se probarán, en orden. La lista por defecto de Downtify ya favorece clientes que funcionan sin un runtime de JavaScript. Cámbiala solo si sabes que un cliente concreto está bloqueado. |
 | `DOWNTIFY_YT_PO_TOKEN` | _(sin definir)_ | Tokens Proof-of-Origin para yt-dlp, separados por comas, cada uno con la forma `<client>.<context>+<token>` (p. ej. `mweb.gvs+ABC123`). Solo hacen falta si YouTube empieza a exigir PO Tokens para los clientes que usas. |
 | `DOWNTIFY_COOKIES_FILE` | _(sin definir)_ | Ruta de un `cookies.txt` en formato Netscape **dentro del contenedor**. Permite a yt-dlp autenticarse como una sesión real de navegador — necesario para canciones explícitas/con restricción de edad y siempre que YouTube imponga un muro de inicio de sesión. Tiene prioridad sobre un archivo subido en la interfaz web y deja esa sección de la interfaz de solo lectura. Consulta [Cookies de YouTube](../features/youtube-cookies.md). |
+| `DOWNTIFY_COOKIES_REFRESH_MINUTES` | `15` | Cada cuántos minutos (`5`–`1440`) el mantenimiento de cookies rota y guarda las cookies de sesión de YouTube. `0` lo desactiva. Renueva el archivo subido o el de `DOWNTIFY_COOKIES_FILE` (cuando se puede escribir). Consulta [Mantenerlas funcionando](../features/youtube-cookies.md#keeping-them-working). |
 | `DOWNTIFY_COOKIES_FROM_BROWSER` | _(sin definir)_ | Nombre del navegador del que extraer las cookies (p. ej. `chrome`, `firefox`). Requiere que el almacén de cookies del navegador sea accesible dentro del contenedor, así que rara vez se puede usar en Docker. |
 
 ::: tip Probablemente no las necesites
@@ -103,7 +123,7 @@ services:
     volumes:
       - ./downloads:/downloads
       - downtify_data:/data
-      - ./cookies.txt:/cookies.txt:ro
+      - ./cookies.txt:/cookies.txt
     environment:
       - DOWNTIFY_FORCE_IPV4=1
       - DOWNTIFY_COOKIES_FILE=/cookies.txt

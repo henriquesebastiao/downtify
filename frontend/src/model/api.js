@@ -4,7 +4,9 @@ import config from '/src/config.js'
 
 import { v4 as uuidv4 } from 'uuid'
 
+import { restoreParams } from '/src/lib/backups'
 import { coverURL, fileURL, saveName } from '/src/lib/paths'
+import { seedSeenVersion } from '/src/lib/whatsNew'
 
 const API = axios.create({
   baseURL: `${config.PROTOCOL}//${config.BACKEND}:${config.PORT}${config.BASEURL}`,
@@ -47,7 +49,15 @@ function onForbidden(fn) {
   return () => forbiddenListeners.delete(fn)
 }
 
-getVersion()
+// "What's new" starts from the version this browser last ran, before
+// getVersion() overwrites it (lib/whatsNew.js).
+try {
+  seedSeenVersion(localStorage)
+} catch {
+  // No storage: the dialog just never shows.
+}
+// The running version, once known ('0.0.0' when it couldn't be read).
+const versionReady = getVersion()
 
 // ── WebSocket: progress events, reconnecting with backoff ────────────
 const listeners = new Set()
@@ -102,6 +112,15 @@ function ws_onmessage(fn) {
 function ws_onerror(fn) {
   errorListeners.add(fn)
   return () => errorListeners.delete(fn)
+}
+
+// Why downloads didn't come from slskd (admins), and starting it over.
+function getSlskdMisses() {
+  return API.get('/api/slskd/misses')
+}
+
+function resetSlskdMisses() {
+  return API.delete('/api/slskd/misses')
 }
 
 function getVersion() {
@@ -457,6 +476,41 @@ function deleteDownloadsBatch(files) {
 // folder instead of being buffered in memory by fetch.
 function prepareLibraryArchive(files) {
   return API.post('/api/library/archive', { files })
+}
+
+// ── Backups (Settings > Server; downtify/backup_routes.py) ──────────
+function getBackups() {
+  return API.get('/api/backups')
+}
+
+function createBackup() {
+  return API.post('/api/backups', null, { timeout: 0 })
+}
+
+/** `hours`: 0 (off), 24, 72 or 168. */
+function setBackupSchedule(hours) {
+  return API.put('/api/backups/schedule', { interval_hours: Number(hours) })
+}
+
+function backupDownloadURL(name) {
+  return `/api/backups/${encodeURIComponent(name)}`
+}
+
+/** `parts`: `{settings, watches, songs}` - what to bring back. */
+function restoreBackup(name, parts) {
+  return API.post(`/api/backups/${encodeURIComponent(name)}/restore`, null, {
+    params: restoreParams(parts),
+    timeout: 0,
+  })
+}
+
+// The backup file is sent as the raw request body, like cookies.txt.
+function restoreBackupFile(file, parts) {
+  return API.post('/api/backups/restore', file, {
+    params: restoreParams(parts),
+    headers: { 'Content-Type': 'application/octet-stream' },
+    timeout: 0,
+  })
 }
 
 function libraryArchiveURL(token) {
@@ -929,6 +983,19 @@ function scanLibraryUsage(refresh = false) {
   return API.get('/api/library/usage/scan', { params: { refresh } })
 }
 
+// ── Navidrome ratings from Deezer (admins) ────────────────────────────
+function navidromeRatingsStatus() {
+  return API.get('/api/navidrome/ratings')
+}
+
+function navidromeRatingsRun(body) {
+  return API.post('/api/navidrome/ratings/run', body)
+}
+
+function navidromeRatingsCancel() {
+  return API.post('/api/navidrome/ratings/cancel')
+}
+
 // ── Doctor (admins): find and repair what older versions left ────────
 function doctorStatus() {
   return API.get('/api/doctor')
@@ -964,6 +1031,15 @@ function doctorPreview(paths) {
   return API.post('/api/doctor/playlists/preview', { paths })
 }
 
+// Duplicate playlists decided on the page: { merge: [[paths]], apart: [[paths]] }.
+function doctorPlaylistsApply(payload) {
+  return API.post('/api/doctor/playlists/apply', payload)
+}
+
+function doctorPlaylistsApartReset() {
+  return API.post('/api/doctor/playlists/apart/reset')
+}
+
 function doctorMerge(paths) {
   return API.post('/api/doctor/playlists/merge', { paths })
 }
@@ -985,6 +1061,35 @@ function doctorDuplicatesKeepReset() {
 
 function doctorNavidromeRepair(payload) {
   return API.post('/api/doctor/navidrome/repair', payload)
+}
+
+// The Doctor's AI helper (downtify/doctor_ai_routes.py).
+function doctorAiStatus() {
+  return API.get('/api/doctor/ai')
+}
+
+function doctorAiStart() {
+  return API.post('/api/doctor/ai/start')
+}
+
+function doctorAiStop() {
+  return API.post('/api/doctor/ai/stop')
+}
+
+function doctorAiSettings(payload) {
+  return API.put('/api/doctor/ai/settings', payload)
+}
+
+function doctorAiApply(ids) {
+  return API.post('/api/doctor/ai/apply', { ids })
+}
+
+function doctorAiDismiss(ids) {
+  return API.post('/api/doctor/ai/dismiss', { ids })
+}
+
+function doctorAiClear() {
+  return API.post('/api/doctor/ai/clear')
 }
 
 function writePlaylistM3u(payload) {
@@ -1037,6 +1142,11 @@ function deleteCookies() {
   return API.delete('/api/cookies')
 }
 
+// Runs the cookie keep-alive now and answers with the status (health).
+function checkCookies() {
+  return API.post('/api/cookies/check')
+}
+
 function getSettings() {
   return API.get('/api/settings', { params: { client_id: sessionID } })
 }
@@ -1080,6 +1190,8 @@ function editMetadata(trackIds, changes, revisions) {
 }
 
 export default {
+  getSlskdMisses,
+  resetSlskdMisses,
   metadataLibrary,
   editMetadata,
   trashCapabilities,
@@ -1210,6 +1322,12 @@ export default {
   renameServer,
   getServerPort,
   setServerPort,
+  getBackups,
+  createBackup,
+  setBackupSchedule,
+  backupDownloadURL,
+  restoreBackup,
+  restoreBackupFile,
   getReplaceCandidates,
   replaceAudio,
   replaceAudioFromFile,
@@ -1245,6 +1363,9 @@ export default {
   resumeLibraryUpgrade,
   cancelLibraryUpgrade,
   getLibraryUsage,
+  navidromeRatingsStatus,
+  navidromeRatingsRun,
+  navidromeRatingsCancel,
   doctorStatus,
   doctorScan,
   doctorCancel,
@@ -1254,10 +1375,19 @@ export default {
   doctorSlskdRelease,
   doctorPreview,
   doctorMerge,
+  doctorPlaylistsApply,
+  doctorPlaylistsApartReset,
   doctorDuplicatesMerge,
   doctorDuplicatesKeep,
   doctorDuplicatesKeepReset,
   doctorNavidromeRepair,
+  doctorAiStatus,
+  doctorAiStart,
+  doctorAiStop,
+  doctorAiSettings,
+  doctorAiApply,
+  doctorAiDismiss,
+  doctorAiClear,
   scanLibraryUsage,
   writePlaylistM3u,
   getQueue,
@@ -1276,9 +1406,11 @@ export default {
   getCookiesStatus,
   uploadCookies,
   deleteCookies,
+  checkCookies,
   check_for_update,
   onMessage,
   ws_onmessage,
   ws_onerror,
   getVersion,
+  versionReady,
 }

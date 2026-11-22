@@ -17,6 +17,7 @@ from .content_advisory import (
 )
 from .cover_art import extract_cover_art
 from .image_size import image_short_side
+from .isrc import read as read_isrc
 
 
 def _tag_text(value: Any) -> str:
@@ -200,8 +201,9 @@ def read_audio_metadata(path: Path) -> dict[str, Any]:
     ``album_artist``, ``track_number`` (0 when unknown), ``year`` and
     ``duration`` in seconds (0 when unknown), plus the audio format:
     ``codec``, ``bitrate``, ``sample_rate`` and ``channels`` (see
-    :func:`audio_format`), ``explicit`` (:func:`read_explicit`) and
-    ``compilation`` (:func:`read_compilation`).
+    :func:`audio_format`), ``explicit`` (:func:`read_explicit`),
+    ``compilation`` (:func:`read_compilation`) and ``isrc`` (the
+    recording's code, ``''`` without one - see :mod:`downtify.isrc`).
     """
 
     empty: dict[str, Any] = {
@@ -217,6 +219,7 @@ def read_audio_metadata(path: Path) -> dict[str, Any]:
         'duration': 0.0,
         'explicit': False,
         'compilation': False,
+        'isrc': '',
         **audio_format(None),
     }
     if not path.is_file():
@@ -287,6 +290,7 @@ def read_audio_metadata(path: Path) -> dict[str, Any]:
         'duration': duration,
         'explicit': read_explicit(path),
         'compilation': read_compilation(path),
+        'isrc': read_isrc(path),
         **fmt,
     }
 
@@ -341,6 +345,7 @@ def library_entry_for_file(
         'channels': int(meta.get('channels') or 0),
         'explicit': bool(meta.get('explicit')),
         'compilation': bool(meta.get('compilation')),
+        'isrc': str(meta.get('isrc') or ''),
         'has_cover': bool(cover_data),
         'cover_px': image_short_side(cover_data),
         **file_stat_fields(full_path),

@@ -6,12 +6,14 @@
         :key="preset"
         type="button"
         class="tabular h-9 min-w-11 rounded-control border px-3 text-[13px] font-semibold transition-colors"
-        :class="
+        :class="[
           preset === modelValue
             ? 'border-accent/50 bg-accent/12 text-accent'
-            : 'border-line-2 text-fg-3 hover:border-line-3 hover:bg-surface-2'
-        "
+            : 'border-line-2 text-fg-3 hover:border-line-3 hover:bg-surface-2',
+          preset < floor && 'opacity-40',
+        ]"
         :aria-pressed="preset === modelValue"
+        :title="preset < floor ? floorTitle : undefined"
         @click="$emit('update:modelValue', preset)"
       >
         {{ format ? format(preset) : preset }}
@@ -45,6 +47,9 @@ const props = defineProps({
   unit: { type: String, default: '' },
   customLabel: { type: String, default: '' },
   format: { type: Function, default: null },
+  /** Presets below this are dimmed: another setting raises them to it. */
+  floor: { type: Number, default: 0 },
+  floorTitle: { type: String, default: '' },
 })
 const emit = defineEmits(['update:modelValue'])
 

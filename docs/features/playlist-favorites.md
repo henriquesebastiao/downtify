@@ -1,3 +1,7 @@
+---
+icon: lucide/pin
+---
+
 # Favorite playlists
 
 Use **Add playlist to favorites** in a playlist's menu to pin it to the top

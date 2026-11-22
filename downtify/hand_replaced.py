@@ -13,6 +13,9 @@ downloader leaves those files alone: a download that would land on one
 counts as "already downloaded" instead (see
 ``Downloader._hand_replaced_at``). Library upgrade's audio replacement
 skips them too. The admin can lift it from the Replace audio dialog.
+
+A file swapped on disk, outside Downtify, is added here too the first
+time a download would land on it (``Downloader._replaced_on_disk``).
 """
 
 from __future__ import annotations
@@ -21,10 +24,13 @@ import time
 from pathlib import Path
 from typing import Any, Optional
 
-from .sqlite_utils import connect_sqlite
+from .db.config import Dialect
+from .db.core import Database, as_database
 
-#: Where the new audio came from.
-SOURCES = ('youtube', 'soundcloud', 'file')
+#: Where the new audio came from. ``disk``: the file was swapped outside
+#: Downtify (noticed by ``downtify/download_sources.py``: its audio is no
+#: longer what Downtify wrote).
+SOURCES = ('youtube', 'soundcloud', 'file', 'disk')
 
 
 def _key(file: str) -> str:
@@ -35,19 +41,22 @@ class HandReplacedFiles:
     """Library files (as stored: relative to the downloads folder, or
     ``slskd/...``) whose audio was replaced by hand."""
 
-    def __init__(self, db_path: Path) -> None:
-        self._path = str(db_path)
-        with self._connect() as conn:
-            conn.execute("""
-                CREATE TABLE IF NOT EXISTS hand_replaced_files (
-                    file TEXT PRIMARY KEY,
-                    source TEXT NOT NULL,
-                    replaced_at REAL NOT NULL
-                )
-            """)
+    def __init__(self, path_or_db: str | Path | Database) -> None:
+        self.db = as_database(path_or_db, 'library')
+        self._path = None if self.db.path is None else str(self.db.path)
+        # The Postgres schema is created by migrations; only SQLite needs DDL.
+        if self.db.dialect is Dialect.SQLITE:
+            with self._connect() as conn:
+                conn.execute("""
+                    CREATE TABLE IF NOT EXISTS hand_replaced_files (
+                        file TEXT PRIMARY KEY,
+                        source TEXT NOT NULL,
+                        replaced_at REAL NOT NULL
+                    )
+                """)
 
     def _connect(self):
-        return connect_sqlite(self._path, row_factory=True)
+        return self.db.connect()
 
     def mark(self, file: str, source: str) -> None:
         """Remember that *file*'s audio was just replaced from *source*."""
@@ -92,10 +101,17 @@ class HandReplacedFiles:
     def rename(self, old: str, new: str) -> None:
         """*old* is now *new* (a merge or a move kept the replacement)."""
 
+        if _key(old) == _key(new):
+            return
         with self._connect() as conn:
+            # SQLite's ``UPDATE OR REPLACE``, spelled portably.
             conn.execute(
-                'UPDATE OR REPLACE hand_replaced_files SET file = ? '
-                'WHERE file = ?',
+                'DELETE FROM hand_replaced_files WHERE file = ? AND '
+                'EXISTS (SELECT 1 FROM hand_replaced_files WHERE file = ?)',
+                (_key(new), _key(old)),
+            )
+            conn.execute(
+                'UPDATE hand_replaced_files SET file = ? WHERE file = ?',
                 (_key(new), _key(old)),
             )
 

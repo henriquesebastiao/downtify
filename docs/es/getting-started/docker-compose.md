@@ -8,23 +8,48 @@ Docker Compose es la forma recomendada de ejecutar Downtify en servidores domés
 
 ## Configuración mínima
 
-Crea un archivo `docker-compose.yml`:
+Crea un archivo `docker-compose.yml`. Ejecuta Downtify con PostgreSQL, con la base de datos en un servicio `postgres` junto a él (consulta [Base de datos](../database.md)):
 
 ```yaml
 services:
   downtify:
     container_name: downtify
     image: ghcr.io/henriquesebastiao/downtify:latest
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
     ports:
       - '8000:8000'
     volumes:
       - ./downloads:/downloads
       - downtify_data:/data
+    environment:
+      DATABASE_URL: postgresql://downtify:${POSTGRES_PASSWORD:-downtify}@postgres:5432/downtify
+
+  postgres:
+    container_name: downtify-postgres
+    image: 'postgres:17-alpine'
     restart: unless-stopped
+    environment:
+      POSTGRES_USER: downtify
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-downtify}
+      POSTGRES_DB: downtify
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U downtify -d downtify']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
 
 volumes:
   downtify_data:
+  pgdata:
 ```
+
+Define `POSTGRES_PASSWORD` en un archivo `.env` junto al archivo Compose antes del primer arranque (consulta [Variables de entorno](environment-variables.md#database)). Para seguir con los archivos SQLite, elimina `DATABASE_URL`, el servicio `postgres` y el bloque `depends_on`.
 
 Arráncalo:
 
@@ -133,6 +158,7 @@ Tu música y tus ajustes se conservan en los volúmenes.
 | Ruta dentro del archivo compose | Finalidad |
 |------------------------------|---------|
 | `./downloads:/downloads` | Archivos de audio descargados (directorio local) |
-| `downtify_data:/data` | Base de datos y ajustes de la aplicación (volumen con nombre) |
+| `downtify_data:/data` | Ajustes, cachés y los archivos SQLite (volumen con nombre) |
+| `pgdata:/var/lib/postgresql/data` | La base de datos PostgreSQL, en el servicio `postgres` |
 
 Puedes sustituir el volumen con nombre por una ruta local (`./data:/data`) si prefieres gestionarlo tú mismo.

@@ -28,7 +28,7 @@ Downtify garde une tâche d’arrière-plan qui s’exécute toutes les 60 secon
 3. Télécharge les nouveaux morceaux avec le même pipeline qu’un téléchargement manuel
 4. Met à jour le fichier M3U de la playlist (si la génération de M3U est activée)
 
-La première vérification, qui démarre dès que vous ajoutez la surveillance, télécharge tout ce qui est déjà dans la playlist ; les suivantes ne téléchargent que ce qui a été ajouté depuis. Le « déjà téléchargé » est consigné dans une petite base SQLite (`downtify_monitor.db` sous `/data`), et non en consultant le dossier de téléchargements — si bien que déplacer un fichier téléchargé ailleurs sur le disque (dans votre propre organisation de bibliothèque, un autre disque, n’importe où) ne fait **pas** croire à Downtify qu’il manque, et il n’est pas retéléchargé à la vérification suivante.
+La première vérification, qui démarre dès que vous ajoutez la surveillance, télécharge tout ce qui est déjà dans la playlist ; les suivantes ne téléchargent que ce qui a été ajouté depuis. Le « déjà téléchargé » est consigné dans une petite base SQLite (`downtify_monitor.db` sous `/data` ; avec PostgreSQL, dans la base PostgreSQL), et non en consultant le dossier de téléchargements — si bien que déplacer un fichier téléchargé ailleurs sur le disque (dans votre propre organisation de bibliothèque, un autre disque, n’importe où) ne fait **pas** croire à Downtify qu’il manque, et il n’est pas retéléchargé à la vérification suivante.
 
 Un passage distinct s’exécute toutes les heures et vérifie si le fichier de chaque morceau téléchargé est toujours là. Les fichiers réellement supprimés (par opposition à ceux que vous avez déplacés) sont oubliés à ce moment-là, si bien que le morceau redevient éligible au téléchargement — à la vérification suivante de la surveillance après ce passage horaire, pas instantanément.
 
@@ -144,11 +144,12 @@ Une fois la surveillance ajoutée par le serveur, le bouton devient un lien vers
 | Toutes les 6 heures | 360 | |
 | Toutes les 12 heures | 720 | |
 | Chaque jour | 1 440 | Playlists qui changent lentement |
+| Tous les 3 jours | 4 320 | |
 | Chaque semaine | 10 080 | Playlists mises à jour chaque semaine |
 | Toutes les 2 semaines | 20 160 | |
 | Chaque mois | 43 200 | Archives ou playlists rarement mises à jour |
 
-Vous pouvez changer l’intervalle d’une playlist existante à tout moment depuis la carte de surveillance, sans la retirer ni la rajouter.
+Vous pouvez changer l’intervalle d’une playlist existante à tout moment depuis la carte de surveillance, sans la retirer ni la rajouter. Ou pour plusieurs surveillances à la fois : voir [Modifier plusieurs surveillances à la fois](#changing-many-watches-at-once).
 
 ## Gérer les playlists surveillées
 
@@ -170,6 +171,17 @@ Sur chaque ligne :
 - **⋯** — **Activité et titres** (la page de la surveillance), pause/reprise, copier le lien, ouvrir l’original, ou **Arrêter la surveillance** (l’enregistrement est supprimé ; les fichiers téléchargés sont conservés)
 
 **Activité** et **Stockage** sont des colonnes comme les autres : masquez-les ou redimensionnez-les depuis **Colonnes**.
+
+### Modifier plusieurs surveillances à la fois
+
+Cliquez sur **Sélectionner** au-dessus de la liste pour afficher une case sur chaque ligne. Cochez les surveillances (Maj+clic coche toutes celles entre deux clics) ou utilisez **Tout sélectionner (affichés)**, qui tient compte de la recherche et du filtre **Toutes / En pause**. La barre au-dessus de la liste applique une même modification à toutes les cochées :
+
+- **Changer la fréquence en…** — le même intervalle pour toutes
+- **Pause** / **Reprendre**
+- **Vérifier maintenant** — vérifie tout de suite les actives
+- **Arrêter la surveillance** — après confirmation ; les fichiers téléchargés sont conservés
+
+Cela fonctionne de la même façon dans les onglets **Playlists** et **Artistes**. Les surveillances cochées le restent quand la recherche change. **Terminé** (ou **Échap**) quitte la sélection ; changer d’onglet la vide.
 
 ### Modifier une surveillance
 
@@ -248,7 +260,7 @@ Si un fichier disparaît vraiment — vous l’avez sorti du dossier de téléch
 
 ## Stockage
 
-L’état du moniteur est stocké dans une base SQLite à `/data/downtify_monitor.db`. La base consigne :
+L’état du moniteur est stocké dans une base SQLite à `/data/downtify_monitor.db`, le backend par défaut. Avec PostgreSQL ([Base de données](../database.md)), les mêmes données sont conservées dans la base PostgreSQL. La base consigne :
 
 - Chaque surveillance (type, identifiant de playlist Spotify ou YouTube Music ou identifiant de chaîne YouTube Music, nom, URL, intervalle, état activé, heure de la dernière vérification). Le fait qu’une surveillance soit Spotify ou YouTube Music se lit dans son URL enregistrée, donc aucune colonne supplémentaire n’est nécessaire.
 - Chaque morceau téléchargé avec succès par surveillance, y compris le nom de fichier sur disque
@@ -288,7 +300,23 @@ L’id de la surveillance (`#12`) est affiché à côté de son nom, pour distin
 
 La page d’un suivi d’artiste liste aussi tout son catalogue au dernier contrôle : chaque sortie que listent YouTube Music, Deezer et MusicBrainz (le même album venu de deux sources n’apparaît qu’une fois), en albums, mixtapes, EP, singles, et sorties live, compilations et remixes. Chacune montre ce que la bibliothèque en a : **Complète** avec son nombre de titres, **En partie**, **À télécharger**, **Sortie avant le suivi** (un suivi **Nouvelles sorties uniquement** l’a ignorée), **Non suivie** (un type ou un genre que le suivi ne télécharge pas) ou **Désactivée**. Les featurings et les bootlegs ont leur propre filtre et ne sont jamais téléchargés.
 
+**Vérifier ce que j’ai** lit la liste des titres de chaque sortie et la compare à toute la bibliothèque, comme le suivi d’artiste rapproche les morceaux (même artiste et même titre, même durée), quel que soit qui les a téléchargés. Un album que vous aviez avant le suivi apparaît donc comme **Complète**, et la flèche à côté d’une sortie liste ses titres, chacun marqué comme dans votre bibliothèque ou manquant. Rien n’est téléchargé. Cela tourne en arrière-plan et c’est lent pour un gros artiste, car MusicBrainz autorise une requête par seconde. Les listes sont gardées : une vérification suivante ne lit que les sorties pas encore lues, et un contrôle normal garde aussi les listes des sorties qu’il télécharge.
+
+**Télécharger ce qui manque** récupère ensuite les morceaux que vous n’avez pas de chaque sortie que le suivi télécharge (activée, ou d’un type et d’un genre qu’il suit), même celles déjà traitées, sous forme d’un contrôle à suivre dans la **file**. Il demande d’abord, avec le nombre de morceaux. Les morceaux déjà dans votre bibliothèque sont liés, pas retéléchargés, et les sorties que le suivi ne télécharge pas restent intactes : activez-en une d’abord pour l’inclure.
+
 L’interrupteur à côté d’une sortie l’emporte sur le suivi, comme le suivi par album de Lidarr. Activé, il la télécharge même si son type n’est pas suivi ou si elle est sortie avant le début du suivi, et un contrôle démarre aussitôt. Désactivé, il ne la télécharge plus. Les morceaux déjà dans la bibliothèque restent dans les deux cas. **Depuis MusicBrainz, télécharger aussi** choisit, pour cet artiste seulement, quels types de sortie que seul MusicBrainz distingue sont téléchargés : mixtapes et bandes originales par défaut ; albums live, compilations, remixes, mixes DJ et démos une fois activés.
+
+### Recherchés
+
+L’onglet **Recherchés** de la page Surveillance, à côté de **Playlists** et **Artistes**, est une liste unique de tout ce que vos suivis d’artistes devraient télécharger et que la bibliothèque n’a pas encore en entier. Pour chacun de vos suivis d’artiste (un administrateur voit ceux de tous), il liste chaque sortie que le suivi télécharge (activée, ou d’un type et d’un genre qu’il suit) et qui est **En partie** ou **À télécharger**, avec le nombre de titres que la bibliothèque en a (« j’ai sur total »). Les suivis en pause sont laissés de côté, ainsi que toute sortie dont vous désactivez l’interrupteur. Les sorties sont groupées par artiste, chaque groupe avec un lien vers la page du suivi et le **Télécharger ce qui manque** de cet artiste. En haut, un résumé compte les titres manquants et les sorties concernées, et combien de sorties ne sont pas encore vérifiées. Un champ de recherche et un filtre de type resserrent la liste.
+
+Une sortie avec le badge **Pas encore vérifiée** a une liste de titres qui n’a pas encore été lue (par **Vérifier ce que j’ai**, voir [Les sorties d’un artiste](#an-artists-releases)), donc sa taille n’est pas connue : même si le catalogue indique un nombre de titres, elle est peut-être déjà dans votre bibliothèque. Elle affiche le badge au lieu d’un nombre, n’entre pas dans les titres manquants, et son artiste est nommé sur une ligne **Pas encore vérifiés** au-dessus de la liste (les premiers noms, puis « et 85 autres »). Le **Télécharger ce qui manque** d’un artiste est disponible dès qu’il a des titres connus comme manquants ou des sorties pas encore vérifiées.
+
+**Vérifier tous les artistes** lance **Vérifier ce que j’ai** pour chacun de ces artistes, un artiste à la fois, en arrière-plan. C’est lent pour les gros artistes, car MusicBrainz autorise une requête par seconde. **Arrêter** met fin à la lecture de l’artiste en cours à sa prochaine sortie : ce qui a été lu est gardé, et un **Vérifier tous les artistes** ultérieur reprend à partir de là.
+
+**Télécharger tout ce qui manque** demande d’abord, avec le nombre de titres (et, si des sorties ne sont pas encore vérifiées, en précisant que ce qui leur manque s’y ajoute : **Vérifier tous les artistes** d’abord donne un nombre exact), puis lance le **Télécharger ce qui manque** de chaque artiste, un artiste à la fois. Les titres se téléchargent dans la **file**. **Arrêter** laisse l’artiste en cours se terminer, puis s’arrête.
+
+Un seul des deux tourne à la fois, et l’exécution d’un autre compte bloque aussi la vôtre. Vous voyez la progression de votre propre exécution (un administrateur voit n’importe laquelle), et les deux sont bloqués en mode bibliothèque seule. La ligne de progression compte l’artiste en cours (« Vérification 1 sur 87 : Ace ») et affiche « Arrêt… » après **Arrêter**, jusqu’à la fin de l’exécution.
 
 ## D’où vient un titre
 

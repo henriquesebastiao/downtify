@@ -495,6 +495,62 @@ def find_track_preview(
     return matches[0][1]
 
 
+def find_track_cover(artist: str, title: str, px: int) -> str:
+    """The cover of the release Deezer has *artist*'s *title* on, at the
+    smallest of Deezer's sizes that reaches *px* (its largest, 1000px,
+    when none does), or ``""``.
+
+    Matched like :func:`find_track_preview`: the row's artist must be
+    *artist* and its title *title*, ignoring ``(Live)``-style suffixes,
+    so another song's cover is never taken. Raises :class:`ValueError`
+    when Deezer didn't really answer.
+    """
+
+    wanted_artist = file_name_key(artist)
+    wanted_title = title_key(title)
+    if not wanted_artist or not wanted_title:
+        return ''
+    try:
+        resp = httpx.get(
+            _TRACK_SEARCH_URL,
+            params={'q': f'{artist} {title}', 'limit': 25},
+            timeout=_TIMEOUT,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+    except Exception as exc:
+        logger.opt(exception=True).debug('Deezer track search failed')
+        raise ValueError('Could not reach Deezer') from exc
+    if not isinstance(data, dict) or data.get('error'):
+        raise ValueError('Deezer refused the request')
+    for row in data.get('data') or []:
+        if not isinstance(row, dict):
+            continue
+        row_artist = str((row.get('artist') or {}).get('name') or '')
+        if file_name_key(row_artist) != wanted_artist:
+            continue
+        titles = {
+            title_key(row.get('title')),
+            title_key(row.get('title_short')),
+        }
+        if wanted_title not in titles:
+            continue
+        album = row.get('album') or {}
+        if not isinstance(album, dict):
+            continue
+        largest = ''
+        for suffix, pixels in _COVER_SIZES:
+            url = str(album.get(f'cover_{suffix}') or '')
+            if not url:
+                continue
+            largest = url
+            if pixels >= px:
+                return url
+        if largest:
+            return largest
+    return ''
+
+
 def fetch_artist_full(artist_id: str, lang: str) -> dict[str, Any]:
     """Bio, social links and related-artist names for a Deezer artist id.
 
@@ -789,8 +845,19 @@ def parse_deezer_url(url: str) -> Optional[tuple[str, str]]:
     return match.group(1).lower(), match.group(2)
 
 
+class DeezerRefused(ValueError):
+    """A 200 reply carrying an ``error`` object, with Deezer's error code
+    (4 quota, 700 busy, 800 no data; 0 when it sent none)."""
+
+    def __init__(self, message: str, code: int = 0) -> None:
+        super().__init__(message)
+        self.code = code
+
+
 def _get_json(url: str, **params: Any) -> dict[str, Any]:
     """A Deezer REST GET, or raise :class:`ValueError`.
+
+    A refusal raises :class:`DeezerRefused` (a ``ValueError``).
 
     Same "HTTP 200 but an ``error`` object instead of data" trap as
     :func:`_search_rows` - an invalid id, a rate limit, all read this
@@ -808,7 +875,12 @@ def _get_json(url: str, **params: Any) -> dict[str, Any]:
         raise ValueError('Deezer sent an unexpected answer')
     if data.get('error'):
         logger.debug('Deezer refused {}: {}', url, data['error'])
-        raise ValueError('Deezer refused the request')
+        error = data['error']
+        code = error.get('code') if isinstance(error, dict) else 0
+        raise DeezerRefused(
+            'Deezer refused the request',
+            code if isinstance(code, int) else 0,
+        )
     return data
 
 
@@ -1169,6 +1241,8 @@ def _artist_release_row(
         'artist': artist_name,
         'cover_url': _cover_from_images(row),
         'year': _year_from_release_date(row.get('release_date')),
+        # Its day: one in the future is announced, not out yet.
+        'release_date': str(row.get('release_date') or '').strip(),
         'explicit': bool(row.get('explicit_lyrics')),
         'url': str(row.get('link') or ''),
         'source': 'deezer',

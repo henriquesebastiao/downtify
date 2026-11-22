@@ -10,13 +10,14 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
-import sqlite3
 
 import pytest
 from fastapi import HTTPException
 from mutagen.id3 import ID3, TALB, TIT2, TPE1, TRCK
 
 from downtify import api, monitor
+from downtify.db.core import Database
+from tests.db.helpers import execute
 
 CHANNEL_ID = 'UCartist000000000000000'
 
@@ -288,8 +289,10 @@ def test_existing_database_without_kind_column_is_migrated(tmp_path):
     """A database created before Artist Watch must keep working, with its
     existing rows treated as playlist watches."""
     path = tmp_path / 'old.db'
-    conn = sqlite3.connect(path)
-    conn.executescript("""
+    seed = Database.sqlite(path)
+    execute(
+        seed,
+        """
         CREATE TABLE monitored_playlists (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             spotify_id TEXT NOT NULL UNIQUE,
@@ -300,15 +303,15 @@ def test_existing_database_without_kind_column_is_migrated(tmp_path):
             last_checked TEXT,
             last_track_count INTEGER NOT NULL DEFAULT 0,
             created_at TEXT NOT NULL
-        );
-    """)
-    conn.execute(
+        )
+    """,
+    )
+    execute(
+        seed,
         'INSERT INTO monitored_playlists '
         '(spotify_id, name, url, interval_minutes, enabled, created_at) '
-        "VALUES ('old1', 'Legacy', 'url', 60, 1, '2026-01-01T00:00:00+00:00')"
+        "VALUES ('old1', 'Legacy', 'url', 60, 1, '2026-01-01T00:00:00+00:00')",
     )
-    conn.commit()
-    conn.close()
 
     db = monitor.PlaylistMonitorDB(path)
     rows = db.list_playlists()
@@ -334,6 +337,21 @@ def test_seen_albums_are_scoped_per_watch(tmp_path):
 
 def _resolve(url):
     return asyncio.run(api._resolve_watch_target(url))
+
+
+@pytest.mark.parametrize(
+    'url',
+    [
+        'https://open.spotify.com/user/drake',
+        'https://open.spotify.com/intl-de/user/drake?si=1',
+        'spotify:user:drake',
+    ],
+)
+def test_resolve_explains_a_spotify_user_link(url):
+    with pytest.raises(api.HTTPException) as err:
+        _resolve(url)
+    assert err.value.status_code == 400
+    assert 'user link' in err.value.detail
 
 
 def test_resolve_spotify_artist_url_maps_to_youtube_channel(monkeypatch):
@@ -677,8 +695,10 @@ def test_to_dict_lists_release_types_and_hides_the_baseline_flag(tmp_path):
 
 def test_an_old_database_gets_the_new_columns(tmp_path):
     path = tmp_path / 'monitor.db'
-    conn = sqlite3.connect(path)
-    conn.executescript("""
+    seed = Database.sqlite(path)
+    execute(
+        seed,
+        """
         CREATE TABLE monitored_playlists (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             spotify_id TEXT NOT NULL UNIQUE,
@@ -690,12 +710,14 @@ def test_an_old_database_gets_the_new_columns(tmp_path):
             last_track_count INTEGER NOT NULL DEFAULT 0,
             created_at TEXT NOT NULL,
             kind TEXT NOT NULL DEFAULT 'playlist'
-        );
-        INSERT INTO monitored_playlists (spotify_id, name, url, created_at,
-            kind) VALUES ('UCold', 'Old', 'u', '2026-01-01', 'artist');
-    """)
-    conn.commit()
-    conn.close()
+        )
+    """,
+    )
+    execute(
+        seed,
+        'INSERT INTO monitored_playlists (spotify_id, name, url, created_at, '
+        "kind) VALUES ('UCold', 'Old', 'u', '2026-01-01', 'artist')",
+    )
 
     pl = monitor.PlaylistMonitorDB(path).get_by_spotify_id('UCold')
 

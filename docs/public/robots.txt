@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://downtify.henriquesebastiao.com/sitemap.xml

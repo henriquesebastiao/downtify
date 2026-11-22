@@ -10,12 +10,14 @@ doesn't ask iTunes and Spotify about tracks that were already checked.
 from __future__ import annotations
 
 import json
-import sqlite3
+from contextlib import AbstractContextManager
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Iterable, Optional
 
-from .sqlite_utils import connect_sqlite
+from .db.config import Dialect
+from .db.core import Connection, Database, as_database
+from .db.dialect import insert_returning_id
 
 # Run states.
 STATE_SCANNING = 'scanning'
@@ -56,7 +58,7 @@ def _json_dict(raw: Any) -> dict[str, Any]:
     return value if isinstance(value, dict) else {}
 
 
-def _run_row(row: sqlite3.Row) -> dict[str, Any]:
+def _run_row(row: Any) -> dict[str, Any]:
     return {
         'id': int(row['id']),
         'state': str(row['state']),
@@ -70,7 +72,7 @@ def _run_row(row: sqlite3.Row) -> dict[str, Any]:
     }
 
 
-def _job_row(row: sqlite3.Row) -> dict[str, Any]:
+def _job_row(row: Any) -> dict[str, Any]:
     return {
         'file': str(row['stored_path']),
         'status': str(row['status']),
@@ -88,14 +90,17 @@ def _job_row(row: sqlite3.Row) -> dict[str, Any]:
 class LibraryUpgradeDB:
     """Runs, their queued tracks, and per-track check history."""
 
-    def __init__(self, db_path: Path) -> None:
-        self._path = str(db_path)
-        self._init_db()
+    def __init__(self, path_or_db: str | Path | Database) -> None:
+        self.db = as_database(path_or_db, 'library')
+        self._path = None if self.db.path is None else str(self.db.path)
+        if self.db.dialect is Dialect.SQLITE:
+            self._init_db()
 
-    def _connect(self) -> sqlite3.Connection:
-        return connect_sqlite(self._path, row_factory=True)
+    def _connect(self) -> AbstractContextManager[Connection]:
+        return self.db.connect()
 
     def _init_db(self) -> None:
+        # SQLite only: on PostgreSQL the migration made this schema.
         with self._connect() as conn:
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS library_upgrade_runs (
@@ -151,7 +156,8 @@ class LibraryUpgradeDB:
         self, categories: list[str], options: dict[str, Any]
     ) -> int:
         with self._connect() as conn:
-            cur = conn.execute(
+            return insert_returning_id(
+                conn,
                 """INSERT INTO library_upgrade_runs
                    (state, categories, options, created_at)
                    VALUES (?, ?, ?, ?)""",
@@ -162,7 +168,6 @@ class LibraryUpgradeDB:
                     _now_iso(),
                 ),
             )
-            return int(cur.lastrowid or 0)
 
     def latest_run(self) -> Optional[dict[str, Any]]:
         with self._connect() as conn:
@@ -247,13 +252,21 @@ class LibraryUpgradeDB:
         return len(rows)
 
     def take_next(self, run_id: int) -> Optional[dict[str, Any]]:
-        """Claim the next queued track, marking it running."""
+        """Claim the next queued track, marking it running.
 
-        with self._connect() as conn:
+        The read and the update share one transaction. On PostgreSQL the
+        row is locked, skipping rows another worker already holds, so two
+        claimers never take the same track.
+        """
+
+        claim = ''
+        if self.db.dialect is Dialect.POSTGRES:
+            claim = ' FOR UPDATE SKIP LOCKED'
+        with self.db.transaction(lock=True) as conn:
             row = conn.execute(
-                """SELECT * FROM library_upgrade_jobs
-                   WHERE run_id = ? AND status = ?
-                   ORDER BY stored_path LIMIT 1""",
+                'SELECT * FROM library_upgrade_jobs '
+                'WHERE run_id = ? AND status = ? '
+                'ORDER BY stored_path LIMIT 1' + claim,
                 (run_id, JOB_QUEUED),
             ).fetchone()
             if row is None:
@@ -403,8 +416,12 @@ class LibraryUpgradeDB:
                    ON CONFLICT(stored_path, category) DO UPDATE SET
                    checked_at = excluded.checked_at,
                    app_version = excluded.app_version,
-                   artwork_px = MAX(excluded.artwork_px,
-                                    library_upgrade_checks.artwork_px),
+                   artwork_px = CASE
+                       WHEN excluded.artwork_px
+                            > library_upgrade_checks.artwork_px
+                       THEN excluded.artwork_px
+                       ELSE library_upgrade_checks.artwork_px
+                   END,
                    artwork_source = excluded.artwork_source""",
                 rows,
             )
@@ -503,3 +520,27 @@ def check_is_fresh(
         checked = checked.replace(tzinfo=timezone.utc)
     age = datetime.now(timezone.utc) - checked
     return age < timedelta(days=max_age_days)
+
+
+def lyrics_outcome(db: LibraryUpgradeDB, run_id: int) -> dict[str, int]:
+    """Of a run's tracks queued for lyrics, how many got them (``added``),
+    came back without (``not_found``), failed, or are still to go
+    (``pending``)."""
+
+    found = {'added': 0, 'not_found': 0, 'failed': 0, 'pending': 0}
+    with db.db.connect() as conn:
+        rows = conn.execute(
+            """SELECT status, changed FROM library_upgrade_jobs
+               WHERE run_id = ? AND categories LIKE ?""",
+            (run_id, '%"lyrics"%'),
+        ).fetchall()
+    for row in rows:
+        status = str(row['status'])
+        if status == JOB_FAILED:
+            found['failed'] += 1
+        elif status in {JOB_DONE, JOB_SKIPPED}:
+            added = 'lyrics' in _json_list(row['changed'])
+            found['added' if added else 'not_found'] += 1
+        else:
+            found['pending'] += 1
+    return found

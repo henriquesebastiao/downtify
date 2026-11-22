@@ -28,7 +28,7 @@ Downtify, 60 saniyede bir çalışan bir arka plan görevi tutar. Her taramada, 
 3. Yeni parçaları elle indirmeyle aynı işlem hattıyla indirir
 4. Çalma listesinin M3U dosyasını günceller (M3U üretimi etkinse)
 
-İzlemeyi eklediğiniz anda başlayan ilk denetim, çalma listesinde zaten olan her şeyi indirir; sonraki denetimler yalnızca o zamandan beri eklenenleri indirir. “Zaten indirilmiş” olan, indirme klasörüne bakılarak değil, küçük bir SQLite veritabanında (`/data` altındaki `downtify_monitor.db`) izlenir — bu yüzden indirilen bir dosyayı diskte başka bir yere (kendi kitaplık düzeninize, başka bir sürücüye, nereye olursa) taşımak, Downtify’ın onun eksik olduğunu düşünüp sonraki denetimde yeniden indirmesine **neden olmaz**.
+İzlemeyi eklediğiniz anda başlayan ilk denetim, çalma listesinde zaten olan her şeyi indirir; sonraki denetimler yalnızca o zamandan beri eklenenleri indirir. “Zaten indirilmiş” olan, indirme klasörüne bakılarak değil, küçük bir SQLite veritabanında (`/data` altındaki `downtify_monitor.db`; PostgreSQL ile PostgreSQL veritabanında) izlenir — bu yüzden indirilen bir dosyayı diskte başka bir yere (kendi kitaplık düzeninize, başka bir sürücüye, nereye olursa) taşımak, Downtify’ın onun eksik olduğunu düşünüp sonraki denetimde yeniden indirmesine **neden olmaz**.
 
 Ayrı bir tarama her saat çalışır ve indirilmiş her parçanın dosyasının hâlâ orada olup olmadığına bakar. Gerçekten silinen dosyalar (taşınanların aksine) o anda unutulur; böylece parça yeniden indirilmeye uygun hale gelir — anında değil, o saatlik taramadan sonraki izleme denetiminde.
 
@@ -144,11 +144,12 @@ Sunucu izlemeyi ekledikten sonra düğme, aralığı ve seçenekleri değiştire
 | Her 6 saat | 360 | |
 | Her 12 saat | 720 | |
 | Her gün | 1 440 | Yavaş değişen çalma listeleri |
+| 3 günde bir | 4 320 | |
 | Her hafta | 10 080 | Haftalık güncellenen çalma listeleri |
 | Her 2 haftada | 20 160 | |
 | Her ay | 43 200 | Arşiv veya nadiren güncellenen çalma listeleri |
 
-Var olan bir çalma listesinin aralığını, kaldırıp yeniden eklemeden, izleyici kartından istediğiniz zaman değiştirebilirsiniz.
+Var olan bir çalma listesinin aralığını, kaldırıp yeniden eklemeden, izleyici kartından istediğiniz zaman değiştirebilirsiniz. Ya da birçok takibi tek seferde değiştirin: bkz. [Birçok takibi tek seferde değiştirme](#changing-many-watches-at-once).
 
 ## İzlenen çalma listelerini yönetme
 
@@ -170,6 +171,17 @@ Her satırda:
 - **⋯** — **Etkinlik ve şarkılar** (izlemenin kendi sayfası), duraklat/sürdür, bağlantıyı kopyala, orijinali aç veya **İzlemeyi bırak** (kayıt silinir; indirilen dosyalar korunur)
 
 **Etkinlik** ve **Depolama** diğerleri gibi birer sütundur: **Sütunlar** menüsünden gizleyebilir ya da genişliklerini değiştirebilirsin.
+
+### Birçok takibi tek seferde değiştirme
+
+Listenin üstündeki **Seç** düğmesine tıklayınca her satırda bir kutu çıkar. Takipleri işaretleyin (**Shift**+tıklama iki tıklama arasındakilerin hepsini işaretler) ya da arama ve **Tümü / Duraklatılan** filtresine uyan **Gösterilenlerin tümünü seç** seçeneğini kullanın. Listenin üstündeki çubuk tek bir değişikliği işaretlenen tüm takiplere uygular:
+
+- **Kontrol sıklığını değiştir…** — hepsine aynı aralık
+- **Duraklat** / **Sürdür**
+- **Şimdi kontrol et** — etkin olanları hemen kontrol eder
+- **Takibi bırak** — onaydan sonra; indirilen dosyalar kalır
+
+**Çalma listeleri** ve **Sanatçılar** sekmelerinde aynı şekilde çalışır. Arama değişince işaretli takipler işaretli kalır. **Bitti** (veya **Esc**) seçimden çıkar; sekme değiştirmek seçimi temizler.
 
 ### Bir izlemeyi düzenleme
 
@@ -248,7 +260,7 @@ Bir dosya gerçekten kaybolursa — indirme klasöründen çıkardınız ya da e
 
 ## Depolama
 
-İzleyici durumu `/data/downtify_monitor.db` konumundaki bir SQLite veritabanında saklanır. Veritabanı şunları kaydeder:
+İzleyici durumu `/data/downtify_monitor.db` konumundaki bir SQLite veritabanında saklanır; bu varsayılan arka uçtur. PostgreSQL ([Veritabanı](../database.md)) ile aynı kayıtlar PostgreSQL veritabanında tutulur. Veritabanı şunları kaydeder:
 
 - Her izleme (tür, Spotify veya YouTube Music çalma listesi kimliği ya da YouTube Music kanal kimliği, ad, URL, aralık, etkin durumu, son denetim zamanı). Bir izlemenin Spotify mı YouTube Music mi olduğu saklanan URL’sinden okunur, bu yüzden ek bir sütun gerekmez.
 - İzleme başına başarıyla indirilen her parça, diskteki dosya adı dahil
@@ -288,7 +300,23 @@ Bir izlemenin sayfası ayrıca şunları gösterir:
 
 Bir sanatçı takibinin sayfası, son kontroldeki tüm kataloğunu da listeler: YouTube Music, Deezer ve MusicBrainz’in listelediği her yayın (iki kaynaktaki aynı albüm bir kez gösterilir); albümler, mixtape’ler, EP’ler, single’lar ve canlı, derleme ve remiks yayınları altında. Her biri kitaplıkta ondan ne olduğunu gösterir: parça sayısıyla **Tamam**, **Kısmen**, **İndirilecek**, **İzlemeden önce çıktı** (**Yalnızca yeni yayınlar** takibi onu atladı), **İzlenmiyor** (takibin indirmediği bir tür veya çeşit) ya da **Kapalı**. Konuk katılımlar ve bootleg’ler kendi filtrelerindedir ve hiç indirilmez.
 
+**Elimde ne var, kontrol et**, her yayının parça listesini okur ve sanatçı takibinin şarkıları eşleştirdiği gibi (aynı sanatçı ve başlık, aynı süre) tüm kitaplıkla karşılaştırır; şarkıları kimin indirdiği fark etmez. Böylece takipten önce sahip olduğunuz bir albüm **Tamam** olarak görünür ve bir yayının yanındaki ok, parçalarını kitaplığınızda veya eksik olarak işaretleyerek listeler. Hiçbir şey indirilmez. Arka planda çalışır ve büyük bir sanatçıda yavaştır, çünkü MusicBrainz saniyede bir isteğe izin verir. Parça listeleri saklanır; sonraki bir kontrol yalnızca henüz okunmamış yayınları okur, normal bir kontrol de indirdiği yayınların parça listelerini saklar.
+
+**Eksikleri indir** ardından, takibin indirdiği her yayından (açık olan veya izlenen bir tür ve çeşitte olan), daha önce gezilmiş olanlar dahil, sizde olmayan şarkıları **kuyrukta** takip ettiğiniz bir kontrol olarak indirir. Önce şarkı sayısıyla birlikte sorar. Kitaplığınızda zaten olan şarkılar yeniden indirilmez, bağlanır; takibin indirmediği yayınlara dokunulmaz: dahil etmek için önce yayını açın.
+
 Bir yayının yanındaki anahtar, Lidarr’ın albüm başına izlemesi gibi takibin önüne geçer. Açık olduğunda, türü izlenmese ya da takip başlamadan önce çıkmış olsa bile yayını indirir ve hemen bir kontrol başlar. Kapalı olduğunda onu indirmeyi bırakır. Kitaplıkta zaten olan şarkılar her iki durumda da kalır. **MusicBrainz’den şunları da indir**, yalnızca bu sanatçı için, yalnızca MusicBrainz’in ayırt ettiği yayın türlerinden hangilerinin indirileceğini seçer: varsayılan olarak mixtape’ler ve film müzikleri; canlı albümler, derlemeler, remiksler, DJ miksleri ve demolar açıldığında.
+
+### Aranan
+
+İzleme sayfasının **Aranan** sekmesi, **Çalma listeleri** ve **Sanatçılar** sekmelerinin yanında, sanatçı takiplerinizin indirmesi gereken ama kitaplığın henüz tam olarak sahip olmadığı her şeyin tek bir listesidir. Her sanatçı takibiniz için (yönetici herkesinkini görür) takibin indirdiği (açık olan veya izlenen bir tür ve çeşitte olan) ve **Kısmen** ya da **İndirilecek** durumundaki her yayını, kitaplıkta ondan kaç şarkı olduğuyla birlikte listeler („sahip olunan / toplam“). Duraklatılmış takipler listeye girmez, anahtarını kapattığınız yayın da girmez. Yayınlar sanatçıya göre gruplanır; her grupta takibin sayfasına bir bağlantı ve o sanatçının **Eksikleri indir** düğmesi bulunur. Üstteki özet, eksik şarkıları ve ait oldukları yayınları, bir de kaç yayının henüz kontrol edilmediğini sayar. Bir arama kutusu ve bir tür filtresi listeyi daraltır.
+
+**Henüz kontrol edilmedi** rozetli bir yayının parça listesi henüz okunmamıştır (**Elimde ne var, kontrol et** okur, bkz. [Bir sanatçının yayınları](#an-artists-releases)), bu yüzden boyutu bilinmez: katalog bir parça sayısı bildirse bile yayın kitaplığınızda zaten olabilir. Sayı yerine rozeti gösterir, eksik şarkılara dahil edilmez ve sanatçısı listenin üstündeki **Henüz kontrol edilmedi** satırında anılır (ilk birkaç ad, sonra „ve 85 tane daha“). Bir sanatçının **Eksikleri indir** düğmesi, bilinen eksik şarkıları ya da henüz kontrol edilmemiş yayınları olduğunda kullanılabilir.
+
+**Tüm sanatçıları kontrol et**, bu sanatçıların her biri için **Elimde ne var, kontrol et** işlemini arka planda, her seferinde bir sanatçı olacak şekilde çalıştırır. MusicBrainz saniyede bir isteğe izin verdiği için büyük sanatçılarda yavaştır. **Durdur**, geçerli sanatçının okunmasını bir sonraki yayınında bitirir: okunanlar saklanır ve sonraki bir **Tüm sanatçıları kontrol et** oradan devam eder.
+
+**Eksiklerin hepsini indir** önce şarkı sayısıyla birlikte sorar (henüz kontrol edilmemiş yayınlar varsa, onlardaki eksiklerin de ekleneceğini söyler: önce **Tüm sanatçıları kontrol et** kesin sayıyı verir), sonra her sanatçının **Eksikleri indir** işlemini her seferinde bir sanatçı olacak şekilde çalıştırır. Şarkılar **kuyrukta** iner. **Durdur**, sürmekte olan sanatçının bitmesine izin verir, sonra durur.
+
+İkisinden yalnızca biri aynı anda çalışır ve başka bir hesabın çalıştırması sizinkini de engeller. Kendi çalıştırmanızın ilerlemesini görürsünüz (yönetici herhangi birini görür); yalnızca kitaplık kipinde ikisi de engellenir. İlerleme satırı sürmekte olan sanatçıyı da sayar („Kontrol ediliyor 1/87: Ace“) ve **Durdur**dan sonra çalıştırma bitene kadar „Durduruluyor…“ yazar.
 
 ## Bir şarkının nereden geldiği
 

@@ -51,6 +51,12 @@ def test_with_block_rolls_back_then_closes_on_error(tmp_path):
         assert other.execute('SELECT x FROM t').fetchall() == []
 
 
+def test_wal_and_synchronous_normal_are_set(tmp_path):
+    with connect_sqlite(str(tmp_path / 'db.sqlite')) as conn:
+        assert conn.execute('PRAGMA synchronous').fetchone()[0] == 1
+        assert conn.execute('PRAGMA journal_mode').fetchone()[0] == 'wal'
+
+
 def test_row_factory_still_applies(tmp_path):
     with connect_sqlite(str(tmp_path / 'db.sqlite'), row_factory=True) as c:
         row = c.execute('SELECT 1 AS one').fetchone()

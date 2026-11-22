@@ -32,13 +32,16 @@ import hmac
 import json
 import re
 import secrets
-import sqlite3
 import threading
+from contextlib import AbstractContextManager
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Optional
 
-from .sqlite_utils import connect_sqlite
+from .db.config import Dialect
+from .db.core import Connection, Database, as_database
+from .db.dialect import column_names, insert_returning_id
+from .db.errors import IntegrityError
 
 #: Shortest password accepted.
 MIN_PASSWORD_LENGTH = 8
@@ -182,12 +185,14 @@ def public_user(row: Any) -> dict[str, Any]:
 class UserStore:
     """The users table (and the one-time accounts notice)."""
 
-    def __init__(self, db_path: Path) -> None:
-        self._path = str(db_path)
+    def __init__(self, db_path: str | Path | Database) -> None:
+        self.db = as_database(db_path, 'auth')
+        self._path = None if self.db.path is None else str(self.db.path)
         self._lock = threading.Lock()
         self._listeners: list[Callable[[], None]] = []
-        self._init_db()
         self._dummy: Optional[str] = None
+        if self.db.dialect is Dialect.SQLITE:
+            self._init_db()
 
     def add_change_listener(self, fn: Callable[[], None]) -> None:
         """Call *fn* after an account's name, role or password changes,
@@ -200,8 +205,8 @@ class UserStore:
         for fn in list(self._listeners):
             fn()
 
-    def _connect(self) -> sqlite3.Connection:
-        return connect_sqlite(self._path, row_factory=True)
+    def _connect(self) -> AbstractContextManager[Connection]:
+        return self.db.connect()
 
     @property
     def _dummy_hash(self) -> str:
@@ -213,6 +218,7 @@ class UserStore:
         return self._dummy
 
     def _init_db(self) -> None:
+        # SQLite only: on PostgreSQL the migration made this schema.
         with self._connect() as conn:
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS users (
@@ -244,16 +250,14 @@ class UserStore:
             """)
 
     @staticmethod
-    def _config(conn: sqlite3.Connection, key: str) -> Optional[str]:
+    def _config(conn: Connection, key: str) -> Optional[str]:
         row = conn.execute(
             'SELECT value FROM auth_config WHERE key = ?', (key,)
         ).fetchone()
         return row['value'] if row else None
 
     @staticmethod
-    def _set_config(
-        conn: sqlite3.Connection, key: str, value: Optional[str]
-    ) -> None:
+    def _set_config(conn: Connection, key: str, value: Optional[str]) -> None:
         if value is None:
             conn.execute('DELETE FROM auth_config WHERE key = ?', (key,))
         else:
@@ -279,9 +283,10 @@ class UserStore:
             if conn.execute('SELECT 1 FROM users LIMIT 1').fetchone():
                 return False
             legacy = self._config(conn, 'password_hash')
-            conn.execute(
+            inserted = conn.execute(
                 'INSERT INTO users (username, password_hash, role, '
-                'default_password, created_at) VALUES (?, ?, ?, ?, ?)',
+                'default_password, created_at) VALUES (?, ?, ?, ?, ?) '
+                'ON CONFLICT DO NOTHING',
                 (
                     DEFAULT_USERNAME,
                     legacy or hash_password(DEFAULT_PASSWORD),
@@ -289,14 +294,16 @@ class UserStore:
                     0 if legacy else 1,
                     _now(),
                 ),
-            )
+            ).rowcount
+            if not inserted:
+                # Another process created the first admin meanwhile.
+                return False
             admin_id = conn.execute(
-                'SELECT id FROM users WHERE username = ?', (DEFAULT_USERNAME,)
+                'SELECT id FROM users WHERE lower(username) = lower(?)',
+                (DEFAULT_USERNAME,),
             ).fetchone()['id']
             # Devices paired before accounts existed belong to the admin.
-            columns = {
-                r[1] for r in conn.execute('PRAGMA table_info(auth_devices)')
-            }
+            columns = set(column_names(conn, 'auth_devices'))
             if 'user_id' in columns:
                 conn.execute(
                     'UPDATE auth_devices SET user_id = ? WHERE user_id = 0',
@@ -339,7 +346,8 @@ class UserStore:
 
         with self._lock, self._connect() as conn:
             row = conn.execute(
-                'SELECT id FROM users WHERE username = ?', (DEFAULT_USERNAME,)
+                'SELECT id FROM users WHERE lower(username) = lower(?)',
+                (DEFAULT_USERNAME,),
             ).fetchone()
             if row is None:
                 conn.execute(
@@ -371,7 +379,7 @@ class UserStore:
 
         with self._connect() as conn:
             row = conn.execute(
-                'SELECT * FROM users WHERE username = ?',
+                'SELECT * FROM users WHERE lower(username) = lower(?)',
                 (str(username or '').strip(),),
             ).fetchone()
         stored = row['password_hash'] if row else self._dummy_hash
@@ -400,14 +408,15 @@ class UserStore:
     def by_username(self, username: str) -> Optional[dict[str, Any]]:
         with self._connect() as conn:
             row = conn.execute(
-                'SELECT * FROM users WHERE username = ?', (username,)
+                'SELECT * FROM users WHERE lower(username) = lower(?)',
+                (username,),
             ).fetchone()
         return public_user(row) if row else None
 
     def list(self) -> list[dict[str, Any]]:
         with self._connect() as conn:
             rows = conn.execute(
-                'SELECT * FROM users ORDER BY username COLLATE NOCASE'
+                'SELECT * FROM users ORDER BY lower(username)'
             ).fetchall()
         return [public_user(r) for r in rows]
 
@@ -470,12 +479,14 @@ class UserStore:
                 candidate = name
                 index = 0
                 while conn.execute(
-                    'SELECT 1 FROM users WHERE username = ?', (candidate,)
+                    'SELECT 1 FROM users WHERE lower(username) = lower(?)',
+                    (candidate,),
                 ).fetchone():
                     extra = suffix if index == 0 else f'{suffix}{index}'
                     candidate = f'{name[: 32 - len(extra) - 1]}_{extra}'
                     index += 1
-                cursor = conn.execute(
+                user_id = insert_returning_id(
+                    conn,
                     'INSERT INTO users (username, password_hash, role, '
                     'created_at) VALUES (?, ?, ?, ?)',
                     (
@@ -485,7 +496,6 @@ class UserStore:
                         _now(),
                     ),
                 )
-                user_id = cursor.lastrowid
                 conn.execute(
                     'INSERT INTO auth_oidc_identities '
                     '(issuer, subject, user_id) VALUES (?, ?, ?)',
@@ -522,7 +532,7 @@ class UserStore:
                     'created_at) VALUES (?, ?, ?, ?)',
                     (name, hash_password(secret), role, _now()),
                 )
-        except sqlite3.IntegrityError as exc:
+        except IntegrityError as exc:
             raise UserError('That username is taken') from exc
         return self.by_username(name) or {}
 
@@ -561,7 +571,7 @@ class UserStore:
                             f'UPDATE users SET {assignments} WHERE id = ?',
                             (*updates.values(), user_id),
                         )
-                except sqlite3.IntegrityError as exc:
+                except IntegrityError as exc:
                     raise UserError('That username is taken') from exc
                 self._changed()
         return self.get(user_id) or {}

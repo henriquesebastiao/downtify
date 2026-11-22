@@ -13,7 +13,9 @@ Three categories are handled, all of them writes to tags:
     iTunes or YouTube Music has for the track.
 ``lyrics``
     Fill in lyrics for tracks that have none, through the ordered
-    provider list (see :mod:`downtify.lyrics`).
+    provider list (see :mod:`downtify.lyrics`). With the
+    ``lyrics_synced_only`` setting, a track counts as having lyrics only
+    when they are time-synced, and only synced lyrics are written.
 ``metadata``
     Re-read the track from Spotify and write back album, album artist,
     release date and track number.
@@ -44,7 +46,8 @@ from typing import Any, Callable, Optional
 from loguru import logger
 from mutagen import File as MutagenFile
 
-from . import cover_sources, spotify
+from . import cover_sources, providers, spotify
+from . import isrc as isrc_mod
 from . import lyrics as lyrics_mod
 from .download_queue import queue_pause
 from .downloader import embed_lyrics, embed_metadata
@@ -67,6 +70,7 @@ from .library_upgrade_db import (
     STATE_SCANNING,
     LibraryUpgradeDB,
     check_is_fresh,
+    lyrics_outcome,
 )
 from .lyrics import read_track_lyrics
 
@@ -79,17 +83,38 @@ STAGING_TEMPLATE = '{stem}' + UPGRADE_STAGING_MARKER + '{suffix}'
 CATEGORY_ARTWORK = 'artwork'
 CATEGORY_LYRICS = 'lyrics'
 CATEGORY_METADATA = 'metadata'
+#: Add the recording's ISRC to files without one (:mod:`downtify.isrc`).
+#: Opt-in, like ``audio``: a normal scan never looks for it; a scan
+#: asked for ``isrc`` looks for nothing else.
+CATEGORY_ISRC = 'isrc'
+#: Sent with ``isrc``: look the ISRCs up and list them, write nothing.
+#: A category, so a paused or restarted run stays look-up only.
+ISRC_LOOKUP_ONLY = 'isrc_lookup'
+_ISRC_MODE = frozenset({CATEGORY_ISRC, ISRC_LOOKUP_ONLY})
 
 #: Every category a scan reports on, in the order the UI shows them.
 CATEGORIES = (CATEGORY_ARTWORK, CATEGORY_LYRICS, CATEGORY_METADATA)
-SUPPORTED_CATEGORIES = (*CATEGORIES, 'audio')
+#: The lyrics check made with Time-synced lyrics only on, kept apart:
+#: a track found to have lyrics before may have only plain ones.
+CHECK_LYRICS_SYNCED = 'lyrics_synced'
+
+
+def check_key(category: str, synced_only: bool = False) -> str:
+    """Name a category's check is remembered under."""
+
+    if synced_only and category == CATEGORY_LYRICS:
+        return CHECK_LYRICS_SYNCED
+    return category
+
+
+SUPPORTED_CATEGORIES = (*CATEGORIES, CATEGORY_ISRC, ISRC_LOOKUP_ONLY, 'audio')
 
 #: How far a rewritten file's duration may drift from the original
 #: before it is rejected. Tag writes don't touch audio, so this only
 #: catches a truncated or corrupted copy.
 _DURATION_TOLERANCE_SECONDS = 2.0
 
-DEFAULT_ARTWORK_MIN_PX = 600
+DEFAULT_ARTWORK_MIN_PX = 1200
 DEFAULT_RECHECK_DAYS = 30
 
 #: Upper bound on how often progress is pushed to connected clients: a
@@ -112,6 +137,8 @@ class UpgradeOptions:
     delete_replaced_audio: bool = False
     files: tuple[str, ...] = ()
     deemix_recordings: dict[str, str] = field(default_factory=dict)
+    #: Start upgrading the chosen categories as soon as the scan ends.
+    start_after_scan: bool = False
 
     def as_dict(self) -> dict[str, Any]:
         result = {
@@ -127,6 +154,8 @@ class UpgradeOptions:
                 result['deemix_recordings'] = dict(self.deemix_recordings)
         if self.files:
             result['files'] = list(self.files)
+        if self.start_after_scan:
+            result['start_after_scan'] = True
         return result
 
 
@@ -136,6 +165,13 @@ def normalize_categories(raw: Any) -> tuple[str, ...]:
     if not isinstance(raw, (list, tuple)):
         return CATEGORIES
     wanted = {str(item) for item in raw}
+    if CATEGORY_ISRC in wanted or ISRC_LOOKUP_ONLY in wanted:
+        # ISRCs are a run of their own: nothing else is looked at.
+        return (
+            (CATEGORY_ISRC, ISRC_LOOKUP_ONLY)
+            if (ISRC_LOOKUP_ONLY in wanted)
+            else (CATEGORY_ISRC,)
+        )
     picked = tuple(name for name in SUPPORTED_CATEGORIES if name in wanted)
     return picked or CATEGORIES
 
@@ -177,6 +213,7 @@ def options_from(payload: dict[str, Any]) -> UpgradeOptions:
         files=tuple(str(f) for f in payload.get('files', [])[:1000])
         if isinstance(payload.get('files'), list)
         else (),
+        start_after_scan=payload.get('start_after_scan') is True,
     )
 
 
@@ -197,15 +234,18 @@ def _metadata_gaps(entry: dict[str, Any]) -> list[str]:
 
 
 def _summarize(
-    jobs: list[dict[str, Any]], recently_checked: int = 0
+    jobs: list[dict[str, Any]],
+    recently_checked: int = 0,
+    plain_lyrics_only: int = 0,
 ) -> dict[str, Any]:
     """How many tracks (and bytes) each category accounts for."""
 
     counts = {name: 0 for name in CATEGORIES}
     sizes = {name: 0 for name in CATEGORIES}
-    if any('audio' in job.get('categories', []) for job in jobs):
-        counts['audio'] = 0
-        sizes['audio'] = 0
+    for extra in ('audio', CATEGORY_ISRC):
+        if any(extra in job.get('categories', []) for job in jobs):
+            counts[extra] = 0
+            sizes[extra] = 0
     for job in jobs:
         for name in job.get('categories') or []:
             if name in counts:
@@ -218,6 +258,9 @@ def _summarize(
         # Tracks the scan didn't even read, because every category had
         # been looked at recently enough.
         'recently_checked': int(recently_checked),
+        # Of the tracks missing lyrics, those that only have plain
+        # (unsynced) ones, with Time-synced lyrics only on.
+        'plain_lyrics_only': int(plain_lyrics_only),
     }
 
 
@@ -226,18 +269,28 @@ def track_findings(
     full_path: Path,
     *,
     artwork_min_px: int,
+    synced_only: bool = False,
 ) -> list[str]:
     """Which categories this track is behind on."""
 
     found: list[str] = []
     if int(entry.get('cover_px') or 0) < artwork_min_px:
         found.append(CATEGORY_ARTWORK)
-    existing = read_track_lyrics(full_path)
-    if not (existing.get('synced') or existing.get('plain')):
+    if not has_lyrics(full_path, synced_only=synced_only):
         found.append(CATEGORY_LYRICS)
     if _metadata_gaps(entry):
         found.append(CATEGORY_METADATA)
     return found
+
+
+def has_lyrics(full_path: Path, *, synced_only: bool = False) -> bool:
+    """Whether a track has lyrics: any, or with *synced_only* time-synced
+    ones (a ``.lrc`` sidecar or synced lyrics in its tags)."""
+
+    if synced_only:
+        return lyrics_mod.has_synced_lyrics(full_path)
+    existing = read_track_lyrics(full_path)
+    return bool(existing.get('synced') or existing.get('plain'))
 
 
 # ── The song a track describes ────────────────────────────────────────
@@ -426,6 +479,9 @@ class UpgradeDeps:
     audio_replacement: Any = None
     # Files whose audio an admin replaced by hand: their audio is kept.
     hand_replaced: Any = None
+    # Each file's upload (downtify/download_sources.py): a file swapped on
+    # disk since Downtify wrote it is kept like one replaced by hand.
+    download_sources: Any = None
 
 
 def resolve_track(stored_path: str, ctx: LibraryContext) -> Optional[Path]:
@@ -471,6 +527,8 @@ def _pick_artwork(
         song,
         current=cover_sources.current_cover(full),
         preference=options.artwork_source,
+        # Asked for at least the size being upgraded to.
+        px=max(options.artwork_min_px, providers.cover_resolution()),
     )
     if better is None:
         return _Artwork(px=have)
@@ -488,14 +546,19 @@ def _pick_lyrics(
 
     if CATEGORY_LYRICS not in options.categories:
         return None
-    existing = read_track_lyrics(full)
-    if existing.get('synced') or existing.get('plain'):
+    settings = deps.settings()
+    synced_only = bool(settings.get('lyrics_synced_only'))
+    if has_lyrics(full, synced_only=synced_only):
         return None
-    providers = list(deps.settings().get('lyrics_providers') or [])
+    providers = list(settings.get('lyrics_providers') or [])
     if not providers:
         return None
-    found = lyrics_mod.fetch(song, providers, deps.lyrics_cache)
-    return found if found is not None and found.has_any() else None
+    found = lyrics_mod.fetch(
+        song, providers, deps.lyrics_cache, synced_only=synced_only
+    )
+    if found is None or not found.usable(synced_only):
+        return None
+    return found
 
 
 def _publish_staged_lrc(source: Path, destination: Path) -> None:
@@ -535,6 +598,7 @@ def _write_upgrade(
     artwork: _Artwork,
     new_lyrics: Optional[lyrics_mod.Lyrics],
     write_tags: bool,
+    embed_synced: bool = False,
 ) -> Optional[str]:
     """Rewrite *full* through a verified working copy; error text or ``None``."""
 
@@ -562,6 +626,7 @@ def _write_upgrade(
                 stage.staged,
                 new_lyrics,
                 sidecar=stage.staged.with_suffix('.lrc'),
+                embed_synced=embed_synced,
             )
     except Exception as exc:
         _discard(stage)
@@ -582,6 +647,91 @@ def _write_upgrade(
         if dest_lrc != beside:
             beside.unlink(missing_ok=True)
     return None
+
+
+def _write_isrc(full: Path, code: str) -> Optional[str]:
+    """Add *code* as *full*'s ISRC through a verified working copy (only
+    that tag changes); error text or ``None``."""
+
+    try:
+        stage = _stage(full)
+    except OSError as exc:
+        if exc.errno == errno.EROFS:
+            return _READ_ONLY_DETAIL
+        return f'Could not stage a copy: {exc}'
+    if not isrc_mod.write(stage.staged, code):
+        _discard(stage)
+        return 'Could not write the ISRC tag'
+    if not _commit(stage):
+        return 'The rewritten file did not verify; kept the original'
+    return None
+
+
+def _add_isrc(
+    stored_path: str,
+    full: Path,
+    song: dict[str, Any],
+    *,
+    deps: 'UpgradeDeps',
+    ctx: LibraryContext,
+    lookup_only: bool,
+    stage_now: Callable[[str], None],
+) -> UpgradeOutcome:
+    """The ISRC run for one track: confident or nothing.
+
+    The same rules as for a new download (:func:`downtify.isrc.for_song`:
+    same first artist and title, length within 3 s, every match agreeing).
+    An unmatched file is left exactly as it is. *lookup_only* writes
+    nothing and doesn't mark the track as checked, so the real run looks
+    it up again.
+    """
+
+    if isrc_mod.read(full):
+        return UpgradeOutcome(JOB_SKIPPED, 'Already has an ISRC')
+    stage_now('isrc')
+    code = isrc_mod.lookup(song) or ''
+    if lookup_only:
+        if code:
+            return UpgradeOutcome(
+                JOB_DONE, f'Would add ISRC {code}', checked=False
+            )
+        return UpgradeOutcome(
+            JOB_SKIPPED,
+            'No ISRC found for sure; would be left as it is',
+            checked=False,
+        )
+    if not code:
+        return UpgradeOutcome(
+            JOB_SKIPPED, 'No ISRC found for sure; left as it is'
+        )
+    stage_now('writing')
+    try:
+        old_key = file_content_key(full) or ''
+    except Exception:
+        old_key = ''
+    error = _write_isrc(full, code)
+    if error == _READ_ONLY_DETAIL:
+        return UpgradeOutcome(JOB_SKIPPED, error, checked=False)
+    if error:
+        return UpgradeOutcome(JOB_FAILED, error)
+    # A tag changes the file's size, so its content key moves: owners,
+    # likes and the rest follow it, as after any other upgrade.
+    if old_key and deps.rekey_owners is not None:
+        try:
+            new_key = file_content_key(full) or ''
+            if new_key:
+                deps.rekey_owners(old_key, new_key, stored_path)
+        except Exception:
+            logger.opt(exception=True).debug(
+                'Library upgrade: could not rekey owners for {}',
+                stored_path,
+            )
+    if ctx.metadata_cache is not None:
+        try:
+            ctx.metadata_cache.refresh(stored_path, full)
+        except Exception:
+            logger.debug('Library upgrade: metadata cache refresh failed')
+    return UpgradeOutcome(JOB_DONE, f'ISRC {code}', changed=[CATEGORY_ISRC])
 
 
 def _outcome_detail(changed: list[str], artwork: _Artwork) -> str:
@@ -626,6 +776,16 @@ def upgrade_track(
         spotify_id=spotify_id,
         refresh_metadata=CATEGORY_METADATA in options.categories,
     )
+    if CATEGORY_ISRC in options.categories:
+        return _add_isrc(
+            stored_path,
+            full,
+            song,
+            deps=deps,
+            ctx=ctx,
+            lookup_only=ISRC_LOOKUP_ONLY in options.categories,
+            stage_now=stage_now,
+        )
 
     stage_now('artwork')
     artwork = _pick_artwork(song, full, entry, options=options)
@@ -660,6 +820,7 @@ def upgrade_track(
         artwork=artwork,
         new_lyrics=new_lyrics,
         write_tags=bool(changed),
+        embed_synced=bool(deps.settings().get('lyrics_synced_only')),
     )
     if error == _READ_ONLY_DETAIL:
         return UpgradeOutcome(JOB_SKIPPED, error, checked=False)
@@ -738,6 +899,8 @@ class LibraryUpgradeRunner:
             'state': run['state'],
             'run': run,
             'counts': counts,
+            # How the lyrics part went: added, none found, failed.
+            'lyrics': lyrics_outcome(self.db, int(run['id'])),
             # Carried by every progress message, not only the initial
             # GET, so a client that only ever sees WebSocket updates
             # still knows what the scan found.
@@ -803,11 +966,14 @@ class LibraryUpgradeRunner:
                 wanted_files = set(options.files)
                 entries = [e for e in entries if e['file'] in wanted_files]
             self._scan_total = len(entries)
+            synced_only = bool(self.deps.settings().get('lyrics_synced_only'))
             checks = self.db.checks_for([str(e['file']) for e in entries])
             jobs: list[dict[str, Any]] = []
             checked: list[tuple[str, list[str]]] = []
             total_bytes = 0
-            skipped = 0
+            # Tracks not even read (all checked recently), and tracks
+            # missing lyrics that only have plain ones.
+            tally = {'skipped': 0, 'plain_only': 0}
             for index, entry in enumerate(entries, start=1):
                 if self._stop.is_set():
                     self.db.set_state(run_id, STATE_CANCELLED)
@@ -826,20 +992,28 @@ class LibraryUpgradeRunner:
                         'artist': str(entry.get('artist') or ''),
                     })
                     continue
+                if CATEGORY_ISRC in options.categories:
+                    jobs.extend(self._isrc_jobs(entry, checks, options, tally))
+                    continue
                 due = self._categories_due(
-                    checks.get(stored) or {}, options.recheck_days
+                    checks.get(stored) or {},
+                    options.recheck_days,
+                    synced_only=synced_only,
                 )
                 if not due:
                     # Every category was looked at recently: don't even
                     # read the file.
-                    skipped += 1
+                    tally['skipped'] += 1
                     continue
                 full = resolve_track(stored, ctx)
                 if full is None:
                     continue
                 behind = set(
                     track_findings(
-                        entry, full, artwork_min_px=options.artwork_min_px
+                        entry,
+                        full,
+                        artwork_min_px=options.artwork_min_px,
+                        synced_only=synced_only,
                     )
                 )
                 found = [name for name in CATEGORIES if name in due & behind]
@@ -847,7 +1021,16 @@ class LibraryUpgradeRunner:
                 # next scan doesn't read this file again for those.
                 clean = sorted(due - behind)
                 if clean:
-                    checked.append((stored, clean))
+                    checked.append((
+                        stored,
+                        [check_key(n, synced_only) for n in clean],
+                    ))
+                if (
+                    synced_only
+                    and CATEGORY_LYRICS in found
+                    and read_track_lyrics(full, raw=True).get('plain')
+                ):
+                    tally['plain_only'] += 1
                 if found:
                     jobs.append({
                         'file': stored,
@@ -859,28 +1042,71 @@ class LibraryUpgradeRunner:
             self.db.record_checks(checked, app_version=self.deps.version)
             self.db.add_jobs(run_id, jobs)
             self.db.set_totals(run_id, len(entries), total_bytes)
-            self.db.set_summary(run_id, _summarize(jobs, skipped))
+            self.db.set_summary(
+                run_id, _summarize(jobs, tally['skipped'], tally['plain_only'])
+            )
             self.db.set_state(run_id, STATE_READY)
+            if options.start_after_scan and jobs and not queue_pause.paused:
+                # "Scan, then upgrade": the chosen categories, at once.
+                self.db.set_categories(run_id, list(options.categories))
+                self._begin(run_id, options)
+                return
         except Exception:
             logger.opt(exception=True).error('Library upgrade scan failed')
             self.db.set_state(run_id, STATE_CANCELLED)
         self._publish()
 
+    def _isrc_jobs(
+        self,
+        entry: dict[str, Any],
+        checks: dict[str, Any],
+        options: UpgradeOptions,
+        tally: dict[str, int],
+    ) -> list[dict[str, Any]]:
+        """An ISRC scan's job for *entry* (none or one). Only the tag the
+        listing already read: no file is opened, nothing else looked for."""
+
+        if isrc_mod.normalize(entry.get('isrc')):
+            return []
+        stored = str(entry['file'])
+        if check_is_fresh(
+            (checks.get(stored) or {}).get(CATEGORY_ISRC),
+            app_version=self.deps.version,
+            max_age_days=options.recheck_days,
+        ):
+            # Looked up recently and nothing sure was found.
+            tally['skipped'] += 1
+            return []
+        return [
+            {
+                'file': stored,
+                'categories': [CATEGORY_ISRC],
+                'size': int(entry.get('size') or 0),
+                'title': str(entry.get('title') or ''),
+                'artist': str(entry.get('artist') or ''),
+            }
+        ]
+
     def _categories_due(
-        self, track_checks: dict[str, Any], recheck_days: int
+        self,
+        track_checks: dict[str, Any],
+        recheck_days: int,
+        *,
+        synced_only: bool = False,
     ) -> set[str]:
         """Categories this track hasn't had looked at recently.
 
         Kept per category: repairing a track's artwork says nothing
         about whether anyone ever went looking for its lyrics, so a
-        later run for another category must still consider it.
+        later run for another category must still consider it. With
+        *synced_only*, only a lyrics check made that way counts.
         """
 
         return {
             name
             for name in CATEGORIES
             if not check_is_fresh(
-                track_checks.get(name),
+                track_checks.get(check_key(name, synced_only)),
                 app_version=self.deps.version,
                 max_age_days=recheck_days,
             )
@@ -894,6 +1120,7 @@ class LibraryUpgradeRunner:
             'category_bytes': stored.get('category_bytes') or {},
             'tracks': int(stored.get('tracks') or 0),
             'recently_checked': int(stored.get('recently_checked') or 0),
+            'plain_lyrics_only': int(stored.get('plain_lyrics_only') or 0),
             'library_tracks': int(run['total_tracks'] or 0),
             'library_bytes': int(run['total_bytes'] or 0),
         }
@@ -920,12 +1147,17 @@ class LibraryUpgradeRunner:
             }:
                 raise RuntimeError('Scan the library before upgrading it')
             run_id = int(run['id'])
+            scanned = options_from(run['options'])
+            if (
+                ISRC_LOOKUP_ONLY in scanned.categories
+                and CATEGORY_ISRC in categories
+            ):
+                # A "look up only" scan never turns into a writing run.
+                categories = (CATEGORY_ISRC, ISRC_LOOKUP_ONLY)
             # Remembered so a resume after a restart runs the same
             # categories the user picked, not everything the scan found.
             self.db.set_categories(run_id, list(categories))
-            options = replace(
-                options_from(run['options']), categories=categories
-            )
+            options = replace(scanned, categories=categories)
             self._begin(run_id, options)
         return self.status()
 
@@ -992,6 +1224,31 @@ class LibraryUpgradeRunner:
             self.db.set_state(run_id, state)
         self._publish()
 
+    def _kept_by_hand(self, stored: str) -> bool:
+        """Whether *stored*'s audio was replaced by hand: through
+        Replace audio, or swapped on disk since Downtify wrote it (which
+        is then remembered as such)."""
+
+        hand = self.deps.hand_replaced
+        if hand is not None and hand.protected(stored):
+            return True
+        sources = self.deps.download_sources
+        if sources is None:
+            return False
+        try:
+            full = resolve_track(stored, self.deps.context())
+            if full is None or not sources.replaced_on_disk(stored, full):
+                return False
+            if hand is not None:
+                hand.mark(stored, 'disk')
+            sources.reject_file_source(stored)
+        except Exception:
+            logger.opt(exception=True).debug(
+                'Hand-replaced check failed for {}', stored
+            )
+            return False
+        return True
+
     def _process(
         self,
         run_id: int,
@@ -1002,8 +1259,7 @@ class LibraryUpgradeRunner:
         def on_stage(stage: str) -> None:
             self.db.set_stage(run_id, stored, stage)
 
-        hand = self.deps.hand_replaced
-        if 'audio' in todo and hand is not None and hand.protected(stored):
+        if 'audio' in todo and self._kept_by_hand(stored):
             # Audio an admin picked by hand isn't swapped for a match.
             todo = [name for name in todo if name != 'audio']
             if not todo:
@@ -1032,7 +1288,14 @@ class LibraryUpgradeRunner:
                     stored,
                     deps=self.deps,
                     options=UpgradeOptions(
-                        categories=tuple(todo),
+                        # The look-up-only marker rides along: it is no
+                        # job's category, so *todo* never has it.
+                        categories=tuple(todo)
+                        + tuple(
+                            name
+                            for name in options.categories
+                            if name == ISRC_LOOKUP_ONLY
+                        ),
                         artwork_min_px=options.artwork_min_px,
                         artwork_source=options.artwork_source,
                         recheck_days=options.recheck_days,
@@ -1056,9 +1319,10 @@ class LibraryUpgradeRunner:
             # Only the categories this run actually looked at: the rest
             # stay due, so a later run for them still considers the
             # track.
+            synced_only = bool(self.deps.settings().get('lyrics_synced_only'))
             self.db.record_check(
                 stored,
-                todo,
+                [check_key(name, synced_only) for name in todo],
                 app_version=self.deps.version,
                 artwork_px=outcome.artwork_px,
                 artwork_source=outcome.artwork_source,

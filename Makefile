@@ -1,6 +1,6 @@
 #!make
 
-DOWNTIFY_VERSION := 3.10.0
+DOWNTIFY_VERSION := 3.13.0
 TARGET := henriquesebastiao/downtify
 
 all: build up
@@ -67,6 +67,27 @@ rm:
 	sudo rm -rf docker/data/*
 	sudo rm -rf docker/data/.*
 
+# The PostgreSQL service is opt-in (compose profile `postgres`).
+db-up:
+	docker compose --profile postgres up -d --wait postgres
+
+# Copy an existing SQLite install into the compose PostgreSQL. Stop the app
+# first (`make down`). The SQLite files in docker/data are never modified.
+# Afterwards enable DATABASE_URL in docker-compose.yml.
+db-migrate: db-up
+	docker compose --profile postgres run --rm --no-deps --entrypoint python downtify main.py db-migrate --from-sqlite /data --to postgresql://downtify:$${POSTGRES_PASSWORD:-downtify}@postgres:5432/downtify
+
+db-shell:
+	docker compose exec postgres psql -U downtify downtify
+
+db-backup:
+	mkdir -p docker
+	docker compose exec -T postgres pg_dump -U downtify downtify > docker/pg-backup-$$(date +%Y%m%d%H%M%S).sql
+
+# DANGER: DELETES the PostgreSQL data volume (pgdata) and all data in it.
+db-reset:
+	docker compose --profile postgres down -v
+
 update:
 	uvx uv-bump
 	npm --prefix frontend update -S
@@ -75,4 +96,4 @@ update:
 %:
 	@:
 
-.PHONY: all build clean up down run format lint export changelog version doc doc-build doc-i18n rm
+.PHONY: all build clean up down run format lint export changelog version doc doc-build doc-i18n rm db-up db-migrate db-shell db-backup db-reset

@@ -16,6 +16,25 @@ Tüm ortam değişkenleri isteğe bağlıdır. Downtify hiçbiri olmadan kutudan
 | `DOWNTIFY_LOG_LEVEL` | `info` | Uygulama günlük düzeyi (`debug`, `info`, `warning`, …). |
 | `TZ` | `UTC` | Aşağıdaki `DOWNTIFY_MONITOR_SYNC_TIME` değerini yorumlamak için kullanılan yerel saat dilimi (IANA adı, örn. `America/Sao_Paulo`). |
 
+## Veritabanı
+
+Varsayılan olarak Downtify verilerini `DATABASE_DIR` altındaki SQLite dosyalarında tutar. PostgreSQL kullanmak için `DATABASE_URL` ayarlayın; [Veritabanı](../database.md) sayfası kurulumu, geçişleri ve neyin nerede saklandığını anlatır.
+
+| Değişken | Varsayılan | Açıklama |
+|----------|---------|-----------|
+| `DATABASE_URL` | _(ayarlı değil)_ | PostgreSQL bağlantı URL’si, `postgresql://kullanıcı:parola@sunucu:5432/veritabani` (`postgres://` de çalışır). Ayarlı değilse: SQLite. Ayarlıysa: normalde SQLite dosyası olan depolar (kitaplık, izleyici, hesaplar, etkinlik, doctor) PostgreSQL kullanır. Başka bir şemaya sahip değer reddedilir. URL hata iletilerinde hiçbir zaman gösterilmez. |
+| `DB_POOL_MIN` | `2` | PostgreSQL havuzunun açık tuttuğu bağlantı sayısı. `0` veya daha fazla olmalı. |
+| `DB_POOL_MAX` | `20` | PostgreSQL havuzunun açabileceği en fazla bağlantı. En az `1` ve en az `DB_POOL_MIN` olmalı. |
+| `DB_POOL_TIMEOUT` | `10` | Bir isteğin boş bir bağlantı için beklediği, sonra başarısız olduğu saniye sayısı. |
+| `DB_SEARCH_PATH` | _(ayarlı değil)_ | Diğer uygulamalarla paylaşılan bir veritabanı için kullanılacak PostgreSQL şeması. Yalnızca düz bir tanımlayıcı: harfler, rakamlar ve alt çizgi; rakamla başlamaz. Ayarlı değilse: sunucunun varsayılanı (`public`). |
+| `DATABASE_DIR` | `/data` | Ayarlar, önbellekler ve SQLite dosyalarının dizini. PostgreSQL ile de kullanılmaya devam eder; veritabanı tablosu olmayan her şey için. |
+| `POSTGRES_PASSWORD` | `downtify` | Yalnızca Docker Compose (depodaki `docker-compose.yml` okur, sunucu okumaz): paketli `postgres` hizmetindeki `downtify` kullanıcısının parolası; `DATABASE_URL` de bunu kullanır. İlk başlatmadan önce Compose dosyasının yanındaki bir `.env` dosyasına koyun. PostgreSQL bunu yalnızca veri birimini oluştururken uygular; bu yüzden sonradan değiştirmek mevcut veritabanının parolasını değiştirmez. |
+
+```yaml
+environment:
+  - DATABASE_URL=postgresql://downtify:change-me@postgres:5432/downtify
+```
+
 ## Çalma Listesi İzleyici
 
 | Değişken | Varsayılan | Açıklama |
@@ -65,7 +84,7 @@ Bkz. [Müzik çöp kutusu](../features/music-trash.md). Bunlardan biri ayarlanma
 
 ## Sağlık denetimi
 
-İmajda yerleşik bir [Docker `HEALTHCHECK`](https://docs.docker.com/reference/dockerfile/#healthcheck) vardır — özel bir `--health-cmd` gerekmez. Kapsayıcının kendi bağlantı noktasında her 30 saniyede bir `GET /api/health`’i sorgular (5 saniye zaman aşımı, 20 saniye başlangıç toleransı, kapsayıcı sağlıksız işaretlenmeden önce 3 deneme). `docker ps` ve `docker inspect` sonucu gösterir; Compose’un `condition: service_healthy` değeri veya Watchtower gibi araçlar buna göre hareket edebilir.
+İmajda yerleşik bir [Docker `HEALTHCHECK`](https://docs.docker.com/reference/dockerfile/#healthcheck) vardır — özel bir `--health-cmd` gerekmez. Kapsayıcının kendi bağlantı noktasında her 30 saniyede bir `GET /api/health`’i sorgular (5 saniye zaman aşımı, 20 saniye başlangıç toleransı, kapsayıcı sağlıksız işaretlenmeden önce 3 deneme). `docker ps` ve `docker inspect` sonucu gösterir; Compose’un `condition: service_healthy` değeri veya Watchtower gibi araçlar buna göre hareket edebilir. PostgreSQL ile, veritabanına ulaşılamadığı sürece denetim de başarısız olur (`503`, bkz. [`GET /api/health`](../api-reference.md#get-apihealth)).
 
 | Değişken | Varsayılan | Açıklama |
 |----------|---------|-------------|
@@ -86,6 +105,7 @@ YouTube otomatik indiricileri düzenli olarak zorlar. Bu değişkenler, varsayı
 | `DOWNTIFY_YT_PLAYER_CLIENTS` | `ios,android,web_embedded,mweb,web,tv` | Denenecek yt-dlp oynatıcı istemcilerinin virgülle ayrılmış, sıralı listesi. Downtify’ın varsayılan listesi zaten JavaScript çalışma zamanı olmadan çalışan istemcileri tercih eder. Yalnızca belirli bir istemcinin engellendiğini biliyorsanız değiştirin. |
 | `DOWNTIFY_YT_PO_TOKEN` | _(ayarlı değil)_ | yt-dlp için virgülle ayrılmış Proof-of-Origin belirteçleri; her biri `<client>.<context>+<token>` biçiminde (örn. `mweb.gvs+ABC123`). Yalnızca YouTube kullandığınız istemciler için PO Token talep etmeye başlarsa gerekir. |
 | `DOWNTIFY_COOKIES_FILE` | _(ayarlı değil)_ | **Kapsayıcının içindeki** Netscape biçimli bir `cookies.txt` yolu. yt-dlp’nin gerçek bir tarayıcı oturumu olarak kimlik doğrulamasını sağlar — açık içerikli/yaş sınırlı parçalar ve YouTube’un oturum açma duvarı uyguladığı her durum için gerekli. Web arayüzünde yüklenen bir dosyaya üstündür ve arayüzün o bölümünü salt okunur yapar. [YouTube çerezleri](../features/youtube-cookies.md) sayfasına bakın. |
+| `DOWNTIFY_COOKIES_REFRESH_MINUTES` | `15` | Çerez bakımının YouTube oturum çerezlerini kaç dakikada bir (`5`–`1440`) yenileyip kaydedeceği. `0` kapatır. Yüklenen dosyayı veya `DOWNTIFY_COOKIES_FILE` dosyasını (yazılabilir olduğunda) yeniler. Bkz. [Çalışır tutma](../features/youtube-cookies.md#keeping-them-working). |
 | `DOWNTIFY_COOKIES_FROM_BROWSER` | _(ayarlı değil)_ | Çerezlerin alınacağı tarayıcının adı (örn. `chrome`, `firefox`). Tarayıcının çerez deposunun kapsayıcı içinden erişilebilir olmasını gerektirir; bu yüzden Docker’da nadiren kullanılabilir. |
 
 ::: tip Muhtemelen bunlara ihtiyacınız yok
@@ -103,7 +123,7 @@ services:
     volumes:
       - ./downloads:/downloads
       - downtify_data:/data
-      - ./cookies.txt:/cookies.txt:ro
+      - ./cookies.txt:/cookies.txt
     environment:
       - DOWNTIFY_FORCE_IPV4=1
       - DOWNTIFY_COOKIES_FILE=/cookies.txt

@@ -28,7 +28,7 @@ Downtify lässt eine Hintergrundaufgabe laufen, die alle 60 Sekunden ausgeführt
 3. Lädt neue Titel mit derselben Pipeline wie ein manueller Download herunter
 4. Aktualisiert die M3U-Datei der Playlist (wenn die M3U-Erzeugung aktiviert ist)
 
-Die erste Prüfung, die startet, sobald du die Beobachtung hinzufügst, lädt alles herunter, was schon in der Playlist ist; spätere Prüfungen laden nur herunter, was seitdem hinzukam. „Schon heruntergeladen“ wird in einer kleinen SQLite-Datenbank (`downtify_monitor.db` unter `/data`) festgehalten, nicht durch Prüfen des Download-Ordners — das Verschieben einer heruntergeladenen Datei an eine andere Stelle auf der Festplatte (in deine eigene Bibliotheksstruktur, auf ein anderes Laufwerk, wohin auch immer) lässt Downtify also **nicht** glauben, sie fehle, und lädt sie bei der nächsten Prüfung nicht erneut herunter.
+Die erste Prüfung, die startet, sobald du die Beobachtung hinzufügst, lädt alles herunter, was schon in der Playlist ist; spätere Prüfungen laden nur herunter, was seitdem hinzukam. „Schon heruntergeladen“ wird in einer kleinen SQLite-Datenbank (`downtify_monitor.db` unter `/data`; mit PostgreSQL in der PostgreSQL-Datenbank) festgehalten, nicht durch Prüfen des Download-Ordners — das Verschieben einer heruntergeladenen Datei an eine andere Stelle auf der Festplatte (in deine eigene Bibliotheksstruktur, auf ein anderes Laufwerk, wohin auch immer) lässt Downtify also **nicht** glauben, sie fehle, und lädt sie bei der nächsten Prüfung nicht erneut herunter.
 
 Ein separater Durchlauf läuft jede Stunde und prüft, ob die Datei jedes heruntergeladenen Titels noch da ist. Wirklich gelöschte Dateien (im Gegensatz zu verschobenen) werden dann vergessen, sodass der Titel wieder zum Download infrage kommt — bei der nächsten Prüfung der Beobachtung nach diesem stündlichen Durchlauf, nicht sofort.
 
@@ -144,11 +144,12 @@ Sobald der Server die Beobachtung hinzugefügt hat, wird die Schaltfläche zu ei
 | Alle 6 Stunden | 360 | |
 | Alle 12 Stunden | 720 | |
 | Jeden Tag | 1 440 | Sich langsam ändernde Playlists |
+| Alle 3 Tage | 4 320 | |
 | Jede Woche | 10 080 | Wöchentlich aktualisierte Playlists |
 | Alle 2 Wochen | 20 160 | |
 | Jeden Monat | 43 200 | Archiv oder selten aktualisierte Playlists |
 
-Du kannst das Intervall einer bestehenden Playlist jederzeit auf der Überwachungskarte ändern, ohne sie zu entfernen und neu hinzuzufügen.
+Du kannst das Intervall einer bestehenden Playlist jederzeit auf der Überwachungskarte ändern, ohne sie zu entfernen und neu hinzuzufügen. Oder für viele Überwachungen auf einmal: siehe [Viele Überwachungen auf einmal ändern](#changing-many-watches-at-once).
 
 ## Überwachte Playlists verwalten
 
@@ -170,6 +171,17 @@ In jeder Zeile:
 - **⋯** — **Aktivität und Titel** (die eigene Seite der Beobachtung), pausieren/fortsetzen, den Link kopieren, das Original öffnen oder **Überwachung beenden** (der Eintrag wird gelöscht; heruntergeladene Dateien bleiben)
 
 **Aktivität** und **Speicher** sind Spalten wie die anderen: Unter **Spalten** blendest du sie aus oder änderst ihre Breite.
+
+### Viele Überwachungen auf einmal ändern
+
+Klicke über der Liste auf **Auswählen**, dann erhält jede Zeile ein Kästchen. Hake die Überwachungen an (mit **Umschalt**-Klick alle zwischen zwei Klicks) oder nutze **Alle angezeigten auswählen**, das die Suche und den Filter **Alle / Pausiert** berücksichtigt. Die Leiste über der Liste wendet dann eine Änderung auf alle angehakten an:
+
+- **Prüfintervall ändern auf…** — dasselbe Intervall für alle
+- **Pause** / **Fortsetzen**
+- **Jetzt prüfen** — die aktiven sofort prüfen
+- **Nicht mehr überwachen** — nach einer Bestätigung; heruntergeladene Dateien bleiben
+
+Das funktioniert auf den Tabs **Playlists** und **Künstler** gleich. Angehakte bleiben angehakt, wenn du die Suche änderst. **Fertig** (oder **Esc**) beendet die Auswahl; ein Tab-Wechsel leert sie.
 
 ### Eine Beobachtung bearbeiten
 
@@ -248,7 +260,7 @@ Verschwindet eine Datei tatsächlich — du hast sie aus dem Download-Ordner gen
 
 ## Speicherung
 
-Der Zustand der Überwachung wird in einer SQLite-Datenbank unter `/data/downtify_monitor.db` gespeichert. Die Datenbank hält fest:
+Der Zustand der Überwachung wird in einer SQLite-Datenbank unter `/data/downtify_monitor.db` gespeichert, dem Standard-Backend. Mit PostgreSQL ([Datenbank](../database.md)) werden dieselben Einträge in der PostgreSQL-Datenbank gehalten. Die Datenbank hält fest:
 
 - Jede Beobachtung (Art, Spotify- oder YouTube-Music-Playlist-ID oder YouTube-Music-Kanal-ID, Name, URL, Intervall, aktiviert, Zeitpunkt der letzten Prüfung). Ob eine Beobachtung Spotify oder YouTube Music ist, wird aus ihrer gespeicherten URL gelesen, sodass keine zusätzliche Spalte nötig ist.
 - Jeden erfolgreich heruntergeladenen Titel pro Beobachtung, einschließlich des Dateinamens auf der Festplatte
@@ -288,7 +300,23 @@ Die Id der Beobachtung (`#12`) steht neben ihrem Namen, damit sich zwei Beobacht
 
 Die Seite einer Künstlerbeobachtung listet auch den ganzen Katalog des Künstlers, Stand der letzten Prüfung: jede Veröffentlichung, die YouTube Music, Deezer und MusicBrainz listen (dasselbe Album aus zwei Quellen erscheint einmal), unter Alben, Mixtapes, EPs, Singles sowie Live-, Compilation- und Remix-Veröffentlichungen. Jede zeigt, was die Bibliothek davon hat: **Vollständig** mit ihrer Titelzahl, **Teilweise**, **Herunterzuladen**, **Vor der Beobachtung erschienen** (eine Beobachtung mit **Nur neue Veröffentlichungen** hat sie übersprungen), **Nicht beobachtet** (ein Typ oder eine Art, die die Beobachtung nicht herunterlädt) oder **Aus**. Gastauftritte und Bootlegs haben einen eigenen Filter und werden nie heruntergeladen.
 
+**Prüfen, was ich habe** liest die Titelliste jeder Veröffentlichung und vergleicht sie mit der ganzen Bibliothek, so wie die Künstlerbeobachtung Songs abgleicht (derselbe Künstler und Titel, dieselbe Länge), egal wer sie heruntergeladen hat. So erscheint ein Album, das du schon vor der Beobachtung hattest, als **Vollständig**, und der Pfeil neben einer Veröffentlichung listet ihre Titel, jeweils als in deiner Bibliothek oder fehlend markiert. Es wird nichts heruntergeladen. Die Prüfung läuft im Hintergrund und ist bei großen Künstlern langsam, da MusicBrainz eine Anfrage pro Sekunde erlaubt. Titellisten werden gespeichert, sodass eine spätere Prüfung nur noch ungelesene Veröffentlichungen liest; eine normale Prüfung speichert auch die Titellisten der Veröffentlichungen, die sie herunterlädt.
+
+**Fehlendes herunterladen** lädt danach die Songs, die du nicht hast, aus jeder Veröffentlichung, die die Beobachtung herunterlädt (eingeschaltet oder von einem beobachteten Typ und einer beobachteten Art), auch aus schon bearbeiteten, als Prüfung, die du in der **Warteschlange** verfolgst. Vorher fragt es, mit der Zahl der Songs. Songs, die schon in deiner Bibliothek sind, werden verknüpft, nicht erneut heruntergeladen, und Veröffentlichungen, die die Beobachtung nicht herunterlädt, bleiben unberührt: Schalte eine zuerst ein, um sie einzubeziehen.
+
 Der Schalter neben einer Veröffentlichung hat Vorrang vor der Beobachtung, wie Lidarrs Überwachung pro Album. Ein lädt sie herunter, auch wenn ihr Typ nicht beobachtet wird oder sie vor Beginn der Beobachtung erschien, und eine Prüfung startet sofort. Aus lädt sie nicht mehr herunter. Songs, die schon in der Bibliothek sind, bleiben in beiden Fällen. **Von MusicBrainz auch herunterladen** wählt, nur für diesen Künstler, welche Arten von Veröffentlichungen, die nur MusicBrainz unterscheidet, heruntergeladen werden: standardmäßig Mixtapes und Soundtracks; Live-Alben, Compilations, Remixe, DJ-Mixe und Demos, wenn eingeschaltet.
+
+### Gesucht
+
+Der Tab **Gesucht** der Monitor-Seite, neben **Playlists** und **Künstler**, ist eine einzige Liste von allem, was deine Künstlerbeobachtungen herunterladen sollen und die Bibliothek noch nicht vollständig hat. Für jede deiner Künstlerbeobachtungen (ein Admin sieht die aller) listet er jede Veröffentlichung, die die Beobachtung herunterlädt (eingeschaltet oder von einem beobachteten Typ und einer beobachteten Art) und die **Teilweise** oder **Herunterzuladen** ist, mit der Zahl der Songs, die die Bibliothek davon hat („habe von gesamt“). Pausierte Beobachtungen bleiben außen vor, ebenso eine Veröffentlichung, deren Schalter du ausschaltest. Die Veröffentlichungen sind nach Künstler gruppiert, jede Gruppe mit einem Link zur Seite der Beobachtung und dem **Fehlendes herunterladen** dieses Künstlers. Oben zählt eine Zusammenfassung die fehlenden Songs und ihre Veröffentlichungen sowie die Veröffentlichungen, die noch nicht geprüft sind. Ein Suchfeld und ein Typfilter schränken die Liste ein.
+
+Eine Veröffentlichung mit dem Zeichen **Noch nicht geprüft** hat eine Titelliste, die noch nicht gelesen wurde (durch **Prüfen, was ich habe**, siehe [Die Veröffentlichungen eines Künstlers](#an-artists-releases)), ihre Größe ist also unbekannt: Auch wenn der Katalog eine Titelzahl nennt, kann sie längst in deiner Bibliothek sein. Sie trägt statt einer Zahl das Zeichen, zählt nicht zu den fehlenden Songs, und ihr Künstler steht in einer Zeile **Noch nicht geprüft** über der Liste (die ersten Namen, dann „und 85 weitere“). Das **Fehlendes herunterladen** eines Künstlers ist verfügbar, sobald er bekannte fehlende Songs oder noch nicht geprüfte Veröffentlichungen hat.
+
+**Alle Künstler prüfen** führt **Prüfen, was ich habe** für jeden dieser Künstler aus, einen Künstler nach dem anderen, im Hintergrund. Bei großen Künstlern ist es langsam, da MusicBrainz eine Anfrage pro Sekunde erlaubt. **Stopp** beendet das Lesen des aktuellen Künstlers bei seiner nächsten Veröffentlichung: Was gelesen wurde, bleibt erhalten, und ein späteres **Alle Künstler prüfen** macht dort weiter.
+
+**Alle fehlenden herunterladen** fragt zuerst, mit der Zahl der Songs (und, wenn Veröffentlichungen noch nicht geprüft sind, mit dem Hinweis, dass deren Fehlendes dazukommt: **Alle Künstler prüfen** vorher ergibt eine genaue Zahl), und führt dann das **Fehlendes herunterladen** jedes Künstlers aus, einen Künstler nach dem anderen. Die Songs werden in der **Warteschlange** heruntergeladen. **Stopp** lässt den Künstler in Arbeit fertig werden und hält dann an.
+
+Nur eines von beiden läuft gleichzeitig, und der Lauf eines anderen Kontos blockiert deinen ebenfalls. Du siehst den Fortschritt deines eigenen Laufs (ein Admin sieht jeden), und im reinen Bibliotheksmodus sind beide gesperrt. Die Fortschrittszeile zählt den Künstler in Arbeit mit („Prüfe 1 von 87: Ace“) und zeigt nach **Stopp** „Stoppe …“, bis der Lauf beendet ist.
 
 ## Woher ein Titel kommt
 

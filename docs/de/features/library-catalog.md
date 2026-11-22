@@ -8,6 +8,8 @@ Downtify führt einen kleinen **Katalog** der Dateien unter `/downloads` (den sl
 
 ## Was gespeichert wird
 
+Die folgenden Speicherorte gelten für das Standard-SQLite-Backend. Mit PostgreSQL ([Datenbank](../database.md)) liegen dieselben Daten in der PostgreSQL-Datenbank.
+
 | Speicher | Ort | Zweck |
 |-------|----------|---------|
 | **Titelindex** | `/data/downtify_library.db` | Ordnet Spotify-Titel-IDs Bibliothekspfaden zu, damit ein bereits auf der Festplatte liegender Titel erkannt werden kann |

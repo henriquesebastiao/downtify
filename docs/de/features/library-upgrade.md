@@ -29,7 +29,7 @@ Der Standardmodus schreibt **Cover, Songtexte und Tags** neu. Der optionale [Dee
 Ein Titel gilt als zurückliegend, wenn:
 
 - die kurze Seite seines eingebetteten Covers **kleiner als die Zielgröße** ist (ein Titel ganz ohne Cover zählt auch);
-- er **weder** eingebettete Songtexte **noch** ein `.lrc`-Sidecar hat (neben der Datei oder im Songtext-Ordner aus den Einstellungen);
+- er **weder** eingebettete Songtexte **noch** ein `.lrc`-Sidecar hat (neben der Datei oder im Songtext-Ordner aus den Einstellungen) — mit eingeschaltetem [Nur zeitsynchrone Songtexte](lyrics.md#time-synced-lyrics-only): wenn er keine **zeitsynchronen** Songtexte hat, und es werden nur synchrone geschrieben;
 - in seinen Tags **Album**, **Album-Künstler**, **Jahr** oder **Titelnummer** fehlt.
 
 **Tags aktualisieren** funktioniert nur für Titel, für die Downtify noch eine Spotify-Titel-ID hat — die, die es von einem Spotify-Link heruntergeladen hat und die im [Titelindex](library-catalog.md#what-gets-stored) stehen. Andere Titel werden eingereiht, kommen aber als _Keine Änderung nötig_ zurück.
@@ -76,13 +76,25 @@ Zwei Dinge heben es immer auf:
 
 Findet ein Scan nichts mehr zu tun, _weil_ alles kürzlich geprüft wurde, sagt er das und bietet an, ohne das Gedächtnis erneut zu laufen, statt dich mit einem unerklärten „nichts zu verbessern“ zurückzulassen.
 
+### Scannen und Songtexte suchen
+
+**Scannen und Songtexte suchen** durchsucht die Bibliothek und beginnt, sobald der Scan endet, Songtexte für die Titel ohne zu suchen, ohne Auswahl dazwischen. In diesem Lauf werden nur Songtexte gesucht; Cover und Tags bleiben für einen anderen.
+
+### ISRCs für ältere Songs
+
+Songs, die geladen wurden, bevor Downtify ISRCs schrieb, haben keinen. Ein ISRC ist der eigene Code der Aufnahme: Downtify erkennt damit, ob ein Song schon in der Bibliothek ist, und der Musik-Papierkorb erkennt damit eine Datei, die er später wiederherstellen kann. Eine Datei ohne ISRC, ohne Anbieter-ID und ohne Album-Tag kann nicht in den Papierkorb.
+
+**ISRCs nachschlagen (schreibt nichts)** sucht Dateien ohne ISRC, schlägt jede nach und zeigt in der Trackliste, was es ergänzen würde (`Would add ISRC …`), ohne eine Datei zu ändern. **ISRCs ergänzen** macht dasselbe und schreibt sie. Nur der ISRC-Tag kommt hinzu, über dieselbe geprüfte Kopie wie bei jedem Upgrade, und alles, was auf die Datei zeigt (Playlists, Likes, Besitzer), zieht mit.
+
+Ein Code wird nur ergänzt, wenn Deezer ihn zweifelsfrei bestätigt, nach denselben Regeln wie bei neuen Downloads: gleicher erster Künstler und Titel, eine Länge auf 3 Sekunden genau und alle passenden Treffer einig über einen Code. Jede andere Datei bleibt genau, wie sie ist, und wird erst wieder gefragt, wenn **Titel nicht erneut prüfen für** abgelaufen ist. Keiner der beiden Scans schaut auf Cover, Songtexte oder Tags, und ein normaler Scan sucht nie nach ISRCs.
+
 ## Während es läuft
 
-Das Fortschrittspanel zeigt erledigte Titel aus der Warteschlange, eine ungefähre Datenmenge (`8.4 GB of 51.3 GB`) und wie viele verbessert wurden, nichts zu tun hatten oder fehlschlugen. Jeder Titel zeigt, was er gerade tut — _Zuordnung_, _Cover werden gesucht_, _Songtexte werden gesucht_, _Datei wird geschrieben_ — und endet mit dem, was sich änderte, z. B. `artwork 1200px (itunes)`.
+Das Fortschrittspanel zeigt erledigte Titel aus der Warteschlange, eine ungefähre Datenmenge (`8.4 GB of 51.3 GB`) und wie viele verbessert wurden, nichts zu tun hatten oder fehlschlugen. Jeder Titel zeigt, was er gerade tut — _Zuordnung_, _Cover werden gesucht_, _Songtexte werden gesucht_, _Datei wird geschrieben_ — und endet mit dem, was sich änderte, z. B. `artwork 1200px (itunes)`. Sucht der Lauf Songtexte, zählt eine Zeile darunter die Titel, die Songtexte bekommen haben, die, für die kein Anbieter welche hatte, und die fehlgeschlagenen.
 
 **Pausieren** stoppt nach dem laufenden Titel und behält die Warteschlange. **Anhalten** verwirft den Rest; bereits verbesserte Titel bleiben verbessert. Du kannst die Seite verlassen — der Lauf geht weiter, und jeder andere offene Tab folgt mit.
 
-Die Warteschlange liegt in `/data/downtify_library.db`, sodass ein **Neustart von Downtify (oder des Containers) mitten im Lauf ihn dort fortsetzt**, wo er aufhörte. Ein Titel, der in Bearbeitung war, als der Prozess starb, kommt zurück in die Warteschlange.
+Die Warteschlange liegt in `/data/downtify_library.db` (oder in der PostgreSQL-Datenbank, wenn [`DATABASE_URL`](../getting-started/environment-variables.md#database) gesetzt ist), sodass ein **Neustart von Downtify (oder des Containers) mitten im Lauf ihn dort fortsetzt**, wo er aufhörte. Ein Titel, der in Bearbeitung war, als der Prozess starb, kommt zurück in die Warteschlange.
 
 ## Nichts geht verloren, wenn eine Verbesserung fehlschlägt
 
@@ -109,7 +121,7 @@ Nach dem Aktivieren und Testen der [Deemix-Quelle](deemix.md) bietet **Bibliothe
 
 Dieser Scan erzeugt statt Cover-/Songtext-/Tag-Aufträgen eine **Audio**-Kategorie. Deemix besitzt die Ausgabedateien, das Artwork, das Albumlayout und die nativen Songtexte. Downtify liest sie an Ort und Stelle. Vorhandene native oder eingebettete Songtexte bleiben erhalten; nur fehlende Songtexte dürfen in einem beschreibbaren, dedizierten Songtext-Ordner ergänzt werden, ohne das Audio neu zu schreiben. Ein verlustfreies Original höherer Qualität bleibt erhalten, wenn Deemix auf MP3 konfiguriert ist.
 
-Die Veröffentlichung geschieht einmal pro Batch. M3U-Kommentare, manuelle Markierungen und die Titelreihenfolge bleiben erhalten; dann wandern Katalogpfade, Playlist-Zugehörigkeiten, die Likes aller Benutzer, Besitz und Regeln für verborgene Titel in einer einzigen SQLite-Transaktion. Gecachte Navidrome-IDs alter Dateien werden für eine frische native Suche ungültig gemacht. Bereits ausgegebene mobile IDs und alte Wiedergabe-URLs behalten schreibgeschützte Aliase auf den registrierten Ersatz; Änderungen nutzen diese URL-Aliase nie.
+Die Veröffentlichung geschieht einmal pro Batch. M3U-Kommentare, manuelle Markierungen und die Titelreihenfolge bleiben erhalten; dann wandern Katalogpfade, Playlist-Zugehörigkeiten, die Likes aller Benutzer, Besitz und Regeln für verborgene Titel in einer einzigen Datenbanktransaktion. Gecachte Navidrome-IDs alter Dateien werden für eine frische native Suche ungültig gemacht. Bereits ausgegebene mobile IDs und alte Wiedergabe-URLs behalten schreibgeschützte Aliase auf den registrierten Ersatz; Änderungen nutzen diese URL-Aliase nie.
 
 Dauerhafte Belege in der Bibliotheksdatenbank halten die SHA-256-Werte von Quelle/Ziel und den Veröffentlichungsstatus fest. Quellen bleiben, bis Ersatz und Referenzen verifiziert sind. Ein geänderter oder fehlender Mount, eine bearbeitete Datei, eine externe schreibgeschützte Playlist-Referenz, aktive Wiedergabe oder eine fehlgeschlagene Katalogveröffentlichung stoppen die Bereinigung mit sichtbarem Grund. Pause/Fortsetzen und Neustart verwenden die Belege wieder. Es gibt keinen allgemeinen Dublettendurchlauf und keine altersbasierte Bereinigung: Nur verifizierte Originale im Download-Ordner von Downtify kommen infrage. Manuelle Deemix-/slskd-Downloads, externe Originale, Verzeichnisse und Sidecars werden nie gelöscht. Ist ein Original einmal entfernt, stellt ein Zurückrollen des Containers diese Datei nicht wieder her; stelle sie bei Bedarf aus deinem eigenen Speicher-Backup wieder her.
 

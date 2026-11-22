@@ -2,6 +2,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from downtify import navidrome
 from downtify.library_catalog import LibraryContext
 from downtify.library_delete import TagMismatchDeleteContext
 from downtify.navidrome import (
@@ -696,3 +697,240 @@ def test_get_playlist_songs_handles_a_single_entry(monkeypatch):
     assert client.get_playlist_songs('playlist-1') == [
         {'id': 'song-1', 'title': 'First'}
     ]
+
+
+def _rating_client(handler):
+    client = NavidromeClient({
+        'url': 'https://navidrome.test',
+        'username': 'u',
+        'password': 'p',
+    })
+    client._request = handler  # type: ignore[method-assign]
+    return client
+
+
+def test_artists_flattens_the_index():
+    def fake_request(endpoint, extra=None, **kwargs):
+        assert endpoint == 'getArtists'
+        return {
+            'artists': {
+                'index': [
+                    {'name': 'A', 'artist': [{'id': 'a1', 'name': 'Abba'}]},
+                    {
+                        'name': 'B',
+                        'artist': [
+                            {'id': 'b1', 'name': 'Beck'},
+                            {'id': 'b2', 'name': 'Bjork'},
+                        ],
+                    },
+                ]
+            }
+        }
+
+    assert _rating_client(fake_request).artists() == [
+        {'id': 'a1', 'name': 'Abba'},
+        {'id': 'b1', 'name': 'Beck'},
+        {'id': 'b2', 'name': 'Bjork'},
+    ]
+
+
+def test_artist_albums_reads_song_counts():
+    def fake_request(endpoint, extra=None, **kwargs):
+        assert endpoint == 'getArtist'
+        assert extra == {'id': 'a1'}
+        return {
+            'artist': {
+                'album': [
+                    {'id': 'al1', 'name': 'One', 'songCount': 10},
+                    {'id': 'al2', 'name': 'Two'},
+                ]
+            }
+        }
+
+    assert _rating_client(fake_request).artist_albums('a1') == [
+        {'id': 'al1', 'name': 'One', 'song_count': 10},
+        {'id': 'al2', 'name': 'Two', 'song_count': 0},
+    ]
+
+
+def test_album_reads_rating_and_starred():
+    def fake_request(endpoint, extra=None, **kwargs):
+        assert endpoint == 'getAlbum'
+        assert extra == {'id': 'al1'}
+        return {
+            'album': {
+                'id': 'al1',
+                'name': 'One',
+                'artist': 'Abba',
+                'song': [
+                    {
+                        'id': 's1',
+                        'title': 'Rated',
+                        'userRating': 4,
+                        'starred': '2026-01-02T03:04:05Z',
+                    },
+                    {'id': 's2', 'title': 'Plain'},
+                ],
+            }
+        }
+
+    album = _rating_client(fake_request).album('al1')
+    assert album['name'] == 'One'
+    assert album['artist'] == 'Abba'
+    assert album['songs'] == [
+        {'id': 's1', 'title': 'Rated', 'starred': True, 'rating': 4},
+        {'id': 's2', 'title': 'Plain', 'starred': False, 'rating': 0},
+    ]
+
+
+def test_set_rating_sends_id_and_rating():
+    calls = []
+
+    def fake_request(endpoint, extra=None, **kwargs):
+        calls.append((endpoint, extra))
+        return {}
+
+    client = _rating_client(fake_request)
+    client.set_rating('s1', 3)
+    client.set_rating('s1', 9)
+    client.set_rating('s1', -2)
+    assert calls == [
+        ('setRating', {'id': 's1', 'rating': 3}),
+        ('setRating', {'id': 's1', 'rating': 5}),
+        ('setRating', {'id': 's1', 'rating': 0}),
+    ]
+
+
+def test_single_entries_and_empty_library():
+    def one_artist(endpoint, extra=None, **kwargs):
+        return {
+            'artists': {
+                'index': {'name': 'A', 'artist': {'id': 'a1', 'name': 'Abba'}}
+            }
+        }
+
+    assert _rating_client(one_artist).artists() == [
+        {'id': 'a1', 'name': 'Abba'}
+    ]
+    assert _rating_client(lambda *a, **k: {'artists': {}}).artists() == []
+
+    def bare_album(endpoint, extra=None, **kwargs):
+        return {'album': {'id': 'al1', 'name': 'One', 'artist': 'Abba'}}
+
+    assert _rating_client(bare_album).album('al1')['songs'] == []
+
+    def one_song(endpoint, extra=None, **kwargs):
+        return {'album': {'id': 'al1', 'song': {'id': 's1', 'title': 'T'}}}
+
+    album = _rating_client(one_song).album('al1')
+    assert not album['name']
+    assert album['songs'] == [
+        {'id': 's1', 'title': 'T', 'starred': False, 'rating': 0}
+    ]
+
+
+# ── Hold scans while someone is listening ─────────────────────────────────
+
+
+class _ListeningClient:
+    """A client whose now-playing list the test controls."""
+
+    def __init__(self, playing):
+        self.playing = playing
+        self.scans = []
+
+    def now_playing(self):
+        if isinstance(self.playing, Exception):
+            raise self.playing
+        return self.playing
+
+    def start_scan(self, *, full=False):
+        self.scans.append(full)
+
+    @staticmethod
+    def wait_scan_complete(_seconds):
+        return True
+
+
+class _NoThread:
+    """Stands in for the background thread: the test runs the checks."""
+
+    def __init__(self, *_args, **_kwargs):
+        pass
+
+    def start(self):
+        pass
+
+    @staticmethod
+    def is_alive():
+        return False
+
+
+@pytest.fixture
+def held(monkeypatch):
+    idle = navidrome.IdleScan()
+    monkeypatch.setattr(navidrome, 'idle_scan', idle)
+    monkeypatch.setattr(navidrome.threading, 'Thread', _NoThread)
+    return idle
+
+
+def test_scan_is_held_while_someone_listens(held):
+    client = _ListeningClient([{'username': 'me', 'title': 'Song'}])
+    cfg = {'scan_when_idle': True, 'scan_full': False}
+
+    assert navidrome._trigger_library_scan(client, cfg, 10) is False
+    assert client.scans == []
+    assert held.pending
+
+    # Still playing: still held.
+    assert held.run_once() is True
+    client.playing = []
+    assert held.run_once() is False
+    assert client.scans == [False]
+
+
+@pytest.mark.parametrize(
+    ('cfg', 'playing'),
+    [
+        ({'scan_when_idle': False}, [{'title': 'Song'}]),
+        ({'scan_when_idle': True}, []),
+        # A failed check never holds a scan.
+        ({'scan_when_idle': True}, RuntimeError('down')),
+    ],
+)
+def test_scan_runs_at_once_when_off_or_nobody_listens(held, cfg, playing):
+    client = _ListeningClient(playing)
+    cfg = {**navidrome._effective_navidrome_settings({}), **cfg}
+
+    assert navidrome._trigger_library_scan(client, cfg, 10) is True
+    assert client.scans == [False]
+    assert not held.pending
+
+
+def test_held_scans_merge_into_one_full_if_any_asked(held):
+    client = _ListeningClient([{'title': 'Song'}])
+    held.request(client, full=False)
+    held.request(client, full=True)
+    client.playing = []
+
+    held.run_once()
+
+    assert client.scans == [True]
+
+
+def test_now_playing_reads_one_or_many_entries(monkeypatch):
+    client = navidrome.NavidromeClient({
+        'url': 'http://nd',
+        'username': 'u',
+        'password': 'p',
+    })
+    replies = iter([
+        {'nowPlaying': {'entry': {'title': 'One'}}},
+        {'nowPlaying': {'entry': [{'title': 'A'}, {'title': 'B'}]}},
+        {'nowPlaying': {}},
+    ])
+    monkeypatch.setattr(client, '_request', lambda *_a, **_k: next(replies))
+
+    assert [e['title'] for e in client.now_playing()] == ['One']
+    assert len(client.now_playing()) == 2
+    assert client.now_playing() == []

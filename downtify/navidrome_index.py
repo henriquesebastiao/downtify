@@ -3,13 +3,13 @@
 from __future__ import annotations
 
 import hashlib
-import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
 
+from .db.config import Dialect
+from .db.core import Database, as_database
 from .library_cache_keys import file_content_key
-from .sqlite_utils import connect_sqlite
 from .track_index import normalize_spotify_track_id
 
 
@@ -24,14 +24,21 @@ def _norm_filename(filename: str) -> str:
 class NavidromeIndex:
     """Maps library files (basename+size) and Spotify ids to Navidrome song ids."""
 
-    def __init__(self, db_path: Path) -> None:
-        self._path = str(db_path)
+    def __init__(self, path_or_db: str | Path | Database) -> None:
+        self.db = as_database(path_or_db, 'library')
+        if isinstance(path_or_db, Database):
+            self._path = str(self.db.path) if self.db.path else None
+        else:
+            self._path = str(path_or_db)
         self._init_db()
 
-    def _connect(self) -> sqlite3.Connection:
-        return connect_sqlite(self._path, row_factory=True)
+    def _connect(self):
+        return self.db.connect()
 
     def _init_db(self) -> None:
+        # The Postgres schema is created by migrations; only SQLite needs DDL.
+        if self.db.dialect is not Dialect.SQLITE:
+            return
         with self._connect() as conn:
             row = conn.execute(
                 "SELECT sql FROM sqlite_master WHERE name='navidrome_tracks'"
@@ -61,7 +68,7 @@ class NavidromeIndex:
             self._migrate_legacy_table(conn)
 
     @staticmethod
-    def _migrate_legacy_table(conn: sqlite3.Connection) -> None:
+    def _migrate_legacy_table(conn: Any) -> None:
         conn.execute("""
             CREATE TABLE navidrome_tracks_new (
                 content_key TEXT PRIMARY KEY,
@@ -76,10 +83,15 @@ class NavidromeIndex:
             filename = str(row['filename'])
             ck = hashlib.sha256(_norm_filename(filename).encode()).hexdigest()
             conn.execute(
-                """INSERT OR REPLACE INTO navidrome_tracks_new
+                """INSERT INTO navidrome_tracks_new
                    (content_key, filename, navidrome_song_id,
                     spotify_track_id, resolved_at)
-                   VALUES (?, ?, ?, ?, ?)""",
+                   VALUES (?, ?, ?, ?, ?)
+                   ON CONFLICT (content_key) DO UPDATE SET
+                   filename=excluded.filename,
+                   navidrome_song_id=excluded.navidrome_song_id,
+                   spotify_track_id=excluded.spotify_track_id,
+                   resolved_at=excluded.resolved_at""",
                 (
                     ck,
                     filename,

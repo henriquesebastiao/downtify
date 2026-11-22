@@ -1,10 +1,9 @@
-"""Persist Spotify playlist and track metadata in SQLite."""
+"""Persist Spotify playlist and track metadata in the library database."""
 
 from __future__ import annotations
 
 import asyncio
 import json
-import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Optional
@@ -12,7 +11,8 @@ from typing import Any, Callable, Optional
 from loguru import logger
 
 from . import library_only, spotify
-from .sqlite_utils import connect_sqlite
+from .db.config import Dialect
+from .db.core import Connection, Database, as_database
 from .track_index import normalize_spotify_track_id
 
 _TRACK_KEYS = (
@@ -34,6 +34,17 @@ def _now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+def _binary_order(dialect: Dialect, column: str) -> str:
+    """ORDER BY term giving SQLite's byte-wise text order on both backends.
+
+    PostgreSQL sorts text by the database collation; the "C" collation
+    compares bytes, as SQLite's default BINARY collation does.
+    """
+    if dialect is Dialect.POSTGRES:
+        return f'{column} COLLATE "C"'
+    return column
+
+
 def _compact_track(song: dict[str, Any]) -> dict[str, Any]:
     row: dict[str, Any] = {}
     for key in _TRACK_KEYS:
@@ -52,16 +63,21 @@ def _compact_track(song: dict[str, Any]) -> dict[str, Any]:
 
 
 class PlaylistSpotifyCache:
-    """SQLite store for Spotify playlist membership and track metadata."""
+    """Store for Spotify playlist membership and track metadata."""
 
-    def __init__(self, db_path: Path) -> None:
-        self._path = str(db_path)
+    def __init__(self, db_path: str | Path | Database) -> None:
+        self.db = as_database(db_path, 'library')
+        self._path = None if self.db.path is None else str(self.db.path)
         self._init_db()
 
-    def _connect(self) -> sqlite3.Connection:
-        return connect_sqlite(self._path, row_factory=True)
+    def _connect(self) -> Connection:
+        return self.db.connect()
 
     def _init_db(self) -> None:
+        # Postgres gets the final schema from the migrations; the CREATE,
+        # rebuild and index steps below are SQLite-only.
+        if self.db.dialect is not Dialect.SQLITE:
+            return
         with self._connect() as conn:
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS spotify_playlist_cache (
@@ -94,7 +110,7 @@ class PlaylistSpotifyCache:
             """)
 
     @staticmethod
-    def _migrate_playlist_tracks_table(conn: sqlite3.Connection) -> None:
+    def _migrate_playlist_tracks_table(conn: Connection) -> None:
         row = conn.execute(
             """SELECT sql FROM sqlite_master
                WHERE type = 'table' AND name = 'spotify_playlist_tracks'"""
@@ -135,7 +151,7 @@ class PlaylistSpotifyCache:
 
     @staticmethod
     def _sync_playlist_track_rows(
-        conn: sqlite3.Connection,
+        conn: Connection,
         spotify_playlist_id: str,
         tracks: list[dict[str, Any]],
     ) -> None:
@@ -185,14 +201,15 @@ class PlaylistSpotifyCache:
         return str(row['playlist_name']), tracks
 
     def list_playlists(self) -> list[dict[str, Any]]:
+        order = _binary_order(self.db.dialect, 'playlist_name')
         with self._connect() as conn:
             rows = conn.execute(
-                """SELECT spotify_playlist_id, playlist_name, fetched_at,
+                f"""SELECT spotify_playlist_id, playlist_name, fetched_at,
                           (SELECT COUNT(*) FROM spotify_playlist_tracks pt
                            WHERE pt.spotify_playlist_id = c.spotify_playlist_id)
                            AS track_count
                    FROM spotify_playlist_cache c
-                   ORDER BY playlist_name"""
+                   ORDER BY {order}, spotify_playlist_id"""
             ).fetchall()
         return [
             {
@@ -248,11 +265,12 @@ class PlaylistSpotifyCache:
             rows = conn.execute(
                 """SELECT DISTINCT spotify_playlist_id
                    FROM spotify_playlist_tracks
-                   WHERE track_spotify_id = ?
-                   ORDER BY spotify_playlist_id""",
+                   WHERE track_spotify_id = ?""",
                 (tid,),
             ).fetchall()
-        return [str(row['spotify_playlist_id']) for row in rows]
+        # Sorted in Python: PostgreSQL rejects ORDER BY on a collated
+        # expression with DISTINCT, and str order is UTF-8 byte order.
+        return sorted(str(row['spotify_playlist_id']) for row in rows)
 
     def get_cached_track(
         self, track_spotify_id: str
@@ -271,7 +289,7 @@ class PlaylistSpotifyCache:
 
     @staticmethod
     def _store_track_row(
-        conn: sqlite3.Connection,
+        conn: Connection,
         track_spotify_id: str,
         track: dict[str, Any],
     ) -> None:

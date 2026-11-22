@@ -28,7 +28,7 @@ A Downtify egy háttérfeladatot futtat 60 másodpercenként. Minden átfésül�
 3. Letölti az új számokat ugyanazzal a folyamattal, mint egy kézi letöltést
 4. Frissíti a lejátszási lista M3U-fájlját (ha az M3U-generálás be van kapcsolva)
 
-Az első ellenőrzés, amely a figyelés hozzáadásakor azonnal elindul, letölt mindent, ami már a listán van; a későbbiek csak a közben hozzáadottat töltik le. A „már letöltött” egy kis SQLite-adatbázisban (`downtify_monitor.db` a `/data` alatt) van nyilvántartva, nem a letöltési mappa vizsgálatával — így egy letöltött fájl áthelyezése a lemez máshová (a saját könyvtárszerkezetedbe, másik meghajtóra, bárhová) **nem** készteti a Downtifyt arra, hogy hiányzónak higgye, és a következő ellenőrzéskor újra letöltse.
+Az első ellenőrzés, amely a figyelés hozzáadásakor azonnal elindul, letölt mindent, ami már a listán van; a későbbiek csak a közben hozzáadottat töltik le. A „már letöltött” egy kis SQLite-adatbázisban (`downtify_monitor.db` a `/data` alatt; PostgreSQL-lel a PostgreSQL-adatbázisban) van nyilvántartva, nem a letöltési mappa vizsgálatával — így egy letöltött fájl áthelyezése a lemez máshová (a saját könyvtárszerkezetedbe, másik meghajtóra, bárhová) **nem** készteti a Downtifyt arra, hogy hiányzónak higgye, és a következő ellenőrzéskor újra letöltse.
 
 Egy külön átfésülés óránként fut, és ellenőrzi, hogy minden letöltött szám fájlja még megvan-e. A valóban törölt fájlokat (szemben az áthelyezettekkel) ekkor elfelejti, így a szám újra letölthetővé válik — a figyelés következő ellenőrzésekor az óránkénti átfésülés után, nem azonnal.
 
@@ -144,11 +144,12 @@ Amint a szerver létrehozta a figyelést, a gomb a **Figyelő** oldalra mutató 
 | 6 óránként | 360 | |
 | 12 óránként | 720 | |
 | Naponta | 1 440 | Lassan változó lejátszási listák |
+| 3 naponta | 4 320 | |
 | Hetente | 10 080 | Hetente frissülő lejátszási listák |
 | 2 hetente | 20 160 | |
 | Havonta | 43 200 | Archívum vagy ritkán frissülő lejátszási listák |
 
-Egy meglévő lejátszási lista intervallumát bármikor módosíthatod a figyelőkártyáról, eltávolítás és újbóli hozzáadás nélkül.
+Egy meglévő lejátszási lista intervallumát bármikor módosíthatod a figyelőkártyáról, eltávolítás és újbóli hozzáadás nélkül. Vagy egyszerre sok figyelésnél: lásd [Sok figyelés módosítása egyszerre](#changing-many-watches-at-once).
 
 ## A figyelt lejátszási listák kezelése
 
@@ -170,6 +171,17 @@ Minden soron:
 - **⋯** — **Aktivitás és számok** (a figyelés saját oldala), szüneteltetés/folytatás, a hivatkozás másolása, az eredeti megnyitása, vagy **Figyelés leállítása** (a bejegyzés törlődik; a letöltött fájlok megmaradnak)
 
 Az **Aktivitás** és a **Tárhely** ugyanolyan oszlop, mint a többi: az **Oszlopok** alatt elrejtheted vagy átméretezheted őket.
+
+### Sok figyelés módosítása egyszerre
+
+Kattints a lista feletti **Kijelölés** gombra, és minden sorban megjelenik egy jelölőnégyzet. Jelöld be a figyeléseket (**Shift**+kattintással két kattintás között mindet), vagy használd **Az összes látható kijelölése** lehetőséget, amely figyelembe veszi a keresést és a **Mind / Szüneteltetett** szűrőt. A lista feletti sáv egy módosítást alkalmaz minden bejelöltre:
+
+- **Ellenőrzés módosítása erre…** — ugyanaz az időköz mindegyiknek
+- **Szüneteltetés** / **Folytatás**
+- **Ellenőrzés most** — az aktívakat azonnal ellenőrzi
+- **Figyelés leállítása** — megerősítés után; a letöltött fájlok megmaradnak
+
+A **Lejátszási listák** és az **Előadók** lapon ugyanígy működik. A bejelöltek a keresés módosításakor is bejelölve maradnak. A **Kész** (vagy az **Esc**) kilép a kijelölésből; lapváltáskor a kijelölés törlődik.
 
 ### Figyelés szerkesztése
 
@@ -248,7 +260,7 @@ Ha egy fájl tényleg eltűnik — kivitted a letöltési mappából, vagy kézz
 
 ## Tárolás
 
-A figyelő állapota egy SQLite-adatbázisban van a `/data/downtify_monitor.db` helyen. Az adatbázis rögzíti:
+A figyelő állapota egy SQLite-adatbázisban van a `/data/downtify_monitor.db` helyen, ez az alapértelmezett backend. PostgreSQL-lel ([Adatbázis](../database.md)) ugyanezek a rekordok a PostgreSQL-adatbázisban vannak. Az adatbázis rögzíti:
 
 - Minden figyelést (fajta, Spotify- vagy YouTube Music-lejátszásilista-azonosító vagy YouTube Music-csatornaazonosító, név, URL, intervallum, engedélyezett állapot, utolsó ellenőrzés ideje). Hogy egy figyelés Spotify vagy YouTube Music, azt a tárolt URL-jéből olvassa ki, így nem kell külön oszlop.
 - Minden sikeresen letöltött számot figyelésenként, a lemezen lévő fájlnévvel együtt
@@ -288,7 +300,23 @@ A figyelés azonosítója (`#12`) a neve mellett látszik, így ugyanannak a lin
 
 Egy előadó-figyelés oldala az előadó teljes katalógusát is mutatja a legutóbbi ellenőrzés szerint: minden kiadványt, amelyet a YouTube Music, a Deezer és a MusicBrainz listáz (ugyanaz az album két forrásból egyszer jelenik meg), albumok, mixtape-ek, EP-k, kislemezek, valamint élő, válogatás- és remixkiadványok szerint. Mindegyiknél látszik, mi van belőle a könyvtárban: **Teljes** a számok számával, **Részben**, **Letöltendő**, **A figyelés előtt jelent meg** (egy **Csak új kiadványok** figyelés kihagyta), **Nem figyelt** (olyan típus vagy fajta, amelyet a figyelés nem tölt le) vagy **Kikapcsolva**. A vendégszereplések és a bootlegek saját szűrőt kapnak, és soha nem töltődnek le.
 
+A **Nézd meg, mi van meg** beolvassa minden kiadvány számlistáját, és összeveti a teljes könyvtárral úgy, ahogy az előadó-figyelés a dalokat párosítja (ugyanaz az előadó és cím, ugyanaz a hossz), bárki töltötte is le őket. Így egy album, amely már a figyelés előtt megvolt, **Teljes**-ként jelenik meg, a kiadvány melletti nyíl pedig kilistázza a számait, mindegyiket a könyvtáradban lévőként vagy hiányzóként jelölve. Semmi nem töltődik le. A háttérben fut, és nagy előadónál lassú, mert a MusicBrainz másodpercenként egy kérést enged. A számlisták megmaradnak, így egy későbbi ellenőrzés csak a még be nem olvasott kiadványokat olvassa; a rendes ellenőrzés is megőrzi az általa letöltött kiadványok számlistáit.
+
+A **Hiányzók letöltése** ezután letölti a hiányzó dalokat minden olyan kiadványból, amelyet a figyelés letölt (bekapcsolt, vagy figyelt típusú és fajtájú), a már feldolgozottakból is, egy ellenőrzésként, amelyet a **sorban** követhetsz. Előtte rákérdez, a dalok számával. A könyvtáradban már meglévő dalok összekapcsolódnak, nem töltődnek le újra, a figyelés által nem letöltött kiadványokhoz pedig nem nyúl: egy kiadvány bevonásához előbb kapcsold be.
+
 A kiadvány melletti kapcsoló felülírja a figyelést, mint a Lidarr albumonkénti figyelése. Bekapcsolva letölti akkor is, ha a típusát nem figyeled, vagy a figyelés kezdete előtt jelent meg, és azonnal indul egy ellenőrzés. Kikapcsolva többé nem tölti le. A könyvtárban már meglévő dalok mindkét esetben megmaradnak. A **MusicBrainzről töltsd le ezeket is** csak ennél az előadónál választja ki, mely, csak a MusicBrainz által megkülönböztetett kiadványfajták töltődjenek le: alapból a mixtape-ek és a filmzenék; az élő albumok, válogatások, remixek, DJ-mixek és demók bekapcsolva.
+
+### Keresett
+
+A Figyelő oldal **Keresett** lapja, a **Listák** és az **Előadók** mellett, egyetlen lista mindarról, amit az előadó-figyeléseid letöltenének, de a könyvtárban még nincs meg teljesen. Minden előadó-figyelésedhez (az admin mindenkiét látja) felsorolja azokat a kiadványokat, amelyeket a figyelés letölt (bekapcsolt, vagy figyelt típusú és fajtájú), és amelyek **Részben** vannak meg, vagy **Letöltendő** állapotúak, azzal, hány dala van meg belőlük a könyvtárban („meglévő / összes”). A szüneteltetett figyelések kimaradnak, ahogy az a kiadvány is, amelynek kikapcsolod a kapcsolóját. A kiadványok előadók szerint csoportosítva vannak, mindegyik csoportban a figyelés oldalára mutató hivatkozással és az adott előadó **Hiányzók letöltése** gombjával. Felül egy összegzés számolja a hiányzó dalokat és a kiadványokat, amelyekhez tartoznak, valamint hány kiadvány nincs még ellenőrizve. Egy keresőmező és egy típusszűrő szűkíti a listát.
+
+A **Még nincs ellenőrizve** jelvényű kiadvány számlistáját még nem olvasták be (a **Nézd meg, mi van meg** olvassa be, lásd [Egy előadó kiadványai](#an-artists-releases)), így a mérete nem ismert: még ha a katalógus meg is ad egy darabszámot, lehet, hogy már megvan a könyvtáradban. Szám helyett a jelvényt mutatja, nem számít bele a hiányzó dalokba, az előadója pedig a lista feletti **Még nincs ellenőrizve** sorban szerepel (az első néhány név, utána „és még 85”). Az előadó **Hiányzók letöltése** gombja akkor érhető el, ha vannak ismerten hiányzó dalai vagy még nem ellenőrzött kiadványai.
+
+Az **Összes előadó ellenőrzése** a **Nézd meg, mi van meg** műveletet futtatja az ilyen előadókon, egyszerre egyen, a háttérben. Nagy előadóknál lassú, mert a MusicBrainz másodpercenként egy kérést enged. A **Leállítás** az éppen soron lévő előadó beolvasását a következő kiadványánál fejezi be: ami beolvasódott, megmarad, egy későbbi **Összes előadó ellenőrzése** onnan folytatja.
+
+Az **Az összes hiányzó letöltése** először rákérdez a dalok számával (és ha vannak még nem ellenőrzött kiadványok, jelzi, hogy ami azokból hiányzik, az még hozzájön: előbb az **Összes előadó ellenőrzése** pontos számot ad), majd minden előadó **Hiányzók letöltése** műveletét futtatja, egyszerre egy előadóét. A dalok a **sorban** töltődnek le. A **Leállítás** hagyja befejezni az éppen soron lévő előadót, aztán megáll.
+
+A kettő közül egyszerre csak egy fut, és egy másik fiók futása a tiédet is blokkolja. A saját futásod előrehaladását látod (az admin bármelyikét), és csak könyvtár módban mindkettő le van tiltva. Az előrehaladás sora az éppen soron lévő előadót is számolja („Ellenőrzés: 1 / 87: Ace”), a **Leállítás** után pedig „Leállítás…” áll, amíg a futás véget nem ér.
 
 ## Honnan jött egy szám
 

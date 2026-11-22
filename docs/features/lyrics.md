@@ -16,10 +16,19 @@ Catalogues differ: a song one provider has never heard of is often on another. D
 
 | Provider | Lyrics | Notes |
 |----------|--------|-------|
-| **[LRCLIB](https://lrclib.net)** | Plain and time-synced | Free community database, no key. Matched on title, primary artist, album and duration. |
+| **[LRCLIB](https://lrclib.net)** | Plain and time-synced | Free community database, no key. Matched on title, primary artist, album and duration; when that finds nothing time-synced, its search is tried too and a hit is accepted on title, artist and length (within a few seconds). |
 | **NetEase Cloud Music** | Usually time-synced | Large catalogue, strong on Asian releases and often on Western ones too. Matched on title, artist and duration; a hit whose artist is spelled differently (traditional vs simplified Chinese, for example) is accepted only when the title and the length both line up. |
+| **Kugou Music** | Time-synced | Large catalogue, strong on Chinese releases and with many Western ones. Matched like NetEase; the title line and songwriting credits at the top are dropped. |
 
-In **Settings → Tags & lyrics → Providers** you can drag the providers into the order you prefer, or use the arrows, and switch any of them off. At least one stays on; to stop looking lyrics up entirely, use the **Download lyrics** switch.
+In **Settings → Tags & lyrics → Providers** you can drag the providers into the order you prefer, or use the arrows, and switch any of them off. At least one stays on; to stop looking lyrics up entirely, use the **Download lyrics** switch. A provider added in an update starts switched off when you had already saved your own list: switch it on there.
+
+### Time-synced lyrics only
+
+**Settings → Tags & lyrics → Time-synced lyrics only** (off by default) keeps only lyrics with timestamps: a provider that only has plain lyrics for a song counts as having nothing, and the next one is asked. [Upgrade library](library-upgrade.md) then also counts a track with only plain lyrics as missing lyrics. Synced lyrics a file already has count either way: a `.lrc` sidecar, lyrics with timestamps embedded in its tags, or an ID3 `SYLT` frame (as files from other apps sometimes have). With the setting on, synced lyrics Downtify finds for a track replace its plain ones, in the `.lrc` sidecar and in the file's own lyrics tag, so players that only read the tags show them synced too. The scan also says how many of the tracks missing lyrics only had plain ones.
+
+### Finding lyrics for tracks that have none
+
+**Library → Upgrade library → Scan and find lyrics** scans the library for tracks without lyrics and looks them up right away, with a progress bar. When it ends, it says how many tracks got lyrics, how many none was found for, and how many failed. See [Upgrade library](library-upgrade.md#while-it-runs).
 
 ::: info What about Genius, Musixmatch and AZLyrics?
 They aren't available, and Downtify no longer offers them:
@@ -33,7 +42,7 @@ Saved settings that still name them keep working: the names are ignored, and a l
 
 ## Skipping providers that had nothing
 
-After a lookup, Downtify records for each song which providers answered and which came back empty, in `downtify_library.db` under `/data`.
+After a lookup, Downtify records for each song which providers answered and which came back empty, in `downtify_library.db` under `/data` (on the default SQLite backend; with PostgreSQL, in the PostgreSQL database).
 
 A provider that had nothing for a song isn't asked about it again for **30 days**, so re-downloads and large library passes don't repeat the same failed lookups. After that it's tried again, since catalogues grow. A provider that *did* have lyrics is never skipped, so a re-downloaded file gets them back.
 

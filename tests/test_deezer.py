@@ -8,6 +8,7 @@ from unittest.mock import MagicMock, patch
 import httpx
 import pytest
 
+from downtify import deezer
 from downtify.deezer import (
     exact_artist_picture,
     fetch_artist_full,
@@ -570,3 +571,35 @@ def test_exact_artist_picture_raises_on_a_refusal_such_as_a_rate_limit():
         pytest.raises(ValueError, match='Could not reach Deezer'),
     ):
         exact_artist_picture('Paramore')
+
+
+# ── _get_json ────────────────────────────────────────────────────────────
+
+
+@pytest.mark.parametrize(
+    ('error', 'code'),
+    [
+        ({'type': 'DataException', 'code': 800}, 800),
+        ({'type': 'Exception', 'code': 4}, 4),
+        ({'type': 'Exception'}, 0),
+        ({'type': 'Exception', 'code': 'x'}, 0),
+        ('refused', 0),
+    ],
+)
+def test_get_json_refusal_carries_the_code(error, code):
+    with patch(
+        'downtify.deezer.httpx.get',
+        return_value=_mock_response({'error': error}),
+    ):
+        with pytest.raises(deezer.DeezerRefused) as exc:
+            deezer._get_json('https://api.deezer.com/album/1')
+    assert exc.value.code == code
+    assert isinstance(exc.value, ValueError)
+    assert str(exc.value) == 'Deezer refused the request'
+
+
+def test_get_json_transport_failure_is_a_plain_value_error():
+    with patch('downtify.deezer.httpx.get', side_effect=Exception('boom')):
+        with pytest.raises(ValueError, match='reach Deezer') as exc:
+            deezer._get_json('https://api.deezer.com/album/1')
+    assert not isinstance(exc.value, deezer.DeezerRefused)

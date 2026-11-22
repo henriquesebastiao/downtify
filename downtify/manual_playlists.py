@@ -38,9 +38,9 @@ _WRITE_LOCK = threading.RLock()
 
 
 def _serialized(func: Callable[_P, _R]) -> Callable[_P, _R]:
-    """Run *func* alone among this module's M3U rewrites: the owner and
-    the editors of a shared playlist read, change and write it back at
-    the same time, and the last write would drop the other's songs."""
+    """Serialize this module's M3U rewrites, including maintenance:
+    reading, changing and writing a playlist concurrently would let
+    a stale edit or cleanup overwrite another operation's changes."""
 
     @functools.wraps(func)
     def run(*args: _P.args, **kwargs: _P.kwargs) -> _R:
@@ -392,6 +392,7 @@ def reorder_manual_playlist(
     }
 
 
+@_serialized
 def detach_imported_playlist(ctx: LibraryContext, name: str) -> dict[str, Any]:
     """Turn an imported playlist into a Library one (tracks kept).
 
@@ -573,6 +574,7 @@ def drop_copies_of(
     return affected
 
 
+@_serialized
 def prune_files_from_manual_playlists(
     ctx: LibraryContext, filenames: list[str]
 ) -> list[str]:

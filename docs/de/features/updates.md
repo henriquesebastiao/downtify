@@ -10,6 +10,14 @@ Downtify prüft seine eigene [GitHub-Releases-Seite](https://github.com/henrique
 
 Ein Klick öffnet dieses Release auf GitHub.
 
+## Neuigkeiten nach einem Update
+
+Beim ersten Öffnen der Web-App nach einem Downtify-Update zeigt ein Dialog **Neu in Downtify 3.12.0** die Highlights der Version, mit einer Schaltfläche **Vollständiges Änderungsprotokoll**, die die Version auf GitHub öffnet, und einer dezenten Zeile, um dem Repository einen Stern zu geben. **Verstanden** (oder Schließen) blendet ihn bis zum nächsten Update aus. **Einstellungen → Über → Neuigkeiten** öffnet ihn erneut.
+
+- Das wird pro Browser gespeichert: Jeder Browser (und jede darin angemeldete Person) sieht ihn einmal pro Update. Ein Browser, der Downtify noch nie geöffnet hat — eine Neuinstallation — bekommt ihn nicht.
+- Die Highlights sind in der App enthalten, der Dialog funktioniert also ohne Internet; nur die beiden Links führen zu GitHub. Eine Version ohne geschriebene Highlights zeigt nur den Link zu ihrem Änderungsprotokoll.
+- Er wartet auf die Anmeldung und öffnet sich nicht über der Aufforderung, das Standardpasswort zu ändern.
+
 ## So funktioniert es
 
 - Eine Hintergrundaufgabe im Backend (`downtify/update_check.py`) holt das neueste Release über die GitHub-API einmal direkt beim Start und danach jede Stunde. Sie läuft nach dem Prinzip „abschicken und vergessen“: In der Oberfläche wartet nichts darauf.
