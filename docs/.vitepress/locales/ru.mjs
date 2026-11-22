@@ -120,6 +120,7 @@ export default {
       'features/music-trash.md': 'Музыкальная корзина',
       'features/doctor.md': 'Доктор',
       'features/backups.md': 'Резервные копии',
+      'features/notifications.md': 'Уведомления',
       'features/replace-audio.md': 'Замена аудио',
       'features/external-playlists.md': 'Импорт существующих плейлистов',
       'features/m3u-export.md': 'Экспорт M3U',

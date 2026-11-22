@@ -2181,6 +2181,7 @@ export default {
     activity: 'Δραστηριότητα',
     personalHint:
       'Μόνο δικές σας: ακολουθούν τον λογαριασμό σας σε κάθε πρόγραμμα περιήγησης και δεν αλλάζουν τίποτα για κανέναν άλλο.',
+    notifications: 'Ειδοποιήσεις',
     server: 'Διακομιστής',
     networkGroup: 'Δίκτυο',
     networkHint:
@@ -2355,6 +2356,96 @@ export default {
     resultWatches: '{added} παρακολουθήσεις προστέθηκαν, {present} υπήρχαν ήδη',
     resultSongs: '{missing} τραγούδια λείπουν, {queued} μπήκαν στην ουρά λήψης',
     resultNoSongs: 'Δεν έλειπε κανένα τραγούδι',
+  },
+  notify: {
+    title: 'Ειδοποιήσεις',
+    hint: 'Μηνύματα για μεγάλες εργασίες και λήψεις, προς Discord, ntfy, Gotify ή webhook. Ανενεργό μέχρι να το ενεργοποιήσετε. Τα μηνύματα είναι στα αγγλικά.',
+    enabled: 'Αποστολή ειδοποιήσεων',
+    enabledHint:
+      'Ο κύριος διακόπτης. Κάθε κανάλι παρακάτω έχει και τον δικό του.',
+    progressEvery: 'Πρόοδος',
+    progressEveryHint:
+      'Πόσο συχνά ενημερώνεται η πρόοδος μιας εργασίας. Στο Discord επεξεργάζεται ένα μήνυμα ανά εργασία· τα άλλα κανάλια παίρνουν μια γραμμή σε κάθε τέταρτο.',
+    channel_discord: 'Discord',
+    channel_discordHint:
+      'Ένα webhook γράφει σε ένα κανάλι. Ένα bot γράφει επίσης και απαντά σε εντολές όπως /status.',
+    channel_ntfy: 'ntfy',
+    channel_ntfyHint:
+      'Ειδοποιήσεις push στην εφαρμογή ntfy, μέσω ntfy.sh ή δικού σας διακομιστή.',
+    channel_gotify: 'Gotify',
+    channel_gotifyHint: 'Ειδοποιήσεις push στον διακομιστή Gotify σας.',
+    channel_webhook: 'Webhook',
+    channel_webhookHint:
+      'Ένα JSON POST σε οποιαδήποτε διεύθυνση. Μια διεύθυνση /notify του Apprise API δουλεύει όπως είναι.',
+    channelOn: 'Χρήση αυτού του καναλιού',
+    discordMode: 'Πώς συνδέεται το Downtify',
+    discordModeHint:
+      'Webhook: μόνο αποστολή. Bot: αποστολή και απαντήσεις σε εντολές· χρειάζεται bot από το Discord Developer Portal προσκεκλημένο στον διακομιστή σας.',
+    modeWebhook: 'Webhook (μόνο αποστολή)',
+    modeBot: 'Bot (αποστολή + εντολές)',
+    webhookUrl: 'URL του webhook',
+    webhookUrlHint:
+      'Discord: ρυθμίσεις καναλιού → Ενσωματώσεις → Webhooks → Αντιγραφή URL. Μένει στον διακομιστή και δεν εμφανίζεται ξανά.',
+    botToken: 'Token του bot',
+    botTokenHint:
+      'Discord Developer Portal → η εφαρμογή σας → Bot → Reset token. Μένει στον διακομιστή και δεν εμφανίζεται ξανά.',
+    channelId: 'ID καναλιού',
+    channelIdHint:
+      'Πού γράφει και απαντά το bot. Στο Discord ενεργοποιήστε τη λειτουργία προγραμματιστή και κάντε δεξί κλικ στο κανάλι → Αντιγραφή ID.',
+    commands: 'Απάντηση σε εντολές',
+    commandsHint:
+      'Οι εντολές μόνο διαβάζουν: κανείς στο Discord δεν μπορεί να ξεκινήσει, να σταματήσει ή να αλλάξει κάτι στο Downtify.',
+    allowedUsers: 'Επιτρεπόμενοι χρήστες',
+    allowedUsersHint:
+      'ID χρηστών του Discord που μπορούν να χρησιμοποιούν τις εντολές, χωρισμένα με κενά. Κενό: όλοι στο κανάλι.',
+    botState: 'Bot',
+    bot_off: 'Ανενεργό',
+    bot_connecting: 'Σύνδεση…',
+    bot_connected: 'Συνδεδεμένο',
+    bot_error: 'Σταμάτησε',
+    invite: 'Πρόσκληση του bot στον διακομιστή σας',
+    commandList: 'Εντολές που μπορείτε να στείλετε στο κανάλι:',
+    server: 'Διακομιστής',
+    topic: 'Θέμα',
+    topicHint:
+      'Σε δημόσιο διακομιστή όποιος ξέρει το θέμα μπορεί να το διαβάσει: διαλέξτε κάτι δύσκολο να μαντευτεί.',
+    accessToken: 'Token πρόσβασης',
+    optional: 'Προαιρετικό.',
+    appToken: 'Token εφαρμογής',
+    appTokenHint:
+      'Gotify → Apps → Create application. Μένει στον διακομιστή και δεν εμφανίζεται ξανά.',
+    genericHint:
+      'Μένει στον διακομιστή και δεν εμφανίζεται ξανά. Το σώμα έχει title, body, type, event και fields.',
+    what: 'Τι αποστέλλεται',
+    whatHint: 'Διαλέξτε τις εργασίες, ποιες στιγμές τους και τα άλλα συμβάντα.',
+    group_tasks: 'Εργασίες',
+    group_phases: 'Πότε',
+    group_events: 'Άλλα συμβάντα',
+    task_doctor: 'Doctor',
+    task_upgrade: 'Αναβάθμιση βιβλιοθήκης (εξώφυλλα, στίχοι, ετικέτες)',
+    task_ratings: 'Βαθμολογίες με αστέρια',
+    task_wanted: 'Αναπλήρωση ζητούμενων',
+    task_backup: 'Αντίγραφα ασφαλείας',
+    phase_start: 'Ξεκίνησε',
+    phase_progress: 'Πρόοδος',
+    phase_finish: 'Ολοκληρώθηκε',
+    phase_fail: 'Απέτυχε',
+    event_download_failed: 'Αποτυχία λήψης',
+    event_download_done: 'Τραγούδια που λήφθηκαν',
+    event_new_releases: 'Βρέθηκαν νέες κυκλοφορίες',
+    event_watch_done: 'Λήψεις παρακολουθήσεων',
+    test: 'Δοκιμή',
+    testHint:
+      'Στέλνει τώρα ένα μήνυμα με ό,τι είναι συμπληρωμένο παραπάνω, αποθηκευμένο ή όχι.',
+    sendTest: 'Αποστολή δοκιμής',
+    testSent: 'Το δοκιμαστικό μήνυμα στάλθηκε',
+    testFailed: 'Η δοκιμή απέτυχε: {error}',
+    lastError: 'Το τελευταίο μήνυμα απέτυχε: {error}',
+    secretSaved: 'Αποθηκεύτηκε (πληκτρολογήστε για αντικατάσταση)',
+    remove: 'Αφαίρεση',
+    save: 'Αποθήκευση ειδοποιήσεων',
+    saved: 'Οι ειδοποιήσεις αποθηκεύτηκαν',
+    unsaved: 'Μη αποθηκευμένες αλλαγές',
   },
   port: {
     label: 'Θύρα',

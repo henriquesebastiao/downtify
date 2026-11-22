@@ -112,6 +112,7 @@ export default {
       'features/music-trash.md': 'Κάδος μουσικής',
       'features/doctor.md': 'Γιατρός',
       'features/backups.md': 'Αντίγραφα ασφαλείας',
+      'features/notifications.md': 'Ειδοποιήσεις',
       'features/replace-audio.md': 'Αντικατάσταση ήχου',
       'features/external-playlists.md': 'Εισαγωγή υπαρχουσών λιστών',
       'features/m3u-export.md': 'Εξαγωγή M3U',

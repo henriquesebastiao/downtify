@@ -34,6 +34,7 @@ from downtify import (
     auth_routes,
     download_policy_routes,
     mobile_routes,
+    notification_routes,
     trash_routes,
     wanted_routes,
 )
@@ -687,6 +688,7 @@ def _all_routes(app: FastAPI):
     yield from trash_routes.router.routes
     yield from download_policy_routes.router.routes
     yield from wanted_routes.router.routes
+    yield from notification_routes.router.routes
 
 
 def _templates(app: FastAPI):

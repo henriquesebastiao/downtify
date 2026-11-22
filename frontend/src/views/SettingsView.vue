@@ -1107,6 +1107,10 @@
             <DoctorSettings />
           </template>
 
+          <template v-else-if="section === 'notifications'">
+            <NotificationSettings />
+          </template>
+
           <template v-else-if="section === 'server'">
             <SettingGroup
               :title="t('settings.networkGroup')"
@@ -1256,6 +1260,7 @@ import DoctorSettings from '/src/components/settings/DoctorSettings.vue'
 import NavidromeRatings from '/src/components/settings/NavidromeRatings.vue'
 import AppsSettings from '/src/components/settings/AppsSettings.vue'
 import BackupSettings from '/src/components/settings/BackupSettings.vue'
+import NotificationSettings from '/src/components/settings/NotificationSettings.vue'
 import ServerPortSetting from '/src/components/settings/ServerPortSetting.vue'
 import HiddenLibrarySettings from '/src/components/settings/HiddenLibrarySettings.vue'
 import UsersSettings from '/src/components/settings/UsersSettings.vue'
@@ -1424,6 +1429,12 @@ const sections = computed(() =>
         id: 'doctor',
         icon: 'stethoscope',
         label: t('settings.doctor'),
+        admin: true,
+      },
+      {
+        id: 'notifications',
+        icon: 'bell',
+        label: t('settings.notifications'),
         admin: true,
       },
       {

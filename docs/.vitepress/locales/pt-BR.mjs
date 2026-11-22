@@ -111,6 +111,7 @@ export default {
       'features/music-trash.md': 'Lixeira de músicas',
       'features/doctor.md': 'Doutor',
       'features/backups.md': 'Backups',
+      'features/notifications.md': 'Notificações',
       'features/replace-audio.md': 'Substituir áudio',
       'features/external-playlists.md': 'Importar playlists existentes',
       'features/m3u-export.md': 'Exportação M3U',

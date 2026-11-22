@@ -2154,6 +2154,7 @@ export default {
     activity: 'Tevékenység',
     personalHint:
       'Csak a tiéd: a fiókoddal együtt minden böngészőben megjelennek, és senki másnak nem változtatnak semmin.',
+    notifications: 'Értesítések',
     server: 'Szerver',
     networkGroup: 'Hálózat',
     networkHint: 'Hogyan érhető el ez a szerver. Ezt csak az adminok látják.',
@@ -2328,6 +2329,97 @@ export default {
     resultWatches: '{added} figyelés hozzáadva, {present} már megvolt',
     resultSongs: '{missing} szám hiányzik, {queued} letöltésre vár',
     resultNoSongs: 'Egy szám sem hiányzott',
+  },
+  notify: {
+    title: 'Értesítések',
+    hint: 'Üzenetek a hosszú feladatokról és letöltésekről a Discordra, ntfy-ra, Gotifyra vagy egy webhookra. Kikapcsolva, amíg be nem kapcsolod. Az üzenetek angolul vannak.',
+    enabled: 'Értesítések küldése',
+    enabledHint:
+      'A főkapcsoló. Az alábbi csatornák mindegyikének saját is van.',
+    progressEvery: 'Haladás',
+    progressEveryHint:
+      'Milyen gyakran frissül egy futó feladat haladása. Discordon feladatonként egy üzenet szerkesztődik; a többi csatorna minden negyednél kap egy sort.',
+    channel_discord: 'Discord',
+    channel_discordHint:
+      'A webhook egy csatornára posztol. A bot is posztol, és válaszol az olyan parancsokra, mint a /status.',
+    channel_ntfy: 'ntfy',
+    channel_ntfyHint:
+      'Push értesítések az ntfy alkalmazásba, az ntfy.sh-n vagy a saját szervereden.',
+    channel_gotify: 'Gotify',
+    channel_gotifyHint: 'Push értesítések a Gotify szerveredre.',
+    channel_webhook: 'Webhook',
+    channel_webhookHint:
+      'JSON POST bármilyen címre. Egy Apprise API /notify cím így ahogy van működik.',
+    channelOn: 'Csatorna használata',
+    discordMode: 'Hogyan kapcsolódik a Downtify',
+    discordModeHint:
+      'Webhook: csak küldés. Bot: küldés és parancsok megválaszolása; kell hozzá egy bot a Discord Developer Portalról, meghívva a szerveredre.',
+    modeWebhook: 'Webhook (csak küldés)',
+    modeBot: 'Bot (küldés + parancsok)',
+    webhookUrl: 'Webhook URL',
+    webhookUrlHint:
+      'Discord: csatorna beállításai → Integrációk → Webhookok → Webhook URL másolása. A szerveren marad, többé nem látható.',
+    botToken: 'Bot token',
+    botTokenHint:
+      'Discord Developer Portal → az alkalmazásod → Bot → Reset token. A szerveren marad, többé nem látható.',
+    channelId: 'Csatorna ID',
+    channelIdHint:
+      'Ahol a bot posztol és válaszol. Discordban kapcsold be a fejlesztői módot, majd jobb klikk a csatornán → Csatorna ID másolása.',
+    commands: 'Parancsok megválaszolása',
+    commandsHint:
+      'A parancsok csak olvasnak: Discordból senki nem tud semmit elindítani, leállítani vagy módosítani a Downtifyban.',
+    allowedUsers: 'Engedélyezett felhasználók',
+    allowedUsersHint:
+      'Discord felhasználó ID-k, akik használhatják a parancsokat, szóközzel elválasztva. Üres: a csatornában mindenki.',
+    botState: 'Bot',
+    bot_off: 'Ki',
+    bot_connecting: 'Kapcsolódás…',
+    bot_connected: 'Kapcsolódva',
+    bot_error: 'Leállt',
+    invite: 'Bot meghívása a szerveredre',
+    commandList: 'A csatornában küldhető parancsok:',
+    server: 'Szerver',
+    topic: 'Téma',
+    topicHint:
+      'Nyilvános szerveren bárki olvashatja, aki ismeri a témát: válassz nehezen kitalálhatót.',
+    accessToken: 'Hozzáférési token',
+    optional: 'Nem kötelező.',
+    appToken: 'Alkalmazás token',
+    appTokenHint:
+      'Gotify → Apps → Create application. A szerveren marad, többé nem látható.',
+    genericHint:
+      'A szerveren marad, többé nem látható. A törzsben title, body, type, event és fields van.',
+    what: 'Mit küldjön',
+    whatHint:
+      'Válaszd ki a feladatokat, azok mely pillanatait és a többi eseményt.',
+    group_tasks: 'Feladatok',
+    group_phases: 'Mikor',
+    group_events: 'Egyéb események',
+    task_doctor: 'Doktor',
+    task_upgrade: 'Könyvtárfrissítés (borítók, dalszövegek, címkék)',
+    task_ratings: 'Csillagos értékelések',
+    task_wanted: 'Hiányzók pótlása',
+    task_backup: 'Biztonsági mentések',
+    phase_start: 'Elindult',
+    phase_progress: 'Haladás',
+    phase_finish: 'Kész',
+    phase_fail: 'Sikertelen',
+    event_download_failed: 'Sikertelen letöltés',
+    event_download_done: 'Letöltött dalok',
+    event_new_releases: 'Új megjelenések',
+    event_watch_done: 'Figyelések letöltései',
+    test: 'Próba',
+    testHint:
+      'Most küld egy üzenetet azzal, ami fent ki van töltve, mentve vagy sem.',
+    sendTest: 'Próba küldése',
+    testSent: 'Próbaüzenet elküldve',
+    testFailed: 'A próba sikertelen: {error}',
+    lastError: 'Az utolsó üzenet sikertelen: {error}',
+    secretSaved: 'Mentve (írj a cseréhez)',
+    remove: 'Eltávolítás',
+    save: 'Értesítések mentése',
+    saved: 'Értesítések mentve',
+    unsaved: 'Nem mentett változások',
   },
   port: {
     label: 'Port',

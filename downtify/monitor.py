@@ -16,7 +16,7 @@ from typing import Any, Callable, Optional
 
 from loguru import logger
 
-from . import deezer, m3u, musicbrainz, providers, spotify
+from . import deezer, m3u, musicbrainz, notifications, providers, spotify
 from .artist_catalogue import (
     ArtistCatalogue,
     release_day,
@@ -2279,6 +2279,12 @@ async def check_artist(  # noqa: PLR0914  # one sweep: discography, releases, tr
             len(new_albums),
             playlist.name,
         )
+        notifications.emit(
+            'new_releases',
+            playlist.name,
+            ', '.join(str(a.get('name') or '') for a in new_albums[:5])
+            + (f' +{len(new_albums) - 5}' if len(new_albums) > 5 else ''),
+        )
 
     delay_seconds = (settings or {}).get('download_delay_seconds', 0) or 0
     complete_albums = bool(
@@ -2871,6 +2877,9 @@ async def monitor_loop(
                             'Auto-downloaded {} new track(s) from "{}"',
                             count,
                             pl.name,
+                        )
+                        notifications.emit(
+                            'watch_done', pl.name, f'{count} new song(s)'
                         )
                 except Exception:
                     logger.exception(

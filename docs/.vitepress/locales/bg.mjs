@@ -111,6 +111,7 @@ export default {
       'features/music-trash.md': 'Кошче за музика',
       'features/doctor.md': 'Доктор',
       'features/backups.md': 'Резервни копия',
+      'features/notifications.md': 'Известия',
       'features/replace-audio.md': 'Замяна на аудио',
       'features/external-playlists.md': 'Внасяне на съществуващи плейлисти',
       'features/m3u-export.md': 'M3U експорт',
