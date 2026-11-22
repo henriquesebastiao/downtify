@@ -431,12 +431,21 @@ def test_save_unavailable_native_state_leaves_no_file(
     http, _ = client
     world = native_playlists
     native = getattr(world, which)
-    original_path = native._path
+    original_connect = native._connect
     world.shares.set_visibility('Unavailable', PUBLIC)
     if offline:
-        # A directory cannot be opened as SQLite: exercise real I/O failure,
-        # native rollback and the API response rather than replacing a method.
-        monkeypatch.setattr(native, '_path', str(world.root))
+        # The 3.13 database layer owns the connection, so ``_path`` no longer
+        # describes it: break the connection itself. The error still reaches
+        # the API through the real write path (open, claim, rollback).
+        import contextlib
+        import sqlite3
+
+        @contextlib.contextmanager
+        def unavailable():
+            raise sqlite3.OperationalError('unable to open database file')
+            yield  # pragma: no cover
+
+        monkeypatch.setattr(native, '_connect', unavailable)
     else:
         field = (
             'manual_playlist_owners'
@@ -453,7 +462,7 @@ def test_save_unavailable_native_state_leaves_no_file(
     assert 'temporarily unavailable' in response.json()['detail']
     assert not list(world.root.rglob('*.m3u'))
     if offline:
-        monkeypatch.setattr(native, '_path', original_path)
+        monkeypatch.setattr(native, '_connect', original_connect)
     assert world.owners.owner('Unavailable') is None
     assert world.shares.visibility('Unavailable') == PUBLIC
 
