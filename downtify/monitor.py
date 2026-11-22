@@ -8,10 +8,12 @@ import functools
 import os
 import re
 import sqlite3
+import threading
 from collections.abc import AsyncIterator, Iterator
 from dataclasses import asdict, dataclass
 from datetime import datetime, time, timedelta, timezone
 from pathlib import Path
+from time import monotonic
 from typing import Any, Callable, Optional
 
 from loguru import logger
@@ -2739,6 +2741,78 @@ def _watch_cover_file(
         return Path(m3u_path).with_suffix('.jpg').relative_to(root).as_posix()
     except Exception:
         return ''
+
+
+def saved_watch_cover(
+    playlist: MonitoredPlaylist, downloader: Downloader
+) -> Optional[Path]:
+    """The cover saved beside a watched playlist's M3U, when it is there
+    (see :func:`_download_cover_for_watch`); ``None`` otherwise."""
+
+    relative = _watch_cover_file(playlist, downloader)
+    if not relative:
+        return None
+    root = Path(downloader.download_dir)
+    path = root / relative
+    try:
+        if path.is_file() and path.resolve().is_relative_to(root.resolve()):
+            return path
+    except OSError:
+        pass
+    return None
+
+
+#: How long a watched playlist's cover address is remembered: a day once
+#: found (Spotify's mixes get a new picture now and then), an hour when
+#: the service had none or didn't answer.
+WATCH_COVER_TTL_SECONDS = 24 * 60 * 60
+WATCH_COVER_MISS_TTL_SECONDS = 60 * 60
+_watch_cover_urls: dict[tuple[str, str], tuple[float, str]] = {}
+# Two lookups at a time: a page of covers opening at once must not send
+# a burst of requests to Spotify.
+_watch_cover_lookups = threading.BoundedSemaphore(2)
+
+
+def _remembered_cover_url(key: tuple[str, str]) -> Optional[str]:
+    hit = _watch_cover_urls.get(key)
+    if hit is None:
+        return None
+    found_at, url = hit
+    ttl = WATCH_COVER_TTL_SECONDS if url else WATCH_COVER_MISS_TTL_SECONDS
+    return url if monotonic() - found_at < ttl else None
+
+
+def watch_cover_url(playlist: MonitoredPlaylist) -> str:
+    """The cover a watched playlist has on its service (Spotify, YouTube
+    Music or Deezer), for the Monitor page to show; ``''`` for an artist
+    or when there is none. Remembered for a while (blocking)."""
+
+    if playlist.kind != KIND_PLAYLIST or not playlist.spotify_id:
+        return ''
+    key = (playlist.source, playlist.spotify_id)
+    remembered = _remembered_cover_url(key)
+    if remembered is not None:
+        return remembered
+    with _watch_cover_lookups:
+        remembered = _remembered_cover_url(key)
+        if remembered is not None:
+            return remembered
+        try:
+            url = fetch_playlist_cover_url(
+                playlist.source, playlist.spotify_id
+            )
+        except Exception:
+            logger.opt(exception=True).debug(
+                'No cover for watched playlist {} ({})',
+                playlist.name,
+                playlist.source,
+            )
+            url = ''
+        url = str(url or '')
+        if not url.startswith('https://'):
+            url = ''
+        _watch_cover_urls[key] = (monotonic(), url)
+        return url
 
 
 def queue_watch(
