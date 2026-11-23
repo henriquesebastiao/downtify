@@ -462,3 +462,64 @@ def test_unreadable_playlists_are_not_partially_read_or_edited(
     assert m3u.remove_m3u_tracks(path, ['song.mp3'], tmp_path) == 0
     assert not m3u.insert_m3u_track(path, 'song.mp3', 0, '', tmp_path)
     assert path.read_bytes() == body
+
+
+# --- atomic writes ---------------------------------------------------------
+
+
+def test_a_rewrite_never_shows_an_empty_or_partial_playlist(
+    tmp_path, monkeypatch
+):
+    """The new content lands with a rename: until then the old file is
+    whole. (A plain write truncates it first, and a reader polling the
+    folder - a batch's test, a media server's scan - saw it empty.)"""
+
+    _touch(tmp_path, 'a.mp3')
+    _touch(tmp_path, 'b.mp3')
+    target, _ = m3u.write_m3u(tmp_path, 'Mix', [{'filename': 'a.mp3'}])
+    assert target is not None
+    before = target.read_text(encoding='utf-8')
+    seen = {}
+    real_replace = m3u.os.replace
+
+    def replace(src, dst):
+        seen['target'] = Path(dst).read_text(encoding='utf-8')
+        seen['staged'] = Path(src).read_text(encoding='utf-8')
+        real_replace(src, dst)
+
+    monkeypatch.setattr(m3u.os, 'replace', replace)
+    m3u.write_m3u(
+        tmp_path, 'Mix', [{'filename': 'a.mp3'}, {'filename': 'b.mp3'}]
+    )
+
+    assert seen['target'] == before
+    assert seen['staged'] == target.read_text(encoding='utf-8')
+    assert 'b.mp3' in seen['staged']
+    assert [p.name for p in target.parent.iterdir()] == ['Mix.m3u']
+
+
+def test_a_rewrite_keeps_the_files_permissions(tmp_path):
+    _touch(tmp_path, 'a.mp3')
+    target, _ = m3u.write_m3u(tmp_path, 'Mix', [{'filename': 'a.mp3'}])
+    assert target is not None
+    target.chmod(0o640)
+    m3u.write_m3u(tmp_path, 'Mix', [{'filename': 'a.mp3'}])
+    assert target.stat().st_mode & 0o777 == 0o640
+
+
+def test_a_failed_write_leaves_the_old_file_and_no_leftover(
+    tmp_path, monkeypatch
+):
+    _touch(tmp_path, 'a.mp3')
+    target, _ = m3u.write_m3u(tmp_path, 'Mix', [{'filename': 'a.mp3'}])
+    assert target is not None
+    before = target.read_text(encoding='utf-8')
+
+    def replace(_src, _dst):
+        raise OSError('disk full')
+
+    monkeypatch.setattr(m3u.os, 'replace', replace)
+    with pytest.raises(OSError, match='disk full'):
+        m3u.write_playlist_text(target, '#EXTM3U\nother.mp3\n')
+    assert target.read_text(encoding='utf-8') == before
+    assert [p.name for p in target.parent.iterdir()] == ['Mix.m3u']
