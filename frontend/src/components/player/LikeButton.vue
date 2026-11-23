@@ -43,7 +43,7 @@ function onClick() {
 /* Not for people who asked for less motion. */
 @media (prefers-reduced-motion: no-preference) {
   .like-pop {
-    animation: like-pop 260ms ease-out;
+    animation: like-pop var(--dur-slow) var(--ease-out-soft);
   }
 }
 
@@ -51,8 +51,8 @@ function onClick() {
   0% {
     transform: scale(0.8);
   }
-  60% {
-    transform: scale(1.18);
+  55% {
+    transform: scale(1.12);
   }
   100% {
     transform: scale(1);

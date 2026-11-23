@@ -34,7 +34,7 @@
     <button
       v-if="downloadable"
       type="button"
-      class="tile-play absolute right-3 bottom-[4.25rem] flex size-11 items-center justify-center rounded-full shadow-float transition-transform hover:scale-105"
+      class="tile-play press absolute right-3 bottom-[4.25rem] flex size-11 items-center justify-center rounded-full shadow-float hover:scale-105"
       :class="queued ? 'bg-surface text-accent' : 'bg-accent text-on-accent'"
       :aria-label="t('actions.downloadItem', { name: item.name })"
       :disabled="queued"

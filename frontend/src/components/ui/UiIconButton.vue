@@ -7,7 +7,7 @@
     :aria-label="label"
     :aria-pressed="toggle ? active : undefined"
     :disabled="to ? undefined : disabled"
-    class="inline-flex shrink-0 items-center justify-center transition-colors duration-150 disabled:opacity-40"
+    class="press transition-press inline-flex shrink-0 items-center justify-center disabled:opacity-40"
     :class="[
       round ? 'rounded-full' : 'rounded-control',
       sizeClass,

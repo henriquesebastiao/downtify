@@ -30,7 +30,7 @@
       loading="lazy"
       decoding="async"
       referrerpolicy="no-referrer"
-      class="size-full object-cover transition-opacity duration-300"
+      class="size-full object-cover transition-opacity duration-(--dur-slow) ease-out-soft"
       :class="ready ? 'opacity-100' : 'opacity-0'"
       @load="ready = true"
       @error="onImageError"

@@ -33,7 +33,7 @@
     <button
       v-if="playable"
       type="button"
-      class="tile-play absolute flex size-11 items-center justify-center rounded-full bg-accent text-on-accent shadow-[0_8px_24px_color-mix(in_srgb,var(--c-accent)_40%,transparent)] transition-transform hover:scale-105"
+      class="tile-play press absolute flex size-11 items-center justify-center rounded-full bg-accent text-on-accent shadow-[0_8px_24px_color-mix(in_srgb,var(--c-accent)_40%,transparent)] hover:scale-105"
       :class="round ? 'right-1 bottom-[4.25rem]' : 'right-3 bottom-[4.25rem]'"
       :aria-label="t('actions.playItem', { name: title })"
       @click="$emit('play')"

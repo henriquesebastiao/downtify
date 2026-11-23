@@ -30,9 +30,15 @@
       </div>
 
       <div v-if="visibility === 'shared'" class="flex flex-col gap-2">
-        <p v-if="loading" class="text-[13px] text-muted">
-          {{ t('sharing.loadingUsers') }}
-        </p>
+        <UiSkeletonRows
+          v-if="loading"
+          :count="3"
+          cover="size-8"
+          round
+          :lines="1"
+          row-class="h-10"
+          :label="t('sharing.loadingUsers')"
+        />
         <p v-else-if="!usernames.length" class="text-[13px] text-muted">
           {{ t('sharing.noOtherUsers') }}
         </p>
@@ -119,6 +125,7 @@ import AppIcon from '../ui/AppIcon.vue'
 import UiButton from '../ui/UiButton.vue'
 import UiInput from '../ui/UiInput.vue'
 import UiModal from '../ui/UiModal.vue'
+import UiSkeletonRows from '../ui/UiSkeletonRows.vue'
 import API from '/src/model/api'
 import { useLibrary } from '/src/model/library'
 import { usePlaylistActions } from '/src/model/playlistActions'

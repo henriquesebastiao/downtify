@@ -57,14 +57,15 @@
     </div>
 
     <Teleport to="body">
-      <Transition name="fade">
-        <div
-          v-if="sheet"
-          class="fixed inset-0 z-[70] flex items-end bg-black/50 md:hidden"
-          @click.self="sheet = false"
-        >
+      <Transition name="modal" :duration="sheetDuration">
+        <div v-if="sheet" class="fixed inset-0 z-[70] flex items-end md:hidden">
           <div
-            class="w-full animate-rise rounded-t-[22px] border-t border-line-3 bg-surface px-4 pt-3 pb-[calc(1rem+env(safe-area-inset-bottom))]"
+            class="modal-backdrop absolute inset-0 bg-black/50"
+            aria-hidden="true"
+            @click="sheet = false"
+          />
+          <div
+            class="modal-panel modal-edge relative w-full rounded-t-[22px] border-t border-line-3 bg-surface px-4 pt-3 pb-[calc(1rem+env(safe-area-inset-bottom))]"
           >
             <div class="mx-auto mb-3 h-1 w-10 rounded-full bg-line-3" />
             <a
@@ -153,6 +154,7 @@ import { useQueuePause } from '/src/model/queuePause'
 import { useTheme } from '/src/model/theme'
 import { useUpdateCheck } from '/src/model/updateCheck'
 import { usePendingCount } from './navState'
+import { useMotionDuration } from '/src/lib/motion'
 
 const { t } = useI18n()
 const route = useRoute()
@@ -161,6 +163,7 @@ const auth = useAuth()
 const pending = usePendingCount()
 const queuePaused = useQueuePause().paused
 const sheet = ref(false)
+const sheetDuration = useMotionDuration(420, 300)
 const update = useUpdateCheck().status
 const hasUpdate = computed(() => Boolean(update.value?.update_available))
 

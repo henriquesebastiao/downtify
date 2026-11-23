@@ -9,9 +9,14 @@
   >
     <div class="flex flex-col gap-4">
       <p class="text-sm text-muted">{{ t('externalPlaylistImport.hint') }}</p>
-      <p v-if="loading" class="text-sm text-muted">
-        {{ t('externalPlaylistImport.loading') }}
-      </p>
+      <UiSkeletonRows
+        v-if="loading"
+        :count="3"
+        cover=""
+        row-class="h-[66px] rounded-control border border-line-2 p-3"
+        gap="gap-3"
+        :label="t('externalPlaylistImport.loading')"
+      />
       <p v-else-if="!playlists.length" class="text-sm text-muted">
         {{ t('externalPlaylistImport.empty') }}
       </p>
@@ -100,6 +105,7 @@
 import { ref } from 'vue'
 import UiButton from '../ui/UiButton.vue'
 import UiModal from '../ui/UiModal.vue'
+import UiSkeletonRows from '../ui/UiSkeletonRows.vue'
 import API from '/src/model/api'
 import { useLibrary } from '/src/model/library'
 import { useI18n } from '/src/i18n'

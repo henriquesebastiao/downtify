@@ -3,38 +3,32 @@
 @import '@fontsource-variable/dm-sans';
 
 @import './styles/tokens.css';
+@import './styles/motion.css';
 
 @layer components {
-  /* Cover tiles: lift on hover and slide the play button in. */
+  /* Cover tiles: lift on hover and slide the play button in. The lift only
+     where there is a real hover - a tap mustn't leave a tile floating. */
   .tile {
-    transition: transform 220ms var(--ease-out-soft);
+    transition: transform var(--dur-base) var(--ease-out-soft);
   }
-  .tile:hover {
-    transform: translateY(-4px);
+  @media (hover: hover) {
+    .tile:hover {
+      transform: translateY(-4px);
+    }
   }
   .tile .tile-play {
     opacity: 0;
     transform: translateY(6px);
-    transition: all 220ms var(--ease-out-soft);
+    transition:
+      opacity var(--dur-fast) var(--ease-out-soft),
+      transform var(--dur-base) var(--ease-out-soft),
+      scale var(--dur-fast) var(--ease-out-soft);
   }
   .tile:hover .tile-play,
   .tile:focus-within .tile-play {
     opacity: 1;
     transform: none;
   }
-}
-
-/* Now playing overlay */
-.now-playing-enter-active,
-.now-playing-leave-active {
-  transition:
-    opacity 260ms ease,
-    transform 360ms var(--ease-out-soft);
-}
-.now-playing-enter-from,
-.now-playing-leave-to {
-  opacity: 0;
-  transform: translateY(24px) scale(0.98);
 }
 
 /* Cover and lyrics follow leftover height, not only width breakpoints.
@@ -154,15 +148,4 @@
   -webkit-background-clip: text;
   background-clip: text;
   transition: --karaoke-fill 260ms linear;
-}
-
-/* List insert/remove */
-.list-enter-active,
-.list-leave-active {
-  transition: all 180ms ease-out;
-}
-.list-enter-from,
-.list-leave-to {
-  opacity: 0;
-  transform: translateY(-4px);
 }

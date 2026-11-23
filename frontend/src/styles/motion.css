@@ -1,0 +1,423 @@
+/*
+ * Motion — the app's transitions, skeletons and loaders, in one place.
+ *
+ * Primary lens: subtle production polish (enter = opacity + a short lift
+ * + a blur that sharpens; exits faster and smaller than enters). Second
+ * lens: restraint — what happens all day long (changing page, opening a
+ * menu, play/pause, anything from the keyboard) is fast or not animated.
+ * Only `opacity`, `transform` / `translate` / `scale`, `filter` and
+ * `clip-path` move; never width, height, top or left.
+ *
+ * The easing and duration tokens live in tokens.css; every rule here has
+ * a reduced-motion path (the global one in tokens.css, plus the loops
+ * below swapped for still versions). See CLAUDE.md → "Motion, skeletons
+ * and lazy loading" before adding to this file.
+ */
+
+/* ---------------------------------------------------------------- press */
+
+/* Tactile feedback on a button: it gives a little under the finger. */
+@utility press {
+  &:active:not(:disabled, [aria-disabled='true']) {
+    scale: 0.97;
+  }
+}
+
+/* The colour changes of a hover plus the press, at a press's speed. */
+@utility transition-press {
+  transition-property:
+    color, background-color, border-color, opacity, box-shadow, scale;
+  transition-duration: var(--dur-fast);
+  transition-timing-function: var(--ease-out-soft);
+}
+
+/* ------------------------------------------------------------- skeleton */
+
+@layer components {
+  /* A placeholder in the shape of what is coming. Held back a moment so an
+     answer that comes fast never flashes one, then a slow sheen sweeps
+     across it while it waits. */
+  .skeleton {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+    background-color: var(--skeleton-bg, var(--c-surface-2));
+    animation: skeleton-in var(--dur-base) var(--ease-out-soft) 120ms both;
+  }
+  .skeleton::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: linear-gradient(
+      90deg,
+      transparent,
+      var(--skeleton-shine, color-mix(in srgb, var(--c-text) 7%, transparent)),
+      transparent
+    );
+    transform: translateX(-100%);
+    animation: skeleton-sweep 1.6s var(--ease-in-out-soft) infinite;
+  }
+  /* On the dark, photo-tinted Now playing screen. */
+  .skeleton-glass {
+    --skeleton-bg: rgb(255 255 255 / 0.08);
+    --skeleton-shine: rgb(255 255 255 / 0.1);
+  }
+}
+
+@keyframes skeleton-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* The sweep, then a pause before the next one. */
+@keyframes skeleton-sweep {
+  0% {
+    transform: translateX(-100%);
+  }
+  65%,
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/*
+ * Skeleton → content. Wrap the `v-if="loading"` skeleton and the content
+ * branch in <Transition name="reveal">: the skeleton goes at once (no
+ * frame where both take room), the content rises into its place. Nothing
+ * animates when the data was already there as the page appeared - the
+ * page's own transition covers that.
+ */
+.reveal-enter-active {
+  transition:
+    opacity var(--dur-slow) var(--ease-out-soft),
+    transform var(--dur-slow) var(--ease-out-soft);
+}
+.reveal-enter-from {
+  opacity: 0;
+  transform: translateY(4px);
+}
+.reveal-leave-active {
+  display: none;
+}
+
+/* --------------------------------------------------------- progress bar */
+
+/* A bar of unknown length: a segment travels along the track. */
+@keyframes progress-indeterminate {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(250%);
+  }
+}
+.progress-indeterminate {
+  position: absolute;
+  inset-block: 0;
+  left: 0;
+  width: 40%;
+  border-radius: inherit;
+  animation: progress-indeterminate 1.4s var(--ease-in-out-soft) infinite;
+}
+
+/* -------------------------------------------- modal, dialog, sheet */
+
+/*
+ * <Transition name="modal"> on the overlay root, with an explicit
+ * :duration (lib/motion.js → useMotionDuration): the overlay doesn't move,
+ * its `.modal-backdrop` fades and its `.modal-panel` comes in.
+ *
+ *   .modal-panel              pops in: lift, scale and blur that sharpens
+ *   .modal-panel.modal-sheet  a bottom sheet on phones (below `sm`), a pop
+ *                             on larger screens
+ *   .modal-panel.modal-edge   a bottom sheet at every size
+ */
+.modal-leave-active {
+  pointer-events: none;
+}
+.modal-enter-active .modal-backdrop {
+  transition: opacity var(--dur-slow) var(--ease-out-soft);
+}
+.modal-leave-active .modal-backdrop {
+  transition: opacity var(--dur-base) var(--ease-in-soft);
+}
+.modal-enter-from .modal-backdrop,
+.modal-leave-to .modal-backdrop {
+  opacity: 0;
+}
+
+.modal-enter-active .modal-panel {
+  transition:
+    opacity var(--dur-slow) var(--ease-out-soft),
+    transform var(--dur-slow) var(--ease-out-soft),
+    filter var(--dur-slow) var(--ease-out-soft);
+}
+.modal-leave-active .modal-panel {
+  transition:
+    opacity var(--dur-fast) var(--ease-in-soft),
+    transform var(--dur-fast) var(--ease-in-soft),
+    filter var(--dur-fast) var(--ease-in-soft);
+}
+.modal-enter-from .modal-panel {
+  opacity: 0;
+  transform: translateY(8px) scale(0.97);
+  filter: blur(4px);
+}
+.modal-leave-to .modal-panel {
+  opacity: 0;
+  transform: scale(0.98);
+  filter: blur(2px);
+}
+
+/* A sheet slides from the bottom edge and goes back the same way: a
+   dismissal the person asked for, so it leaves the way it came. */
+.modal-enter-active .modal-edge {
+  transition: transform var(--dur-sheet) var(--ease-drawer);
+}
+.modal-leave-active .modal-edge {
+  transition: transform var(--dur-slow) var(--ease-drawer);
+}
+.modal-enter-from .modal-edge,
+.modal-leave-to .modal-edge {
+  opacity: 1;
+  transform: translateY(calc(100% + 1rem));
+  filter: none;
+}
+@media (width < 40rem) {
+  .modal-enter-active .modal-sheet {
+    transition: transform var(--dur-sheet) var(--ease-drawer);
+  }
+  .modal-leave-active .modal-sheet {
+    transition: transform var(--dur-slow) var(--ease-drawer);
+  }
+  .modal-enter-from .modal-sheet,
+  .modal-leave-to .modal-sheet {
+    opacity: 1;
+    transform: translateY(calc(100% + 1rem));
+    filter: none;
+  }
+}
+
+/* ------------------------------------------------------- menu, popover */
+
+/* Opened dozens of times a session: quick, from its trigger (the
+   element's transform-origin is set where it is placed), no blur. */
+.menu-enter-active {
+  transition:
+    opacity var(--dur-fast) var(--ease-out-soft),
+    transform var(--dur-base) var(--ease-out-soft);
+}
+.menu-leave-active {
+  transition:
+    opacity var(--dur-instant) var(--ease-in-soft),
+    transform var(--dur-instant) var(--ease-in-soft);
+}
+.menu-enter-from {
+  opacity: 0;
+  transform: scale(0.95);
+}
+.menu-leave-to {
+  opacity: 0;
+  transform: scale(0.98);
+}
+
+/* ---------------------------------------------------------------- toast */
+
+.toast-enter-active {
+  transition:
+    opacity var(--dur-slow) var(--ease-out-soft),
+    transform var(--dur-sheet) var(--ease-out-soft),
+    filter var(--dur-slow) var(--ease-out-soft);
+}
+.toast-leave-active {
+  transition:
+    opacity var(--dur-fast) var(--ease-in-soft),
+    transform var(--dur-fast) var(--ease-in-soft),
+    filter var(--dur-fast) var(--ease-in-soft);
+}
+.toast-enter-from {
+  opacity: 0;
+  transform: translateY(12px) scale(0.97);
+  filter: blur(4px);
+}
+.toast-leave-to {
+  opacity: 0;
+  transform: scale(0.97);
+  filter: blur(2px);
+}
+/* The others make room for a new one instead of jumping. */
+.toast-move {
+  transition: transform var(--dur-slow) var(--ease-out-soft);
+}
+
+/* ------------------------------------------- floating bar (mini player) */
+
+/* The mini player and the selection bar: they rise into place and sink
+   back a little, quicker. No blur here: they are frosted glass, and a
+   filter on the wrapper would switch their backdrop blur off meanwhile. */
+.float-bar-enter-active {
+  transition:
+    opacity var(--dur-slow) var(--ease-out-soft),
+    transform var(--dur-sheet) var(--ease-out-soft);
+}
+.float-bar-leave-active {
+  transition:
+    opacity var(--dur-base) var(--ease-in-soft),
+    transform var(--dur-base) var(--ease-in-soft);
+}
+.float-bar-enter-from {
+  opacity: 0;
+  transform: translateY(16px);
+}
+.float-bar-leave-to {
+  opacity: 0;
+  transform: translateY(8px);
+}
+
+/* --------------------------------------------------- now playing screen */
+
+/* On a phone it is a sheet over the mini player it was opened from: it
+   slides up from the bottom and back down. On a larger screen it rises a
+   little and fades, and leaves quicker. */
+.now-playing-enter-active {
+  transition:
+    opacity var(--dur-slow) var(--ease-out-soft),
+    transform var(--dur-sheet) var(--ease-out-soft);
+}
+.now-playing-leave-active {
+  transition:
+    opacity var(--dur-base) var(--ease-in-soft),
+    transform var(--dur-base) var(--ease-in-soft);
+}
+.now-playing-enter-from {
+  opacity: 0;
+  transform: translateY(24px) scale(0.98);
+}
+.now-playing-leave-to {
+  opacity: 0;
+  transform: translateY(12px);
+}
+@media (width < 48rem) {
+  .now-playing-enter-active {
+    transition: transform var(--dur-sheet) var(--ease-drawer);
+  }
+  .now-playing-leave-active {
+    transition: transform var(--dur-slow) var(--ease-drawer);
+  }
+  .now-playing-enter-from,
+  .now-playing-leave-to {
+    opacity: 1;
+    transform: translateY(100%);
+  }
+}
+
+/* ----------------------------------------------------------------- lists */
+
+/* Rows added to or removed from a short list (Up next, watches). */
+.list-enter-active {
+  transition:
+    opacity var(--dur-base) var(--ease-out-soft),
+    transform var(--dur-base) var(--ease-out-soft);
+}
+.list-leave-active {
+  transition:
+    opacity var(--dur-fast) var(--ease-in-soft),
+    transform var(--dur-fast) var(--ease-in-soft);
+}
+.list-enter-from {
+  opacity: 0;
+  transform: translateY(-4px);
+}
+.list-leave-to {
+  opacity: 0;
+  transform: scale(0.98);
+}
+.list-move {
+  transition: transform var(--dur-slow) var(--ease-out-soft);
+}
+
+/* ------------------------------------------------- icon and text swaps */
+
+/* One icon becoming another (download → spinner → check): scale, blur
+   and opacity, so the change is seen and not just a flicker. Use with
+   mode="out-in". */
+.swap-enter-active {
+  transition:
+    opacity var(--dur-fast) var(--ease-out-soft),
+    transform var(--dur-fast) var(--ease-out-soft),
+    filter var(--dur-fast) var(--ease-out-soft);
+}
+.swap-leave-active {
+  transition:
+    opacity var(--dur-instant) var(--ease-in-soft),
+    transform var(--dur-instant) var(--ease-in-soft),
+    filter var(--dur-instant) var(--ease-in-soft);
+}
+.swap-enter-from,
+.swap-leave-to {
+  opacity: 0;
+  transform: scale(0.8);
+  filter: blur(2px);
+}
+
+/* A line of text replaced by another (the song that is playing). */
+.text-swap-enter-active {
+  transition:
+    opacity var(--dur-base) var(--ease-out-soft),
+    transform var(--dur-base) var(--ease-out-soft),
+    filter var(--dur-base) var(--ease-out-soft);
+}
+.text-swap-leave-active {
+  transition:
+    opacity var(--dur-instant) var(--ease-in-soft),
+    filter var(--dur-instant) var(--ease-in-soft);
+}
+.text-swap-enter-from {
+  opacity: 0;
+  transform: translateY(4px);
+  filter: blur(2px);
+}
+.text-swap-leave-to {
+  opacity: 0;
+  filter: blur(2px);
+}
+
+/* ---------------------------------------------------------- collapsible */
+
+/* Something that opens below its header (an expanding card, a revealed
+   field): a short drop from the header. */
+.collapse-enter-active {
+  transition:
+    opacity var(--dur-base) var(--ease-out-soft),
+    transform var(--dur-base) var(--ease-out-soft);
+}
+.collapse-leave-active {
+  transition:
+    opacity var(--dur-instant) var(--ease-in-soft),
+    transform var(--dur-instant) var(--ease-in-soft);
+}
+.collapse-enter-from {
+  opacity: 0;
+  transform: translateY(-4px);
+}
+.collapse-leave-to {
+  opacity: 0;
+}
+
+/* ------------------------------------------------------- reduced motion */
+
+/* The loops get still versions: a plain skeleton, a dimmed full bar. */
+@media (prefers-reduced-motion: reduce) {
+  .skeleton::after {
+    display: none;
+  }
+  .progress-indeterminate {
+    width: 100%;
+    animation: none;
+    opacity: 0.4;
+  }
+}

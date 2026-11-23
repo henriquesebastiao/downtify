@@ -1,5 +1,5 @@
 <template>
-  <Transition name="now-playing">
+  <Transition name="float-bar">
     <div
       v-if="count"
       class="sticky top-[76px] z-20 flex flex-wrap items-center gap-2 rounded-[14px] border border-line-3 bg-surface-2/95 p-2 pl-4 shadow-float backdrop-blur-xl md:top-[84px]"

@@ -1,5 +1,5 @@
 <template>
-  <Transition name="now-playing">
+  <Transition name="float-bar">
     <!-- The wrapper lets the seek bar's hit area and time tooltip reach
          past the player's clipped top edge. -->
     <div v-if="visible" class="relative">
@@ -13,8 +13,8 @@
         <!-- Progress: a hairline on phones; desktop's scrubber is below. -->
         <div class="absolute inset-x-3 bottom-0 h-0.5 bg-line-2 md:hidden">
           <div
-            class="h-full bg-accent"
-            :style="{ width: `${smoothPercent}%` }"
+            class="h-full origin-left bg-accent"
+            :style="{ transform: `scaleX(${smoothPercent / 100})` }"
           />
         </div>
 
@@ -40,22 +40,28 @@
               :icon-size="18"
               class="track-art size-11 md:size-[52px]"
             />
-            <span class="flex min-w-0 flex-col">
-              <span class="flex items-center gap-2">
-                <span class="truncate text-sm font-semibold">{{
-                  track.title
-                }}</span>
-                <ExplicitBadge v-if="track.explicit" />
-                <EqBars
-                  v-if="player.isPlaying.value"
-                  :size="10"
-                  class="hidden md:inline-flex"
-                />
+            <!-- The next song's name comes into focus over the last one. -->
+            <Transition name="text-swap" mode="out-in">
+              <span
+                :key="track.file || track.title"
+                class="flex min-w-0 flex-col"
+              >
+                <span class="flex items-center gap-2">
+                  <span class="truncate text-sm font-semibold">{{
+                    track.title
+                  }}</span>
+                  <ExplicitBadge v-if="track.explicit" />
+                  <EqBars
+                    v-if="player.isPlaying.value"
+                    :size="10"
+                    class="hidden md:inline-flex"
+                  />
+                </span>
+                <span class="truncate text-xs text-muted">
+                  {{ [track.artist, track.album].filter(Boolean).join(' · ') }}
+                </span>
               </span>
-              <span class="truncate text-xs text-muted">
-                {{ [track.artist, track.album].filter(Boolean).join(' · ') }}
-              </span>
-            </span>
+            </Transition>
           </button>
           <!-- Phones have no room for it beside the transport buttons;
              the rows and the full player carry the heart there. -->
@@ -107,7 +113,7 @@
           />
           <button
             type="button"
-            class="play-button flex size-11 items-center justify-center rounded-full text-fg md:bg-invert md:text-on-invert md:transition-transform md:hover:scale-105"
+            class="play-button press flex size-11 items-center justify-center rounded-full text-fg transition-[scale] duration-(--dur-fast) ease-out-soft md:bg-invert md:text-on-invert md:hover:scale-105"
             :aria-label="
               player.isPlaying.value ? t('player.pause') : t('player.play')
             "

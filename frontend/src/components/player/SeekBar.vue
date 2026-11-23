@@ -27,10 +27,15 @@
       class="seek-rail absolute inset-x-4 rounded-full"
       :style="{ top: `${hitAbove + 2}px` }"
     >
-      <div
-        class="seek-fill absolute inset-y-0 left-0 rounded-full bg-accent"
-        :style="{ width: `${percent}%` }"
-      />
+      <!-- The visible bar: full height always, squashed to a hairline at
+           rest and let out under the pointer (a transform, not a height);
+           the fill is slid along it, not resized. -->
+      <div class="seek-track absolute inset-0 overflow-hidden rounded-full">
+        <div
+          class="seek-fill absolute inset-0 rounded-full bg-accent"
+          :style="{ transform: `translateX(${percent - 100}%)` }"
+        />
+      </div>
       <span
         class="seek-thumb absolute top-1/2 size-3 rounded-full bg-accent shadow"
         :style="{ left: `${percent}%` }"
@@ -134,32 +139,38 @@ const tipLeft = computed(() =>
 
 <style scoped>
 .seek-rail {
-  height: 2px;
-  margin-top: -1px;
+  height: 6px;
+  margin-top: -3px;
+}
+
+.seek-track {
   background-color: transparent;
+  transform: scaleY(0.34);
   transition:
-    height 160ms cubic-bezier(0.2, 0.9, 0.3, 1.3),
-    margin-top 160ms cubic-bezier(0.2, 0.9, 0.3, 1.3),
-    background-color 160ms ease;
+    transform var(--dur-fast) var(--ease-out-soft),
+    background-color var(--dur-fast) var(--ease-out-soft);
 }
 
 .seek-thumb {
-  transform: translate(-50%, -50%) scale(0);
-  transition: transform 160ms cubic-bezier(0.2, 0.9, 0.3, 1.3);
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.5);
+  transition:
+    opacity var(--dur-fast) var(--ease-out-soft),
+    transform var(--dur-fast) var(--ease-out-soft);
 }
 
-.is-active .seek-rail {
-  height: 6px;
-  margin-top: -3px;
+.is-active .seek-track {
+  transform: none;
   background-color: color-mix(in srgb, var(--color-fg) 22%, transparent);
 }
 
 .is-active .seek-thumb {
+  opacity: 1;
   transform: translate(-50%, -50%) scale(1);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .seek-rail,
+  .seek-track,
   .seek-thumb {
     transition: none;
   }

@@ -23,13 +23,20 @@
         <p class="mt-1 text-xs text-muted">
           {{ t(column.help, { days: halfLife }) }}
         </p>
+        <UiSkeletonRows
+          v-if="loading && !shown(column.key).length && !error"
+          class="mt-3"
+          :count="4"
+          cover=""
+          action
+          row-class="h-[61px]"
+          :label="t('artistSuggestions.loading')"
+        />
         <p
-          v-if="!shown(column.key).length && !error"
+          v-else-if="!shown(column.key).length && !error"
           class="mt-4 text-sm text-muted"
         >
-          {{
-            t(loading ? 'artistSuggestions.loading' : 'artistSuggestions.empty')
-          }}
+          {{ t('artistSuggestions.empty') }}
         </p>
         <ul class="mt-3 divide-y divide-line-2">
           <li
@@ -130,6 +137,7 @@
 import { onBeforeUnmount, ref, watch } from 'vue'
 import UiButton from '/src/components/ui/UiButton.vue'
 import UiModal from '/src/components/ui/UiModal.vue'
+import UiSkeletonRows from '/src/components/ui/UiSkeletonRows.vue'
 import ArtistCandidateList from './ArtistCandidateList.vue'
 import API from '/src/model/monitor'
 import { useI18n } from '/src/i18n'

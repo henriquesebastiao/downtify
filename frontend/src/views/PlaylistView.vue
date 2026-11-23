@@ -297,13 +297,13 @@
                 {{ t('playlists.addFromLibrary', { count: heldSongs.length }) }}
               </UiButton>
             </div>
-            <ul v-if="loadingMissing" class="flex flex-col gap-2">
-              <li
-                v-for="n in 4"
-                :key="n"
-                class="h-14 animate-pulse rounded-[10px] bg-surface-2"
-              />
-            </ul>
+            <UiSkeletonRows
+              v-if="loadingMissing"
+              :count="4"
+              cover="size-10"
+              action
+              row-class="h-14 px-2"
+            />
             <ul v-else-if="shownSongs.length" class="-mx-2 flex flex-col">
               <li
                 v-for="song in shownSongs"
@@ -424,6 +424,7 @@ import UiEmpty from '/src/components/ui/UiEmpty.vue'
 import UiIconButton from '/src/components/ui/UiIconButton.vue'
 import UiMenu from '/src/components/ui/UiMenu.vue'
 import UiPanel from '/src/components/ui/UiPanel.vue'
+import UiSkeletonRows from '/src/components/ui/UiSkeletonRows.vue'
 import CollectionHero from '/src/components/library/CollectionHero.vue'
 import DetailState from '/src/components/library/DetailState.vue'
 import PlayButton from '/src/components/library/PlayButton.vue'

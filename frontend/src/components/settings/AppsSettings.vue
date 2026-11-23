@@ -68,6 +68,8 @@
           </UiButton>
         </form>
         <p v-else-if="info" class="text-sm font-semibold">{{ info.name }}</p>
+        <UiSkeleton v-else-if="!infoLoaded" class="h-4 w-40" />
+        <UiSkeleton v-if="!info && !infoLoaded" class="mt-1 h-3 w-56" />
         <p v-if="info" class="text-[12px] text-faint">
           {{ t('apps.serverId', { id: info.server_id }) }} · Downtify
           {{ info.version }}
@@ -88,14 +90,24 @@
       "
     >
       <div class="flex items-center justify-between gap-3 px-5 py-4">
-        <p class="text-sm text-muted">
+        <UiSkeleton v-if="!devicesLoaded" class="h-4 w-28" />
+        <p v-else class="text-sm text-muted">
           {{ t('apps.deviceCount', { count: devices.length }) }}
         </p>
         <UiButton variant="primary" icon="plus" @click="openPairing">
           {{ t('apps.pair') }}
         </UiButton>
       </div>
-      <ul v-if="devices.length" class="flex flex-col">
+      <UiSkeletonRows
+        v-if="!devicesLoaded"
+        :count="2"
+        cover="size-10"
+        round
+        action
+        row-class="h-16 px-5"
+        gap="gap-0"
+      />
+      <ul v-else-if="devices.length" class="flex animate-reveal flex-col">
         <li
           v-for="device in devices"
           :key="device.id"
@@ -201,6 +213,8 @@ import AppIcon from '../ui/AppIcon.vue'
 import UiButton from '../ui/UiButton.vue'
 import UiInput from '../ui/UiInput.vue'
 import UiModal from '../ui/UiModal.vue'
+import UiSkeleton from '../ui/UiSkeleton.vue'
+import UiSkeletonRows from '../ui/UiSkeletonRows.vue'
 import SettingGroup from './SettingGroup.vue'
 import SettingRow from './SettingRow.vue'
 import AurralSettings from './AurralSettings.vue'
@@ -224,6 +238,8 @@ const serverName = ref('')
 const nameError = ref('')
 const savingName = ref(false)
 const devices = ref([])
+const devicesLoaded = ref(false)
+const infoLoaded = ref(false)
 
 function errorOf(err) {
   return err?.response?.data?.detail || t('toast.actionFailed')
@@ -236,6 +252,8 @@ async function loadInfo() {
     serverName.value = res.data.name
   } catch {
     // Shown as missing; the page stays usable.
+  } finally {
+    infoLoaded.value = true
   }
 }
 
@@ -245,6 +263,8 @@ async function loadDevices() {
     devices.value = res.data || []
   } catch {
     devices.value = []
+  } finally {
+    devicesLoaded.value = true
   }
 }
 

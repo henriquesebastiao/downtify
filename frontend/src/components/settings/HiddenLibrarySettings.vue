@@ -3,7 +3,15 @@
     :title="t('visibility.title')"
     :description="t('visibility.hint')"
   >
-    <p v-if="loaded && !total" class="px-5 py-4 text-sm text-muted">
+    <UiSkeletonRows
+      v-if="!loaded"
+      :count="2"
+      cover="size-10"
+      action
+      row-class="h-16 px-5"
+      gap="gap-0"
+    />
+    <p v-else-if="!total" class="px-5 py-4 text-sm text-muted">
       {{ t('visibility.none') }}
     </p>
     <template v-for="group in groups" :key="group.id">
@@ -54,6 +62,7 @@
 import { computed, onMounted, ref } from 'vue'
 import AppIcon from '../ui/AppIcon.vue'
 import UiButton from '../ui/UiButton.vue'
+import UiSkeletonRows from '../ui/UiSkeletonRows.vue'
 import SettingGroup from './SettingGroup.vue'
 import API from '/src/model/api'
 import { useUi } from '/src/model/ui'

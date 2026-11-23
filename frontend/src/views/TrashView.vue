@@ -74,9 +74,17 @@
           :title="search ? t('trash.noMatch') : t('trash.empty')"
           :body="search ? '' : t('trash.emptyHint')"
         />
+        <UiSkeletonRows
+          v-else-if="!items.length"
+          :count="5"
+          cover=""
+          action
+          row-class="h-[84px] px-4"
+          gap="gap-0 divide-y divide-line-2 overflow-hidden rounded-panel border border-line-2 bg-surface"
+        />
         <ul
           v-else
-          class="flex flex-col divide-y divide-line-2 overflow-hidden rounded-panel border border-line-2 bg-surface"
+          class="flex animate-reveal flex-col divide-y divide-line-2 overflow-hidden rounded-panel border border-line-2 bg-surface"
         >
           <li
             v-for="item in items"
@@ -168,6 +176,14 @@
           icon="download"
           :title="t('trash.exclusionsEmpty')"
         />
+        <UiSkeletonRows
+          v-else-if="!exclusions.length"
+          :count="3"
+          cover=""
+          action
+          row-class="h-[66px] px-4"
+          gap="gap-0 divide-y divide-line-2 overflow-hidden rounded-panel border border-line-2 bg-surface"
+        />
         <ul
           v-else
           class="flex flex-col divide-y divide-line-2 overflow-hidden rounded-panel border border-line-2 bg-surface"
@@ -195,6 +211,23 @@
         </ul>
       </template>
     </template>
+
+    <!-- Asking the server whether the trash is on, then for its first
+         page: the controls' and the list's shape. -->
+    <div v-else-if="!checked" class="flex flex-col gap-6" aria-busy="true">
+      <div class="flex flex-wrap items-center gap-2">
+        <UiSkeleton class="h-10 w-48" />
+        <UiSkeleton class="h-10 w-56" />
+      </div>
+      <UiSkeleton class="h-3.5 w-40" />
+      <UiSkeletonRows
+        :count="5"
+        cover=""
+        action
+        row-class="h-[84px] px-4"
+        gap="gap-0 divide-y divide-line-2 overflow-hidden rounded-panel border border-line-2 bg-surface"
+      />
+    </div>
   </div>
 </template>
 
@@ -210,6 +243,8 @@ import UiBadge from '/src/components/ui/UiBadge.vue'
 import UiButton from '/src/components/ui/UiButton.vue'
 import UiEmpty from '/src/components/ui/UiEmpty.vue'
 import UiSegmented from '/src/components/ui/UiSegmented.vue'
+import UiSkeleton from '/src/components/ui/UiSkeleton.vue'
+import UiSkeletonRows from '/src/components/ui/UiSkeletonRows.vue'
 import PageHeader from '/src/components/library/PageHeader.vue'
 import API from '/src/model/api'
 import { useAuth } from '/src/model/auth'

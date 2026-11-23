@@ -27,7 +27,7 @@
       aria-busy="true"
     >
       <div v-for="n in 12" :key="n" class="flex flex-col gap-2.5">
-        <UiSkeleton class="aspect-square w-full rounded-full" />
+        <UiSkeleton class="aspect-square w-full !rounded-full" />
         <UiSkeleton class="mx-auto h-4 w-2/3" />
       </div>
     </div>
