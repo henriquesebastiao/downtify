@@ -773,6 +773,31 @@ function getUserStats() {
   return API.get('/api/users/stats')
 }
 
+// ── Storage quotas (downtify/storage_quota_routes.py) ────────────────
+function getMyStorage() {
+  return API.get('/api/me/storage')
+}
+
+function getUsersStorage() {
+  return API.get('/api/users/storage')
+}
+
+/** `quotaBytes`: bytes, or null for no default. */
+function setDefaultStorageQuota(quotaBytes) {
+  return API.put('/api/users/storage/default', { quota_bytes: quotaBytes })
+}
+
+/** `quotaBytes`: bytes, -1 for unlimited, null to follow the default. */
+function setUserStorageQuota(id, quotaBytes) {
+  return API.put(`/api/users/${encodeURIComponent(id)}/storage`, {
+    quota_bytes: quotaBytes,
+  })
+}
+
+function resetUserStorage(id) {
+  return API.post(`/api/users/${encodeURIComponent(id)}/storage/reset`)
+}
+
 function getActivity(params = {}) {
   return API.get('/api/activity', { params })
 }
@@ -1361,6 +1386,11 @@ export default {
   updateUser,
   deleteUser,
   getUserStats,
+  getMyStorage,
+  getUsersStorage,
+  setDefaultStorageQuota,
+  setUserStorageQuota,
+  resetUserStorage,
   getActivity,
   getNowPlaying,
   reportPlayback,

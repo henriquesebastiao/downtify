@@ -280,6 +280,17 @@ class TrackOwners:
             ).fetchall()
         return {str(row['content_key']) for row in rows}
 
+    def owned_paths(self, user_id: int) -> set[str]:
+        """The library paths of every file *user_id* owns (rows recorded
+        before paths were kept have none)."""
+
+        with self._connect() as conn:
+            rows = conn.execute(
+                'SELECT stored_path FROM track_owners WHERE user_id = ?',
+                (int(user_id),),
+            ).fetchall()
+        return {str(row['stored_path']) for row in rows if row['stored_path']}
+
     def count_by_user(self) -> dict[int, int]:
         """How many ownership rows each account has (download history)."""
 

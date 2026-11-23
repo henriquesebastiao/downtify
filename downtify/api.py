@@ -388,6 +388,14 @@ downloads are shared, and files are never stored twice.
   (admins), ``GET /api/activity``, ``GET /api/activity/now`` (admins) and
   ``POST /api/activity/playback`` (players report what they play) - see
   ``downtify/account_routes.py``
+* ``GET  /api/me/storage`` (your storage quota: ``{used, limit,
+  remaining, unlimited, exceeded, source, own}``), ``GET
+  /api/users/storage``, ``PUT /api/users/storage/default``, ``PUT
+  /api/users/{id}/storage`` (``{quota_bytes}``: bytes, ``-1`` unlimited,
+  ``null`` the default) and ``POST /api/users/{id}/storage/reset``
+  (admins) - see ``downtify/storage_quota_routes.py``. A download asked
+  for, or starting, while its account is out of space is refused with
+  ``507`` and a message giving the space used and left
 * ``/api/v1/...``: the apps' API, by track id - ``GET /api/v1/library``
   (``?since=`` change feed), ``GET /api/v1/tracks/{id}`` (and
   ``/stream``, ``/cover``, ``/lyrics``), ``GET|POST|DELETE
@@ -697,6 +705,15 @@ from .slskd_misses import SlskdMisses
 from .slskd_provider import (
     normalize_slskd_quality,
     reset_slskd_parallelism,
+)
+from .storage_quota import (
+    QUOTA_STATUS_CODE,
+    QuotaExceededError,
+    StorageQuotas,
+    effective_quota,
+    exceeded_message,
+    quota_status,
+    used_bytes,
 )
 from .storage_scan import plan_folders, scan_folders
 from .stream import StreamCache
@@ -1380,6 +1397,7 @@ class AppState:
     external_sync: Optional[ExternalSyncJob] = None
     likes: Optional[LikedTracks] = None
     track_owners: Optional[TrackOwners] = None
+    storage_quotas: Optional[StorageQuotas] = None
     library_visibility: Optional[LibraryVisibility] = None
     manual_playlist_owners: Optional[ManualPlaylistOwners] = None
     playlist_shares: Optional[PlaylistShares] = None
@@ -1519,6 +1537,109 @@ def request_is_admin(request: Optional[Request]) -> bool:
         return False
     principal = principal_of(request)
     return bool(principal is not None and principal.is_admin)
+
+
+def library_live_sizes() -> dict[str, int]:
+    """Content key -> size in bytes of every file the Library lists
+    (the cached snapshot; empty when it can't be read)."""
+
+    try:
+        entries = listing_for_request(library_context())
+    except Exception:
+        logger.opt(exception=True).debug('Could not read the library')
+        return {}
+    sizes: dict[str, int] = {}
+    for entry in entries:
+        try:
+            sizes[entry_content_key(entry)] = int(entry.get('size') or 0)
+        except (TypeError, ValueError):
+            continue
+    sizes.pop('', None)
+    return sizes
+
+
+def _account_is_admin(user_id: int) -> bool:
+    auth = state.auth
+    if auth is None or getattr(auth, 'auth_disabled', False):
+        return True
+    try:
+        user = auth.users.get(user_id)
+    except Exception:
+        logger.opt(exception=True).debug('Could not read user {}', user_id)
+        return False
+    return bool(user and user.get('role') == 'admin')
+
+
+def storage_status(
+    user_id: int,
+    *,
+    is_admin: Optional[bool] = None,
+    sizes: Optional[dict[str, int]] = None,
+) -> dict[str, Any]:
+    """*user_id*'s storage: what they downloaded, their quota and the
+    space left (see :func:`downtify.storage_quota.quota_status`)."""
+
+    admin = _account_is_admin(user_id) if is_admin is None else is_admin
+    quotas = state.storage_quotas
+    own = quotas.get(user_id) if quotas is not None else None
+    default = quotas.default() if quotas is not None else None
+    limit, source = effective_quota(admin, own, default)
+    owned: set[str] = set()
+    if state.track_owners is not None and user_id:
+        owned = state.track_owners.owned_keys(user_id)
+    live = library_live_sizes() if sizes is None else sizes
+    return quota_status(used_bytes(owned, live), limit, source, own)
+
+
+def storage_quota_refusal(user_ids: Collection[int]) -> Optional[str]:
+    """Why a download for *user_ids* is refused - every one of them is
+    out of space - or ``None`` when it may go ahead (no quotas set, no
+    account behind it, or someone still has room)."""
+
+    users = {int(uid) for uid in user_ids if uid}
+    quotas = state.storage_quotas
+    if not users or quotas is None:
+        return None
+    try:
+        if not quotas.any_set():
+            return None
+        sizes: Optional[dict[str, int]] = None
+        message = None
+        for uid in sorted(users):
+            if _account_is_admin(uid):
+                return None
+            if quotas.get(uid) is None and quotas.default() is None:
+                return None
+            if sizes is None:
+                sizes = library_live_sizes()
+            status = storage_status(uid, is_admin=False, sizes=sizes)
+            if not status['exceeded']:
+                return None
+            message = message or exceeded_message(status)
+        return message
+    except Exception:
+        # A quota hiccup never blocks downloads.
+        logger.opt(exception=True).warning('Could not check storage quota')
+        return None
+
+
+async def ensure_storage_quota(request: Optional[Request]) -> None:
+    """507 with the space used and left when the account behind
+    *request* has no space left for another download."""
+
+    quotas = state.storage_quotas
+    if request is None or quotas is None:
+        return
+    # Nothing to enforce: no request-side work at all.
+    if not await asyncio.to_thread(quotas.any_set):
+        return
+    if request_is_admin(request):
+        return
+    message = await asyncio.to_thread(
+        storage_quota_refusal, [request_user_id(request)]
+    )
+    if message:
+        raise HTTPException(status_code=QUOTA_STATUS_CODE, detail=message)
 
 
 def hidden_rules() -> HiddenRules:
@@ -4796,6 +4917,13 @@ async def _run_download_locked(
                 existing = await _finish_with_existing(song, job, subdir)
                 if existing:
                     return existing
+                # Checked as it starts, not only when it was asked for:
+                # a long queue would otherwise run past the quota.
+                refusal = await asyncio.to_thread(
+                    storage_quota_refusal, _job_users(job)
+                )
+                if refusal:
+                    raise QuotaExceededError(refusal)
 
                 job['status'] = 'downloading'
 
@@ -4877,7 +5005,9 @@ async def _run_download_locked(
             if delay_seconds > 0:
                 await asyncio.sleep(delay_seconds)
     except Exception as exc:
-        if isinstance(exc, (NoAudioMatchError, TrackTooLongError)):
+        if isinstance(
+            exc, (NoAudioMatchError, TrackTooLongError, QuotaExceededError)
+        ):
             # An expected outcome, not a crash: no traceback in the log.
             logger.warning('{} ({})', exc, song_id)
             message = str(exc)
@@ -4977,15 +5107,19 @@ async def download_endpoint(
     if state.downloader is None:
         raise HTTPException(status_code=500, detail='Downloader not ready')
 
+    skip_owned = (
+        isinstance(client_hints, dict)
+        and client_hints.get('skip_if_in_library') is True
+    )
+    if not skip_owned:
+        # Out of space: say so before resolving anything.
+        await ensure_storage_quota(request)
     # Spotify/YouTube Music network calls: off the event loop, or every
     # other request and WebSocket stalls until they return.
     song = await asyncio.to_thread(
         _song_from_download_request, url, client_hints
     )
-    if (
-        isinstance(client_hints, dict)
-        and client_hints.get('skip_if_in_library') is True
-    ):
+    if skip_owned:
         _wanted, owned = await asyncio.to_thread(_split_owned, request, [song])
         if owned:
             return {
@@ -4993,6 +5127,7 @@ async def download_endpoint(
                 'filename': owned[0]['filename'],
                 'match': owned[0]['match'],
             }
+        await ensure_storage_quota(request)
     # A retried track from a playlist carries its playlist in the hints,
     # so it lands in that playlist's folder and catalog.
     pl_ctx = await asyncio.to_thread(
@@ -5028,6 +5163,10 @@ async def download_endpoint(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except TrackTooLongError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except QuotaExceededError as exc:
+        raise HTTPException(
+            status_code=QUOTA_STATUS_CODE, detail=str(exc)
+        ) from exc
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
     return filename
@@ -6249,6 +6388,7 @@ async def download_batch_endpoint(request: Request) -> dict[str, Any]:
         songs, owned = await asyncio.to_thread(_split_owned, request, songs)
         if not songs:
             return {'job_ids': [], 'count': 0, ALREADY_IN_LIBRARY: owned}
+    await ensure_storage_quota(request)
     playlist_url = str(payload.get('playlist_url') or '')
     generate_m3u = bool(payload.get('generate_m3u', True))
     # No real Spotify/YouTube Music playlist id backs this batch (e.g. an
@@ -6331,6 +6471,7 @@ async def download_csv_endpoint(request: Request) -> dict[str, Any]:
     """
     if state.downloader is None:
         raise HTTPException(status_code=500, detail='Downloader not ready')
+    await ensure_storage_quota(request)
 
     try:
         payload = await request.json()
@@ -6444,6 +6585,7 @@ async def download_album_endpoint(
     """
     if state.downloader is None:
         raise HTTPException(status_code=500, detail='Downloader not ready')
+    await ensure_storage_quota(request)
 
     songs = await asyncio.to_thread(_songs_for_album_download, url)
     first_song = songs[0] if songs else {}

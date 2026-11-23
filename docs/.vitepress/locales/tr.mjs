@@ -96,6 +96,7 @@ export default {
       'features/collaborative-playlists.md': 'Birlikte düzenlenen listeler',
       'features/playlist-order.md': 'Sıralama ve tekrarlanan şarkılar',
       'features/users.md': 'Kullanıcılar ve oturum açma',
+      'features/storage-quotas.md': 'Depolama kotaları',
       'features/mobile-apps.md': 'Mobil uygulamalar',
       'features/library-only.md': 'Yalnızca kitaplık modu',
       'features/server.md': 'Sunucu ayarları',

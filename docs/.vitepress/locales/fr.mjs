@@ -96,6 +96,7 @@ export default {
       'features/collaborative-playlists.md': 'Playlists collaboratives',
       'features/playlist-order.md': 'Ordre et titres répétés',
       'features/users.md': 'Utilisateurs et connexion',
+      'features/storage-quotas.md': 'Quotas de stockage',
       'features/mobile-apps.md': 'Applications mobiles',
       'features/library-only.md': 'Mode bibliothèque seule',
       'features/server.md': 'Réglages du serveur',

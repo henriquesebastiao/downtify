@@ -1004,6 +1004,8 @@ RULES: list[tuple[frozenset[str], re.Pattern[str], str]] = [
         # (the routes check whose), and a WebSocket ticket.
         (_m('POST'), r'^/api/auth/ws-ticket$', CLIENT),
         (_READ, r'^/api/me$', CLIENT),
+        # Your storage quota and usage (downtify/storage_quota_routes.py).
+        (_READ, r'^/api/me/storage$', CLIENT),
         (_ALL, r'^/api/me(/|$)', USER),
         (_ALL, r'^/api/auth/(devices|pairing)(/|$)', USER),
         # A signed-in browser (a user or an admin - paired apps stay

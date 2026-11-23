@@ -138,6 +138,7 @@ export const NAV = [
     icon: 'lucide/server',
     items: [
       { title: 'Users & Sign-in', page: 'features/users.md' },
+      { title: 'Storage Quotas', page: 'features/storage-quotas.md' },
       { title: 'Server Settings', page: 'features/server.md' },
       { title: 'Backups', page: 'features/backups.md' },
       { title: 'Notifications', page: 'features/notifications.md' },
