@@ -65,6 +65,7 @@ const settings = ref({
   download_cover_art_artist_banner: false,
   sync_navidrome: true,
   allow_playlist_sharing: true,
+  discover_navidrome_plays: false,
   navidrome: {
     enabled: false,
     url: '',

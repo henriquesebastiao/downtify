@@ -53,6 +53,8 @@ A song counts once per play, after **half of it** (or **four minutes**, for long
 
 Listens are kept on the server, so what you play on your phone shapes the suggestions on your desktop too. To start over, open **Hidden artists → Clear listening history**; your library and liked songs stay as they are.
 
+If you mostly listen through a Navidrome client, an admin can turn on **Use Navidrome plays in Discover** under **Settings → Navidrome**. The plays and starred songs of the Navidrome account Downtify signs in with then count too: its most played albums add to their artists' listens (the latest play as the most recent one), and each starred song counts as a liked song of its artist. They count for admins only, since Navidrome only tells an account its own plays and that account's listening is no one else's. Downtify asks Navidrome at most every 6 hours; **Clear listening history** doesn't touch them.
+
 ## Hiding artists
 
 **⋯ → Not interested** on a suggestion hides that artist from Discover for good (the toast that appears has an **Undo**). To hide an artist before it's ever suggested — one you just don't want to hear about — open **Hidden artists** and type the name in.
