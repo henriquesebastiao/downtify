@@ -1989,7 +1989,77 @@ def playlists_for_request(request: Optional[Request]) -> list[dict[str, Any]]:
     found = list_library_playlists(
         ctx.download_dir, ctx.slskd_dir, ctx.extra_dirs, stale_ok=True
     )
+    if state.settings.get('generate_m3u', True) is False:
+        found = _with_catalog_playlists(found, ctx)
     return _filter_playlists_for(found, request)
+
+
+def _with_catalog_playlists(
+    found: list[dict[str, Any]], ctx: LibraryContext
+) -> list[dict[str, Any]]:
+    """The listing with downloaded playlists read from the playlist
+    catalog, for *Write M3U playlists* off (issue #412).
+
+    The Library lists playlists from their M3U files. With none written,
+    a playlist downloaded since never showed up and one written before
+    kept its old songs, though Search and Navidrome had them all. The
+    catalog records every downloaded playlist's songs either way, so
+    here it is the source: it replaces an old M3U's songs (keeping its
+    cover and date) and adds the playlists that have no M3U. Library
+    playlists and liked songs keep their M3U (always written).
+    """
+
+    catalog = state.playlist_catalog
+    if catalog is None:
+        return found
+    try:
+        rows = catalog.all_track_rows()
+    except Exception:
+        logger.opt(exception=True).debug('Could not read the playlist catalog')
+        return found
+    saved: dict[str, list[tuple[int, str]]] = {}
+    for row in rows:
+        saved.setdefault(row['playlist_name'], []).append((
+            row['track_order'],
+            row['filename'],
+        ))
+    pairs = peek_cached_path_pairs(ctx)
+    known = None if pairs is None else {stored for stored, _ in pairs}
+    by_name = {
+        str(p.get('name') or '').casefold(): index
+        for index, p in enumerate(found)
+    }
+    out = list(found)
+    for name, tracks in saved.items():
+        files = [
+            file
+            for _order, file in sorted(tracks)
+            if known is None or file in known
+        ]
+        if not files:
+            continue
+        index = by_name.get(name.casefold())
+        if index is None:
+            index = by_name.get(m3u.sanitize_playlist_name(name).casefold())
+        if index is not None:
+            listed = out[index]
+            if listed.get('manual') or listed.get('liked'):
+                continue
+            out[index] = {**listed, 'files': files, 'count': len(files)}
+            continue
+        out.append({
+            'name': name,
+            'files': files,
+            'count': len(files),
+            # No file to date it by (see playlist_entry_for_request).
+            'added': 0,
+            'cover': '',
+            'liked': False,
+            'manual': False,
+            'explicit_cover': False,
+        })
+    out.sort(key=lambda p: (not p.get('liked'), str(p['name']).casefold()))
+    return out
 
 
 def playlist_entry_for_request(

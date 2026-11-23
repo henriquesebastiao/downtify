@@ -163,6 +163,7 @@ def test_remove_track_and_remove_by_filename(
             'track_spotify_id': SID_A,
             'content_key': catalog.all_track_rows()[0]['content_key'],
             'filename': 'a.mp3',
+            'track_order': 0,
         }
     ]
 
