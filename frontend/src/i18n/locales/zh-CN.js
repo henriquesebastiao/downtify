@@ -754,6 +754,18 @@ export default {
       '在 Downtify 开始写入 ISRC 之前下载的歌曲没有 ISRC。ISRC 是录音自己的编码：Downtify 用它识别重复项，音乐回收站也用它识别文件。只添加 Deezer 确认无疑的编码（艺术家和标题相同，时长相差不超过 3 秒）；其他文件保持原样。先查询一下，查看列表。',
     isrcLookupButton: '查询 ISRC（不写入任何内容）',
     isrcAddButton: '添加 ISRC',
+    acoustid: '按声音添加 ISRC',
+    acoustidHint:
+      '通过声音（AcoustID）识别没有 ISRC 的文件，仅在匹配确定时添加 ISRC。',
+    acoustidQuickTitle: '按声音识别歌曲',
+    acoustidQuickHint:
+      '用于 Deezer 找不到的文件：为每个文件生成指纹并在 AcoustID 上查询。只有当 AcoustID 确定文件就是其标签所写的歌曲，且 MusicBrainz 只知道它的一个 ISRC 时，才会添加。被识别为其他歌曲或无法识别的文件保持原样，也绝不会写入 MusicBrainz ID。先查询以查看列表。',
+    acoustidLookupButton: '按声音查询（不写入任何内容）',
+    acoustidAddButton: '按声音添加 ISRC',
+    acoustidOff: 'AcoustID 已关闭。',
+    acoustidNoKey: '请先保存你的 AcoustID API 密钥。',
+    acoustidNoTool: '服务器无法生成指纹：请安装 fpcalc（Chromaprint）。',
+    acoustidOpenSettings: '打开设置',
     lyricsPlainOnly: '只有非同步歌词：{count} — 找到同步歌词后替换',
     lyricsOutcome: '已添加歌词：{added} · 未找到：{notFound} · 失败：{failed}',
     completed: '已升级',
@@ -771,6 +783,7 @@ export default {
     stageArtwork: '正在查找封面',
     stageLyrics: '正在查找歌词',
     stageWriting: '正在写入文件',
+    stageFingerprint: '正在生成指纹',
     loadFailed: '无法加载音乐库升级任务',
   },
   usage: {
@@ -1776,6 +1789,23 @@ export default {
     isrc: '写入 ISRC 代码',
     isrcHint:
       '为每个新下载写入 ISRC（标识一条录音的代码），即使名称不同也能认出同一首歌。从 Deezer 查询；不确定时不写入。',
+    acoustid: '按声音识别歌曲（AcoustID）',
+    acoustidHint:
+      '让“资料库 → 升级资料库”通过音频指纹识别旧文件，并在匹配确定时添加其 ISRC。需要你自己的免费 AcoustID API 密钥。默认关闭。',
+    acoustidKey: 'AcoustID API 密钥',
+    acoustidKeyHint:
+      '在 AcoustID 上注册一个应用（免费），并将其 API 密钥粘贴到这里。它与其他设置分开保存，之后不会再完整显示。',
+    acoustidKeyPlaceholder: '粘贴你的 API 密钥',
+    acoustidBad: '这看起来不像 API 密钥',
+    acoustidSaveKey: '保存密钥',
+    acoustidTest: '测试密钥',
+    acoustidRemoveKey: '移除密钥',
+    acoustidKeyWorks: 'AcoustID 已接受该密钥。',
+    acoustidSaveFailed: '无法连接服务器',
+    acoustidToolFpcalc: '使用 fpcalc 生成指纹。',
+    acoustidToolFfmpeg: '使用 FFmpeg 的 Chromaprint 生成指纹。',
+    acoustidToolMissing:
+      '未找到指纹工具：请在服务器上安装 fpcalc（Chromaprint）。',
     artGroup: '封面',
     coverArt: '嵌入封面',
     coverArtHint: '关闭可减小文件并加快下载。',

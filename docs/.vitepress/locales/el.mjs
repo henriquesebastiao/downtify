@@ -109,6 +109,7 @@ export default {
       'features/library-catalog.md': 'Κατάλογος βιβλιοθήκης',
       'features/external-library.md': 'Υπάρχοντες φάκελοι μουσικής',
       'features/library-upgrade.md': 'Αναβάθμιση βιβλιοθήκης',
+      'features/acoustid.md': 'Αναγνώριση τραγουδιών από τον ήχο',
       'features/storage-usage.md': 'Χώρος και χρήση',
       'features/music-trash.md': 'Κάδος μουσικής',
       'features/doctor.md': 'Γιατρός',

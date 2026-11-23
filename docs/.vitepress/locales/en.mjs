@@ -116,6 +116,7 @@ export default {
       'features/library-catalog.md': 'Library Catalog',
       'features/external-library.md': 'Existing music folders',
       'features/library-upgrade.md': 'Upgrade Library',
+      'features/acoustid.md': 'Identify Songs by Sound',
       'features/storage-usage.md': 'Storage & Usage',
       'features/music-trash.md': 'Music Trash',
       'features/doctor.md': 'Doctor',

@@ -88,6 +88,8 @@ Songs, die geladen wurden, bevor Downtify ISRCs schrieb, haben keinen. Ein ISRC 
 
 Ein Code wird nur ergänzt, wenn Deezer ihn zweifelsfrei bestätigt, nach denselben Regeln wie bei neuen Downloads: gleicher erster Künstler und Titel, eine Länge auf 3 Sekunden genau und alle passenden Treffer einig über einen Code. Jede andere Datei bleibt genau, wie sie ist, und wird erst wieder gefragt, wenn **Titel nicht erneut prüfen für** abgelaufen ist. Keiner der beiden Scans schaut auf Cover, Songtexte oder Tags, und ein normaler Scan sucht nie nach ISRCs.
 
+Für Dateien, die Deezer nicht zuordnen kann, fragt [Songs am Klang erkennen](acoustid.md) stattdessen AcoustID: Das ist optional und braucht deinen eigenen kostenlosen API-Schlüssel.
+
 ## Während es läuft
 
 Das Fortschrittspanel zeigt erledigte Titel aus der Warteschlange, eine ungefähre Datenmenge (`8.4 GB of 51.3 GB`) und wie viele verbessert wurden, nichts zu tun hatten oder fehlschlugen. Jeder Titel zeigt, was er gerade tut — _Zuordnung_, _Cover werden gesucht_, _Songtexte werden gesucht_, _Datei wird geschrieben_ — und endet mit dem, was sich änderte, z. B. `artwork 1200px (itunes)`. Sucht der Lauf Songtexte, zählt eine Zeile darunter die Titel, die Songtexte bekommen haben, die, für die kein Anbieter welche hatte, und die fehlgeschlagenen.

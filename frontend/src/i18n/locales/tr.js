@@ -813,6 +813,19 @@ export default {
       'Downtify ISRC yazmaya başlamadan önce indirilen şarkılarda ISRC yoktur. ISRC, kaydın kendi kodudur: Downtify yinelenenleri, müzik çöp kutusu da dosyayı onunla tanır. Yalnızca Deezer’ın şüphesiz doğruladığı kodlar eklenir (aynı sanatçı ve başlık, süre farkı en fazla 3 saniye); diğer tüm dosyalar olduğu gibi kalır. Listeyi görmek için önce arayın.',
     isrcLookupButton: 'ISRC ara (hiçbir şey yazmaz)',
     isrcAddButton: 'ISRC ekle',
+    acoustid: 'ISRC’leri sesle ekle',
+    acoustidHint:
+      'ISRC’si olmayan dosyaları seslerinden (AcoustID) tanır ve ISRC’yi yalnızca eşleşme kesinse ekler.',
+    acoustidQuickTitle: 'Şarkıları sesinden tanı',
+    acoustidQuickHint:
+      'Deezer’ın bulamadığı dosyalar için: her birinin parmak izi çıkarılır ve AcoustID’de aranır. ISRC yalnızca AcoustID dosyanın etiketlerindeki şarkı olduğundan emin olduğunda ve MusicBrainz bu şarkı için tam olarak bir ISRC bildiğinde eklenir. Başka bir şarkı olarak tanınan ya da hiç tanınmayan dosyalar olduğu gibi kalır ve MusicBrainz kimlikleri asla yazılmaz. Listeyi görmek için önce arayın.',
+    acoustidLookupButton: 'Sesle ara (hiçbir şey yazmaz)',
+    acoustidAddButton: 'ISRC’leri sesle ekle',
+    acoustidOff: 'AcoustID kapalı.',
+    acoustidNoKey: 'Önce AcoustID API anahtarınızı kaydedin.',
+    acoustidNoTool:
+      'Sunucu parmak izi çıkaramıyor: fpcalc’ı (Chromaprint) kurun.',
+    acoustidOpenSettings: 'Ayarları aç',
     lyricsPlainOnly:
       'Yalnızca senkronize olmayan sözler: {count} — bulunduğunda senkronize olanlarla değiştirilir',
     lyricsOutcome:
@@ -832,6 +845,7 @@ export default {
     stageArtwork: 'Kapak aranıyor',
     stageLyrics: 'Şarkı sözü aranıyor',
     stageWriting: 'Dosya yazılıyor',
+    stageFingerprint: 'Parmak izi çıkarılıyor',
     loadFailed: 'Kitaplık iyileştirmesi yüklenemedi',
   },
   usage: {
@@ -1903,6 +1917,24 @@ export default {
     isrc: 'ISRC kodlarını yaz',
     isrcHint:
       'Her yeni indirmeye, bir kaydı tanımlayan ISRC kodunu yazar; böylece aynı şarkı başka bir adla da tanınır. Deezer’da aranır; emin olunmadığında yazılmaz.',
+    acoustid: 'Şarkıları sesinden tanı (AcoustID)',
+    acoustidHint:
+      'Kitaplık → Kitaplığı yükselt bölümünün eski dosyaları ses parmak iziyle tanımasını ve eşleşme kesinse ISRC’lerini eklemesini sağlar. Kendi ücretsiz AcoustID API anahtarınız gerekir. Varsayılan olarak kapalı.',
+    acoustidKey: 'AcoustID API anahtarı',
+    acoustidKeyHint:
+      'AcoustID’de bir uygulama kaydedin (ücretsiz) ve API anahtarını buraya yapıştırın. Diğer ayarlardan ayrı saklanır ve bir daha asla tamamı gösterilmez.',
+    acoustidKeyPlaceholder: 'API anahtarınızı yapıştırın',
+    acoustidBad: 'Bu bir API anahtarına benzemiyor',
+    acoustidSaveKey: 'Anahtarı kaydet',
+    acoustidTest: 'Anahtarı test et',
+    acoustidRemoveKey: 'Anahtarı kaldır',
+    acoustidKeyWorks: 'AcoustID anahtarı kabul etti.',
+    acoustidSaveFailed: 'Sunucuya ulaşılamadı',
+    acoustidToolFpcalc: 'Parmak izleri fpcalc ile çıkarılıyor.',
+    acoustidToolFfmpeg:
+      'Parmak izleri FFmpeg’in Chromaprint’i ile çıkarılıyor.',
+    acoustidToolMissing:
+      'Parmak izi aracı bulunamadı: sunucuya fpcalc’ı (Chromaprint) kurun.',
     artGroup: 'Kapak',
     coverArt: 'Kapağı göm',
     coverArtHint: 'Daha küçük dosyalar ve daha hızlı indirmeler için kapat.',

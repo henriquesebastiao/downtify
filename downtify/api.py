@@ -770,6 +770,10 @@ DEFAULT_SETTINGS: dict[str, Any] = {
     'cover_largest': False,
     # Write each download's ISRC, the recording's own code (downtify.isrc).
     'write_isrc': True,
+    # Identify songs by their sound with AcoustID (downtify/acoustid.py).
+    # Off until an admin turns it on and saves their own API key, which
+    # is kept apart from these settings.
+    'acoustid_enabled': False,
     # Let Aurral use Downtify as a download source (downtify/aurral.py,
     # Settings > Apps > Aurral). Off: nothing changes.
     'aurral_enabled': False,

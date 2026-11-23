@@ -88,6 +88,8 @@ Downtify ISRC yazmaya başlamadan önce indirilen şarkılarda ISRC yoktur. ISRC
 
 Bir kod yalnızca Deezer şüphesiz doğruladığında eklenir; kurallar yeni indirmelerdekiyle aynıdır: aynı ilk sanatçı ve başlık, en fazla 3 saniye süre farkı ve eşleşen tüm sonuçların tek bir kodda birleşmesi. Diğer her dosya olduğu gibi kalır ve **Bir parçayı şu süre boyunca yeniden denetleme** dolana kadar tekrar sorulmaz. İki tarama da kapak, söz veya etiketlere bakmaz; normal tarama ise ISRC aramaz.
 
+Deezer’ın bulamadığı dosyalar için [Şarkıları sesinden tanı](acoustid.md) AcoustID’ye sorar: isteğe bağlıdır ve kendi ücretsiz API anahtarınızı gerektirir.
+
 ## Çalışırken
 
 İlerleme paneli kuyruktan biten parçaları, yaklaşık bir veri miktarını (`8.4 GB of 51.3 GB`) ve kaç tanesinin iyileştirildiğini, yapacak bir şeyi olmadığını ya da başarısız olduğunu gösterir. Her parça ne yaptığını gösterir — _Eşleştiriliyor_, _Kapak aranıyor_, _Şarkı sözü aranıyor_, _Dosya yazılıyor_ — ve neyin değiştiğiyle biter, örn. `artwork 1200px (itunes)`. Çalıştırma söz aradığında, altındaki bir satır söz eklenen parçaları, hiçbir sağlayıcının sözü olmayanları ve başarısız olanları sayar.

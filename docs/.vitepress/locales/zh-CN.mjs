@@ -107,6 +107,7 @@ export default {
       'features/library-catalog.md': '媒体库目录',
       'features/external-library.md': '现有音乐文件夹',
       'features/library-upgrade.md': '升级媒体库',
+      'features/acoustid.md': '按声音识别歌曲',
       'features/storage-usage.md': '存储空间与用量',
       'features/music-trash.md': '音乐回收站',
       'features/doctor.md': '医生',

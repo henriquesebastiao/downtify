@@ -34,6 +34,7 @@ Minden, amit a Downtify tud, területenként csoportosítva, ahogy az oldalsávo
 | [Könyvtárkatalógus és útvonal-szinkronizálás](library-catalog.md) | Hogyan követi a Downtify a könyvtár fájljait és lejátszási listáit, a Könyvtárban létrehozott lejátszási listák, és az útvonalak javítása fájlok áthelyezése után |
 | [Meglévő zenemappák](external-library.md) | Irányítsd a Downtifyt a már meglévő hangfájlmappákra; a szinkronizálás beolvassa a címkéket, párosítja az előadókat, és kihagyja a könyvtárban már meglévő dalokat |
 | [Könyvtár javítása](library-upgrade.md) | Szkenneld a már letöltött zenét, és javítsd a kis borítókat, a hiányzó dalszövegeket és a hiányos címkéket |
+| [Dalok felismerése hang alapján](acoustid.md) | Ismerd fel a régebbi fájlokat a hangjuk alapján az AcoustID-vel (opcionális), és add hozzá az ISRC-t biztos egyezésnél |
 | [Hang cseréje](replace-audio.md) | Rossz dal vagy verzió? Válaszd ki a helyeset a YouTube Musicon vagy a YouTube-on; a fájl megtartja nevét, címkéit és lejátszási listáit |
 | [Előadó fotója, bannere és bemutatkozása](artist-images.md) | Válassz valódi fotót és bannert egy előadóhoz a YouTube Musicból, Deezerről, Spotifyról vagy saját feltöltésből, és kérd le a bemutatkozását, származását és hivatkozásait az Apple Musicról és a Deezerről, automatikusan vagy kérésre |
 | [Tárhely és használat](storage-usage.md) | Nézd meg, mekkora a könyvtár és milyen gyorsan nő, melyik része melyik forrásból jött, hogyan végződtek a letöltések, és mennyi helyet foglalnak az ismétlődések, az slskd-másolatok és a maradékok |

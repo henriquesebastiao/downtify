@@ -85,6 +85,40 @@
         </UiButton>
       </div>
     </UiPanel>
+    <UiPanel
+      v-if="canScan"
+      :title="t('upgrade.acoustidQuickTitle')"
+      :description="t('upgrade.acoustidQuickHint')"
+    >
+      <p v-if="acoustidWhyNot" class="mb-3 text-[13px] text-muted">
+        {{ t(`upgrade.${acoustidWhyNot}`) }}
+        <RouterLink
+          :to="{ name: 'Settings', params: { section: 'tags' } }"
+          class="text-accent underline"
+          >{{ t('upgrade.acoustidOpenSettings') }}</RouterLink
+        >
+      </p>
+      <div class="flex flex-wrap gap-2">
+        <UiButton
+          variant="secondary"
+          icon="search"
+          :loading="loading"
+          :disabled="Boolean(acoustidWhyNot)"
+          @click="scanBySound(true)"
+        >
+          {{ t('upgrade.acoustidLookupButton') }}
+        </UiButton>
+        <UiButton
+          variant="secondary"
+          icon="tag"
+          :loading="loading"
+          :disabled="Boolean(acoustidWhyNot)"
+          @click="scanBySound(false)"
+        >
+          {{ t('upgrade.acoustidAddButton') }}
+        </UiButton>
+      </div>
+    </UiPanel>
     <p v-if="status.finalizationError" role="alert" class="text-sm text-danger">
       {{ status.finalizationError }}
     </p>
@@ -402,6 +436,8 @@ import PageHeader from '/src/components/library/PageHeader.vue'
 import DeemixRecordingDialog from '/src/components/library/DeemixRecordingDialog.vue'
 import { formatBytes } from '/src/lib/format'
 import { ARTWORK_SIZES } from '/src/lib/upgrade'
+import { acoustidBlocker, normalizeAcoustid } from '/src/lib/acoustid'
+import API from '/src/model/api'
 import { useUpgrade } from '/src/model/upgrade'
 import { useI18n } from '/src/i18n'
 
@@ -490,6 +526,25 @@ const scanForIsrcs = (lookupOnly) =>
     start_after_scan: true,
   })
 
+// ISRCs by sound (AcoustID): the same run, for files Deezer can't place.
+// Off until AcoustID is set up in Settings.
+const acoustid = ref(normalizeAcoustid(null))
+const acoustidWhyNot = computed(() => acoustidBlocker(acoustid.value))
+const scanBySound = (lookupOnly) =>
+  startScan({
+    recheck_days: recheckDays.value,
+    categories: lookupOnly ? ['acoustid', 'acoustid_lookup'] : ['acoustid'],
+    start_after_scan: true,
+  })
+
+async function loadAcoustid() {
+  try {
+    acoustid.value = normalizeAcoustid((await API.getAcoustid()).data)
+  } catch {
+    // Shown as "turned off".
+  }
+}
+
 const lyricsRan = computed(
   () =>
     (status.value.run?.categories || []).includes('lyrics') &&
@@ -506,7 +561,10 @@ function rescanEverything() {
   return runScan()
 }
 
-onMounted(() => load())
+onMounted(() => {
+  load()
+  loadAcoustid()
+})
 
 // Show the values the last scan actually ran with, so re-running it
 // from another device doesn't silently use different ones.
@@ -588,6 +646,7 @@ const STAGE_KEYS = {
   artwork: 'upgrade.stageArtwork',
   lyrics: 'upgrade.stageLyrics',
   writing: 'upgrade.stageWriting',
+  fingerprint: 'upgrade.stageFingerprint',
 }
 
 const toneFor = (job) => JOB_TONES[job.status] || 'neutral'

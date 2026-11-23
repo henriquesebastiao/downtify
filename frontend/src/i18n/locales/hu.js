@@ -817,6 +817,19 @@ export default {
       'A dalok, amelyeket azelőtt töltöttél le, hogy a Downtify ISRC-t írt volna, nem tartalmaznak ilyet. Az ISRC a felvétel saját kódja: ezzel ismeri fel a Downtify a duplikátumokat, a zenei kuka pedig a fájlt. Csak a Deezer által kétséget kizáróan megerősített kódok kerülnek be (azonos előadó és cím, legfeljebb 3 másodperc hosszeltérés); minden más fájl pontosan úgy marad, ahogy van. Előbb keresd ki őket, hogy lásd a listát.',
     isrcLookupButton: 'ISRC-k kikeresése (semmit sem ír)',
     isrcAddButton: 'ISRC-k hozzáadása',
+    acoustid: 'ISRC-k hozzáadása hang alapján',
+    acoustidHint:
+      'A hangjuk alapján (AcoustID) azonosítja az ISRC nélküli fájlokat, és csak biztos egyezésnél adja hozzá az ISRC-t.',
+    acoustidQuickTitle: 'Dalok felismerése hang alapján',
+    acoustidQuickHint:
+      'Azokhoz a fájlokhoz, amelyeket a Deezer nem talál: mindegyikről ujjlenyomat készül, amelyet az AcoustID-n keres. ISRC csak akkor kerül be, ha az AcoustID biztos benne, hogy a fájl a címkéiben szereplő dal, és a MusicBrainz pontosan egy ISRC-t ismer hozzá. A más dalnak vagy semminek felismert fájlok változatlanok maradnak, és MusicBrainz-azonosító soha nem íródik be. Előbb keresd meg őket, hogy lásd a listát.',
+    acoustidLookupButton: 'Keresés hang alapján (nem ír semmit)',
+    acoustidAddButton: 'ISRC-k hozzáadása hang alapján',
+    acoustidOff: 'Az AcoustID ki van kapcsolva.',
+    acoustidNoKey: 'Előbb mentsd el az AcoustID API-kulcsodat.',
+    acoustidNoTool:
+      'A szerver nem tud ujjlenyomatot készíteni: telepítsd az fpcalc-ot (Chromaprint).',
+    acoustidOpenSettings: 'Beállítások megnyitása',
     lyricsPlainOnly:
       'Csak szinkronizálatlan szöveg: {count} — szinkronizáltra cserélődik, ha van',
     lyricsOutcome:
@@ -836,6 +849,7 @@ export default {
     stageArtwork: 'Borító keresése',
     stageLyrics: 'Dalszöveg keresése',
     stageWriting: 'Fájl írása',
+    stageFingerprint: 'Ujjlenyomat készítése',
     loadFailed: 'A könyvtár feljavítása nem tölthető be',
   },
   usage: {
@@ -1921,6 +1935,23 @@ export default {
     isrc: 'ISRC-kódok írása',
     isrcHint:
       'Minden új letöltésbe beírja az ISRC-t, egy felvétel azonosító kódját, így ugyanaz a dal más néven is felismerhető. A Deezeren keresi ki; kihagyja, ha nem biztos.',
+    acoustid: 'Dalok felismerése hang alapján (AcoustID)',
+    acoustidHint:
+      'Lehetővé teszi, hogy a Könyvtár → Könyvtár feljavítása a régebbi fájlokat hang-ujjlenyomatuk alapján azonosítsa, és biztos egyezésnél hozzáadja az ISRC-jüket. Saját, ingyenes AcoustID API-kulcs kell hozzá. Alapból ki van kapcsolva.',
+    acoustidKey: 'AcoustID API-kulcs',
+    acoustidKeyHint:
+      'Regisztrálj egy alkalmazást az AcoustID-n (ingyenes), és illeszd be ide az API-kulcsát. A többi beállítástól külön tárolódik, és soha többé nem jelenik meg teljesen.',
+    acoustidKeyPlaceholder: 'Illeszd be az API-kulcsot',
+    acoustidBad: 'Ez nem tűnik API-kulcsnak',
+    acoustidSaveKey: 'Kulcs mentése',
+    acoustidTest: 'Kulcs tesztelése',
+    acoustidRemoveKey: 'Kulcs eltávolítása',
+    acoustidKeyWorks: 'Az AcoustID elfogadta a kulcsot.',
+    acoustidSaveFailed: 'A szerver nem érhető el',
+    acoustidToolFpcalc: 'Az ujjlenyomatokat az fpcalc készíti.',
+    acoustidToolFfmpeg: 'Az ujjlenyomatokat az FFmpeg Chromaprintje készíti.',
+    acoustidToolMissing:
+      'Nincs ujjlenyomat-eszköz: telepítsd az fpcalc-ot (Chromaprint) a szerverre.',
     artGroup: 'Borító',
     coverArt: 'Borító beágyazása',
     coverArtHint: 'Kapcsold ki a kisebb fájlokért és gyorsabb letöltésért.',

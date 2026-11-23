@@ -108,6 +108,7 @@ export default {
       'features/library-catalog.md': 'Каталог на библиотеката',
       'features/external-library.md': 'Съществуващи папки с музика',
       'features/library-upgrade.md': 'Подобряване на библиотеката',
+      'features/acoustid.md': 'Разпознаване на песни по звук',
       'features/storage-usage.md': 'Хранилище и използване',
       'features/music-trash.md': 'Кошче за музика',
       'features/doctor.md': 'Доктор',

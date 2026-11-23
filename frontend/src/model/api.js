@@ -996,6 +996,20 @@ function cancelLibraryUpgrade() {
   return API.post('/api/library/upgrade/cancel')
 }
 
+// ── AcoustID (admins): identify songs by their sound ─────────────────
+// The key is saved apart from the settings and never sent back.
+function getAcoustid() {
+  return API.get('/api/acoustid')
+}
+
+function setAcoustidKey(key) {
+  return API.put('/api/acoustid/key', { key })
+}
+
+function testAcoustid() {
+  return API.post('/api/acoustid/test')
+}
+
 // ── Library storage and usage (admins) ───────────────────────────────
 // Size, growth, downloads, duplicates and working copies over `days`.
 function getLibraryUsage(days = 30) {
@@ -1448,6 +1462,9 @@ export default {
   testSlskd,
   testDeemix,
   testNavidrome,
+  getAcoustid,
+  setAcoustidKey,
+  testAcoustid,
   getCookiesStatus,
   uploadCookies,
   deleteCookies,

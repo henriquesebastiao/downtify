@@ -88,6 +88,8 @@ Las canciones descargadas antes de que Downtify escribiera ISRC no tienen ningun
 
 Un código solo se añade cuando Deezer lo confirma sin duda, con las mismas reglas que para las descargas nuevas: el mismo primer artista y título, una duración con 3 segundos de margen y todos los resultados coincidentes de acuerdo en un único código. Cualquier otro archivo queda exactamente igual y no se vuelve a consultar hasta que pase **No volver a revisar una canción durante**. Ninguno de los dos escaneos mira portadas, letras ni etiquetas, y un escaneo normal nunca busca ISRC.
 
+Para los archivos que Deezer no ubica, [Identificar canciones por su sonido](acoustid.md) pregunta a AcoustID: es opcional y necesita tu propia clave de API gratuita.
+
 ## Mientras se ejecuta
 
 El panel de progreso muestra las canciones hechas de la cola, una cifra aproximada de datos (`8.4 GB of 51.3 GB`) y cuántas se mejoraron, no tenían nada que hacer o fallaron. Cada canción muestra lo que está haciendo — _Identificando_, _Buscando portada_, _Buscando letra_, _Escribiendo el archivo_ — y termina con lo que cambió, p. ej. `artwork 1200px (itunes)`. Cuando la ejecución busca letras, una línea debajo cuenta las pistas que consiguieron letra, aquellas para las que ningún proveedor tenía y las que fallaron.

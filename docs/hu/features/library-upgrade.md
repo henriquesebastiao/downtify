@@ -88,6 +88,8 @@ Az **ISRC-k kikeresése (semmit sem ír)** megkeresi az ISRC nélküli fájlokat
 
 Egy kód csak akkor kerül be, ha a Deezer kétséget kizáróan megerősíti, ugyanazokkal a szabályokkal, mint az új letöltéseknél: azonos első előadó és cím, legfeljebb 3 másodperc hosszeltérés, és minden egyező találat ugyanazt a kódot adja. Minden más fájl pontosan úgy marad, ahogy van, és addig nem keresi újra, amíg le nem telik a **Egy szám ne legyen újra ellenőrizve ennyi ideig**. Egyik vizsgálat sem nézi a borítókat, dalszövegeket vagy címkéket, és a normál vizsgálat sosem keres ISRC-t.
 
+Azokhoz a fájlokhoz, amelyeket a Deezer nem talál, a [Dalok felismerése hang alapján](acoustid.md) az AcoustID-t kérdezi: opcionális, és saját ingyenes API-kulcs kell hozzá.
+
 ## Futás közben
 
 Az előrehaladás panel a sorból elkészült számokat, egy hozzávetőleges adatmennyiséget (`8.4 GB of 51.3 GB`) és azt mutatja, hány lett feljavítva, hánynál nem volt tennivaló, vagy hány hibázott. Minden szám megmutatja, mit csinál — _Azonosítás_, _Borító keresése_, _Dalszöveg keresése_, _Fájl írása_ — és azzal zárul, ami változott, pl. `artwork 1200px (itunes)`. Ha a futtatás dalszöveget keres, alatta egy sor megszámolja a dalszöveget kapott számokat, azokat, amelyekhez egyik szolgáltatónak sem volt, és a sikerteleneket.

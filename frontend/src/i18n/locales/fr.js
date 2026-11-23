@@ -838,6 +838,19 @@ export default {
       'Les morceaux téléchargés avant que Downtify n’écrive les ISRC n’en ont pas. L’ISRC est le code propre à l’enregistrement : il permet à Downtify de repérer les doublons et à la corbeille musicale de reconnaître un fichier. Seuls les codes que Deezer confirme sans aucun doute sont ajoutés (même artiste et titre, durée à 3 secondes près) ; tous les autres fichiers restent exactement tels quels. Recherchez-les d’abord pour voir la liste.',
     isrcLookupButton: 'Rechercher les ISRC (n’écrit rien)',
     isrcAddButton: 'Ajouter les ISRC',
+    acoustid: 'Ajouter les ISRC par le son',
+    acoustidHint:
+      'Identifie les fichiers sans ISRC par leur son (AcoustID) et n’ajoute l’ISRC que si la correspondance est certaine.',
+    acoustidQuickTitle: 'Identifier les titres par le son',
+    acoustidQuickHint:
+      'Pour les fichiers que Deezer ne sait pas placer : chacun reçoit une empreinte recherchée sur AcoustID. Un ISRC n’est ajouté que si AcoustID est sûr que le fichier est bien le titre de ses tags et que MusicBrainz lui connaît un seul ISRC. Les fichiers reconnus comme un autre titre, ou pas reconnus, restent tels quels, et aucun identifiant MusicBrainz n’est écrit. Recherchez-les d’abord pour voir la liste.',
+    acoustidLookupButton: 'Rechercher par le son (n’écrit rien)',
+    acoustidAddButton: 'Ajouter les ISRC par le son',
+    acoustidOff: 'AcoustID est désactivé.',
+    acoustidNoKey: 'Enregistrez d’abord votre clé d’API AcoustID.',
+    acoustidNoTool:
+      'Le serveur ne peut pas créer d’empreintes : installez fpcalc (Chromaprint).',
+    acoustidOpenSettings: 'Ouvrir les réglages',
     lyricsPlainOnly:
       'Paroles non synchronisées seulement : {count} — remplacées par des synchronisées si trouvées',
     lyricsOutcome:
@@ -857,6 +870,7 @@ export default {
     stageArtwork: 'Recherche de la pochette',
     stageLyrics: 'Recherche des paroles',
     stageWriting: 'Écriture du fichier',
+    stageFingerprint: 'Empreinte',
     loadFailed: 'Impossible de charger l’amélioration de la bibliothèque',
   },
   usage: {
@@ -1958,6 +1972,24 @@ export default {
     isrc: 'Écrire les codes ISRC',
     isrcHint:
       'Enregistre l’ISRC de chaque nouveau téléchargement, le code qui désigne un enregistrement, pour reconnaître le même titre sous un autre nom. Recherché sur Deezer ; omis s’il n’est pas certain.',
+    acoustid: 'Identifier les titres par le son (AcoustID)',
+    acoustidHint:
+      'Permet à Bibliothèque → Améliorer la bibliothèque d’identifier les anciens fichiers par leur empreinte audio et d’ajouter leur ISRC quand la correspondance est certaine. Nécessite votre propre clé d’API AcoustID gratuite. Désactivé par défaut.',
+    acoustidKey: 'Clé d’API AcoustID',
+    acoustidKeyHint:
+      'Enregistrez une application sur AcoustID (gratuit) et collez sa clé d’API ici. Elle est gardée à part des autres réglages et n’est plus jamais affichée en entier.',
+    acoustidKeyPlaceholder: 'Collez votre clé d’API',
+    acoustidBad: 'Ceci ne ressemble pas à une clé d’API',
+    acoustidSaveKey: 'Enregistrer la clé',
+    acoustidTest: 'Tester la clé',
+    acoustidRemoveKey: 'Retirer la clé',
+    acoustidKeyWorks: 'AcoustID a accepté la clé.',
+    acoustidSaveFailed: 'Impossible de joindre le serveur',
+    acoustidToolFpcalc: 'Les empreintes sont créées avec fpcalc.',
+    acoustidToolFfmpeg:
+      'Les empreintes sont créées avec Chromaprint de FFmpeg.',
+    acoustidToolMissing:
+      'Aucun outil d’empreinte trouvé : installez fpcalc (Chromaprint) sur le serveur.',
     artGroup: 'Pochette',
     coverArt: 'Intégrer la pochette',
     coverArtHint:

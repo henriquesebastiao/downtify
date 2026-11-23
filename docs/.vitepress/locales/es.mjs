@@ -108,6 +108,7 @@ export default {
       'features/library-catalog.md': 'Catálogo de la biblioteca',
       'features/external-library.md': 'Carpetas de música existentes',
       'features/library-upgrade.md': 'Mejorar la biblioteca',
+      'features/acoustid.md': 'Identificar canciones por su sonido',
       'features/storage-usage.md': 'Almacenamiento y uso',
       'features/music-trash.md': 'Papelera de música',
       'features/doctor.md': 'Doctor',
