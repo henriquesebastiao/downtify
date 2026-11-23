@@ -130,6 +130,7 @@ export const NAV = [
       { title: 'Deemix', page: 'features/deemix.md' },
       { title: 'slskd & Navidrome', page: 'features/slskd-navidrome.md' },
       { title: 'Ratings from Deezer', page: 'features/navidrome-ratings.md' },
+      { title: 'Aurral', page: 'features/aurral.md' },
     ],
   },
   {
@@ -139,6 +140,7 @@ export const NAV = [
       { title: 'Users & Sign-in', page: 'features/users.md' },
       { title: 'Server Settings', page: 'features/server.md' },
       { title: 'Backups', page: 'features/backups.md' },
+      { title: 'Notifications', page: 'features/notifications.md' },
       { title: 'Library-only mode', page: 'features/library-only.md' },
       { title: 'Outbound Proxy', page: 'features/outbound-proxy.md' },
       { title: 'Update Notifications', page: 'features/updates.md' },

@@ -486,6 +486,23 @@ function prepareLibraryArchive(files) {
   return API.post('/api/library/archive', { files })
 }
 
+// ── Notifications (Settings; downtify/notification_routes.py) ───────
+function getNotifications() {
+  return API.get('/api/notifications')
+}
+
+function saveNotifications(body) {
+  return API.put('/api/notifications', body)
+}
+
+function testNotification(channel, settings) {
+  return API.post(
+    `/api/notifications/test/${encodeURIComponent(channel)}`,
+    { channel: settings },
+    { timeout: 30000 }
+  )
+}
+
 // ── Backups (Settings > Server; downtify/backup_routes.py) ──────────
 function getBackups() {
   return API.get('/api/backups')
@@ -1032,6 +1049,14 @@ function doctorCancel() {
 }
 
 // Pauses the download queue, then checks every slskd leftover.
+function doctorFormatsScan(formats) {
+  return API.post('/api/doctor/formats/scan', { formats })
+}
+
+function doctorFormatsConvert(files) {
+  return API.post('/api/doctor/formats/convert', { files })
+}
+
 function doctorSlskdScan() {
   return API.post('/api/doctor/slskd/scan')
 }
@@ -1083,6 +1108,11 @@ function doctorDuplicatesKeepReset() {
 
 function doctorNavidromeRepair(payload) {
   return API.post('/api/doctor/navidrome/repair', payload)
+}
+
+// A key for Aurral's Downtify plugin (downtify/aurral_routes.py).
+function aurralKey() {
+  return API.post('/api/aurral/key')
 }
 
 // The Doctor's AI helper (downtify/doctor_ai_routes.py).
@@ -1345,6 +1375,9 @@ export default {
   renameServer,
   getServerPort,
   setServerPort,
+  getNotifications,
+  saveNotifications,
+  testNotification,
   getBackups,
   createBackup,
   setBackupSchedule,
@@ -1393,6 +1426,8 @@ export default {
   doctorScan,
   doctorCancel,
   doctorSlskdScan,
+  doctorFormatsScan,
+  doctorFormatsConvert,
   doctorSlskdFiles,
   doctorSlskdClean,
   doctorSlskdRelease,
@@ -1404,6 +1439,7 @@ export default {
   doctorDuplicatesKeep,
   doctorDuplicatesKeepReset,
   doctorNavidromeRepair,
+  aurralKey,
   doctorAiStatus,
   doctorAiStart,
   doctorAiStop,

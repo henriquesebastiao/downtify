@@ -82,6 +82,7 @@ Downtify가 하는 모든 일을 사이드바와 같은 영역별로 묶었습�
 | [Deemix](deemix.md) | 직접 운영하는 Deemix 서버와 Deezer 계정을 오디오 소스로 사용 |
 | [slskd와 Navidrome](slskd-navidrome.md) | slskd로 Soulseek에서 내려받고, 재생목록을 Navidrome에 반영하고, 재생목록 다운로드 추적 |
 | [Deezer 별점](navidrome-ratings.md) | Deezer에서의 인기도에 따라 Navidrome 곡에 0~5개의 별점 부여 |
+| [Aurral](aurral.md) | Aurral이 Downtify를 다운로드 소스로 쓰게 하기: Aurral이 요청하면 Downtify가 받고, Aurral이 자기 라이브러리에 정리 |
 
 ## 서버와 계정
 
@@ -90,6 +91,7 @@ Downtify가 하는 모든 일을 사이드바와 같은 영역별로 묶었습�
 | [사용자와 로그인](users.md) | 사용자 이름과 비밀번호로 로그인(새 서버에서는 `admin` / `downtify`), 관리자와 일반 사용자 계정, 사용자별 설정, 로그인과 각자 듣는 곡의 활동 로그 |
 | [서버 설정](server.md) | Downtify가 수신하는 포트를 설정(관리자)에서 변경하고, 원하면 즉시 재시작 |
 | [백업](backups.md) | 설정, 감시 목록, 곡 목록을 일정에 따라 또는 원할 때 저장해, 디스크를 잃은 뒤나 새 서버에서 되살리기 |
+| [알림](notifications.md) | 긴 작업(닥터, 라이브러리 업그레이드, 별점, 백업)과 다운로드에 대한 메시지를 Discord, ntfy, Gotify, 웹훅으로 보내고, `/status` 같은 Discord 명령에 답합니다 |
 | [라이브러리 전용 모드](library-only.md) | 모든 계정과 앱을 라이브러리에 이미 있는 음악으로 제한: 외부 검색, 스트리밍, 다운로드 없음 |
 | [아웃바운드 프록시](outbound-proxy.md) | Downtify의 외부 트래픽을 HTTP, HTTPS 또는 SOCKS5 프록시로 보내기 |
 | [업데이트 알림](updates.md) | GitHub Releases를 매시간 확인. 새 버전이 나오면 사이드바에 알림을 표시하고, 업데이트 후에는 새로운 기능 요약을 보여 줌 |

@@ -1869,6 +1869,10 @@ export default {
     bitrateHint: '손실 압축 포맷의 비트레이트입니다.',
     bitrateLossless: '무손실 포맷인 FLAC에는 적용되지 않습니다.',
     bitrateOriginal: '원본 오디오 포맷을 유지할 때는 적용되지 않습니다.',
+    avoidFormats: '피할 형식',
+    avoidFormatsHint:
+      '다운로드는 이 형식의 파일을 라이브러리에 절대 들이지 않습니다. slskd는 이 형식을 건너뛰고 다른 파일을 찾으며, 어떤 소스가 그래도 이 형식을 주면 아무것도 찾지 못한 것으로 보고 다음 소스를 시도합니다. 다운로드 형식은 여기에 넣을 수 없습니다.',
+    avoidFormatsLocked: '다운로드 형식은 피할 수 없습니다',
     filesGroup: '파일',
     template: '파일명 템플릿',
     templateHint: '/ 문자를 사용하여 하위 폴더를 구성할 수 있습니다.',
@@ -2003,7 +2007,7 @@ export default {
     ratingsNextSoon: '한 시간 안에 다음 실행',
     ratingsNever: '아직 실행하지 않음',
     ratingsFailedDeezer:
-      'Deezer에 연결할 수 없습니다. 이미 준 별점은 그대로 유지됩니다.',
+      'Deezer가 몇 분 동안 응답하지 않았습니다. 이미 준 별점은 그대로 유지되며, 다음 실행은 이번에 멈춘 곳부터 이어서 진행합니다.',
     ratingsFailedNavidrome: 'Navidrome 오류: {message}',
     ratingsFailed: '별점 실행에 실패했습니다: {message}',
     ratingsNotConfigured: '먼저 Navidrome 로그인 정보를 저장하세요.',
@@ -2165,6 +2169,7 @@ export default {
     activity: '활동 로그',
     personalHint:
       '현재 계정에만 적용되는 설정입니다. 모든 브라우저에 동일하게 동기화되며 다른 사용자에게는 영향을 주지 않습니다.',
+    notifications: '알림',
     server: '서버',
     networkGroup: '네트워크',
     networkHint: '이 서버에 접근하는 주소 설정입니다. 관리자에게만 표시됩니다.',
@@ -2212,6 +2217,21 @@ export default {
     noticeKeptPassword: '이전에 설정한 비밀번호',
     noticeChange: '로그인 후 설정 → 일반에서 비밀번호를 변경하세요.',
     noticeOk: '확인',
+  },
+  aurral: {
+    title: 'Aurral',
+    hint: 'Aurral이 Downtify를 통해 음악을 받게 합니다. 선택 사항: 켜기 전에는 아무것도 바뀌지 않습니다.',
+    enable: 'Aurral이 Downtify로 다운로드하도록 허용',
+    enableHint:
+      '그러면 Aurral의 Downtify 플러그인이 여기서 검색하고 곡과 앨범을 받을 수 있습니다. 다운로드는 라이브러리가 아닌 별도 폴더에 저장되고, Aurral이 가져가면 삭제됩니다.',
+    key: 'Aurral용 키',
+    keyHint:
+      'Aurral의 Downtify 플러그인 설정에 이 서버 주소와 함께 붙여 넣으세요. 연결된 앱 목록에 표시되며 거기서 해제할 수 있습니다.',
+    makeKey: '키 만들기',
+    plugin: 'Aurral 플러그인',
+    keyOnce: '지금 복사하세요. 다시 표시되지 않습니다.',
+    copy: '복사',
+    copied: '복사됨',
   },
   apps: {
     serverGroup: '현재 서버',
@@ -2333,6 +2353,95 @@ export default {
     resultWatches: '감시 {added}개 추가, {present}개는 이미 있음',
     resultSongs: '없는 곡 {missing}개, {queued}개 다운로드 대기',
     resultNoSongs: '없는 곡이 없습니다',
+  },
+  notify: {
+    title: '알림',
+    hint: '긴 작업과 다운로드에 대한 메시지를 Discord, ntfy, Gotify 또는 웹훅으로 보냅니다. 켜기 전까지는 꺼져 있습니다. 메시지는 영어로 보내집니다.',
+    enabled: '알림 보내기',
+    enabledHint: '기본 스위치입니다. 아래 각 채널에도 따로 스위치가 있습니다.',
+    progressEvery: '진행 상황',
+    progressEveryHint:
+      '실행 중인 작업의 진행 상황을 얼마나 자주 갱신할지 정합니다. Discord에서는 작업마다 메시지 하나를 수정하고, 다른 채널은 4분의 1마다 한 줄을 받습니다.',
+    channel_discord: 'Discord',
+    channel_discordHint:
+      '웹훅은 한 채널에 글을 올립니다. 봇은 글도 올리고 /status 같은 명령에도 답합니다.',
+    channel_ntfy: 'ntfy',
+    channel_ntfyHint:
+      'ntfy.sh 또는 직접 운영하는 서버를 통해 ntfy 앱으로 푸시 알림을 보냅니다.',
+    channel_gotify: 'Gotify',
+    channel_gotifyHint: 'Gotify 서버로 푸시 알림을 보냅니다.',
+    channel_webhook: '웹훅',
+    channel_webhookHint:
+      '아무 주소로나 JSON POST를 보냅니다. Apprise API의 /notify 주소는 그대로 쓸 수 있습니다.',
+    channelOn: '이 채널 사용',
+    discordMode: 'Downtify 연결 방식',
+    discordModeHint:
+      '웹훅: 보내기만. 봇: 보내기와 명령 응답. Discord Developer Portal에서 만든 봇을 서버에 초대해야 합니다.',
+    modeWebhook: '웹훅 (보내기만)',
+    modeBot: '봇 (보내기 + 명령)',
+    webhookUrl: '웹훅 URL',
+    webhookUrlHint:
+      'Discord: 채널 설정 → 연동 → 웹후크 → 웹후크 URL 복사. 서버에만 저장되며 다시 표시되지 않습니다.',
+    botToken: '봇 토큰',
+    botTokenHint:
+      'Discord Developer Portal → 내 애플리케이션 → Bot → Reset token. 서버에만 저장되며 다시 표시되지 않습니다.',
+    channelId: '채널 ID',
+    channelIdHint:
+      '봇이 글을 올리고 답하는 곳입니다. Discord에서 개발자 모드를 켜고 채널을 오른쪽 클릭 → 채널 ID 복사.',
+    commands: '명령에 답하기',
+    commandsHint:
+      '명령은 읽기만 합니다. Discord에서 누구도 Downtify의 작업을 시작, 중지, 변경할 수 없습니다.',
+    allowedUsers: '허용된 사용자',
+    allowedUsersHint:
+      '명령을 쓸 수 있는 Discord 사용자 ID를 공백으로 구분해 적습니다. 비워 두면 채널의 모두가 쓸 수 있습니다.',
+    botState: '봇',
+    bot_off: '꺼짐',
+    bot_connecting: '연결 중…',
+    bot_connected: '연결됨',
+    bot_error: '중지됨',
+    invite: '봇을 서버에 초대',
+    commandList: '채널에서 보낼 수 있는 명령:',
+    server: '서버',
+    topic: '토픽',
+    topicHint:
+      '공개 서버에서는 토픽을 아는 누구나 읽을 수 있으니 추측하기 어려운 이름을 고르세요.',
+    accessToken: '액세스 토큰',
+    optional: '선택 사항입니다.',
+    appToken: '앱 토큰',
+    appTokenHint:
+      'Gotify → Apps → Create application. 서버에만 저장되며 다시 표시되지 않습니다.',
+    genericHint:
+      '서버에만 저장되며 다시 표시되지 않습니다. 본문에는 title, body, type, event, fields가 들어 있습니다.',
+    what: '보낼 내용',
+    whatHint: '작업, 그 작업의 어떤 순간, 그리고 다른 이벤트를 고르세요.',
+    group_tasks: '작업',
+    group_phases: '시점',
+    group_events: '기타 이벤트',
+    task_doctor: '닥터',
+    task_upgrade: '라이브러리 업그레이드 (커버, 가사, 태그)',
+    task_ratings: '별점',
+    task_wanted: '원하는 항목 따라잡기',
+    task_backup: '백업',
+    phase_start: '시작됨',
+    phase_progress: '진행 상황',
+    phase_finish: '완료됨',
+    phase_fail: '실패함',
+    event_download_failed: '다운로드 실패',
+    event_download_done: '다운로드된 곡',
+    event_new_releases: '새 발매 발견',
+    event_watch_done: '감시 항목 다운로드',
+    test: '테스트',
+    testHint:
+      '위에 입력된 내용으로 지금 메시지 하나를 보냅니다. 저장 여부와 상관없습니다.',
+    sendTest: '테스트 보내기',
+    testSent: '테스트 메시지를 보냈습니다',
+    testFailed: '테스트 실패: {error}',
+    lastError: '마지막 메시지 실패: {error}',
+    secretSaved: '저장됨 (입력하면 바뀝니다)',
+    remove: '삭제',
+    save: '알림 저장',
+    saved: '알림을 저장했습니다',
+    unsaved: '저장하지 않은 변경 사항',
   },
   port: {
     label: '포트',
@@ -2681,6 +2790,42 @@ export default {
     from: '{source}에서 다운로드됨',
   },
   doctor: {
+    formatsTitle: '변환할 형식',
+    formatsHint:
+      '형식 규칙을 정하기 전에 받은 FLAC처럼 원하지 않는 형식의 라이브러리 파일입니다. 각 파일은 다운로드 품질의 MP3가 되어, 중복 병합처럼 재생목록·좋아요·감시를 넘겨받습니다.',
+    formatsPick: '형식',
+    formatsPickHint:
+      '찾을 형식을 고르세요. 무손실 형식(FLAC, WAV, AIFF, APE, WavPack)은 MP3 320으로 변환해도 똑같이 들리고, 손실 형식(M4A, OGG, Opus)은 다시 변환하면 조금 손실됩니다.',
+    formatsFind: '파일 찾기',
+    formatsNone: '라이브러리에 {formats} 파일이 없습니다.',
+    formatsFound: '{formats} 파일: {count}개, 모두 {size}.',
+    formatsEstimate: 'MP3 {bitrate}k로: 약 {size}, 약 {saved} 절약.',
+    formatsDuplicatesFirst:
+      '각 곡이 한 번만 변환되도록 중복 곡을 먼저 병합하세요.',
+    formatsListLabel: '변환할 파일',
+    formatsAbout: '약 {size}',
+    formatsConvert: 'MP3 {bitrate}k로 변환 ({count})',
+    formatsConvertTitle: '이 파일들을 변환할까요?',
+    formatsConvertBody:
+      '변환할 파일: {count}개. 각 파일은 같은 태그·커버·가사를 가진 {bitrate}k MP3가 되어 재생목록·좋아요·감시를 넘겨받고, 원본은 {where} 이동합니다. 시간이 걸릴 수 있으며 파일 사이에서 멈출 수 있습니다.',
+    formatsConvertConfirm: '변환',
+    formatsConverted: '변환됨: {count}. 절약: {saved}.',
+    formatsStopped: '멈춤. 그대로 둔 파일: {count}.',
+    formatsInTrash: '원본은 30일 동안 음악 휴지통에 있습니다.',
+    formatsDeleted: '원본을 삭제했습니다.',
+    formatsFailed: '변환하지 못해 그대로 둔 파일: {count}',
+    convertError: {
+      missing: '파일이 없습니다',
+      convert_failed: 'ffmpeg가 읽지 못했습니다',
+      convert_length: 'MP3 길이가 다르게 나왔습니다',
+      convert_exists: '같은 이름의 MP3가 이미 있습니다',
+      convert_no_ffmpeg: 'ffmpeg가 설치되어 있지 않습니다',
+      convert_trash: '음악 휴지통이 그 폴더를 다루지 않습니다',
+      convert_remove: '원본을 지우지 못해 둘 다 남겼습니다',
+      dedupe_missing: '파일이 없습니다',
+      dedupe_invalid: '라이브러리 파일이 아닙니다',
+      dedupe_replacement_pending: '오디오 교체가 아직 작업 중입니다',
+    },
     title: '닥터',
     intro:
       '새 버전의 Downtify는 그때부터 문제를 고치지만, 예전 버전이 쓴 파일과 재생목록은 그대로 남습니다. 닥터는 그런 잔여 상태를 찾아 안전하다고 증명할 수 있는 것만 고칩니다.',
@@ -2691,6 +2836,8 @@ export default {
     runCheckup: '지금 점검',
     stop: '중지',
     step: {
+      convert: '파일 변환 중…',
+      convert_publish: '라이브러리 업데이트 중…',
       starting: '시작하는 중…',
       library: '라이브러리 읽는 중…',
       playlists: '재생목록 읽는 중…',
@@ -2890,6 +3037,7 @@ export default {
         '크기는 1GB를 1024³바이트로 셉니다. 일부 파일 탐색기는 1000³으로 세므로 같은 폴더가 더 크게 보일 수 있습니다.',
     },
     badge: {
+      toConvert: '{count} · {size}',
       notChecked: '확인 안 함',
       allGood: '문제 없음',
       toDelete: '삭제할 항목 {count}개',
@@ -2990,6 +3138,9 @@ export default {
     relinkedLabel: '같은 노래, 여러 ID',
     relinkedCounts: '노래: {songs} · 여분 파일: {extra}',
     error: {
+      formats_none: '형식을 하나 이상 고르세요.',
+      convert_no_ffmpeg:
+        '서버에 ffmpeg가 설치되어 있지 않아 변환할 수 없습니다.',
       ai_not_running: 'AI 도우미가 꺼져 있습니다. 먼저 시작하세요.',
       doctor_busy: '닥터가 이미 작업 중입니다.',
       rescan_first:

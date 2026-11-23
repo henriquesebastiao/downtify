@@ -82,6 +82,7 @@ Todo lo que hace Downtify, agrupado por áreas como en la barra lateral. Cada fu
 | [Deemix](deemix.md) | Usa tu propio servidor Deemix y tu cuenta de Deezer como fuente de audio |
 | [slskd y Navidrome](slskd-navidrome.md) | Descarga de Soulseek mediante slskd, refleja playlists en Navidrome y haz seguimiento de las descargas de playlists |
 | [Valoraciones de Deezer](navidrome-ratings.md) | Da a las canciones de Navidrome de 0 a 5 estrellas según su popularidad en Deezer |
+| [Aurral](aurral.md) | Deja que Aurral use Downtify como fuente de descargas: pide, Downtify descarga y Aurral guarda el resultado en su propia biblioteca |
 
 ## Servidor y cuentas
 
@@ -90,6 +91,7 @@ Todo lo que hace Downtify, agrupado por áreas como en la barra lateral. Cada fu
 | [Usuarios e inicio de sesión](users.md) | Inicio de sesión con usuario y contraseña (`admin` / `downtify` en un servidor nuevo), cuentas de administrador y de usuario normal, preferencias por usuario y un registro de actividad con inicios de sesión y lo que escucha cada uno |
 | [Ajustes del servidor](server.md) | El puerto en el que escucha Downtify, cambiado desde Ajustes (administradores), con reinicio inmediato si quieres |
 | [Copias de seguridad](backups.md) | Guarda los ajustes, los seguimientos y la lista de canciones, de forma programada o cuando quieras, para recuperarlos tras perder un disco o en un servidor nuevo |
+| [Notificaciones](notifications.md) | Mensajes sobre tareas largas (Doctor, mejora de la biblioteca, valoraciones, copias de seguridad) y descargas en Discord, ntfy, Gotify o un webhook, con comandos de Discord como `/status` |
 | [Modo solo biblioteca](library-only.md) | Limita todas las cuentas y apps a la música que ya está en la biblioteca: sin búsquedas externas, streams ni descargas |
 | [Proxy de salida](outbound-proxy.md) | Envía el tráfico saliente de Downtify por un proxy HTTP, HTTPS o SOCKS5 |
 | [Avisos de actualización](updates.md) | Comprobación cada hora en los Releases de GitHub; aparece un aviso en la barra lateral cuando hay una versión más reciente, y un resumen de novedades tras actualizar |

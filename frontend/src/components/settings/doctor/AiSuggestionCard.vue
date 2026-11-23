@@ -53,11 +53,16 @@
         <li
           v-for="file in item.preview"
           :key="file.file"
-          class="flex flex-col rounded-control bg-surface-2 px-3 py-2"
+          class="flex items-center gap-3 rounded-control bg-surface-2 px-3 py-2"
         >
-          <span class="text-fg [overflow-wrap:anywhere]">{{ file.file }}</span>
-          <span class="text-muted [overflow-wrap:anywhere]">
-            = {{ file.match }} · {{ formatBytes(file.bytes) }}
+          <DoctorCover :file="file.match || file.file" size="sm" />
+          <span class="flex min-w-0 flex-1 flex-col">
+            <span class="text-fg [overflow-wrap:anywhere]">{{
+              file.file
+            }}</span>
+            <span class="text-muted [overflow-wrap:anywhere]">
+              = {{ file.match }} · {{ formatBytes(file.bytes) }}
+            </span>
           </span>
         </li>
       </ul>
@@ -79,6 +84,12 @@
           :key="playlist.id"
           class="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-control bg-surface-2 px-3 py-2"
         >
+          <DoctorCover
+            :m3u="playlist.m3u_exists ? playlist.m3u : ''"
+            :name="playlist.name"
+            :version="item.created_at"
+            size="sm"
+          />
           <span class="min-w-0 flex-1 truncate text-fg">
             {{ playlist.name || playlist.id }}
           </span>
@@ -133,6 +144,7 @@ import { useI18n } from '/src/i18n'
 import { formatBytes } from '/src/lib/format'
 import UiBadge from '/src/components/ui/UiBadge.vue'
 import UiButton from '/src/components/ui/UiButton.vue'
+import DoctorCover from './DoctorCover.vue'
 import DuplicateGroupCard from './DuplicateGroupCard.vue'
 import PlaylistGroupCard from './PlaylistGroupCard.vue'
 

@@ -82,6 +82,7 @@ Minden, amit a Downtify tud, területenként csoportosítva, ahogy az oldalsávo
 | [Deemix](deemix.md) | Használd a saját Deemix-szerveredet és Deezer-fiókodat hangforrásként |
 | [slskd és Navidrome](slskd-navidrome.md) | Tölts le a Soulseekről a slskd-n át, tükrözd a lejátszási listákat a Navidrome-ba, és kövesd a lejátszási listák letöltéseit |
 | [Értékelések a Deezerből](navidrome-ratings.md) | Adj a Navidrome dalainak 0–5 csillagot aszerint, mennyire népszerűek a Deezeren |
+| [Aurral](aurral.md) | Engedd, hogy az Aurral letöltési forrásként használja a Downtifyt: kér, a Downtify letölt, az Aurral a saját könyvtárába teszi az eredményt |
 
 ## Szerver és fiókok
 
@@ -90,6 +91,7 @@ Minden, amit a Downtify tud, területenként csoportosítva, ahogy az oldalsávo
 | [Felhasználók és bejelentkezés](users.md) | Bejelentkezés felhasználónévvel és jelszóval (`admin` / `downtify` új szerveren), adminisztrátori és normál felhasználói fiókok, felhasználónkénti beállítások és tevékenységnapló a bejelentkezésekről és arról, ki mit hallgat |
 | [Szerverbeállítások](server.md) | A port, amelyen a Downtify figyel, a Beállításokból módosítható (adminisztrátorok), kívánság szerint azonnali újraindítással |
 | [Biztonsági mentések](backups.md) | Mentsd el a beállításokat, a figyeléseket és a dalok listáját ütemezve vagy kérésre, hogy egy elveszett lemez után vagy egy új szerveren visszaállíthasd őket |
+| [Értesítések](notifications.md) | Üzenetek a hosszú feladatokról (Doktor, könyvtárfrissítés, értékelések, mentések) és a letöltésekről Discordon, ntfy-on, Gotifyon vagy webhookon, Discord parancsokkal, mint a `/status` |
 | [Csak könyvtár mód](library-only.md) | Korlátozz minden fiókot és alkalmazást a könyvtárban már meglévő zenére: nincs külső keresés, stream vagy letöltés |
 | [Kimenő proxy](outbound-proxy.md) | Küldd a Downtify kimenő forgalmát egy HTTP-, HTTPS- vagy SOCKS5-proxyn keresztül |
 | [Frissítési értesítések](updates.md) | Óránkénti ellenőrzés a GitHub Releases oldalán; az oldalsávon értesítés jelenik meg, ha újabb verzió jelent meg, frissítés után pedig összefoglaló az újdonságokról |

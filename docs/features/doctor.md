@@ -106,6 +106,14 @@ Deleting one copy of a duplicate from the Library isn't enough: the playlists, l
 
 **Keep all, they're different** is for look-alikes that really are different recordings: an edit, a live take, a parody under the original's name. The Doctor stops listing them until another copy turns up; **List them again** brings back every group kept this way.
 
+## Formats to convert
+
+Files already in the library in a format you don't want: a FLAC from before your format rules were set, say, which can take ten times the space of an MP3 320. Pick the formats (FLAC is picked to start with) and **Find files** lists every library file in them, biggest first, with its size now and as an MP3 at your Downloads quality. Nothing changes yet.
+
+**Convert** turns each file into an MP3 beside it, at the Downloads quality (320 kbps unless you chose less), with the same title, artists, album, numbers, date, genre, ISRC, cover and lyrics; an `.lrc` file has the same name and keeps working. The MP3 is checked to be as long as the original, then takes over everything that pointed at the original, as **Keep the selected copy** does for a duplicate, and the original goes to the music trash when it is on. A file that can't be converted is left as it was, with the reason. The run can be stopped between files.
+
+A lossless file (FLAC, WAV, AIFF, APE, WavPack) converted to MP3 320 sounds the same: that is how good MP3s are made. A lossy one (M4A, OGG, Opus) converted again loses a little, so pick those only when you need the space. Merge duplicate songs first, so each song is converted once. To keep such files from coming back, set **Formats to avoid** in the download settings.
+
 ## Downloaded again under a new Spotify ID
 
 Spotify sometimes replaces a playlist's track with the same song under a new ID — a re-release, a remaster, a regional version. Downtify remembers a monitored playlist's tracks by ID, so the replacement looks new and is downloaded again, though nobody changed the playlist. The check lists songs a monitored playlist holds under several IDs in several files.

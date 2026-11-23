@@ -1871,6 +1871,10 @@ export default {
     bitrateLossless: 'Не се използва за FLAC, който е без загуби.',
     bitrateOriginal:
       'Не се използва при запазване на оригиналния аудио формат.',
+    avoidFormats: 'Формати за избягване',
+    avoidFormatsHint:
+      'Изтеглянията никога не добавят в библиотеката файл в тези формати. slskd ги пропуска и търси друг файл; източник, който все пак достави такъв, се брои като ненамерил нищо и се опитва следващият. Форматът за изтегляне не може да е сред тях.',
+    avoidFormatsLocked: 'Форматът за изтегляне не може да се избягва',
     filesGroup: 'Файлове',
     template: 'Име на файла',
     templateHint: 'Използвай / за създаване на папки.',
@@ -2003,7 +2007,7 @@ export default {
     ratingsNextSoon: 'Следващо пускане до един час',
     ratingsNever: 'Още не е пускано',
     ratingsFailedDeezer:
-      'Deezer не може да бъде достигнат. Вече дадените звезди остават.',
+      'Deezer не отговори няколко минути. Вече дадените звезди остават, а следващото пускане продължава оттам, където спря това.',
     ratingsFailedNavidrome: 'Грешка от Navidrome: {message}',
     ratingsFailed: 'Оценяването не успя: {message}',
     ratingsNotConfigured: 'Първо запази входа в Navidrome.',
@@ -2165,6 +2169,7 @@ export default {
     activity: 'Активност',
     personalHint:
       'Само ваши: следват акаунта ви във всеки браузър и не променят нищо за никой друг.',
+    notifications: 'Известия',
     server: 'Сървър',
     networkGroup: 'Мрежа',
     networkHint:
@@ -2214,6 +2219,21 @@ export default {
     noticeKeptPassword: 'паролата, която зададохте преди',
     noticeChange: 'След това сменете паролата в Настройки → Общи.',
     noticeOk: 'Разбрах',
+  },
+  aurral: {
+    title: 'Aurral',
+    hint: 'Позволете на Aurral да изтегля музика чрез Downtify. По избор: нищо не се променя, докато не го включите.',
+    enable: 'Aurral да изтегля чрез Downtify',
+    enableHint:
+      'Тогава приставката Downtify на Aurral може да търси тук и да взема песни и албуми. Изтеглянията ѝ отиват в отделна папка, не във вашата библиотека, и се изтриват, щом Aurral ги вземе.',
+    key: 'Ключ за Aurral',
+    keyHint:
+      'Поставете го в настройките на приставката Downtify в Aurral заедно с адреса на този сървър. Той се показва в Сдвоени приложения, където можете да го отмените.',
+    makeKey: 'Създай ключ',
+    plugin: 'Приставката за Aurral',
+    keyOnce: 'Копирайте го сега: няма да бъде показан отново.',
+    copy: 'Копирай',
+    copied: 'Копирано',
   },
   apps: {
     serverGroup: 'Този сървър',
@@ -2339,6 +2359,95 @@ export default {
     resultWatches: '{added} добавени следения, {present} вече съществуват',
     resultSongs: '{missing} липсващи песни, {queued} добавени за изтегляне',
     resultNoSongs: 'Няма липсващи песни',
+  },
+  notify: {
+    title: 'Известия',
+    hint: 'Съобщения за дълги задачи и изтегляния към Discord, ntfy, Gotify или webhook. Изключено, докато не го включите. Съобщенията са на английски.',
+    enabled: 'Изпращай известия',
+    enabledHint: 'Главният превключвател. Всеки канал по-долу има и свой.',
+    progressEvery: 'Напредък',
+    progressEveryHint:
+      'Колко често се обновява напредъкът на текуща задача. В Discord се редактира по едно съобщение на задача; другите канали получават ред на всяка четвърт.',
+    channel_discord: 'Discord',
+    channel_discordHint:
+      'Webhook публикува в един канал. Бот също публикува и отговаря на команди като /status.',
+    channel_ntfy: 'ntfy',
+    channel_ntfyHint:
+      'Push известия към приложението ntfy, през ntfy.sh или ваш сървър.',
+    channel_gotify: 'Gotify',
+    channel_gotifyHint: 'Push известия към вашия Gotify сървър.',
+    channel_webhook: 'Webhook',
+    channel_webhookHint:
+      'JSON POST към произволен адрес. Адрес /notify на Apprise API работи директно.',
+    channelOn: 'Използвай този канал',
+    discordMode: 'Как се свързва Downtify',
+    discordModeHint:
+      'Webhook: само изпращане. Бот: изпращане и отговор на команди; нужен е бот от Discord Developer Portal, поканен във вашия сървър.',
+    modeWebhook: 'Webhook (само изпращане)',
+    modeBot: 'Бот (изпращане + команди)',
+    webhookUrl: 'Webhook URL',
+    webhookUrlHint:
+      'Discord: настройки на канала → Интеграции → Webhooks → Копирай URL. Пази се на сървъра и не се показва повече.',
+    botToken: 'Токен на бота',
+    botTokenHint:
+      'Discord Developer Portal → вашето приложение → Bot → Reset token. Пази се на сървъра и не се показва повече.',
+    channelId: 'ID на канала',
+    channelIdHint:
+      'Къде ботът публикува и отговаря. В Discord включете режима за разработчици, после десен клик върху канала → Копирай ID.',
+    commands: 'Отговаряй на команди',
+    commandsHint:
+      'Командите само четат: никой в Discord не може да пуска, спира или променя нищо в Downtify.',
+    allowedUsers: 'Разрешени потребители',
+    allowedUsersHint:
+      'ID на потребители в Discord, които могат да ползват командите, разделени с интервал. Празно: всички в канала.',
+    botState: 'Бот',
+    bot_off: 'Изключен',
+    bot_connecting: 'Свързване…',
+    bot_connected: 'Свързан',
+    bot_error: 'Спрян',
+    invite: 'Покани бота в сървъра си',
+    commandList: 'Команди, които можете да пратите в канала:',
+    server: 'Сървър',
+    topic: 'Тема',
+    topicHint:
+      'На публичен сървър всеки, който знае темата, може да я чете: изберете нещо трудно за отгатване.',
+    accessToken: 'Токен за достъп',
+    optional: 'По избор.',
+    appToken: 'Токен на приложението',
+    appTokenHint:
+      'Gotify → Apps → Create application. Пази се на сървъра и не се показва повече.',
+    genericHint:
+      'Пази се на сървъра и не се показва повече. Тялото съдържа title, body, type, event и fields.',
+    what: 'Какво да се изпраща',
+    whatHint: 'Изберете задачите, кои моменти от тях и другите събития.',
+    group_tasks: 'Задачи',
+    group_phases: 'Кога',
+    group_events: 'Други събития',
+    task_doctor: 'Доктор',
+    task_upgrade: 'Подобряване на библиотеката (обложки, текстове, тагове)',
+    task_ratings: 'Звездни оценки',
+    task_wanted: 'Наваксване на търсените',
+    task_backup: 'Резервни копия',
+    phase_start: 'Започната',
+    phase_progress: 'Напредък',
+    phase_finish: 'Завършена',
+    phase_fail: 'Неуспешна',
+    event_download_failed: 'Неуспешно изтегляне',
+    event_download_done: 'Изтеглени песни',
+    event_new_releases: 'Намерени нови издания',
+    event_watch_done: 'Изтегляния от следенията',
+    test: 'Проба',
+    testHint:
+      'Изпраща едно съобщение сега с попълненото по-горе, записано или не.',
+    sendTest: 'Изпрати проба',
+    testSent: 'Пробното съобщение е изпратено',
+    testFailed: 'Пробата не успя: {error}',
+    lastError: 'Последното съобщение не успя: {error}',
+    secretSaved: 'Записано (пишете, за да смените)',
+    remove: 'Премахни',
+    save: 'Запиши известията',
+    saved: 'Известията са записани',
+    unsaved: 'Незаписани промени',
   },
   port: {
     label: 'Порт',
@@ -2690,6 +2799,44 @@ export default {
     from: 'Изтеглено от {source}',
   },
   doctor: {
+    formatsTitle: 'Формати за преобразуване',
+    formatsHint:
+      'Файлове в библиотеката в нежелани формати, например FLAC отпреди правилата за формат. Всеки става MP3 с качеството за изтегляне и поема плейлистите, харесванията и наблюденията му, както при сливане на дубликати.',
+    formatsPick: 'Формати',
+    formatsPickHint:
+      'Изберете форматите за търсене. Формат без загуби (FLAC, WAV, AIFF, APE, WavPack), преобразуван в MP3 320, звучи същото; формат със загуби (M4A, OGG, Opus) губи малко при повторно преобразуване.',
+    formatsFind: 'Намери файлове',
+    formatsNone: 'Няма файлове {formats} в библиотеката.',
+    formatsFound: 'Файлове в {formats}: {count}, общо {size}.',
+    formatsEstimate:
+      'Като MP3 {bitrate}k: около {size}, спестява около {saved}.',
+    formatsDuplicatesFirst:
+      'Първо слейте дублираните песни, за да се преобразува всяка само веднъж.',
+    formatsListLabel: 'Файлове за преобразуване',
+    formatsAbout: 'около {size}',
+    formatsConvert: 'Преобразувай в MP3 {bitrate}k ({count})',
+    formatsConvertTitle: 'Преобразуване на тези файлове?',
+    formatsConvertBody:
+      'Файлове за преобразуване: {count}. Всеки става MP3 {bitrate}k със същите тагове, обложка и текст, поема плейлистите, харесванията и наблюденията си, а оригиналът отива {where}. Може да отнеме време; можете да спрете между файловете.',
+    formatsConvertConfirm: 'Преобразувай',
+    formatsConverted: 'Преобразувани: {count}. Спестени: {saved}.',
+    formatsStopped: 'Спряно. Оставени непроменени: {count}.',
+    formatsInTrash: 'Оригиналите са в музикалното кошче за 30 дни.',
+    formatsDeleted: 'Оригиналите са изтрити.',
+    formatsFailed:
+      'Не можаха да се преобразуват, оставени непроменени: {count}',
+    convertError: {
+      missing: 'файлът липсва',
+      convert_failed: 'ffmpeg не можа да го прочете',
+      convert_length: 'MP3 файлът е с друга дължина',
+      convert_exists: 'вече има MP3 с това име',
+      convert_no_ffmpeg: 'ffmpeg не е инсталиран',
+      convert_trash: 'музикалното кошче не покрива папката му',
+      convert_remove: 'оригиналът не можа да се премахне, запазени са и двата',
+      dedupe_missing: 'файлът липсва',
+      dedupe_invalid: 'не е файл от библиотеката',
+      dedupe_replacement_pending: '„Замяна на аудио“ още работи по него',
+    },
     title: 'Доктор',
     intro:
       'Новите версии на Downtify поправят проблемите оттук нататък, но файловете и плейлистите от по-стара версия остават същите. Доктор намира тези остатъци и поправя това, за което може да докаже, че е безопасно.',
@@ -2700,6 +2847,8 @@ export default {
     runCheckup: 'Провери сега',
     stop: 'Спри',
     step: {
+      convert: 'Преобразуване на файлове…',
+      convert_publish: 'Обновяване на библиотеката…',
       starting: 'Започва…',
       library: 'Четене на библиотеката…',
       playlists: 'Четене на плейлистите…',
@@ -2903,6 +3052,7 @@ export default {
         'Размерите броят 1 GB като 1024³ байта; някои файлови мениджъри броят 1000³, затова там същата папка може да изглежда по-голяма.',
     },
     badge: {
+      toConvert: '{count} · {size}',
       notChecked: 'Непроверено',
       allGood: 'Всичко е наред',
       toDelete: '{count} за изтриване',
@@ -3004,6 +3154,9 @@ export default {
     relinkedLabel: 'Една песен, няколко ID',
     relinkedCounts: 'Песни: {songs} · излишни файлове: {extra}',
     error: {
+      formats_none: 'Изберете поне един формат.',
+      convert_no_ffmpeg:
+        'ffmpeg не е инсталиран на сървъра, затова нищо не може да се преобразува.',
       ai_not_running: 'AI помощникът е изключен. Първо го пуснете.',
       doctor_busy: 'Доктор вече работи.',
       rescan_first:

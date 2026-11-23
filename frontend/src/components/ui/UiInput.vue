@@ -26,6 +26,7 @@
         :max="max"
         :autocomplete="autocomplete"
         :readonly="readonly"
+        :aria-label="ariaLabel || undefined"
         :aria-readonly="readonly ? 'true' : undefined"
         :spellcheck="false"
         :aria-invalid="error ? 'true' : undefined"
@@ -80,6 +81,8 @@ const props = defineProps({
   inputmode: { type: String, default: undefined },
   autocomplete: { type: String, default: 'off' },
   list: { type: String, default: '' },
+  // Names the input when there is no visible `label`.
+  ariaLabel: { type: String, default: '' },
   modelModifiers: { type: Object, default: () => ({}) },
 })
 const emit = defineEmits(['update:modelValue', 'change'])

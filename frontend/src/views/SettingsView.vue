@@ -530,6 +530,18 @@
                   "
                 />
               </SettingRow>
+              <SettingRow
+                :label="t('settings.avoidFormats')"
+                :description="t('settings.avoidFormatsHint')"
+                stacked
+              >
+                <FormatPicker
+                  v-model="s.avoid_formats"
+                  :locked="lockedAvoidFormats"
+                  :locked-hint="t('settings.avoidFormatsLocked')"
+                  :label="t('settings.avoidFormats')"
+                />
+              </SettingRow>
             </SettingGroup>
 
             <SettingGroup :title="t('settings.filesGroup')">
@@ -1117,6 +1129,10 @@
             <DoctorSettings />
           </template>
 
+          <template v-else-if="section === 'notifications'">
+            <NotificationSettings />
+          </template>
+
           <template v-else-if="section === 'server'">
             <SettingGroup
               :title="t('settings.networkGroup')"
@@ -1256,6 +1272,8 @@ import ExperimentalBadge from '/src/components/ui/ExperimentalBadge.vue'
 import PageHeader from '/src/components/library/PageHeader.vue'
 import CookiesCard from '/src/components/settings/CookiesCard.vue'
 import AcoustidSettings from '/src/components/settings/AcoustidSettings.vue'
+import FormatPicker from '/src/components/settings/FormatPicker.vue'
+import { downloadsFormat } from '/src/lib/audioFormats'
 import ConnectionTest from '/src/components/settings/ConnectionTest.vue'
 import ExternalLibrarySettings from '/src/components/settings/ExternalLibrarySettings.vue'
 import PathSuggestInput from '/src/components/settings/PathSuggestInput.vue'
@@ -1267,6 +1285,7 @@ import DoctorSettings from '/src/components/settings/DoctorSettings.vue'
 import NavidromeRatings from '/src/components/settings/NavidromeRatings.vue'
 import AppsSettings from '/src/components/settings/AppsSettings.vue'
 import BackupSettings from '/src/components/settings/BackupSettings.vue'
+import NotificationSettings from '/src/components/settings/NotificationSettings.vue'
 import ServerPortSetting from '/src/components/settings/ServerPortSetting.vue'
 import HiddenLibrarySettings from '/src/components/settings/HiddenLibrarySettings.vue'
 import UsersSettings from '/src/components/settings/UsersSettings.vue'
@@ -1309,6 +1328,11 @@ const whatsNew = useWhatsNew()
 
 const hasTrack = computed(() => !!player.currentTrack.value)
 const s = sm.settings
+// The Downloads format can't be one to avoid (the server drops it too).
+const lockedAvoidFormats = computed(() => {
+  const own = downloadsFormat(s.value.format)
+  return own ? [own] : []
+})
 // The minimum cover size raises the first cover request too (capped at
 // the largest cover size), so cover sizes below it make no difference.
 const coverFloor = computed(() =>
@@ -1435,6 +1459,12 @@ const sections = computed(() =>
         id: 'doctor',
         icon: 'stethoscope',
         label: t('settings.doctor'),
+        admin: true,
+      },
+      {
+        id: 'notifications',
+        icon: 'bell',
+        label: t('settings.notifications'),
         admin: true,
       },
       {

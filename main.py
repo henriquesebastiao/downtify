@@ -36,6 +36,7 @@ from downtify import (
     account_routes,
     acoustid_routes,
     api,
+    aurral_routes,
     auth_routes,
     backup_routes,
     doctor_ai_routes,
@@ -43,6 +44,7 @@ from downtify import (
     download_policy_routes,
     mobile_routes,
     navidrome_ratings_routes,
+    notification_routes,
     trash_routes,
     wanted_routes,
 )
@@ -745,6 +747,12 @@ def build_app() -> FastAPI:
         api.spawn_task(api.usage_snapshot_loop(), name='usage-snapshot-loop')
         # Automatic backups (Settings > Server > Backups).
         api.spawn_task(backup_routes.schedule_loop(), name='backup-schedule')
+        # Settings > Notifications: off until turned on; reads the job
+        # records above and sends what changed (downtify/notifications.py).
+        api.spawn_task(notification_routes.run(), name='notifications-loop')
+        # Hand-over downloads for Aurral never outlive a restart
+        # (downtify/aurral.py).
+        aurral_routes.reset()
         # The repeat schedule of the Navidrome star ratings. Its name must
         # not start with "navidrome-ratings": that prefix is the
         # library-only lease a running job holds.
@@ -949,6 +957,8 @@ def build_app() -> FastAPI:
     app.include_router(download_policy_routes.router)
     app.include_router(wanted_routes.router)
     app.include_router(backup_routes.router)
+    app.include_router(notification_routes.router)
+    app.include_router(aurral_routes.router)
 
     @app.get('/list')
     def list_downloads(request: Request, refresh: bool = False) -> list[str]:

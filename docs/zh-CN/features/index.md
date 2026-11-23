@@ -82,6 +82,7 @@ Downtify 的全部功能，按侧边栏中的领域分组。每个功能都有�
 | [Deemix](deemix.md) | 使用你自己的 Deemix 服务器和 Deezer 账号作为音源 |
 | [slskd 与 Navidrome](slskd-navidrome.md) | 通过 slskd 从 Soulseek 下载、将播放列表同步到 Navidrome，并跟踪播放列表下载 |
 | [来自 Deezer 的评分](navidrome-ratings.md) | 根据歌曲在 Deezer 上的热度，为 Navidrome 中的歌曲打 0–5 星 |
+| [Aurral](aurral.md) | 让 Aurral 把 Downtify 当作下载来源：Aurral 发出请求，Downtify 下载，Aurral 把结果放进自己的音乐库 |
 
 ## 服务器与账户
 
@@ -90,6 +91,7 @@ Downtify 的全部功能，按侧边栏中的领域分组。每个功能都有�
 | [用户与登录](users.md) | 用户名密码登录（新服务器默认 `admin` / `downtify`）、管理员和普通用户账号、个人偏好设置，以及登录和播放活动日志 |
 | [服务器设置](server.md) | 由管理员在设置中更改 Downtify 监听端口，并可选择立即重启 |
 | [备份](backups.md) | 按计划或随时备份设置、监控项和歌曲列表，在磁盘丢失后或在新服务器上恢复 |
+| [通知](notifications.md) | 把长任务（医生、媒体库升级、评分、备份）和下载的消息发到 Discord、ntfy、Gotify 或 webhook，并支持 `/status` 等 Discord 命令 |
 | [仅媒体库模式](library-only.md) | 将所有账号和应用限制在媒体库中已有的音乐：不进行外部搜索、流式播放或下载 |
 | [出站代理](outbound-proxy.md) | 通过 HTTP、HTTPS 或 SOCKS5 代理发送 Downtify 的出站流量 |
 | [更新通知](updates.md) | 每小时检查 GitHub Releases；有新版本时在侧边栏显示通知，更新后显示新功能摘要 |

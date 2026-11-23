@@ -1936,6 +1936,10 @@ export default {
     bitrateLossless: 'Wird für verlustfreies FLAC nicht verwendet.',
     bitrateOriginal:
       'Wird beim Beibehalten des Originalformats nicht verwendet.',
+    avoidFormats: 'Zu meidende Formate',
+    avoidFormatsHint:
+      'Downloads bringen nie eine Datei in diesen Formaten in deine Bibliothek. slskd überspringt sie und sucht eine andere Datei; liefert eine Quelle trotzdem eine, gilt das als nichts gefunden, und die nächste Quelle wird versucht. Dein Download-Format kann keines davon sein.',
+    avoidFormatsLocked: 'Dein Download-Format kann nicht gemieden werden',
     filesGroup: 'Dateien',
     template: 'Dateiname',
     templateHint: 'Verwende /, um Ordner zu erstellen.',
@@ -2072,7 +2076,7 @@ export default {
     ratingsNextSoon: 'Nächster Durchlauf innerhalb der nächsten Stunde',
     ratingsNever: 'Noch nicht ausgeführt',
     ratingsFailedDeezer:
-      'Deezer war nicht erreichbar. Bereits vergebene Sterne bleiben erhalten.',
+      'Deezer hat mehrere Minuten nicht geantwortet. Bereits vergebene Sterne bleiben erhalten, und der nächste Lauf macht dort weiter, wo dieser aufgehört hat.',
     ratingsFailedNavidrome: 'Navidrome-Fehler: {message}',
     ratingsFailed: 'Der Bewertungslauf ist fehlgeschlagen: {message}',
     ratingsNotConfigured: 'Speichere zuerst die Navidrome-Anmeldung.',
@@ -2239,6 +2243,7 @@ export default {
     activity: 'Aktivität',
     personalHint:
       'Nur für dich: Diese Daten folgen deinem Konto in jeden Browser und ändern nichts für andere.',
+    notifications: 'Benachrichtigungen',
     server: 'Server',
     networkGroup: 'Netzwerk',
     networkHint:
@@ -2289,6 +2294,21 @@ export default {
     noticeChange:
       'Ändere anschließend das Passwort unter „Einstellungen → Allgemein“.',
     noticeOk: 'Verstanden',
+  },
+  aurral: {
+    title: 'Aurral',
+    hint: 'Lass Aurral Musik über Downtify herunterladen. Optional: Nichts ändert sich, bis du es einschaltest.',
+    enable: 'Aurral über Downtify herunterladen lassen',
+    enableHint:
+      'Das Downtify-Plugin von Aurral kann dann hier suchen und Songs und Alben holen. Seine Downloads landen in einem eigenen Ordner, nicht in deiner Bibliothek, und werden gelöscht, sobald Aurral sie hat.',
+    key: 'Schlüssel für Aurral',
+    keyHint:
+      'Füge ihn in Aurral in den Einstellungen des Downtify-Plugins ein, zusammen mit der Adresse dieses Servers. Er steht unter Gekoppelte Apps, wo du ihn widerrufen kannst.',
+    makeKey: 'Schlüssel erstellen',
+    plugin: 'Das Aurral-Plugin',
+    keyOnce: 'Jetzt kopieren: Er wird nicht noch einmal angezeigt.',
+    copy: 'Kopieren',
+    copied: 'Kopiert',
   },
   apps: {
     serverGroup: 'Dieser Server',
@@ -2416,6 +2436,97 @@ export default {
       '{added} Überwachungen hinzugefügt, {present} schon vorhanden',
     resultSongs: '{missing} Songs fehlen, {queued} zum Download eingereiht',
     resultNoSongs: 'Es fehlten keine Songs',
+  },
+  notify: {
+    title: 'Benachrichtigungen',
+    hint: 'Nachrichten über lange Aufgaben und Downloads an Discord, ntfy, Gotify oder einen Webhook. Aus, bis du es einschaltest. Die Nachrichten sind auf Englisch.',
+    enabled: 'Benachrichtigungen senden',
+    enabledHint:
+      'Der Hauptschalter. Jeder Kanal unten hat zusätzlich seinen eigenen.',
+    progressEvery: 'Fortschritt',
+    progressEveryHint:
+      'Wie oft der Fortschritt einer laufenden Aufgabe aktualisiert wird. In Discord wird pro Aufgabe eine Nachricht bearbeitet; andere Kanäle bekommen bei jedem Viertel eine Zeile.',
+    channel_discord: 'Discord',
+    channel_discordHint:
+      'Ein Webhook postet in einen Kanal. Ein Bot postet auch und beantwortet Befehle wie /status.',
+    channel_ntfy: 'ntfy',
+    channel_ntfyHint:
+      'Push-Benachrichtigungen an die ntfy-App, über ntfy.sh oder deinen eigenen Server.',
+    channel_gotify: 'Gotify',
+    channel_gotifyHint: 'Push-Benachrichtigungen an deinen Gotify-Server.',
+    channel_webhook: 'Webhook',
+    channel_webhookHint:
+      'Ein JSON-POST an eine beliebige Adresse. Eine Apprise-API-/notify-Adresse funktioniert direkt.',
+    channelOn: 'Diesen Kanal nutzen',
+    discordMode: 'Wie Downtify sich verbindet',
+    discordModeHint:
+      'Webhook: nur senden. Bot: senden und Befehle beantworten; braucht einen Bot aus dem Discord Developer Portal, der auf deinen Server eingeladen ist.',
+    modeWebhook: 'Webhook (nur senden)',
+    modeBot: 'Bot (senden + Befehle)',
+    webhookUrl: 'Webhook-URL',
+    webhookUrlHint:
+      'Discord: Kanaleinstellungen → Integrationen → Webhooks → Webhook-URL kopieren. Bleibt auf dem Server und wird nie wieder angezeigt.',
+    botToken: 'Bot-Token',
+    botTokenHint:
+      'Discord Developer Portal → deine Anwendung → Bot → Token zurücksetzen. Bleibt auf dem Server und wird nie wieder angezeigt.',
+    channelId: 'Kanal-ID',
+    channelIdHint:
+      'Wo der Bot postet und antwortet. In Discord den Entwicklermodus einschalten, dann Rechtsklick auf den Kanal → Kanal-ID kopieren.',
+    commands: 'Befehle beantworten',
+    commandsHint:
+      'Die Befehle lesen nur: Niemand in Discord kann in Downtify etwas starten, stoppen oder ändern.',
+    allowedUsers: 'Erlaubte Nutzer',
+    allowedUsersHint:
+      'Discord-Nutzer-IDs, die die Befehle nutzen dürfen, durch Leerzeichen getrennt. Leer: alle im Kanal.',
+    botState: 'Bot',
+    bot_off: 'Aus',
+    bot_connecting: 'Verbinde…',
+    bot_connected: 'Verbunden',
+    bot_error: 'Gestoppt',
+    invite: 'Bot auf deinen Server einladen',
+    commandList: 'Befehle, die du im Kanal senden kannst:',
+    server: 'Server',
+    topic: 'Thema',
+    topicHint:
+      'Wer das Thema kennt, kann es auf einem öffentlichen Server lesen: wähle etwas schwer zu Erratendes.',
+    accessToken: 'Zugriffstoken',
+    optional: 'Optional.',
+    appToken: 'App-Token',
+    appTokenHint:
+      'Gotify → Apps → Anwendung erstellen. Bleibt auf dem Server und wird nie wieder angezeigt.',
+    genericHint:
+      'Bleibt auf dem Server und wird nie wieder angezeigt. Der Inhalt hat title, body, type, event und fields.',
+    what: 'Was gesendet wird',
+    whatHint:
+      'Wähle die Aufgaben, welche Momente davon und die anderen Ereignisse.',
+    group_tasks: 'Aufgaben',
+    group_phases: 'Wann',
+    group_events: 'Andere Ereignisse',
+    task_doctor: 'Doctor',
+    task_upgrade: 'Bibliotheks-Upgrade (Cover, Songtexte, Tags)',
+    task_ratings: 'Sternebewertungen',
+    task_wanted: 'Gesucht-Abgleich',
+    task_backup: 'Sicherungen',
+    phase_start: 'Gestartet',
+    phase_progress: 'Fortschritt',
+    phase_finish: 'Fertig',
+    phase_fail: 'Fehlgeschlagen',
+    event_download_failed: 'Download fehlgeschlagen',
+    event_download_done: 'Songs heruntergeladen',
+    event_new_releases: 'Neue Veröffentlichungen gefunden',
+    event_watch_done: 'Downloads von Beobachtungen',
+    test: 'Test',
+    testHint:
+      'Sendet jetzt eine Nachricht mit dem, was oben eingetragen ist, gespeichert oder nicht.',
+    sendTest: 'Test senden',
+    testSent: 'Testnachricht gesendet',
+    testFailed: 'Der Test ist fehlgeschlagen: {error}',
+    lastError: 'Die letzte Nachricht ist fehlgeschlagen: {error}',
+    secretSaved: 'Gespeichert (tippen zum Ersetzen)',
+    remove: 'Entfernen',
+    save: 'Benachrichtigungen speichern',
+    saved: 'Benachrichtigungen gespeichert',
+    unsaved: 'Ungespeicherte Änderungen',
   },
   port: {
     label: 'Port',
@@ -2771,6 +2882,42 @@ export default {
     from: 'Heruntergeladen von {source}',
   },
   doctor: {
+    formatsTitle: 'Formate umwandeln',
+    formatsHint:
+      'Dateien der Bibliothek in Formaten, die du nicht willst, etwa FLACs aus der Zeit vor deinen Formatregeln. Jede wird zu einer MP3 in deiner Download-Qualität, die ihre Playlists, Likes und Beobachtungen übernimmt, wie beim Zusammenführen von Duplikaten.',
+    formatsPick: 'Formate',
+    formatsPickHint:
+      'Wähle die Formate, nach denen gesucht wird. Ein verlustfreies Format (FLAC, WAV, AIFF, APE, WavPack) klingt als MP3 320 gleich; ein verlustbehaftetes (M4A, OGG, Opus) verliert bei erneuter Umwandlung etwas.',
+    formatsFind: 'Dateien suchen',
+    formatsNone: 'Keine {formats}-Dateien in der Bibliothek.',
+    formatsFound: 'Dateien in {formats}: {count}, insgesamt {size}.',
+    formatsEstimate: 'Als MP3 {bitrate}k: etwa {size}, spart etwa {saved}.',
+    formatsDuplicatesFirst:
+      'Führe zuerst doppelte Songs zusammen, damit jeder Song nur einmal umgewandelt wird.',
+    formatsListLabel: 'Umzuwandelnde Dateien',
+    formatsAbout: 'etwa {size}',
+    formatsConvert: 'In MP3 {bitrate}k umwandeln ({count})',
+    formatsConvertTitle: 'Diese Dateien umwandeln?',
+    formatsConvertBody:
+      'Umzuwandelnde Dateien: {count}. Jede wird zu einer MP3 mit {bitrate}k mit denselben Tags, Cover und Songtexten, übernimmt ihre Playlists, Likes und Beobachtungen, und das Original kommt {where}. Das kann dauern; zwischen den Dateien kannst du anhalten.',
+    formatsConvertConfirm: 'Umwandeln',
+    formatsConverted: 'Umgewandelt: {count}. Gespart: {saved}.',
+    formatsStopped: 'Angehalten. Unverändert gelassen: {count}.',
+    formatsInTrash: 'Die Originale liegen 30 Tage im Musik-Papierkorb.',
+    formatsDeleted: 'Die Originale wurden gelöscht.',
+    formatsFailed: 'Nicht umwandelbar, unverändert gelassen: {count}',
+    convertError: {
+      missing: 'die Datei ist weg',
+      convert_failed: 'ffmpeg konnte sie nicht lesen',
+      convert_length: 'die MP3 hat eine andere Länge',
+      convert_exists: 'eine MP3 mit diesem Namen gibt es schon',
+      convert_no_ffmpeg: 'ffmpeg ist nicht installiert',
+      convert_trash: 'der Musik-Papierkorb deckt ihren Ordner nicht ab',
+      convert_remove: 'das Original ließ sich nicht entfernen, beide bleiben',
+      dedupe_missing: 'die Datei ist weg',
+      dedupe_invalid: 'keine Datei der Bibliothek',
+      dedupe_replacement_pending: 'Audio ersetzen arbeitet noch daran',
+    },
     title: 'Doktor',
     intro:
       'Neuere Downtify-Versionen beheben Probleme ab dann, aber Dateien und Playlists einer älteren Version bleiben, wie sie waren. Der Doktor findet diese Reste und repariert, was nachweislich sicher ist.',
@@ -2781,6 +2928,8 @@ export default {
     runCheckup: 'Jetzt prüfen',
     stop: 'Stoppen',
     step: {
+      convert: 'Dateien werden umgewandelt…',
+      convert_publish: 'Bibliothek wird aktualisiert…',
       starting: 'Startet…',
       library: 'Bibliothek wird gelesen…',
       playlists: 'Playlists werden gelesen…',
@@ -2984,6 +3133,7 @@ export default {
         'Größen zählen 1 GB als 1024³ Bytes; manche Dateibrowser zählen 1000³, dort kann derselbe Ordner also größer erscheinen.',
     },
     badge: {
+      toConvert: '{count} · {size}',
       notChecked: 'Nicht geprüft',
       allGood: 'Alles in Ordnung',
       toDelete: '{count} zu löschen',
@@ -3085,6 +3235,9 @@ export default {
     relinkedLabel: 'Gleicher Song, mehrere IDs',
     relinkedCounts: 'Songs: {songs} · zusätzliche Dateien: {extra}',
     error: {
+      formats_none: 'Wähle mindestens ein Format.',
+      convert_no_ffmpeg:
+        'ffmpeg ist auf dem Server nicht installiert, daher kann nichts umgewandelt werden.',
       ai_not_running: 'Der KI-Helfer ist aus. Starte ihn zuerst.',
       doctor_busy: 'Der Doktor arbeitet bereits.',
       rescan_first:

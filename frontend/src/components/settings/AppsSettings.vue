@@ -75,6 +75,9 @@
       </SettingRow>
     </SettingGroup>
 
+    <!-- Aurral: Downtify as one of its download sources -->
+    <AurralSettings v-if="auth.isAdmin.value" @key-made="loadDevices" />
+
     <!-- Paired apps -->
     <SettingGroup
       :title="t('apps.devicesGroup')"
@@ -200,6 +203,7 @@ import UiInput from '../ui/UiInput.vue'
 import UiModal from '../ui/UiModal.vue'
 import SettingGroup from './SettingGroup.vue'
 import SettingRow from './SettingRow.vue'
+import AurralSettings from './AurralSettings.vue'
 import API from '/src/model/api'
 import { useAuth } from '/src/model/auth'
 import { useUi } from '/src/model/ui'

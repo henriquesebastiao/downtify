@@ -34,6 +34,10 @@ L’audio téléchargé est encodé au débit choisi, pour tous les formats avec
 L’audio de YouTube plafonne à environ **128–160 kbps** (AAC ou Opus), et Downtify télécharge toujours le meilleur flux disponible. L’encoder à 256 ou 320 kbps donne des fichiers plus gros qui préservent fidèlement cette source, mais ne peut pas restituer des détails que la source n’a jamais eus. Choisissez un débit plus bas si la taille des fichiers compte davantage pour vous.
 :::
 
+## Formats à éviter
+
+Les téléchargements n’ajoutent jamais à ta bibliothèque un fichier dans ces formats, quelle que soit la source. slskd écarte ces fichiers quand il en choisit un, quoi que disent sa liste de formats et **N’autoriser que les formats listés**, et une source qui en fournit un quand même (Deemix, ou un fichier que slskd avait déjà) compte comme n’ayant rien trouvé, et la source suivante est essayée. Les téléchargements YouTube et SoundCloud sont convertis au **Format** ci-dessus, ils n’en produisent donc jamais. Le format de téléchargement lui-même ne peut pas être évité. Les fichiers déjà dans la bibliothèque se convertissent avec **Formats à convertir** du Docteur.
+
 ## Modèle de nom de fichier
 
 Le modèle de nom de fichier par défaut est :

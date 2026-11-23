@@ -82,6 +82,7 @@ Tout ce que fait Downtify, regroupé par domaine comme dans la barre latérale. 
 | [Deemix](deemix.md) | Utilisez votre propre serveur Deemix et votre compte Deezer comme source audio |
 | [slskd et Navidrome](slskd-navidrome.md) | Téléchargez depuis Soulseek via slskd, reflétez les playlists dans Navidrome et suivez les téléchargements de playlists |
 | [Notes depuis Deezer](navidrome-ratings.md) | Donnez aux morceaux de Navidrome de 0 à 5 étoiles selon leur popularité sur Deezer |
+| [Aurral](aurral.md) | Laissez Aurral utiliser Downtify comme source de téléchargement : il demande, Downtify télécharge, Aurral range le résultat dans sa propre bibliothèque |
 
 ## Serveur et comptes
 
@@ -90,6 +91,7 @@ Tout ce que fait Downtify, regroupé par domaine comme dans la barre latérale. 
 | [Utilisateurs et connexion](users.md) | Connexion par nom d’utilisateur et mot de passe (`admin` / `downtify` sur un nouveau serveur), comptes administrateur et utilisateur, préférences par utilisateur et journal d’activité des connexions et de ce que chacun écoute |
 | [Réglages du serveur](server.md) | Le port sur lequel Downtify écoute, modifié depuis les Paramètres (administrateurs), avec redémarrage immédiat si vous le souhaitez |
 | [Sauvegardes](backups.md) | Enregistrez les réglages, les surveillances et la liste des morceaux, selon un calendrier ou à la demande, pour les retrouver après la perte d’un disque ou sur un nouveau serveur |
+| [Notifications](notifications.md) | Des messages sur les longues tâches (Docteur, mise à niveau de la bibliothèque, notes, sauvegardes) et les téléchargements sur Discord, ntfy, Gotify ou un webhook, avec des commandes Discord comme `/status` |
 | [Mode bibliothèque seule](library-only.md) | Limitez tous les comptes et toutes les applications à la musique déjà présente dans la bibliothèque : ni recherche extérieure, ni flux, ni téléchargement |
 | [Proxy sortant](outbound-proxy.md) | Faites passer le trafic sortant de Downtify par un proxy HTTP, HTTPS ou SOCKS5 |
 | [Notifications de mise à jour](updates.md) | Vérification toutes les heures sur les Releases GitHub ; un avis apparaît dans la barre latérale quand une version plus récente est sortie, et un résumé des nouveautés après la mise à jour |

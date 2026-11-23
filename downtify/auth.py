@@ -1025,12 +1025,13 @@ RULES: list[tuple[frozenset[str], re.Pattern[str], str]] = [
         (_m('PATCH', 'DELETE'), r'^/api/podcasts/shows/\d+$', USER),
         (_m('DELETE'), r'^/api/podcasts/episodes/\d+$', USER),
         (_m('POST', 'PATCH', 'DELETE'), r'^/api/monitor/playlists', USER),
-        # Where a song came from and what each watch added (own
-        # watches; every one for an admin).
+        # Where a song came from and what each watch added, and a
+        # playlist watch's picture (own watches; every one for an admin).
         (_READ, r'^/api/monitor/(stats|provenance)$', USER),
         (
             _READ,
-            r'^/api/monitor/playlists/\d+/(tracks|releases|releases/tracks)$',
+            r'^/api/monitor/playlists/\d+/'
+            r'(tracks|releases|releases/tracks|cover)$',
             USER,
         ),
         # Artists to suggest following, from one's own listens.
@@ -1048,6 +1049,7 @@ RULES: list[tuple[frozenset[str], re.Pattern[str], str]] = [
         (_ALL, r'^/api/server(/port)?$', ADMIN),
         (_ALL, r'^/api/settings', ADMIN),
         (_ALL, r'^/api/backups(/.*)?$', ADMIN),
+        (_ALL, r'^/api/notifications(/.*)?$', ADMIN),
         (_READ, r'^/api/fs/dirs$', ADMIN),
         (_ALL, r'^/api/cookies(/check)?$', ADMIN),
         (_ALL, r'^/api/(slskd|navidrome|deemix)/test$', ADMIN),
@@ -1114,6 +1116,13 @@ RULES: list[tuple[frozenset[str], re.Pattern[str], str]] = [
         (_m('POST'), r'^/api/activity/playback$', CLIENT),
         (_READ, r'^/api/monitor/playlists$', CLIENT),
         (_READ, r'^/api/check_update$', CLIENT),
+        # Aurral's Downtify plugin, with a key made under Settings >
+        # Apps > Aurral (downtify/aurral_routes.py). Each job is its
+        # owner's; making a key needs an admin's browser.
+        (_m('POST'), r'^/api/aurral/key$', ADMIN),
+        (_READ, r'^/api/aurral(/.*)?$', CLIENT),
+        (_m('POST'), r'^/api/aurral/jobs$', CLIENT),
+        (_m('DELETE'), r'^/api/aurral/jobs/[^/]+$', CLIENT),
         # Admin (after the client rules, which carve out exceptions):
         # changes to the library, the queue, watches and profiles.
         (_m('POST', 'PUT', 'DELETE'), r'^/api/artists/(art|profile)', ADMIN),
