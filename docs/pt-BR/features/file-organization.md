@@ -71,6 +71,15 @@ Uma fonte pode creditar um lançamento a um artista quando ele pertence a vário
 
 Só admins veem o botão. Os servidores de mídia pegam a mudança na próxima varredura da biblioteca.
 
+### Baixar uma playlist como álbum
+
+Para manter uma playlist junta como um único álbum (útil para o Plex e outros servidores que ignoram playlists M3U), abra o link dela e use **Baixar como álbum**. Todas as músicas da playlist são baixadas e marcadas como um álbum:
+
+- **Álbum** é o nome da playlist e **Artista do álbum** é "Various Artists", com a marcação de coletânea, para que os servidores de mídia mostrem um só álbum. Cada música mantém o próprio artista, título e ano.
+- As faixas são numeradas na ordem da playlist, e a imagem da playlist vira a capa do álbum.
+- No disco o álbum ganha uma pasta: `Various Artists/<playlist>/` com **Organizar por artista** e **Organizar por álbum** ligados (`Various Artists/` só com o primeiro), `<playlist>/` nos outros casos.
+- Uma música que a biblioteca já tem em outro álbum é baixada de novo neste, para o álbum ficar completo. Com **Baixar de novo se o arquivo existir** desligado, só é pulada uma música que já está na pasta do álbum.
+
 ## M3U e pastas de artista
 
 Quando *Organizar por artista* está ativado e você baixa uma playlist do Spotify com a geração de M3U também ativada, o M3U é colocado em `<downloads>/Playlists/<nome-da-playlist>.m3u` em vez de ficar dentro da subpasta da playlist. Isso acontece porque as faixas agora ficam espalhadas por várias pastas de artistas. Os caminhos relativos dentro do M3U continuam resolvendo corretamente, não importa onde você monte a biblioteca.

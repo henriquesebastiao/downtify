@@ -485,6 +485,9 @@ export default {
     downloadAll: { one: 'İndir', other: '{count} parçanın tümünü indir' },
     downloadNew: { one: '{count} yeniyi indir', other: '{count} yeniyi indir' },
     redownloadAll: 'Tümünü yeniden indir',
+    downloadAsAlbum: 'Albüm olarak indir',
+    downloadAsAlbumHint:
+      'Tüm şarkıları çalma listesinin adını taşıyan tek bir albüm olarak, Various Artists adına, tek bir klasöre kaydeder.',
     downloadSelected: 'Seçilenleri indir',
     allHandled: 'Zaten kitaplığınızda veya kuyrukta',
     addPlaylist: 'Çalma listelerime ekle',

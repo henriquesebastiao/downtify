@@ -543,6 +543,9 @@ export default {
       other: 'Скачать {count} новых',
     },
     redownloadAll: 'Скачать всё заново',
+    downloadAsAlbum: 'Скачать как альбом',
+    downloadAsAlbumHint:
+      'Сохранить все песни как один альбом с названием плейлиста, исполнитель Various Artists, в одну папку.',
     downloadSelected: 'Скачать выбранное',
     allInLibrary: 'Всё уже в библиотеке',
     allHandled: 'Уже в библиотеке или в очереди',

@@ -584,6 +584,7 @@ Download multiple tracks concurrently, gated by the [`max_parallel_downloads` se
 | `playlist_name` | string | Optional. Names the playlist subfolder and M3U when there is no `playlist_url`, e.g. an artist's [top songs](features/top-songs.md). Ignored when `playlist_url` resolves. |
 | `cover_url` | string | Optional. Image saved as the playlist's [cover art](features/playlist-cover-art.md) when there is no `playlist_url`. Only used when `generate_m3u` is true, a `playlist_name` is set and the cover art setting is on. |
 | `generate_m3u` | boolean | Whether to write an M3U after the batch finishes. Default: `true`. |
+| `as_album` | boolean | Optional. Save the playlist as one album: album = the playlist's name, album artist "Various Artists" with the compilation flag, tracks numbered in `downtify_track_order`, `cover_url` (when given) as every track's cover, filed in one folder. A song the library has elsewhere is downloaded again into the album. See [Downloading a playlist as an album](features/file-organization.md#downloading-a-playlist-as-an-album). Default: `false`. |
 | `skip_if_in_library` | boolean | Optional. Leave out the songs the library already has (same rule as [`POST /api/download/url`](#post-apidownloadurl)); the response then lists them under `already_in_library` as `{ "input_index", "song_id", "filename", "match" }`. A batch of only such songs queues nothing (`count: 0`). Default: `false`. |
 
 **Response:**

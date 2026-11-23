@@ -502,6 +502,9 @@ export default {
       other: 'Télécharger {count} nouveaux',
     },
     redownloadAll: 'Tout retélécharger',
+    downloadAsAlbum: 'Télécharger comme un album',
+    downloadAsAlbumHint:
+      'Enregistre tous les titres comme un seul album au nom de la playlist, attribué à Various Artists, dans un seul dossier.',
     downloadSelected: 'Télécharger la sélection',
     allInLibrary: 'Tout est dans votre bibliothèque',
     allHandled: 'Déjà dans votre bibliothèque ou dans la file',

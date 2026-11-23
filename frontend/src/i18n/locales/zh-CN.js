@@ -449,6 +449,9 @@ export default {
       other: '下载 {count} 个新项目',
     },
     redownloadAll: '全部重新下载',
+    downloadAsAlbum: '作为专辑下载',
+    downloadAsAlbumHint:
+      '将所有歌曲保存为一张以歌单命名的专辑，艺人为 Various Artists，放在同一个文件夹中。',
     downloadSelected: '下载所选',
     allInLibrary: '已全部在音乐库中',
     allHandled: '已在音乐库或队列中',

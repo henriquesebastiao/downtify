@@ -493,6 +493,9 @@ export default {
       other: 'Descargar {count} nuevas',
     },
     redownloadAll: 'Descargar todo de nuevo',
+    downloadAsAlbum: 'Descargar como álbum',
+    downloadAsAlbumHint:
+      'Guarda todas las canciones como un solo álbum con el nombre de la playlist, atribuido a Various Artists, en una sola carpeta.',
     downloadSelected: 'Descargar seleccionadas',
     allHandled: 'Ya está en tu biblioteca o en la cola',
     addPlaylist: 'Añadir a mis listas',

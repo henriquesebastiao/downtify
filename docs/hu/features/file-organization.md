@@ -71,6 +71,15 @@ Egy forrás egyetlen előadónak tulajdoníthat egy kiadást akkor is, ha az egy
 
 Csak az adminok látják a gombot. A médiaszerverek a következő könyvtárvizsgálatkor veszik át a változást.
 
+### Lejátszási lista letöltése albumként
+
+Ha inkább egyetlen albumként tartaná együtt a lejátszási listát (hasznos a Plexhez és más szerverekhez, amelyek figyelmen kívül hagyják az M3U listákat), nyissa meg a linkjét, és válassza a **Letöltés albumként** lehetőséget. A lista minden dala letöltődik, és egy albumként kap címkét:
+
+- Az **Album** a lista neve, az **Album előadója** pedig „Various Artists”, válogatás jelzővel, így a médiaszerverek egyetlen albumot mutatnak. Minden dal megtartja saját előadóját, címét és évét.
+- A számok a lista sorrendjében kapnak sorszámot, a lista képe pedig az album borítója lesz.
+- A lemezen az album egy mappát kap: `Various Artists/<lista>/`, ha a **Rendezés előadó szerint** és a **Rendezés album szerint** is be van kapcsolva (`Various Artists/`, ha csak az első), különben `<lista>/`.
+- Az a dal, amely már megvan a könyvtárban egy másik albumon, újra letöltődik ebbe, hogy az album teljes legyen. Kikapcsolt **Újratöltés, ha a fájl létezik** mellett csak az album mappájában már meglévő dal marad ki.
+
 ## M3U és előadómappák
 
 Ha a *Rendezés előadó szerint* be van kapcsolva, és úgy töltesz le Spotify-lejátszási listát, hogy az M3U-generálás is be van kapcsolva, az M3U a `<downloads>/Playlists/<lejátszási-lista-neve>.m3u` útvonalra kerül, nem a lejátszási lista almappájába. Ennek oka, hogy a számok most több előadómappában szétszórva vannak. Az M3U-n belüli relatív útvonalak továbbra is helyesen oldódnak fel, bárhová csatolod is a könyvtárat.

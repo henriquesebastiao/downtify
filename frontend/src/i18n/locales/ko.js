@@ -481,6 +481,9 @@ export default {
       other: '신규 {count}개 다운로드',
     },
     redownloadAll: '전체 다시 다운로드',
+    downloadAsAlbum: '앨범으로 다운로드',
+    downloadAsAlbumHint:
+      '모든 곡을 플레이리스트 이름의 앨범 하나로 저장합니다. 아티스트는 Various Artists로, 폴더 하나에 저장됩니다.',
     downloadSelected: '선택 항목 다운로드',
     allHandled: '이미 라이브러리 또는 대기열에 있음',
     addPlaylist: '내 재생목록에 추가',

@@ -479,6 +479,9 @@ export default {
     downloadAll: { one: 'Изтегли', other: 'Изтегли всички {count}' },
     downloadNew: { one: 'Изтегли {count} нова', other: 'Изтегли {count} нови' },
     redownloadAll: 'Изтегли всички отново',
+    downloadAsAlbum: 'Изтегли като албум',
+    downloadAsAlbumHint:
+      'Запазва всички песни като един албум с името на плейлиста, с изпълнител Various Artists, в една папка.',
     downloadSelected: 'Изтегли избраните',
     allHandled: 'Вече е в библиотеката или опашката',
     addPlaylist: 'Добавяне към моите плейлисти',

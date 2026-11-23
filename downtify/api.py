@@ -149,8 +149,10 @@ downloads are shared, and files are never stored twice.
   explicit ``playlist_name`` and ``cover_url`` - e.g. an artist's top
   songs selection, which isn't backed by a real playlist id; a Deezer
   ``playlist_url`` gets the same per-playlist folder, M3U and cover as a
-  Spotify/YouTube Music one, but isn't tracked as a resumable batch)
-* ``skip_if_in_library: true`` (``/url`` body, ``/batch`` body, ``/album``
+  Spotify/YouTube Music one, but isn't tracked as a resumable batch;
+  ``as_album: true`` saves the playlist as one album - see
+  ``album_artist.as_playlist_album``)
+  * ``skip_if_in_library: true`` (``/url`` body, ``/batch`` body, ``/album``
   query) leaves out songs the library already has and reports them as
   ``already_in_library`` - see ``downtify/library_match.py``
 * ``POST /api/download/album`` (YouTube Music album/browse URL only;
@@ -468,6 +470,7 @@ from . import (
     stream,
 )
 from .activity import ActivityLog, NowPlaying, describe_user_agent
+from .album_artist import PLAYLIST_ALBUM, as_playlist_album
 from .artist_suggestions import artist_candidates, artist_suggestions
 from .audio_formats import normalize_formats
 from .auth import (
@@ -4650,7 +4653,9 @@ async def _finish_with_existing(
         state.downloader,
         song,
         subdir=subdir,
-        track_index=state.track_index,
+        # A playlist saved as an album wants its own copy of a song the
+        # library has elsewhere: only a file already in the album counts.
+        track_index=None if song.get(PLAYLIST_ALBUM) else state.track_index,
     )
     if not existing_hit:
         return None
@@ -5135,6 +5140,7 @@ async def _process_batch(
     batch_id: Optional[int] = None,
     cover_url: Optional[str] = None,
     user_id: int = 0,
+    as_album: bool = False,
 ) -> None:
     # Resolve the playlist name up-front so all tracks land in a single,
     # per-playlist sub-folder. Loose batches (e.g. albums or unrelated
@@ -5175,6 +5181,9 @@ async def _process_batch(
             batch_id,
             playlist_name,
         )
+    if as_album and playlist_name:
+        # In place: the queue's jobs hold these very dicts.
+        as_playlist_album(songs, playlist_name, cover_url or '')
 
     # A per-song delay only makes sense when there's a "next" song to
     # wait for; skip it entirely for a lone track so a single download
@@ -6105,6 +6114,7 @@ async def _submit_playlist_batch(
     playlist_name: Optional[str] = None,
     cover_url: Optional[str] = None,
     user_id: int = 0,
+    as_album: bool = False,
 ) -> dict[str, Any]:
     valid_songs: list[dict[str, Any]] = []
     job_ids: list[str] = []
@@ -6132,6 +6142,7 @@ async def _submit_playlist_batch(
             batch_id=batch_id,
             cover_url=cover_url,
             user_id=user_id,
+            as_album=as_album,
         ),
         name='playlist-batch',
     )
@@ -6174,6 +6185,8 @@ async def download_batch_endpoint(request: Request) -> dict[str, Any]:
     # directly instead of us deriving them from playlist_url.
     playlist_name = str(payload.get('playlist_name') or '') or None
     cover_url = str(payload.get('cover_url') or '') or None
+    # Save the playlist as one album (see album_artist.as_playlist_album).
+    as_album = payload.get('as_album') is True
     first_song = next((s for s in songs if isinstance(s, dict)), {})
     await log_activity(
         request,
@@ -6212,6 +6225,7 @@ async def download_batch_endpoint(request: Request) -> dict[str, Any]:
         playlist_name=playlist_name,
         cover_url=cover_url,
         user_id=request_user_id(request),
+        as_album=as_album,
     )
     if payload.get('skip_if_in_library') is True:
         result[ALREADY_IN_LIBRARY] = owned

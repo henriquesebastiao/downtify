@@ -299,11 +299,19 @@ export function useDownloadManager() {
    * playlist download (folder, M3U, playlist tracking). Without a real
    * playlist behind it (an artist's top songs), `playlistName` and
    * `coverUrl` name the playlist and its cover instead, and `m3u`
-   * overrides the "generate M3U" setting for this batch.
+   * overrides the "generate M3U" setting for this batch. `asAlbum` saves
+   * the playlist as one album named after it, with `coverUrl` as its
+   * cover (issue #531).
    */
   async function fromSongs(
     list,
-    { playlistUrl = '', playlistName = '', coverUrl = '', m3u } = {}
+    {
+      playlistUrl = '',
+      playlistName = '',
+      coverUrl = '',
+      m3u,
+      asAlbum = false,
+    } = {}
   ) {
     const hints = playlistUrl ? { downtify_playlist_url: playlistUrl } : {}
     const songs = list.map((song, i) => ({
@@ -321,6 +329,7 @@ export function useDownloadManager() {
       playlist_name: playlistName,
       cover_url: coverUrl,
       generate_m3u: m3u ?? generateM3u(),
+      ...(asAlbum ? { as_album: true } : {}),
     })
     await syncQueueFromServer().catch(() => {})
     return songs.length

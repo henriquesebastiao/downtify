@@ -101,6 +101,19 @@
               {{ t('link.redownloadAll') }}
             </UiButton>
           </template>
+          <!-- Every song, as one album named after the playlist, in
+               one folder (issue #531). -->
+          <UiButton
+            v-if="details.kind === 'playlist' && details.tracks.length"
+            variant="ghost"
+            size="lg"
+            icon="disc"
+            :loading="submitting"
+            :title="t('link.downloadAsAlbumHint')"
+            @click="download(details.tracks, { asAlbum: true })"
+          >
+            {{ t('link.downloadAsAlbum') }}
+          </UiButton>
           <UiButton
             v-if="details.kind === 'playlist' && details.tracks.length"
             variant="primary"
@@ -556,7 +569,7 @@ function toggle(key) {
   selected.value = next
 }
 
-async function download(songs) {
+async function download(songs, { asAlbum = false } = {}) {
   if (!songs.length) return
   submitting.value = true
   try {
@@ -569,6 +582,9 @@ async function download(songs) {
     }))
     const count = await dm.fromSongs(withOrder, {
       playlistUrl: isPlaylist ? url.value : '',
+      ...(asAlbum
+        ? { asAlbum: true, coverUrl: details.value.cover_url || '' }
+        : {}),
     })
     selected.value = new Set()
     ui.toast(t('toast.queuedTracks', { count, name: details.value.name }), {

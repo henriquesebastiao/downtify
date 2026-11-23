@@ -71,6 +71,15 @@ Una fuente puede acreditar un lanzamiento a un solo artista cuando pertenece a v
 
 Solo los administradores ven el botón. Los servidores multimedia recogen el cambio en su próximo escaneo de la biblioteca.
 
+### Descargar una playlist como álbum
+
+Para mantener una playlist junta como un solo álbum (útil para Plex y otros servidores que ignoran las playlists M3U), abre su enlace y usa **Descargar como álbum**. Todas las canciones de la playlist se descargan y se etiquetan como un álbum:
+
+- **Álbum** es el nombre de la playlist y **Artista del álbum** es «Various Artists», con la marca de recopilatorio, para que los servidores multimedia muestren un solo álbum. Cada canción conserva su propio artista, título y año.
+- Las pistas se numeran en el orden de la playlist, y la imagen de la playlist pasa a ser la portada del álbum.
+- En el disco el álbum tiene una carpeta: `Various Artists/<playlist>/` con **Organizar por artista** y **Organizar por álbum** activados (`Various Artists/` solo con el primero), `<playlist>/` en otro caso.
+- Una canción que la biblioteca ya tiene en otro álbum se descarga de nuevo en este, para que el álbum quede completo. Con **Descargar de nuevo si el archivo existe** desactivado, solo se omite una canción que ya está en la carpeta del álbum.
+
 ## M3U y carpetas de artista
 
 Cuando *Organizar por artista* está activado y descargas una playlist de Spotify con la generación de M3U también activada, el M3U se coloca en `<downloads>/Playlists/<nombre-de-la-playlist>.m3u` en lugar de dentro de la subcarpeta de la playlist. Esto se debe a que las canciones ahora están repartidas por varias carpetas de artistas. Las rutas relativas dentro del M3U siguen resolviéndose correctamente dondequiera que montes la biblioteca.

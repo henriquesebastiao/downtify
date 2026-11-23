@@ -501,6 +501,9 @@ export default {
       other: '{count} neu herunterladen',
     },
     redownloadAll: 'Alle erneut herunterladen',
+    downloadAsAlbum: 'Als Album herunterladen',
+    downloadAsAlbumHint:
+      'Alle Songs als ein Album mit dem Namen der Playlist speichern, Various Artists zugeordnet, in einem einzigen Ordner.',
     downloadSelected: 'Ausgewählte herunterladen',
     allHandled: 'Bereits in deiner Bibliothek oder Warteschlange',
     addPlaylist: 'Zu meinen Playlists hinzufügen',

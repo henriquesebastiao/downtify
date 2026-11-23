@@ -23,6 +23,12 @@ from loguru import logger
 
 VARIOUS_ARTISTS = 'Various Artists'
 
+#: Song field marking a playlist downloaded as one album (issue #531): a
+#: various-artists compilation titled after the playlist, whose tracks are
+#: filed together under "Various Artists" instead of each under its own
+#: first artist. See :func:`as_playlist_album`.
+PLAYLIST_ALBUM = 'playlist_album'
+
 # The "Various Artists" entity on each service. Deezer localizes its name
 # ("Vários intérpretes" for a Brazilian client), so its ids are what count
 # there; Spotify only exposes its id on the playlist GraphQL path. The two
@@ -99,6 +105,9 @@ def filing_artist(song: dict[str, Any]) -> str:
     album whole in a media server). ``''`` when there is no artist."""
 
     album_artist = str(song.get('album_artist') or '').strip()
+    if album_artist and song.get(PLAYLIST_ALBUM):
+        # A playlist downloaded as one album stays in one folder.
+        return album_artist
     if (
         album_artist
         and not song.get('compilation')
@@ -119,3 +128,43 @@ def album_artist_fields(name: Any, *, artist_id: Any = '') -> dict[str, Any]:
         return {'album_artist': VARIOUS_ARTISTS, 'compilation': True}
     text = str(name or '').strip()
     return {'album_artist': text} if text else {}
+
+
+def as_playlist_album(
+    songs: list[dict[str, Any]], name: str, cover_url: str = ''
+) -> None:
+    """Make *songs*, a playlist's tracks, one album called *name*, in place.
+
+    Each becomes a track of a various-artists compilation (album artist
+    "Various Artists" and the compilation flag, which media servers like
+    Plex and Navidrome group an album by), numbered in playlist order. *cover_url*, the playlist's own picture, becomes every
+    track's cover, so the album has one. The tracks keep their own
+    artists, titles and years.
+    """
+
+    album = str(name or '').strip()
+    if not album:
+        return
+    positions = sorted(
+        range(len(songs)),
+        key=lambda i: (_track_order(songs[i], i), i),
+    )
+    for number, index in enumerate(positions, start=1):
+        song = songs[index]
+        song.update({
+            'album_name': album,
+            'album_artist': VARIOUS_ARTISTS,
+            'compilation': True,
+            PLAYLIST_ALBUM: True,
+            'track_number': number,
+            'album_track_total': len(songs),
+        })
+        if cover_url:
+            song['cover_url'] = cover_url
+
+
+def _track_order(song: dict[str, Any], index: int) -> int:
+    try:
+        return int(song.get('downtify_track_order'))
+    except (TypeError, ValueError):
+        return index
