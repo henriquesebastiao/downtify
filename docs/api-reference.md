@@ -3226,7 +3226,9 @@ Public. What an app checks before it has credentials.
     "podcasts": true,
     "discover": true,
     "lyrics": true,
-    "library_sync": true
+    "library_sync": true,
+    "playlist_editing": true,
+    "playlist_delete": true
   }
 }
 ```
@@ -3822,9 +3824,9 @@ Keep the other people's playlists apart from the caller's own (a "Shared with me
 
 ### Mobile playlist writes
 
-`GET /api/server/info` advertises `capabilities.playlist_editing: true` when these routes are available. These routes use stable mobile **track IDs**, and write only **manual** (Library-created) playlists. An inaccessible playlist or track returns `404`; imported playlists and callers without the required write permission return `403`; malformed bodies or fields return `400`; a stale reorder returns `409` without changing the playlist. The library sync index must be ready; otherwise a write returns `503` (`Starting up`). There is no whole-playlist delete route in this mobile API.
+`GET /api/server/info` advertises `capabilities.playlist_editing: true` when these routes are available. These routes use stable mobile **track IDs**, and write only **manual** (Library-created) playlists. An inaccessible playlist or track returns `404`; imported playlists and callers without the required write permission return `403`; malformed bodies or fields return `400`; a stale reorder returns `409` without changing the playlist. The library sync index must be ready; otherwise a write returns `503` (`Starting up`). [`DELETE /api/v1/playlists`](#delete-apiv1playlists) deletes a manual playlist; servers that have it also advertise `capabilities.playlist_delete: true`.
 
-Create and rename require the playlist owner or an admin. Add, remove, and reorder require the owner, an admin, or an editor of a shared playlist. Successful changes notify connected WebSocket clients with `playlists_changed` according to playlist visibility.
+Create, rename and delete require the playlist owner or an admin. Add, remove, and reorder require the owner, an admin, or an editor of a shared playlist. Successful changes notify connected WebSocket clients with `playlists_changed` according to playlist visibility.
 
 All successful writes return the canonical shape `{ "name", "manual", "count", "track_ids" }`, where `track_ids` is in playlist order and includes every repeated occurrence. Rename also returns `previous`; track edits may also return `added`, `removed`, and `already`.
 
@@ -3835,6 +3837,16 @@ Create an empty manual playlist.
 **Body:** `{ "name": "Late night" }`
 
 **Response:** `{ "name": "Late night", "manual": true, "count": 0, "track_ids": [] }`
+
+#### `DELETE /api/v1/playlists`
+
+Delete a manual playlist. Only the list is deleted: its songs stay in the library.
+
+**Query:** `?name=Late night` (or the body `{ "name": "Late night" }`)
+
+**Response:** `{ "name": "Late night", "deleted": true }`
+
+An imported playlist returns `403`, since deleting one deletes its songs from disk (the web [Library](features/library-catalog.md) asks first), and so does the liked-songs playlist. Editors of a shared playlist get `403` too: they may change its songs, not delete it.
 
 #### `POST /api/v1/playlists/rename`
 

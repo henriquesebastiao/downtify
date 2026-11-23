@@ -1061,6 +1061,74 @@ def test_mobile_playlist_inaccessible_user_gets_not_found(client, app_dirs):
         assert response.json()['detail'] == 'Playlist not found'
 
 
+def _playlist_names(client, headers=None):
+    response = client.get('/api/v1/playlists', headers=headers or {})
+    assert response.status_code == 200
+    return {p['name'] for p in response.json()}
+
+
+@_needs_ffmpeg
+def test_mobile_playlist_owner_deletes_the_list_not_the_songs(
+    client, app_dirs
+):
+    # Issue #477: apps can delete a Library playlist; its songs stay.
+    downloads, _data = app_dirs
+    setup = _paired_playlist_setup(client, app_dirs)
+    owner = setup['headers']['playlist-owner']
+    deleted = client.delete(
+        '/api/v1/playlists', params={'name': 'Paired Mix'}, headers=owner
+    )
+    assert deleted.status_code == 200
+    assert deleted.json() == {'name': 'Paired Mix', 'deleted': True}
+    assert 'Paired Mix' not in _playlist_names(client, owner)
+    assert (downloads / 'Roads.mp3').is_file()
+    assert setup['track_id'] in {t['id'] for t in _library(client)['tracks']}
+
+
+@_needs_ffmpeg
+def test_mobile_playlist_delete_by_body_as_admin(client, app_dirs):
+    _paired_playlist_setup(client, app_dirs)
+    deleted = client.request(
+        'DELETE', '/api/v1/playlists', json={'name': 'Paired Mix'}
+    )
+    assert deleted.status_code == 200
+    assert 'Paired Mix' not in _playlist_names(client)
+
+
+@_needs_ffmpeg
+def test_mobile_playlist_delete_permissions(client, app_dirs):
+    setup = _paired_playlist_setup(client, app_dirs)
+    headers = setup['headers']
+    for who, status in (
+        ('playlist-editor', 403),
+        ('playlist-viewer', 403),
+        ('playlist-stranger', 404),
+    ):
+        response = client.delete(
+            '/api/v1/playlists',
+            params={'name': 'Paired Mix'},
+            headers=headers[who],
+        )
+        assert response.status_code == status, who
+    assert 'Paired Mix' in _playlist_names(client, headers['playlist-owner'])
+    assert (
+        client.delete('/api/v1/playlists', headers=headers['playlist-owner'])
+    ).status_code == 400
+
+
+@_needs_ffmpeg
+def test_mobile_playlist_delete_refuses_imported_playlists(client, app_dirs):
+    # Deleting an imported playlist deletes its songs from disk: not here.
+    downloads, _data = app_dirs
+    _make_mp3(downloads / 'Roads.mp3')
+    (downloads / 'Imported.m3u').write_text('#EXTM3U\nRoads.mp3\n')
+    _library(client)
+    response = client.delete('/api/v1/playlists', params={'name': 'Imported'})
+    assert response.status_code == 403
+    assert (downloads / 'Roads.mp3').is_file()
+    assert (downloads / 'Imported.m3u').is_file()
+
+
 @_needs_ffmpeg
 def test_signed_stream_url_for_a_cast_receiver(client, app_dirs):
     downloads, _data = app_dirs
