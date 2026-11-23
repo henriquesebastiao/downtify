@@ -1018,6 +1018,14 @@ function doctorCancel() {
 }
 
 // Pauses the download queue, then checks every slskd leftover.
+function doctorFormatsScan(formats) {
+  return API.post('/api/doctor/formats/scan', { formats })
+}
+
+function doctorFormatsConvert(files) {
+  return API.post('/api/doctor/formats/convert', { files })
+}
+
 function doctorSlskdScan() {
   return API.post('/api/doctor/slskd/scan')
 }
@@ -1384,6 +1392,8 @@ export default {
   doctorScan,
   doctorCancel,
   doctorSlskdScan,
+  doctorFormatsScan,
+  doctorFormatsConvert,
   doctorSlskdFiles,
   doctorSlskdClean,
   doctorSlskdRelease,

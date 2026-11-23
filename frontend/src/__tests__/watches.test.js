@@ -9,6 +9,7 @@ import {
   releaseFilterSummary,
   sortWatches,
   toggleReleaseType,
+  watchCoverUrl,
   watchKind,
   watchKindOfUrl,
   watchReleaseTypes,
@@ -205,5 +206,27 @@ describe('Spotify user links and typed artist names', () => {
     expect(nameFromSpotifyUser('drake')).toBe('drake')
     expect(nameFromSpotifyUser('the_weeknd')).toBe('the weeknd')
     expect(nameFromSpotifyUser('31l3kq7xqz2ab4c5d6e7f8g9h0')).toBe('')
+  })
+})
+
+describe('watchCoverUrl', () => {
+  it('asks the server for a playlist watch, versioned by its last check', () => {
+    expect(
+      watchCoverUrl({
+        id: 7,
+        kind: 'playlist',
+        last_checked: '2026-11-21T10:00:00',
+      })
+    ).toBe('/api/monitor/playlists/7/cover?v=2026-11-21T10%3A00%3A00')
+  })
+
+  it('treats a row with no kind as a playlist, and works before any check', () => {
+    expect(watchCoverUrl({ id: 3 })).toBe('/api/monitor/playlists/3/cover')
+  })
+
+  it('leaves artists (their photo) and rows without an id alone', () => {
+    expect(watchCoverUrl({ id: 2, kind: 'artist' })).toBe('')
+    expect(watchCoverUrl({ kind: 'playlist' })).toBe('')
+    expect(watchCoverUrl(null)).toBe('')
   })
 })

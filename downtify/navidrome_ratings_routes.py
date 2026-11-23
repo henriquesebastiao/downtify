@@ -89,7 +89,9 @@ def _write_state(data: dict[str, Any]) -> None:
 
 
 def _public_job() -> dict[str, Any]:
-    return {k: v for k, v in _job.items() if k != 'cancel'}
+    return {
+        k: v for k, v in _job.items() if k not in {'cancel', 'albums_done'}
+    }
 
 
 def _navidrome_ready() -> Optional[dict[str, Any]]:
@@ -115,8 +117,20 @@ def _finish(job: dict[str, Any]) -> None:
         result.get('not_found', 0),
     )
     state = _read_state()
-    state['last_run'] = {k: v for k, v in job.items() if k != 'cancel'}
+    state['last_run'] = {
+        k: v for k, v in job.items() if k not in {'cancel', 'albums_done'}
+    }
     if not job['preview']:
+        # An unfinished run leaves the albums it finished, so the next
+        # one (scheduled again within hours after a failure) carries on
+        # from there; a finished run starts the next one afresh.
+        if job['state'] == 'done':
+            state.pop('resume', None)
+        else:
+            state['resume'] = {
+                'options': job.get('options'),
+                'albums': sorted(job.get('albums_done') or ()),
+            }
         state['last_rating_run'] = {
             'started_at': job['started_at'],
             'finished_at': job['finished_at'],
@@ -150,7 +164,13 @@ def start_run(
             'result': None,
             'error': None,
             'cancel': False,
+            'options': dict(options),
+            'albums_done': set(),
         }
+        resume = (_read_state().get('resume') or {}) if not preview else {}
+        if resume.get('options') == dict(options):
+            job['albums_done'] = set(resume.get('albums') or ())
+            job['resumed_albums'] = len(job['albums_done'])
 
         logger.info(
             'ratings: run started (trigger={}, preview={}, options={})',
@@ -170,6 +190,8 @@ def start_run(
                     preview=preview,
                     cancelled=lambda: bool(job['cancel']),
                     progress=progress,
+                    done_albums=set(job['albums_done']),
+                    album_done=job['albums_done'].add,
                 )
                 result = await asyncio.to_thread(run.run)
                 job['state'] = result['state']

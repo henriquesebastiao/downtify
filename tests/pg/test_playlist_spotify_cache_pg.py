@@ -12,8 +12,8 @@ from downtify.db.config import Dialect
 from downtify.playlist_spotify_cache import PlaylistSpotifyCache
 from tests.db.helpers import execute
 
-SID = 'playlist12345678901234567890'
-SID2 = 'playlist22345678901234567890'
+SID = 'playlist12345678901234'
+SID2 = 'playlist22345678901234'
 TID = '4uLU6hMCjMI75M1A2tKUQC'
 TID2 = '1x00000000000000000000'
 

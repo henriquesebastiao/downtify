@@ -31,6 +31,7 @@ from pydantic import BaseModel, Field
 
 from . import api, m3u, trash_routes
 from .admin_access import admin_user
+from .audio_formats import normalize_formats
 from .db.runtime import db_target
 from .doctor import (
     STATUS_VERIFIED,
@@ -63,10 +64,18 @@ from .duplicate_merge import (
     plan_merge,
     relink_duplicates,
 )
+from .format_convert import (
+    ConvertError,
+    convert_to_mp3,
+    files_in_formats,
+    target_bitrate,
+)
+from .format_convert import ffmpeg as format_ffmpeg
 from .library_catalog import (
     AUDIO_EXTENSIONS,
     drop_library_listing_files,
     list_library_entries,
+    resolve_library_file,
 )
 from .library_delete import delete_library_file
 from .library_paths import SLSKD_LIBRARY_PREFIX, locate_library_file
@@ -1375,3 +1384,236 @@ def _publish_library(ctx) -> None:
     invalidate_library_paths_cache(drop_entries=True)
     if api.state.library_sync is not None:
         api.state.library_sync.refresh(list_library_entries(ctx))
+
+
+# ---------------------------------------------------------------------------
+# Formats to convert
+# ---------------------------------------------------------------------------
+
+
+#: Files one conversion run may take (the page sends what the scan found).
+CONVERT_MAX = 50_000
+
+
+class FormatScan(BaseModel):
+    formats: list[str] = Field(default_factory=list, max_length=20)
+
+
+class FormatConvert(BaseModel):
+    files: list[str] = Field(min_length=1, max_length=CONVERT_MAX)
+
+
+@router.post('/formats/scan')
+async def formats_scan(payload: FormatScan) -> dict[str, Any]:
+    """List the library files in *formats* (FLAC, WAV, …) with their size
+    and the size they would have as MP3s. Changes nothing."""
+
+    formats = normalize_formats(payload.formats)
+    if not formats:
+        raise HTTPException(400, detail={'code': 'formats_none'})
+
+    async def work(job: dict[str, Any]) -> dict[str, Any]:
+        return await asyncio.to_thread(_formats_found, job, formats)
+
+    return _start('formats', work)
+
+
+def _formats_found(job: dict[str, Any], formats: list[str]) -> dict[str, Any]:
+    ctx = _ctx()
+    _step(job, 'library')
+    inputs = api._usage_library_inputs(ctx)
+    infos = _m3u_infos(ctx)
+    library, _leftovers = working_copy_rows(
+        inputs['entries'],
+        sources=inputs['sources'],
+        slskd_in_place=inputs['slskd_in_place'],
+        referenced=_referenced(inputs, infos),
+    )
+    bitrate = target_bitrate(api.state.settings)
+    files = files_in_formats(library, formats, bitrate)
+    _state['formats'] = {f['file'] for f in files}
+    return {
+        'scanned_at': _now(),
+        'formats': formats,
+        'bitrate': bitrate,
+        'ffmpeg': bool(format_ffmpeg()),
+        'trash': api.state.library_trash is not None,
+        'count': len(files),
+        'bytes': sum(f['size'] for f in files),
+        'estimated': sum(f['estimated'] for f in files),
+        'files': files,
+    }
+
+
+@router.post('/formats/convert')
+async def formats_convert(
+    payload: FormatConvert, request: Request
+) -> dict[str, Any]:
+    """Convert *files* (from the last format scan) to MP3 at the
+    Downloads quality: each new MP3 takes over the old file's playlists,
+    likes and watches, and the old file goes to the music trash when it
+    is on (as a duplicate merge does)."""
+
+    _require_fresh('formats')
+    known = _state.get('formats') or set()
+    files = list(dict.fromkeys(norm(f) for f in payload.files if norm(f)))
+    unknown = [f for f in files if f not in known]
+    if unknown or not files:
+        raise HTTPException(
+            409,
+            detail={
+                'code': 'rescan_first',
+                'section': 'formats',
+                'file': unknown[0] if unknown else '',
+            },
+        )
+    if not format_ffmpeg():
+        raise HTTPException(503, detail={'code': 'convert_no_ffmpeg'})
+    user_id = admin_user(request)
+
+    async def work(job: dict[str, Any]) -> dict[str, Any]:
+        return await _convert_files(job, files, user_id)
+
+    return _start('convert', work)
+
+
+def _mp3_name(name: str) -> str:
+    stem, dot, _ext = name.rpartition('.')
+    return f'{stem if dot else name}.mp3'
+
+
+async def _convert_files(
+    job: dict[str, Any], files: list[str], user_id: int
+) -> dict[str, Any]:
+    bitrate = target_bitrate(api.state.settings)
+    converted: list[dict[str, Any]] = []
+    failed: list[dict[str, str]] = []
+    playlists: set[str] = set()
+    trash = api.state.library_trash
+    for index, name in enumerate(files):
+        if job.get('cancel'):
+            break
+        _step(job, 'convert', index, len(files))
+        ctx = _ctx()
+        try:
+            done = await _convert_one(name, ctx, bitrate, trash, user_id)
+        except _Skip as exc:
+            failed.append({'file': name, 'error': exc.code})
+            continue
+        converted.append(done)
+        playlists.update(done.pop('playlists'))
+    _step(job, 'convert_publish', len(files), len(files))
+    if converted:
+        if trash is not None:
+            await trash_routes.publish_changes()
+            trash_routes.wake_worker()
+        gone = [c['file'] for c in converted]
+        await asyncio.to_thread(_kept_apart().forget_files, gone)
+        await asyncio.to_thread(_publish_library, _ctx())
+        if playlists:
+            await api._schedule_playlist_refresh_after_delete(playlists)
+        await api.announce_playlists_changed()
+    done_names = {c['file'] for c in converted}
+    _state['formats'] = (_state.get('formats') or set()) - done_names
+    return {
+        'converted': converted,
+        'failed': failed,
+        'cancelled': bool(job.get('cancel')),
+        'left': max(0, len(files) - len(converted) - len(failed)),
+        'bitrate': bitrate,
+        'trash': trash is not None,
+        'bytes_before': sum(c['size_before'] for c in converted),
+        'bytes_after': sum(c['size_after'] for c in converted),
+    }
+
+
+class _Skip(Exception):
+    def __init__(self, code: str) -> None:
+        super().__init__(code)
+        self.code = code
+
+
+async def _convert_one(
+    name: str, ctx, bitrate: int, trash, user_id: int
+) -> dict[str, Any]:
+    """Convert *name*, move its references to the MP3 and remove it.
+    Raises :class:`_Skip` with nothing changed (the new MP3 removed)."""
+
+    source = await asyncio.to_thread(resolve_library_file, name, ctx)
+    if source is None or not source.is_file():
+        raise _Skip('missing')
+    size_before = source.stat().st_size
+    try:
+        target = await asyncio.to_thread(convert_to_mp3, source, bitrate)
+    except ConvertError as exc:
+        raise _Skip(f'convert_{exc.code}') from None
+    new_name = _mp3_name(name)
+    invalidate_library_paths_cache()
+
+    def undo() -> None:
+        try:
+            target.unlink()
+        except OSError:
+            logger.warning('Could not remove {} after a failed swap', target)
+        invalidate_library_paths_cache()
+
+    stores = _merge_stores(ctx)
+    try:
+        plan = await asyncio.to_thread(plan_merge, new_name, [name], ctx)
+    except MergeError as exc:
+        undo()
+        raise _Skip(exc.code) from None
+    batch = ''
+    if trash is not None:
+        try:
+            tracks = await asyncio.to_thread(
+                trash_routes._selection, trash_routes.Selection(files=[name])
+            )
+            batch = (await asyncio.to_thread(trash.preview, user_id, tracks))[
+                'confirmation'
+            ]
+        except TrashError:
+            undo()
+            raise _Skip('convert_trash') from None
+    try:
+        await asyncio.to_thread(relink_duplicates, plan, stores)
+    except MergeError as exc:
+        undo()
+        raise _Skip(exc.code) from None
+    # From here the MP3 is the song: a failure to remove the original
+    # leaves both, like a duplicate merge that couldn't delete a copy.
+    removed = await _remove_original(name, ctx, user_id, batch)
+    await asyncio.to_thread(finish_merge, plan, stores, removed)
+    if not removed:
+        raise _Skip('convert_remove')
+    return {
+        'file': name,
+        'new_file': new_name,
+        'size_before': size_before,
+        'size_after': target.stat().st_size,
+        'playlists': set(plan.playlists),
+    }
+
+
+async def _remove_original(
+    name: str, ctx, user_id: int, batch: str
+) -> list[str]:
+    if batch:
+        try:
+            await asyncio.to_thread(
+                api.state.library_trash.confirm, user_id, batch
+            )
+        except TrashError:
+            return []
+        return [name]
+    result = await asyncio.to_thread(
+        delete_library_file,
+        name,
+        ctx,
+        cover_cache=api.state.cover_cache,
+        metadata_cache=api.state.metadata_cache,
+        playlist_catalog=api.state.playlist_catalog,
+        track_index=api.state.track_index,
+        navidrome_index=api.state.navidrome_index,
+    )
+    return [name] if result.get('deleted') else []

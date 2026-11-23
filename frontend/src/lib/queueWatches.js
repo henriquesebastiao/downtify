@@ -3,12 +3,17 @@
 // events of the songs it downloads; the queue keeps it on the item.
 import { proxiedArtistPhotoUrl } from './artistPhotoProxy'
 import { playlistCoverURL } from './paths'
+import { watchCoverUrl } from './watches'
 
-/** A watch's picture: the artist's photo, or the playlist's saved cover. */
+/**
+ * A watch's picture: the artist's photo, or the playlist's - the cover
+ * saved beside its M3U, else the one its service shows (see
+ * `watchCoverUrl`). An event without the watch's id keeps the saved file.
+ */
 export function watchCover(watch) {
   if (!watch) return ''
   if (watch.kind === 'artist') return proxiedArtistPhotoUrl(watch.name)
-  return playlistCoverURL(watch.cover_file)
+  return watchCoverUrl(watch) || playlistCoverURL(watch.cover_file)
 }
 
 /**

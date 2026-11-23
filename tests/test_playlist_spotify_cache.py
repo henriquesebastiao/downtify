@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from pathlib import Path
 from unittest.mock import patch
 
@@ -9,6 +10,8 @@ from downtify.playlist_spotify_cache import (
     PlaylistSpotifyCache,
     fetch_playlist_tracks,
     fetch_track_metadata,
+    is_spotify_playlist_id,
+    warm_uncached_playlists,
 )
 
 
@@ -107,3 +110,29 @@ def test_fetch_track_metadata_uses_playlist_cache(tmp_path: Path) -> None:
         track = fetch_track_metadata(tid, cache=cache, playlist_id=sid)
         mock_fetch.assert_not_called()
     assert track['name'] == 'Cached Song'
+
+
+def test_only_spotify_ids_are_spotify_playlist_ids() -> None:
+    assert is_spotify_playlist_id('37i9dQZF1DXcBWIGoYBM5M')
+    # A YouTube channel id kept for an artist watch (Drake's).
+    assert not is_spotify_playlist_id('UCU6cE7pdJPc6DU2jSrKEsdQ')
+    assert not is_spotify_playlist_id('deezer-1234567')
+    assert not is_spotify_playlist_id('')
+
+
+def test_warming_skips_ids_spotify_cannot_answer(tmp_path: Path) -> None:
+    cache = PlaylistSpotifyCache(tmp_path / 'lib.db')
+    spotify_id = '37i9dQZF1DXcBWIGoYBM5M'
+    with patch(
+        'downtify.playlist_spotify_cache.spotify.playlist_info_and_tracks',
+        return_value=('Top Hits', []),
+    ) as mock_fetch:
+        warmed = asyncio.run(
+            warm_uncached_playlists(
+                cache,
+                ['UCU6cE7pdJPc6DU2jSrKEsdQ', spotify_id],
+                delay_seconds=0,
+            )
+        )
+    assert warmed == 1
+    mock_fetch.assert_called_once_with(spotify_id)

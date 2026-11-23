@@ -34,6 +34,10 @@ Das heruntergeladene Audio wird für jedes verlustbehaftete Format mit der gewä
 Das Audio von YouTube reicht höchstens bis etwa **128–160 kbps** (AAC oder Opus), und Downtify lädt immer den besten verfügbaren Stream. Mit 256 oder 320 kbps kodiert, entstehen größere Dateien, die diese Quelle originalgetreu bewahren, aber keine Details zurückbringen können, die die Quelle nie hatte. Wähle eine niedrigere Bitrate, wenn dir die Dateigröße wichtiger ist.
 :::
 
+## Zu meidende Formate
+
+Downloads bringen nie eine Datei in diesen Formaten in deine Bibliothek, egal aus welcher Quelle. slskd lässt solche Dateien bei der Auswahl weg, was auch immer seine eigene Formatliste und **Nur gelistete Formate erlauben** sagen, und eine Quelle, die trotzdem eine liefert (Deemix oder eine Datei, die slskd schon hatte), gilt als hätte sie nichts gefunden, sodass die nächste Quelle versucht wird. YouTube- und SoundCloud-Downloads werden ins **Format** oben umgewandelt und ergeben nie eine. Das Download-Format selbst kann nicht gemieden werden. Dateien, die schon in der Bibliothek sind, wandelt der Doctor unter **Formate umwandeln** um.
+
 ## Vorlage für den Dateinamen
 
 Die Standardvorlage für den Dateinamen lautet:

@@ -55,10 +55,12 @@ def env(monkeypatch, tmp_path: Path) -> dict[str, Any]:
     monkeypatch.setattr(api.state, 'settings', settings)
     monkeypatch.setattr(api.state, 'settings_path', tmp_path / 'settings.json')
     monkeypatch.setattr(routes, '_job', {})
-    seen: dict[str, Any] = {'options': [], 'previews': []}
+    seen: dict[str, Any] = {'options': [], 'previews': [], 'resumed': []}
 
     class FakeRun:
         outcome: Any = dict(RESULT)
+        #: Albums the fake run finishes before its outcome.
+        finish: tuple[str, ...] = ()
 
         def __init__(self, client, options, *, preview=False, **kwargs):
             seen['options'].append(options)
@@ -67,11 +69,15 @@ def env(monkeypatch, tmp_path: Path) -> dict[str, Any]:
 
         def run(self):
             self._kwargs['progress'](1, 3, 'rating')
+            seen['resumed'].append(set(self._kwargs.get('done_albums') or ()))
+            for album_id in FakeRun.finish:
+                self._kwargs['album_done'](album_id)
             if isinstance(FakeRun.outcome, Exception):
                 raise FakeRun.outcome
             return dict(FakeRun.outcome, preview=seen['previews'][-1])
 
     FakeRun.outcome = dict(RESULT)
+    FakeRun.finish = ()
     monkeypatch.setattr(routes, 'RatingRun', FakeRun)
     return {
         'settings': settings,
@@ -421,3 +427,47 @@ def test_settings_update_coerces_ratings_options(env, monkeypatch):
         'skip_starred': False,
         'grading': 'absolute',
     }
+
+
+def _run(env, **request) -> dict[str, Any]:
+    async def go():
+        await routes.ratings_run(routes.RunRequest(**request))
+        return await _finished()
+
+    return asyncio.run(go())
+
+
+def test_an_interrupted_run_carries_on_where_it_stopped(env):
+    env['run'].finish = ('al1', 'al2')
+    env['run'].outcome = DeezerUnavailable('Deezer is not answering')
+    assert _run(env)['state'] == 'failed'
+    assert _state_file(env)['resume']['albums'] == ['al1', 'al2']
+
+    # The next run skips them, and a finished run forgets them.
+    env['run'].finish = ('al3',)
+    env['run'].outcome = dict(RESULT)
+    assert _run(env)['state'] == 'done'
+    assert env['seen']['resumed'][-1] == {'al1', 'al2'}
+    assert 'resume' not in _state_file(env)
+    _run(env)
+    assert env['seen']['resumed'][-1] == set()
+
+
+def test_a_run_with_other_options_starts_afresh(env):
+    env['run'].finish = ('al1',)
+    env['run'].outcome = dict(RESULT, state='stopped')
+    _run(env)
+    env['settings']['navidrome_ratings']['grading'] = 'artist'
+    env['run'].outcome = dict(RESULT)
+    _run(env)
+    assert env['seen']['resumed'][-1] == set()
+
+
+def test_a_preview_neither_resumes_nor_forgets(env):
+    env['run'].finish = ('al1',)
+    env['run'].outcome = dict(RESULT, state='stopped')
+    _run(env)
+    env['run'].outcome = dict(RESULT)
+    _run(env, preview=True)
+    assert env['seen']['resumed'][-1] == set()
+    assert _state_file(env)['resume']['albums'] == ['al1']

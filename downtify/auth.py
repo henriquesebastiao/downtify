@@ -1025,12 +1025,13 @@ RULES: list[tuple[frozenset[str], re.Pattern[str], str]] = [
         (_m('PATCH', 'DELETE'), r'^/api/podcasts/shows/\d+$', USER),
         (_m('DELETE'), r'^/api/podcasts/episodes/\d+$', USER),
         (_m('POST', 'PATCH', 'DELETE'), r'^/api/monitor/playlists', USER),
-        # Where a song came from and what each watch added (own
-        # watches; every one for an admin).
+        # Where a song came from and what each watch added, and a
+        # playlist watch's picture (own watches; every one for an admin).
         (_READ, r'^/api/monitor/(stats|provenance)$', USER),
         (
             _READ,
-            r'^/api/monitor/playlists/\d+/(tracks|releases|releases/tracks)$',
+            r'^/api/monitor/playlists/\d+/'
+            r'(tracks|releases|releases/tracks|cover)$',
             USER,
         ),
         # Artists to suggest following, from one's own listens.

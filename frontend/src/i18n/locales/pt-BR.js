@@ -1879,6 +1879,10 @@ export default {
     bitrateHint: 'Taxa de bits para formatos com perdas.',
     bitrateLossless: 'Não usado para FLAC, que é sem perdas.',
     bitrateOriginal: 'Não usado ao manter o formato de áudio original.',
+    avoidFormats: 'Formatos a evitar',
+    avoidFormatsHint:
+      'Os downloads nunca trazem para a sua biblioteca um arquivo nesses formatos. O slskd os ignora e procura outro arquivo; uma fonte que entregue um mesmo assim conta como não tendo encontrado nada, e a próxima fonte é tentada. Seu formato de download não pode ser um deles.',
+    avoidFormatsLocked: 'Seu formato de download não pode ser evitado',
     filesGroup: 'Arquivos',
     template: 'Nome do arquivo',
     templateHint: 'Use / para criar pastas.',
@@ -1995,7 +1999,7 @@ export default {
     ratingsNextSoon: 'Próxima execução dentro de uma hora',
     ratingsNever: 'Ainda não executada',
     ratingsFailedDeezer:
-      'Não foi possível acessar o Deezer. As estrelas já dadas continuam.',
+      'O Deezer não respondeu por vários minutos. As estrelas já dadas continuam, e a próxima execução continua de onde esta parou.',
     ratingsFailedNavidrome: 'Erro do Navidrome: {message}',
     ratingsFailed: 'A avaliação falhou: {message}',
     ratingsNotConfigured: 'Salve primeiro o login do Navidrome.',
@@ -2689,6 +2693,46 @@ export default {
     from: 'Baixado de {source}',
   },
   doctor: {
+    formatsTitle: 'Formatos a converter',
+    formatsHint:
+      'Arquivos da biblioteca em formatos que você não quer, como FLACs de antes das suas regras de formato. Cada um vira um MP3 na sua qualidade de download que assume as playlists, curtidas e monitoramentos dele, como uma junção de duplicatas.',
+    formatsPick: 'Formatos',
+    formatsPickHint:
+      'Escolha os formatos a procurar. Um formato sem perdas (FLAC, WAV, AIFF, APE, WavPack) convertido para MP3 320 soa igual; um com perdas (M4A, OGG, Opus) convertido de novo perde um pouco.',
+    formatsFind: 'Procurar arquivos',
+    formatsNone: 'Nenhum arquivo {formats} na biblioteca.',
+    formatsFound: 'Arquivos em {formats}: {count}, {size} no total.',
+    formatsEstimate:
+      'Como MP3 {bitrate}k: cerca de {size}, economizando cerca de {saved}.',
+    formatsDuplicatesFirst:
+      'Junte primeiro as músicas duplicadas, para que cada música seja convertida só uma vez.',
+    formatsListLabel: 'Arquivos a converter',
+    formatsAbout: 'cerca de {size}',
+    formatsConvert: 'Converter para MP3 {bitrate}k ({count})',
+    formatsConvertTitle: 'Converter estes arquivos?',
+    formatsConvertBody:
+      'Arquivos a converter: {count}. Cada um vira um MP3 a {bitrate}k com as mesmas tags, capa e letra, assume suas playlists, curtidas e monitoramentos, e o original vai {where}. Pode demorar; você pode parar entre arquivos.',
+    formatsConvertConfirm: 'Converter',
+    formatsConverted: 'Convertidos: {count}. Economizado: {saved}.',
+    formatsStopped: 'Parado. Deixados como estavam: {count}.',
+    formatsInTrash: 'Os originais ficam na lixeira de música por 30 dias.',
+    formatsDeleted: 'Os originais foram apagados.',
+    formatsFailed:
+      'Não puderam ser convertidos, deixados como estavam: {count}',
+    convertError: {
+      missing: 'o arquivo sumiu',
+      convert_failed: 'o ffmpeg não conseguiu lê-lo',
+      convert_length: 'o MP3 saiu com outra duração',
+      convert_exists: 'já existe um MP3 com esse nome',
+      convert_no_ffmpeg: 'o ffmpeg não está instalado',
+      convert_trash: 'a lixeira de música não cobre a pasta dele',
+      convert_remove:
+        'não foi possível remover o original, os dois foram mantidos',
+      dedupe_missing: 'o arquivo sumiu',
+      dedupe_invalid: 'não é um arquivo da biblioteca',
+      dedupe_replacement_pending:
+        'Substituir áudio ainda está trabalhando nele',
+    },
     title: 'Doutor',
     intro:
       'Versões novas do Downtify corrigem problemas daqui para frente, mas arquivos e playlists gravados por versões antigas continuam como estavam. O Doutor encontra esses restos e repara o que consegue provar que é seguro.',
@@ -2699,6 +2743,8 @@ export default {
     runCheckup: 'Verificar agora',
     stop: 'Parar',
     step: {
+      convert: 'Convertendo arquivos…',
+      convert_publish: 'Atualizando a biblioteca…',
       starting: 'Iniciando…',
       library: 'Lendo a biblioteca…',
       playlists: 'Lendo as playlists…',
@@ -2903,6 +2949,7 @@ export default {
         'Os tamanhos contam 1 GB como 1024³ bytes; alguns gerenciadores de arquivos contam 1000³, então a mesma pasta pode parecer maior lá.',
     },
     badge: {
+      toConvert: '{count} · {size}',
       notChecked: 'Não verificado',
       allGood: 'Tudo certo',
       toDelete: '{count} para apagar',
@@ -3006,6 +3053,9 @@ export default {
     relinkedLabel: 'Mesma música, vários IDs',
     relinkedCounts: 'Músicas: {songs} · arquivos extras: {extra}',
     error: {
+      formats_none: 'Escolha pelo menos um formato.',
+      convert_no_ffmpeg:
+        'O ffmpeg não está instalado no servidor, então nada pode ser convertido.',
       ai_not_running: 'O assistente de IA está desligado. Ligue-o primeiro.',
       doctor_busy: 'O Doutor já está trabalhando.',
       rescan_first:

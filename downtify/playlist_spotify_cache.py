@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import re
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Optional
@@ -14,6 +15,18 @@ from . import library_only, spotify
 from .db.config import Dialect
 from .db.core import Connection, Database, as_database
 from .track_index import normalize_spotify_track_id
+
+#: A Spotify playlist id: 22 base-62 characters.
+_SPOTIFY_ID = re.compile(r'[A-Za-z0-9]{22}')
+
+
+def is_spotify_playlist_id(value: Any) -> bool:
+    """Whether *value* can be a Spotify playlist id. Other sources' ids
+    can end up beside them (a YouTube channel id, ``UC`` and 24
+    characters, kept for an artist), and Spotify can't answer for those."""
+
+    return bool(_SPOTIFY_ID.fullmatch(str(value or '').strip()))
+
 
 _TRACK_KEYS = (
     'song_id',
@@ -435,7 +448,10 @@ async def warm_uncached_playlists(
     warmed = 0
     for raw_id in spotify_ids:
         sid = str(raw_id or '').strip()
-        if not sid or await asyncio.to_thread(cache.get, sid) is not None:
+        if not is_spotify_playlist_id(sid):
+            # Not Spotify's: asking would only fail (and warn) every pass.
+            continue
+        if await asyncio.to_thread(cache.get, sid) is not None:
             continue
         try:
             await asyncio.to_thread(

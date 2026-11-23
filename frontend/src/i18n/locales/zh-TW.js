@@ -1766,6 +1766,10 @@ export default {
     bitrateHint: '失真格式的位元率。',
     bitrateLossless: 'FLAC 為無損格式，不使用此設定。',
     bitrateOriginal: '保留原始音訊格式時不使用此設定。',
+    avoidFormats: '避免的格式',
+    avoidFormatsHint:
+      '下載絕不會把這些格式的檔案放進資料庫。slskd 會跳過它們另找檔案；若某個來源仍給出這種檔案，就當作什麼也沒找到，改試下一個來源。下載格式本身不能列入其中。',
+    avoidFormatsLocked: '下載格式不能被避免',
     filesGroup: '檔案',
     template: '檔案名稱',
     templateHint: '使用 / 建立資料夾。',
@@ -1876,7 +1880,8 @@ export default {
     ratingsNext: '下次執行 {when}',
     ratingsNextSoon: '下次執行將在一小時內',
     ratingsNever: '尚未執行',
-    ratingsFailedDeezer: '無法連線到 Deezer。已打的星級會保留。',
+    ratingsFailedDeezer:
+      'Deezer 幾分鐘內都沒有回應。已打的星級會保留，下次執行會從這次停下的地方繼續。',
     ratingsFailedNavidrome: 'Navidrome 錯誤：{message}',
     ratingsFailed: '評分執行失敗：{message}',
     ratingsNotConfigured: '請先儲存 Navidrome 登入資訊。',
@@ -2537,6 +2542,41 @@ export default {
     from: '下載自 {source}',
   },
   doctor: {
+    formatsTitle: '要轉換的格式',
+    formatsHint:
+      '資料庫中你不想要的格式的檔案，例如在設定格式規則之前下載的 FLAC。每個檔案會轉成下載品質的 MP3，並像合併重複項一樣接管它的播放清單、喜歡和監控。',
+    formatsPick: '格式',
+    formatsPickHint:
+      '選擇要尋找的格式。無損格式（FLAC、WAV、AIFF、APE、WavPack）轉成 MP3 320 聽起來一樣；有損格式（M4A、OGG、Opus）再次轉換會略有損失。',
+    formatsFind: '尋找檔案',
+    formatsNone: '資料庫中沒有 {formats} 檔案。',
+    formatsFound: '{formats} 檔案：{count} 個，共 {size}。',
+    formatsEstimate: '轉為 MP3 {bitrate}k：約 {size}，約節省 {saved}。',
+    formatsDuplicatesFirst: '請先合併重複的歌曲，這樣每首歌只轉換一次。',
+    formatsListLabel: '要轉換的檔案',
+    formatsAbout: '約 {size}',
+    formatsConvert: '轉換為 MP3 {bitrate}k（{count}）',
+    formatsConvertTitle: '轉換這些檔案？',
+    formatsConvertBody:
+      '要轉換的檔案：{count} 個。每個檔案會變成 {bitrate}k 的 MP3，保留相同的標籤、封面和歌詞，接管它的播放清單、喜歡和監控，原檔案則{where}。這可能需要一段時間；可以在檔案之間停止。',
+    formatsConvertConfirm: '轉換',
+    formatsConverted: '已轉換：{count}。節省：{saved}。',
+    formatsStopped: '已停止。保持原樣：{count}。',
+    formatsInTrash: '原檔案在音樂回收筒中保留 30 天。',
+    formatsDeleted: '原檔案已刪除。',
+    formatsFailed: '無法轉換，保持原樣：{count}',
+    convertError: {
+      missing: '檔案已不存在',
+      convert_failed: 'ffmpeg 無法讀取',
+      convert_length: '產生的 MP3 長度不同',
+      convert_exists: '已有同名的 MP3',
+      convert_no_ffmpeg: '未安裝 ffmpeg',
+      convert_trash: '音樂回收筒不涵蓋它的資料夾',
+      convert_remove: '無法移除原檔案，兩者都保留',
+      dedupe_missing: '檔案已不存在',
+      dedupe_invalid: '不是資料庫中的檔案',
+      dedupe_replacement_pending: '「替換音訊」仍在處理它',
+    },
     title: '醫生',
     intro:
       'Downtify 的新版本會從此修正問題，但舊版本寫下的檔案和播放清單仍維持原樣。醫生會找出這些遺留狀態，並修復能證明安全的部分。',
@@ -2547,6 +2587,8 @@ export default {
     runCheckup: '立即檢查',
     stop: '停止',
     step: {
+      convert: '正在轉換檔案…',
+      convert_publish: '正在更新資料庫…',
       starting: '正在開始…',
       library: '正在讀取音樂庫…',
       playlists: '正在讀取播放清單…',
@@ -2737,6 +2779,7 @@ export default {
         '這裡的大小按 1 GB = 1024³ 位元組計算；有些檔案瀏覽器按 1000³ 計算，因此同一資料夾在那裡可能顯示得更大。',
     },
     badge: {
+      toConvert: '{count} · {size}',
       notChecked: '未檢查',
       allGood: '一切正常',
       toDelete: '{count} 個待刪除',
@@ -2832,6 +2875,8 @@ export default {
     relinkedLabel: '同一首歌，多個 ID',
     relinkedCounts: '歌曲：{songs} · 多餘檔案：{extra}',
     error: {
+      formats_none: '請至少選擇一種格式。',
+      convert_no_ffmpeg: '伺服器上沒有安裝 ffmpeg，因此無法轉換。',
       ai_not_running: 'AI 助手未開啟，請先啟動。',
       doctor_busy: '醫生正在工作。',
       rescan_first: '其他地方的修復改變了這一部分，請先重新檢查。',

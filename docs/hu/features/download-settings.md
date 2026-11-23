@@ -34,6 +34,10 @@ A letöltött hang minden veszteséges formátumnál a választott bitrátán k�
 A YouTube hangja legfeljebb nagyjából **128–160 kbps**-ig terjed (AAC vagy Opus), a Downtify pedig mindig a legjobb elérhető adatfolyamot tölti le. 256 vagy 320 kbps-en kódolva nagyobb fájlokat kapsz, amelyek hűen megőrzik azt a forrást, de nem tudnak olyan részletet visszahozni, ami a forrásban sosem volt. Válassz alacsonyabb bitrátát, ha a fájlméret fontosabb.
 :::
 
+## Kerülendő formátumok
+
+A letöltések soha nem hoznak a könyvtárba ilyen formátumú fájlt, bármelyik forrásból. Az slskd kihagyja ezeket a választáskor, bármit mond a saját formátumlistája és az **Csak a felsorolt formátumok**, és ha egy forrás mégis ilyet ad (a Deemix, vagy egy fájl, amely már megvolt az slskd-nél), az úgy számít, mintha semmit sem talált volna, és a következő forrás jön. A YouTube- és SoundCloud-letöltések a fenti **Formátum**ra alakulnak, így sosem adnak ilyet. Maga a letöltési formátum nem kerülhető el. A könyvtárban már meglévő fájlokat a Doctor **Átalakítandó formátumok** része alakítja át.
+
 ## Kimeneti fájlnév-sablon
 
 Az alapértelmezett fájlnév-sablon:

@@ -100,6 +100,7 @@ const settings = ref({
   artist_watch_complete_albums: false,
   write_isrc: true,
   aurral_enabled: false,
+  avoid_formats: [],
   search_albums: true,
   mini_player_enabled: true,
 })
