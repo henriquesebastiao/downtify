@@ -100,7 +100,17 @@ _album_search_artist_cache: dict[str, list[str]] = {}
 # without this, every one of those calls reruns a live YouTube Music search
 # per music-video track, which is most of what makes an album "slow to
 # start" downloading.
-_omv_preference_cache: dict[str, tuple[str, int]] = {}
+#
+# Keyed by video id *and* title: an album listing can give several tracks
+# the same music video ("Divine Intervention (Choir)" and "... (No Choir)"
+# both pointing at one upload), and each title has its own official audio.
+# Keyed by the video alone, the second track got the first one's answer
+# (issue #662).
+_omv_preference_cache: dict[tuple[str, str], tuple[str, int]] = {}
+# (video id several tracks of one release share, track title) -> the
+# YouTube Music song found for that title, or ``None`` when the search
+# found none (see :func:`_split_shared_videos`).
+_shared_video_cache: dict[tuple[str, str], Optional[tuple[str, int]]] = {}
 # Artist channel id -> the channel's own name.
 _artist_channel_name_cache: dict[str, str] = {}
 # Artist channel id -> when reading its name last failed (monotonic): it is
@@ -2703,8 +2713,9 @@ def _prefer_official_audio_track(
     """
     if video_type != _MUSIC_VIDEO_TYPE_MUSIC_VIDEO:
         return video_id, duration
+    key = (video_id, _norm_compact_title(title))
     with _lock:
-        cached = _omv_preference_cache.get(video_id)
+        cached = _omv_preference_cache.get(key)
     if cached is not None:
         return cached
     query = f'{" ".join(artists)} {title}'.strip()
@@ -2741,11 +2752,150 @@ def _prefer_official_audio_track(
         )
         chosen = (candidate.strip(), (candidate_duration or duration))
         with _lock:
-            _omv_preference_cache[video_id] = chosen
+            _omv_preference_cache[key] = chosen
         return chosen
     with _lock:
-        _omv_preference_cache[video_id] = (video_id, duration)
+        _omv_preference_cache[key] = (video_id, duration)
     return video_id, duration
+
+
+def _own_track_video(
+    shared_id: str, title: str, artists: list[str]
+) -> Optional[tuple[str, int]]:
+    """``(video_id, duration)`` of the YouTube Music song that is
+    *title* by *artists*, preferring an official-audio upload; ``None``
+    when the search finds none (or fails, which isn't remembered).
+
+    *shared_id* is the video the release listed for this track and
+    others: only a key for the cache, since the answer may well be it.
+    """
+
+    key = (shared_id, _norm_compact_title(title))
+    with _lock:
+        if key in _shared_video_cache:
+            return _shared_video_cache[key]
+    query = f'{" ".join(artists)} {title}'.strip()
+    if not query:
+        return None
+    try:
+        results = _ytm().search(query, filter='songs', limit=10)
+    except Exception:
+        logger.opt(exception=True).debug(
+            'Own-recording search failed for {!r}', title
+        )
+        return None
+    hits = [r for r in results or [] if isinstance(r, dict)]
+    # The exact title first (title matching lets "Song" stand for "Song
+    # (History Version)"), then official audio; YouTube Music's order
+    # otherwise (the sort is stable).
+    wanted = _norm_compact_title(title)
+    hits.sort(
+        key=lambda r: (
+            _norm_compact_title(r.get('title')) != wanted,
+            r.get('videoType') != _MUSIC_VIDEO_TYPE_OFFICIAL_AUDIO,
+        )
+    )
+    found: Optional[tuple[str, int]] = None
+    for result in hits:
+        candidate = result.get('videoId')
+        if not (isinstance(candidate, str) and candidate.strip()):
+            continue
+        if not _titles_match(title, result.get('title')):
+            continue
+        if not _artists_overlap(artists, result):
+            continue
+        length = result.get('duration_seconds') or _parse_duration(
+            result.get('duration')
+        )
+        found = (candidate.strip(), int(length or 0))
+        break
+    with _lock:
+        _shared_video_cache[key] = found
+    return found
+
+
+def _with_video(
+    song: dict[str, Any], video_id: str, duration: int
+) -> dict[str, Any]:
+    return {
+        **song,
+        'song_id': video_id,
+        'url': f'https://music.youtube.com/watch?v={video_id}',
+        'duration': duration or song.get('duration') or 0,
+    }
+
+
+def _split_shared_videos(
+    songs: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Give every track of a release a recording of its own.
+
+    YouTube Music's album listing sometimes points several tracks at one
+    music video - "Ultramarines", "Tyranids" and "Death Korps of Krieg"
+    all at the "Ultramarines" video, or a song and its "(No Choir)"
+    version at the same upload - and downloading that would save one
+    recording under every one of those titles, with lengths that pass
+    validation since they were read off that very video (issue #662).
+
+    Each such track is searched for by its own title and artists. A
+    track the search finds a different song for gets it; one the search
+    confirms the shared video for keeps it. The rest keep it only for
+    the first of them: the others are downloaded by matching their name
+    instead (``_match_by_metadata``), with no length, since the one
+    listed was the shared video's. Tracks with the same title (a song
+    listed twice) share a video legitimately; titles are compared
+    exactly, since "(History Version)" or "(No Choir)" is another
+    recording even where title matching would let it pass.
+    """
+
+    groups: dict[str, list[int]] = {}
+    for index, song in enumerate(songs):
+        groups.setdefault(str(song.get('song_id') or ''), []).append(index)
+    out = list(songs)
+    for shared_id, members in groups.items():
+        if not shared_id or len(members) < 2:
+            continue
+        titles = {_norm_compact_title(out[i].get('name')) for i in members}
+        if len(titles) < 2:
+            continue
+        owner: Optional[int] = None
+        unresolved: list[int] = []
+        for index in members:
+            song = out[index]
+            found = _own_track_video(
+                shared_id,
+                str(song.get('name') or ''),
+                list(song.get('artists') or []),
+            )
+            if found is None or (found[0] == shared_id and owner is not None):
+                unresolved.append(index)
+            elif found[0] == shared_id:
+                owner = index
+            else:
+                out[index] = _with_video(song, *found)
+        if owner is None and unresolved:
+            owner = unresolved.pop(0)
+        for index in unresolved:
+            # Both flags: the monitor hands this dict to the downloader
+            # as is, a page sends it back as POST /api/download/url's
+            # hints (see api._song_from_download_request).
+            out[index] = {
+                **out[index],
+                '_match_by_metadata': True,
+                'download_by_metadata': True,
+                'duration': 0,
+            }
+        logger.info(
+            'YouTube Music lists videoId={} for {} tracks of {!r}: '
+            '{!r} keeps it, {} found their own, {} matched by name',
+            shared_id,
+            len(members),
+            str(out[members[0]].get('album_name') or ''),
+            str(out[owner].get('name') or '') if owner is not None else '',
+            len(members) - len(unresolved) - (owner is not None),
+            len(unresolved),
+        )
+    return out
 
 
 def _album_track_song(
@@ -2838,7 +2988,7 @@ def album_tracks_from_browse_id(
         if not video_id:
             continue
         songs.append(_album_track_song(track, video_id, position, total, meta))
-    return songs
+    return _split_shared_videos(songs)
 
 
 def _find_match_via_album(

@@ -52,6 +52,7 @@ def clear_ytm_album_cache():
     providers._album_browse_search_cache.clear()
     providers._album_search_artist_cache.clear()
     providers._omv_preference_cache.clear()
+    providers._shared_video_cache.clear()
     providers._artist_channel_name_cache.clear()
     providers._artist_channel_name_failed.clear()
     yield
@@ -60,6 +61,7 @@ def clear_ytm_album_cache():
     providers._album_browse_search_cache.clear()
     providers._album_search_artist_cache.clear()
     providers._omv_preference_cache.clear()
+    providers._shared_video_cache.clear()
     providers._artist_channel_name_cache.clear()
     providers._artist_channel_name_failed.clear()
 
@@ -2105,7 +2107,9 @@ def test_prefer_official_audio_track_survives_search_exception(monkeypatch):
     assert duration == 240
 
 
-def test_prefer_official_audio_track_caches_swap_by_video_id(monkeypatch):
+def test_prefer_official_audio_track_caches_swap_per_video_and_title(
+    monkeypatch,
+):
     # Regression: album_tracks_from_browse_id gets called several times
     # over for the same album within a single download (once per caller
     # resolving the tracklist, once more server-side when the download
@@ -2151,6 +2155,44 @@ def test_prefer_official_audio_track_caches_no_match_result(monkeypatch):
         assert video_id == 'omv-id'
         assert duration == 240
     assert calls['count'] == 1
+
+
+def test_prefer_official_audio_track_answers_each_title_on_its_own(
+    monkeypatch,
+):
+    # Issue #662: an album listing gives "Divine Intervention (Choir)" and
+    # "Divine Intervention (No Choir)" the same music video. Cached by the
+    # video alone, the second title got the first one's official audio.
+    hits = {
+        'Divine Intervention (Choir)': 'choir-atv',
+        'Divine Intervention (No Choir)': 'no-choir-atv',
+    }
+
+    class _ByTitleYTM:
+        @staticmethod
+        def search(query, **_kw):
+            title = query.removeprefix('Two Steps from Hell ')
+            return [
+                _search_hit(
+                    hits[title],
+                    title,
+                    'Two Steps from Hell',
+                    'MUSIC_VIDEO_TYPE_ATV',
+                )
+            ]
+
+    monkeypatch.setattr(providers, '_ytm', _ByTitleYTM)
+    chosen = [
+        providers._prefer_official_audio_track(
+            'dx7WbhET7kk',
+            300,
+            title,
+            ['Two Steps from Hell'],
+            'MUSIC_VIDEO_TYPE_OMV',
+        )[0]
+        for title in hits
+    ]
+    assert chosen == ['choir-atv', 'no-choir-atv']
 
 
 def test_album_track_song_prefers_official_audio(monkeypatch):
@@ -2225,6 +2267,148 @@ def test_album_tracks_from_browse_id_resolves_full_tracklist(monkeypatch):
     assert songs[0]['release_type'] == 'Album'
     assert songs[1]['name'] == 'Held Together'
     assert songs[1]['track_number'] == 2
+
+
+def _album_listing(monkeypatch, rows):
+    monkeypatch.setattr(
+        providers,
+        '_cached_album_tracks_and_count',
+        lambda _browse_id: (rows, len(rows)),
+    )
+    monkeypatch.setattr(
+        providers,
+        '_cached_album_meta',
+        lambda _browse_id: {'title': '40K HEAVY METAL', 'type': 'Album'},
+    )
+
+
+def test_album_tracks_from_browse_id_gives_shared_video_tracks_their_own(
+    monkeypatch,
+):
+    # Issue #662: YouTube Music lists one music video for three different
+    # songs of an album. Each title is searched for on its own: the one the
+    # video is keeps it, the others get the song the search found.
+    artist = 'Jonathan Young'
+    _album_listing(
+        monkeypatch,
+        [
+            _album_track_row('h21NK3f-9dc', 'Ultramarines', 1, artist),
+            _album_track_row('h21NK3f-9dc', 'Death Korps of Krieg', 2, artist),
+            _album_track_row('h21NK3f-9dc', 'Tyranids', 3, artist),
+        ],
+    )
+    found = {
+        'Ultramarines': 'h21NK3f-9dc',
+        'Death Korps of Krieg': 'krieg-atv',
+        'Tyranids': 'tyranids-atv',
+    }
+    queries = []
+
+    class _ByTitleYTM:
+        @staticmethod
+        def search(query, **_kw):
+            queries.append(query)
+            title = query.removeprefix(f'{artist} ')
+            return [
+                _search_hit(
+                    found[title], title, artist, 'MUSIC_VIDEO_TYPE_ATV', 180
+                )
+            ]
+
+    monkeypatch.setattr(providers, '_ytm', _ByTitleYTM)
+    songs = album_tracks_from_browse_id('MPREb_x')
+    assert [s['song_id'] for s in songs] == [
+        'h21NK3f-9dc',
+        'krieg-atv',
+        'tyranids-atv',
+    ]
+    assert songs[1]['url'] == 'https://music.youtube.com/watch?v=krieg-atv'
+    assert songs[1]['duration'] == 180
+    assert not any(s.get('_match_by_metadata') for s in songs)
+
+    # The listing is read several times per download: searched once.
+    album_tracks_from_browse_id('MPREb_x')
+    assert len(queries) == 3
+
+
+def test_album_tracks_from_browse_id_matches_unfound_shared_tracks_by_name(
+    monkeypatch,
+):
+    # Nothing found for either title: the first keeps the listed video,
+    # the other is downloaded by matching its name, with no length (the
+    # listed one was the shared video's).
+    _album_listing(
+        monkeypatch,
+        [
+            _album_track_row('XIExyEe3WGI', 'I Know', 7, 'Eivør'),
+            _album_track_row('XIExyEe3WGI', 'Eg Veit', 11, 'Eivør'),
+        ],
+    )
+    monkeypatch.setattr(providers, '_ytm', lambda: _FakeYTM([]))
+    first, second = album_tracks_from_browse_id('MPREb_y')
+    assert first['song_id'] == 'XIExyEe3WGI'
+    assert not first.get('_match_by_metadata')
+    assert first['duration'] == 200
+    assert second['_match_by_metadata'] is True
+    assert second['download_by_metadata'] is True
+    assert second['duration'] == 0
+
+
+def test_album_tracks_from_browse_id_splits_version_titles(monkeypatch):
+    # "(History Version)" passes title matching against the plain title,
+    # but it is another recording: searched for, and the exact title wins
+    # over a plain-title hit listed first.
+    _album_listing(
+        monkeypatch,
+        [
+            _album_track_row('ddddddddddd', 'Varg', 1),
+            _album_track_row('ddddddddddd', 'Varg (History Version)', 2),
+        ],
+    )
+
+    class _ByTitleYTM:
+        @staticmethod
+        def search(query, **_kw):
+            return [
+                _search_hit(
+                    'ddddddddddd',
+                    'Varg',
+                    'Mica Ferreira',
+                    'MUSIC_VIDEO_TYPE_ATV',
+                ),
+                _search_hit(
+                    'history-atv',
+                    'Varg (History Version)',
+                    'Mica Ferreira',
+                    'MUSIC_VIDEO_TYPE_ATV',
+                ),
+            ]
+
+    monkeypatch.setattr(providers, '_ytm', _ByTitleYTM)
+    songs = album_tracks_from_browse_id('MPREb_v')
+    assert [s['song_id'] for s in songs] == ['ddddddddddd', 'history-atv']
+
+
+def test_album_tracks_from_browse_id_keeps_shared_video_of_one_song(
+    monkeypatch,
+):
+    # Two listings of the same song (a reissue in a box set) may share a
+    # video: nothing is searched.
+    _album_listing(
+        monkeypatch,
+        [
+            _album_track_row('ccccccccccc', 'Held Together', 1),
+            _album_track_row('ccccccccccc', 'Held Together', 2),
+        ],
+    )
+
+    def _no_search():
+        raise AssertionError('one song: nothing to search')
+
+    monkeypatch.setattr(providers, '_ytm', _no_search)
+    songs = album_tracks_from_browse_id('MPREb_z')
+    assert [s['song_id'] for s in songs] == ['ccccccccccc'] * 2
+    assert not any(s.get('_match_by_metadata') for s in songs)
 
 
 def test_album_tracks_from_browse_id_backfills_title_featuring_artist(
