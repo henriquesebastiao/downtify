@@ -4,7 +4,9 @@
   >
     <PageHeader :title="t('similar.title')" :subtitle="t('similar.subtitle')" />
 
-    <!-- No search button: Enter (like the main search) starts the mix. -->
+    <!-- No visible search button: Enter (like the main search) starts the mix.
+         With two text fields, browsers only submit on Enter when the form has
+         a submit button, so a hidden one is kept below. -->
     <form
       class="flex flex-col gap-2 sm:flex-row sm:items-end"
       @submit.prevent="submit"
@@ -23,6 +25,9 @@
         :placeholder="t('similar.trackPlaceholder')"
         autocomplete="off"
       />
+      <button type="submit" class="sr-only" tabindex="-1" aria-hidden="true">
+        {{ t('similar.title') }}
+      </button>
     </form>
 
     <div v-if="similar.loading.value" class="flex flex-col gap-2">
