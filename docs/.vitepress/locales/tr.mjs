@@ -112,6 +112,7 @@ export default {
       'features/music-trash.md': 'Müzik çöp kutusu',
       'features/doctor.md': 'Doktor',
       'features/backups.md': 'Yedekler',
+      'features/notifications.md': 'Bildirimler',
       'features/replace-audio.md': 'Sesi değiştir',
       'features/external-playlists.md': 'Mevcut çalma listelerini içe aktar',
       'features/m3u-export.md': 'M3U dışa aktarma',

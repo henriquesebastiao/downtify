@@ -450,6 +450,7 @@ from . import (
     m3u,
     musicbrainz,
     navidrome_ratings,
+    notifications,
     providers,
     spotify,
     stream,
@@ -4684,6 +4685,7 @@ async def _run_download_locked(
                 job['filename'] = filename
                 job['progress'] = 100
                 if filename:
+                    notifications.emit('download_done', song_label(song))
                     await _record_finished_download(
                         song,
                         filename,
@@ -4726,6 +4728,7 @@ async def _run_download_locked(
             message = f'Error: {exc}'
         job['status'] = 'error'
         job['message'] = message
+        notifications.emit('download_failed', song_label(song), message)
         await state.connections.broadcast_job(
             _job_users(job),
             {

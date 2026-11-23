@@ -90,6 +90,7 @@ Downtify’ın yaptığı her şey, kenar çubuğundaki gibi alanlara göre grup
 | [Kullanıcılar ve oturum açma](users.md) | Kullanıcı adı ve parolayla oturum açma (yeni sunucuda `admin` / `downtify`), yönetici ve normal kullanıcı hesapları, kullanıcı başına tercihler ve oturum açmaların ve herkesin ne dinlediğinin etkinlik günlüğü |
 | [Sunucu ayarları](server.md) | Downtify’ın dinlediği bağlantı noktası, Ayarlar’dan (yöneticiler) değiştirilir; isterseniz hemen yeniden başlatma ile |
 | [Yedekler](backups.md) | Ayarları, izlemeleri ve şarkı listesini bir zamanlamayla ya da istediğinizde yedekleyin; bir disk kaybından sonra ya da yeni bir sunucuda geri getirin |
+| [Bildirimler](notifications.md) | Uzun görevler (Doktor, kütüphane yükseltmesi, puanlar, yedekler) ve indirmeler hakkında Discord, ntfy, Gotify veya webhook mesajları, `/status` gibi Discord komutlarıyla |
 | [Yalnızca kitaplık modu](library-only.md) | Tüm hesapları ve uygulamaları kitaplıkta zaten olan müzikle sınırlayın: dış arama, akış ya da indirme yok |
 | [Giden proxy](outbound-proxy.md) | Downtify’ın giden trafiğini bir HTTP, HTTPS veya SOCKS5 proxy üzerinden gönderin |
 | [Güncelleme bildirimleri](updates.md) | GitHub Releases’a saatlik kontrol; daha yeni sürüm çıktığında kenar çubuğunda bir bildirim belirir, güncellemeden sonra da yeniliklerin bir özeti gösterilir |

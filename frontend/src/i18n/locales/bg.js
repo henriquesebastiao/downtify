@@ -2138,6 +2138,7 @@ export default {
     activity: 'Активност',
     personalHint:
       'Само ваши: следват акаунта ви във всеки браузър и не променят нищо за никой друг.',
+    notifications: 'Известия',
     server: 'Сървър',
     networkGroup: 'Мрежа',
     networkHint:
@@ -2327,6 +2328,95 @@ export default {
     resultWatches: '{added} добавени следения, {present} вече съществуват',
     resultSongs: '{missing} липсващи песни, {queued} добавени за изтегляне',
     resultNoSongs: 'Няма липсващи песни',
+  },
+  notify: {
+    title: 'Известия',
+    hint: 'Съобщения за дълги задачи и изтегляния към Discord, ntfy, Gotify или webhook. Изключено, докато не го включите. Съобщенията са на английски.',
+    enabled: 'Изпращай известия',
+    enabledHint: 'Главният превключвател. Всеки канал по-долу има и свой.',
+    progressEvery: 'Напредък',
+    progressEveryHint:
+      'Колко често се обновява напредъкът на текуща задача. В Discord се редактира по едно съобщение на задача; другите канали получават ред на всяка четвърт.',
+    channel_discord: 'Discord',
+    channel_discordHint:
+      'Webhook публикува в един канал. Бот също публикува и отговаря на команди като /status.',
+    channel_ntfy: 'ntfy',
+    channel_ntfyHint:
+      'Push известия към приложението ntfy, през ntfy.sh или ваш сървър.',
+    channel_gotify: 'Gotify',
+    channel_gotifyHint: 'Push известия към вашия Gotify сървър.',
+    channel_webhook: 'Webhook',
+    channel_webhookHint:
+      'JSON POST към произволен адрес. Адрес /notify на Apprise API работи директно.',
+    channelOn: 'Използвай този канал',
+    discordMode: 'Как се свързва Downtify',
+    discordModeHint:
+      'Webhook: само изпращане. Бот: изпращане и отговор на команди; нужен е бот от Discord Developer Portal, поканен във вашия сървър.',
+    modeWebhook: 'Webhook (само изпращане)',
+    modeBot: 'Бот (изпращане + команди)',
+    webhookUrl: 'Webhook URL',
+    webhookUrlHint:
+      'Discord: настройки на канала → Интеграции → Webhooks → Копирай URL. Пази се на сървъра и не се показва повече.',
+    botToken: 'Токен на бота',
+    botTokenHint:
+      'Discord Developer Portal → вашето приложение → Bot → Reset token. Пази се на сървъра и не се показва повече.',
+    channelId: 'ID на канала',
+    channelIdHint:
+      'Къде ботът публикува и отговаря. В Discord включете режима за разработчици, после десен клик върху канала → Копирай ID.',
+    commands: 'Отговаряй на команди',
+    commandsHint:
+      'Командите само четат: никой в Discord не може да пуска, спира или променя нищо в Downtify.',
+    allowedUsers: 'Разрешени потребители',
+    allowedUsersHint:
+      'ID на потребители в Discord, които могат да ползват командите, разделени с интервал. Празно: всички в канала.',
+    botState: 'Бот',
+    bot_off: 'Изключен',
+    bot_connecting: 'Свързване…',
+    bot_connected: 'Свързан',
+    bot_error: 'Спрян',
+    invite: 'Покани бота в сървъра си',
+    commandList: 'Команди, които можете да пратите в канала:',
+    server: 'Сървър',
+    topic: 'Тема',
+    topicHint:
+      'На публичен сървър всеки, който знае темата, може да я чете: изберете нещо трудно за отгатване.',
+    accessToken: 'Токен за достъп',
+    optional: 'По избор.',
+    appToken: 'Токен на приложението',
+    appTokenHint:
+      'Gotify → Apps → Create application. Пази се на сървъра и не се показва повече.',
+    genericHint:
+      'Пази се на сървъра и не се показва повече. Тялото съдържа title, body, type, event и fields.',
+    what: 'Какво да се изпраща',
+    whatHint: 'Изберете задачите, кои моменти от тях и другите събития.',
+    group_tasks: 'Задачи',
+    group_phases: 'Кога',
+    group_events: 'Други събития',
+    task_doctor: 'Доктор',
+    task_upgrade: 'Подобряване на библиотеката (обложки, текстове, тагове)',
+    task_ratings: 'Звездни оценки',
+    task_wanted: 'Наваксване на търсените',
+    task_backup: 'Резервни копия',
+    phase_start: 'Започната',
+    phase_progress: 'Напредък',
+    phase_finish: 'Завършена',
+    phase_fail: 'Неуспешна',
+    event_download_failed: 'Неуспешно изтегляне',
+    event_download_done: 'Изтеглени песни',
+    event_new_releases: 'Намерени нови издания',
+    event_watch_done: 'Изтегляния от следенията',
+    test: 'Проба',
+    testHint:
+      'Изпраща едно съобщение сега с попълненото по-горе, записано или не.',
+    sendTest: 'Изпрати проба',
+    testSent: 'Пробното съобщение е изпратено',
+    testFailed: 'Пробата не успя: {error}',
+    lastError: 'Последното съобщение не успя: {error}',
+    secretSaved: 'Записано (пишете, за да смените)',
+    remove: 'Премахни',
+    save: 'Запиши известията',
+    saved: 'Известията са записани',
+    unsaved: 'Незаписани промени',
   },
   port: {
     label: 'Порт',

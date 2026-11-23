@@ -90,6 +90,7 @@ Todo lo que hace Downtify, agrupado por áreas como en la barra lateral. Cada fu
 | [Usuarios e inicio de sesión](users.md) | Inicio de sesión con usuario y contraseña (`admin` / `downtify` en un servidor nuevo), cuentas de administrador y de usuario normal, preferencias por usuario y un registro de actividad con inicios de sesión y lo que escucha cada uno |
 | [Ajustes del servidor](server.md) | El puerto en el que escucha Downtify, cambiado desde Ajustes (administradores), con reinicio inmediato si quieres |
 | [Copias de seguridad](backups.md) | Guarda los ajustes, los seguimientos y la lista de canciones, de forma programada o cuando quieras, para recuperarlos tras perder un disco o en un servidor nuevo |
+| [Notificaciones](notifications.md) | Mensajes sobre tareas largas (Doctor, mejora de la biblioteca, valoraciones, copias de seguridad) y descargas en Discord, ntfy, Gotify o un webhook, con comandos de Discord como `/status` |
 | [Modo solo biblioteca](library-only.md) | Limita todas las cuentas y apps a la música que ya está en la biblioteca: sin búsquedas externas, streams ni descargas |
 | [Proxy de salida](outbound-proxy.md) | Envía el tráfico saliente de Downtify por un proxy HTTP, HTTPS o SOCKS5 |
 | [Avisos de actualización](updates.md) | Comprobación cada hora en los Releases de GitHub; aparece un aviso en la barra lateral cuando hay una versión más reciente, y un resumen de novedades tras actualizar |

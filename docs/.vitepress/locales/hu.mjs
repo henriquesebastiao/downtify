@@ -112,6 +112,7 @@ export default {
       'features/music-trash.md': 'Zenekuka',
       'features/doctor.md': 'Doktor',
       'features/backups.md': 'Biztonsági mentések',
+      'features/notifications.md': 'Értesítések',
       'features/replace-audio.md': 'Hang cseréje',
       'features/external-playlists.md': 'Meglévő lejátszási listák importálása',
       'features/m3u-export.md': 'M3U-exportálás',

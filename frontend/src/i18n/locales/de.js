@@ -2211,6 +2211,7 @@ export default {
     activity: 'Aktivität',
     personalHint:
       'Nur für dich: Diese Daten folgen deinem Konto in jeden Browser und ändern nichts für andere.',
+    notifications: 'Benachrichtigungen',
     server: 'Server',
     networkGroup: 'Netzwerk',
     networkHint:
@@ -2403,6 +2404,97 @@ export default {
       '{added} Überwachungen hinzugefügt, {present} schon vorhanden',
     resultSongs: '{missing} Songs fehlen, {queued} zum Download eingereiht',
     resultNoSongs: 'Es fehlten keine Songs',
+  },
+  notify: {
+    title: 'Benachrichtigungen',
+    hint: 'Nachrichten über lange Aufgaben und Downloads an Discord, ntfy, Gotify oder einen Webhook. Aus, bis du es einschaltest. Die Nachrichten sind auf Englisch.',
+    enabled: 'Benachrichtigungen senden',
+    enabledHint:
+      'Der Hauptschalter. Jeder Kanal unten hat zusätzlich seinen eigenen.',
+    progressEvery: 'Fortschritt',
+    progressEveryHint:
+      'Wie oft der Fortschritt einer laufenden Aufgabe aktualisiert wird. In Discord wird pro Aufgabe eine Nachricht bearbeitet; andere Kanäle bekommen bei jedem Viertel eine Zeile.',
+    channel_discord: 'Discord',
+    channel_discordHint:
+      'Ein Webhook postet in einen Kanal. Ein Bot postet auch und beantwortet Befehle wie /status.',
+    channel_ntfy: 'ntfy',
+    channel_ntfyHint:
+      'Push-Benachrichtigungen an die ntfy-App, über ntfy.sh oder deinen eigenen Server.',
+    channel_gotify: 'Gotify',
+    channel_gotifyHint: 'Push-Benachrichtigungen an deinen Gotify-Server.',
+    channel_webhook: 'Webhook',
+    channel_webhookHint:
+      'Ein JSON-POST an eine beliebige Adresse. Eine Apprise-API-/notify-Adresse funktioniert direkt.',
+    channelOn: 'Diesen Kanal nutzen',
+    discordMode: 'Wie Downtify sich verbindet',
+    discordModeHint:
+      'Webhook: nur senden. Bot: senden und Befehle beantworten; braucht einen Bot aus dem Discord Developer Portal, der auf deinen Server eingeladen ist.',
+    modeWebhook: 'Webhook (nur senden)',
+    modeBot: 'Bot (senden + Befehle)',
+    webhookUrl: 'Webhook-URL',
+    webhookUrlHint:
+      'Discord: Kanaleinstellungen → Integrationen → Webhooks → Webhook-URL kopieren. Bleibt auf dem Server und wird nie wieder angezeigt.',
+    botToken: 'Bot-Token',
+    botTokenHint:
+      'Discord Developer Portal → deine Anwendung → Bot → Token zurücksetzen. Bleibt auf dem Server und wird nie wieder angezeigt.',
+    channelId: 'Kanal-ID',
+    channelIdHint:
+      'Wo der Bot postet und antwortet. In Discord den Entwicklermodus einschalten, dann Rechtsklick auf den Kanal → Kanal-ID kopieren.',
+    commands: 'Befehle beantworten',
+    commandsHint:
+      'Die Befehle lesen nur: Niemand in Discord kann in Downtify etwas starten, stoppen oder ändern.',
+    allowedUsers: 'Erlaubte Nutzer',
+    allowedUsersHint:
+      'Discord-Nutzer-IDs, die die Befehle nutzen dürfen, durch Leerzeichen getrennt. Leer: alle im Kanal.',
+    botState: 'Bot',
+    bot_off: 'Aus',
+    bot_connecting: 'Verbinde…',
+    bot_connected: 'Verbunden',
+    bot_error: 'Gestoppt',
+    invite: 'Bot auf deinen Server einladen',
+    commandList: 'Befehle, die du im Kanal senden kannst:',
+    server: 'Server',
+    topic: 'Thema',
+    topicHint:
+      'Wer das Thema kennt, kann es auf einem öffentlichen Server lesen: wähle etwas schwer zu Erratendes.',
+    accessToken: 'Zugriffstoken',
+    optional: 'Optional.',
+    appToken: 'App-Token',
+    appTokenHint:
+      'Gotify → Apps → Anwendung erstellen. Bleibt auf dem Server und wird nie wieder angezeigt.',
+    genericHint:
+      'Bleibt auf dem Server und wird nie wieder angezeigt. Der Inhalt hat title, body, type, event und fields.',
+    what: 'Was gesendet wird',
+    whatHint:
+      'Wähle die Aufgaben, welche Momente davon und die anderen Ereignisse.',
+    group_tasks: 'Aufgaben',
+    group_phases: 'Wann',
+    group_events: 'Andere Ereignisse',
+    task_doctor: 'Doctor',
+    task_upgrade: 'Bibliotheks-Upgrade (Cover, Songtexte, Tags)',
+    task_ratings: 'Sternebewertungen',
+    task_wanted: 'Gesucht-Abgleich',
+    task_backup: 'Sicherungen',
+    phase_start: 'Gestartet',
+    phase_progress: 'Fortschritt',
+    phase_finish: 'Fertig',
+    phase_fail: 'Fehlgeschlagen',
+    event_download_failed: 'Download fehlgeschlagen',
+    event_download_done: 'Songs heruntergeladen',
+    event_new_releases: 'Neue Veröffentlichungen gefunden',
+    event_watch_done: 'Downloads von Beobachtungen',
+    test: 'Test',
+    testHint:
+      'Sendet jetzt eine Nachricht mit dem, was oben eingetragen ist, gespeichert oder nicht.',
+    sendTest: 'Test senden',
+    testSent: 'Testnachricht gesendet',
+    testFailed: 'Der Test ist fehlgeschlagen: {error}',
+    lastError: 'Die letzte Nachricht ist fehlgeschlagen: {error}',
+    secretSaved: 'Gespeichert (tippen zum Ersetzen)',
+    remove: 'Entfernen',
+    save: 'Benachrichtigungen speichern',
+    saved: 'Benachrichtigungen gespeichert',
+    unsaved: 'Ungespeicherte Änderungen',
   },
   port: {
     label: 'Port',

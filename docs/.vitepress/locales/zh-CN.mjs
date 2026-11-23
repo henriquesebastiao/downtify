@@ -111,6 +111,7 @@ export default {
       'features/music-trash.md': '音乐回收站',
       'features/doctor.md': '医生',
       'features/backups.md': '备份',
+      'features/notifications.md': '通知',
       'features/replace-audio.md': '替换音频',
       'features/external-playlists.md': '导入现有播放列表',
       'features/m3u-export.md': '导出 M3U',

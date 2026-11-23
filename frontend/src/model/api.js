@@ -486,6 +486,23 @@ function prepareLibraryArchive(files) {
   return API.post('/api/library/archive', { files })
 }
 
+// ── Notifications (Settings; downtify/notification_routes.py) ───────
+function getNotifications() {
+  return API.get('/api/notifications')
+}
+
+function saveNotifications(body) {
+  return API.put('/api/notifications', body)
+}
+
+function testNotification(channel, settings) {
+  return API.post(
+    `/api/notifications/test/${encodeURIComponent(channel)}`,
+    { channel: settings },
+    { timeout: 30000 }
+  )
+}
+
 // ── Backups (Settings > Server; downtify/backup_routes.py) ──────────
 function getBackups() {
   return API.get('/api/backups')
@@ -1344,6 +1361,9 @@ export default {
   renameServer,
   getServerPort,
   setServerPort,
+  getNotifications,
+  saveNotifications,
+  testNotification,
   getBackups,
   createBackup,
   setBackupSchedule,

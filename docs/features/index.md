@@ -90,6 +90,7 @@ Everything Downtify does, grouped by area as in the sidebar. Every feature has i
 | [Users & Sign-in](users.md) | Username and password sign-in (`admin` / `downtify` on a new server), admin and normal user accounts, per-user preferences, and an activity log of sign-ins and what everyone plays |
 | [Server Settings](server.md) | The port Downtify listens on, changed from Settings (admins), with a restart right away if you like |
 | [Backups](backups.md) | Save the settings, the watches and the list of songs, on a schedule or on demand, to bring them back after a lost disk or on a new server |
+| [Notifications](notifications.md) | Messages about long tasks (Doctor, Library upgrade, ratings, backups) and downloads on Discord, ntfy, Gotify or a webhook, with Discord commands such as `/status` |
 | [Library-only mode](library-only.md) | Keep every account and app to the music already in the library: no outside search, streams or downloads |
 | [Outbound Proxy](outbound-proxy.md) | Send Downtify's outbound traffic through an HTTP, HTTPS or SOCKS5 proxy |
 | [Update Notifications](updates.md) | Hourly check against GitHub Releases; a notice appears in the sidebar when a newer version is out, and a "What's new" summary after you update |

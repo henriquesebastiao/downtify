@@ -111,6 +111,7 @@ export default {
       'features/music-trash.md': '음악 휴지통',
       'features/doctor.md': '닥터',
       'features/backups.md': '백업',
+      'features/notifications.md': '알림',
       'features/replace-audio.md': '오디오 교체',
       'features/external-playlists.md': '기존 재생목록 가져오기',
       'features/m3u-export.md': 'M3U 내보내기',

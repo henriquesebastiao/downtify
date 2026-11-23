@@ -2199,6 +2199,7 @@ export default {
     activity: 'Activité',
     personalHint:
       'Rien qu’à vous : ils suivent votre compte dans chaque navigateur et ne changent rien pour les autres.',
+    notifications: 'Notifications',
     server: 'Serveur',
     networkGroup: 'Réseau',
     networkHint: 'Comment joindre ce serveur. Seuls les admins voient ceci.',
@@ -2389,6 +2390,97 @@ export default {
     resultSongs:
       '{missing} morceaux manquants, {queued} mis en file de téléchargement',
     resultNoSongs: 'Aucun morceau ne manquait',
+  },
+  notify: {
+    title: 'Notifications',
+    hint: 'Des messages sur les longues tâches et les téléchargements, envoyés à Discord, ntfy, Gotify ou un webhook. Désactivé tant que vous ne l’activez pas. Les messages sont en anglais.',
+    enabled: 'Envoyer des notifications',
+    enabledHint:
+      'L’interrupteur principal. Chaque canal ci-dessous a aussi le sien.',
+    progressEvery: 'Progression',
+    progressEveryHint:
+      'À quelle fréquence la progression d’une tâche en cours est mise à jour. Sur Discord, un message par tâche est modifié sur place ; les autres canaux reçoivent une ligne à chaque quart.',
+    channel_discord: 'Discord',
+    channel_discordHint:
+      'Un webhook publie dans un salon. Un bot publie aussi et répond à des commandes comme /status.',
+    channel_ntfy: 'ntfy',
+    channel_ntfyHint:
+      'Des notifications push vers l’app ntfy, sur ntfy.sh ou votre propre serveur.',
+    channel_gotify: 'Gotify',
+    channel_gotifyHint: 'Des notifications push vers votre serveur Gotify.',
+    channel_webhook: 'Webhook',
+    channel_webhookHint:
+      'Un POST JSON vers n’importe quelle adresse. Une adresse /notify d’Apprise API fonctionne telle quelle.',
+    channelOn: 'Utiliser ce canal',
+    discordMode: 'Comment Downtify se connecte',
+    discordModeHint:
+      'Webhook : envoi seulement. Bot : envoi et réponse aux commandes ; il faut un bot du Discord Developer Portal invité sur votre serveur.',
+    modeWebhook: 'Webhook (envoi seulement)',
+    modeBot: 'Bot (envoi + commandes)',
+    webhookUrl: 'URL du webhook',
+    webhookUrlHint:
+      'Discord : paramètres du salon → Intégrations → Webhooks → Copier l’URL du webhook. Gardée sur le serveur ; elle n’est plus jamais affichée.',
+    botToken: 'Jeton du bot',
+    botTokenHint:
+      'Discord Developer Portal → votre application → Bot → Reset token. Gardé sur le serveur ; il n’est plus jamais affiché.',
+    channelId: 'ID du salon',
+    channelIdHint:
+      'Où le bot publie et répond. Dans Discord, activez le mode développeur, puis clic droit sur le salon → Copier l’identifiant du salon.',
+    commands: 'Répondre aux commandes',
+    commandsHint:
+      'Les commandes ne font que lire : personne dans Discord ne peut lancer, arrêter ou modifier quoi que ce soit dans Downtify.',
+    allowedUsers: 'Utilisateurs autorisés',
+    allowedUsersHint:
+      'Les ID d’utilisateurs Discord qui peuvent utiliser les commandes, séparés par des espaces. Vide : tout le monde dans le salon.',
+    botState: 'Bot',
+    bot_off: 'Désactivé',
+    bot_connecting: 'Connexion…',
+    bot_connected: 'Connecté',
+    bot_error: 'Arrêté',
+    invite: 'Inviter le bot sur votre serveur',
+    commandList: 'Les commandes que vous pouvez envoyer dans le salon :',
+    server: 'Serveur',
+    topic: 'Sujet',
+    topicHint:
+      'Sur un serveur public, quiconque connaît le sujet peut le lire : choisissez quelque chose de difficile à deviner.',
+    accessToken: 'Jeton d’accès',
+    optional: 'Facultatif.',
+    appToken: 'Jeton d’application',
+    appTokenHint:
+      'Gotify → Apps → Create application. Gardé sur le serveur ; il n’est plus jamais affiché.',
+    genericHint:
+      'Gardée sur le serveur ; elle n’est plus jamais affichée. Le corps contient title, body, type, event et fields.',
+    what: 'Quoi envoyer',
+    whatHint:
+      'Choisissez les tâches, à quels moments, et les autres événements.',
+    group_tasks: 'Tâches',
+    group_phases: 'Quand',
+    group_events: 'Autres événements',
+    task_doctor: 'Docteur',
+    task_upgrade: 'Mise à niveau de la bibliothèque (pochettes, paroles, tags)',
+    task_ratings: 'Notes en étoiles',
+    task_wanted: 'Rattrapage des manquants',
+    task_backup: 'Sauvegardes',
+    phase_start: 'Démarrée',
+    phase_progress: 'Progression',
+    phase_finish: 'Terminée',
+    phase_fail: 'Échouée',
+    event_download_failed: 'Téléchargement échoué',
+    event_download_done: 'Morceaux téléchargés',
+    event_new_releases: 'Nouvelles sorties trouvées',
+    event_watch_done: 'Téléchargements des suivis',
+    test: 'Test',
+    testHint:
+      'Envoie un message maintenant avec ce qui est rempli ci-dessus, enregistré ou non.',
+    sendTest: 'Envoyer un test',
+    testSent: 'Message de test envoyé',
+    testFailed: 'Le test a échoué : {error}',
+    lastError: 'Le dernier message a échoué : {error}',
+    secretSaved: 'Enregistré (tapez pour remplacer)',
+    remove: 'Supprimer',
+    save: 'Enregistrer les notifications',
+    saved: 'Notifications enregistrées',
+    unsaved: 'Modifications non enregistrées',
   },
   port: {
     label: 'Port',

@@ -2428,6 +2428,7 @@ export default {
     activity: 'Активность',
     personalHint:
       'Только ваши: они следуют за вашим аккаунтом во все браузеры и ничего не меняют для остальных.',
+    notifications: 'Уведомления',
     server: 'Сервер',
     networkGroup: 'Сеть',
     networkHint:
@@ -2619,6 +2620,95 @@ export default {
     resultWatches: 'Отслеживаний добавлено: {added}, уже были: {present}',
     resultSongs: 'Не хватало песен: {missing}, поставлено в очередь: {queued}',
     resultNoSongs: 'Все песни уже на месте',
+  },
+  notify: {
+    title: 'Уведомления',
+    hint: 'Сообщения о долгих задачах и загрузках в Discord, ntfy, Gotify или на вебхук. Выключено, пока вы не включите. Сообщения на английском.',
+    enabled: 'Отправлять уведомления',
+    enabledHint: 'Главный переключатель. У каждого канала ниже есть ещё свой.',
+    progressEvery: 'Ход выполнения',
+    progressEveryHint:
+      'Как часто обновляется ход идущей задачи. В Discord для каждой задачи правится одно сообщение; другие каналы получают строку на каждой четверти.',
+    channel_discord: 'Discord',
+    channel_discordHint:
+      'Вебхук пишет в один канал. Бот тоже пишет и ещё отвечает на команды вроде /status.',
+    channel_ntfy: 'ntfy',
+    channel_ntfyHint:
+      'Push-уведомления в приложение ntfy, через ntfy.sh или ваш сервер.',
+    channel_gotify: 'Gotify',
+    channel_gotifyHint: 'Push-уведомления на ваш сервер Gotify.',
+    channel_webhook: 'Вебхук',
+    channel_webhookHint:
+      'JSON POST на любой адрес. Адрес /notify от Apprise API подходит как есть.',
+    channelOn: 'Использовать этот канал',
+    discordMode: 'Как подключается Downtify',
+    discordModeHint:
+      'Вебхук: только отправка. Бот: отправка и ответы на команды; нужен бот из Discord Developer Portal, приглашённый на ваш сервер.',
+    modeWebhook: 'Вебхук (только отправка)',
+    modeBot: 'Бот (отправка + команды)',
+    webhookUrl: 'URL вебхука',
+    webhookUrlHint:
+      'Discord: настройки канала → Интеграция → Вебхуки → Копировать URL вебхука. Хранится на сервере и больше не показывается.',
+    botToken: 'Токен бота',
+    botTokenHint:
+      'Discord Developer Portal → ваше приложение → Bot → Reset token. Хранится на сервере и больше не показывается.',
+    channelId: 'ID канала',
+    channelIdHint:
+      'Где бот пишет и отвечает. В Discord включите режим разработчика, затем правый клик по каналу → Копировать ID канала.',
+    commands: 'Отвечать на команды',
+    commandsHint:
+      'Команды только читают: никто в Discord не может ничего запустить, остановить или изменить в Downtify.',
+    allowedUsers: 'Разрешённые пользователи',
+    allowedUsersHint:
+      'ID пользователей Discord, которым можно пользоваться командами, через пробел. Пусто: всем в канале.',
+    botState: 'Бот',
+    bot_off: 'Выключен',
+    bot_connecting: 'Подключение…',
+    bot_connected: 'Подключён',
+    bot_error: 'Остановлен',
+    invite: 'Пригласить бота на сервер',
+    commandList: 'Команды, которые можно отправить в канале:',
+    server: 'Сервер',
+    topic: 'Тема',
+    topicHint:
+      'На публичном сервере тему может читать любой, кто её знает: выберите что-то трудно угадываемое.',
+    accessToken: 'Токен доступа',
+    optional: 'Необязательно.',
+    appToken: 'Токен приложения',
+    appTokenHint:
+      'Gotify → Apps → Create application. Хранится на сервере и больше не показывается.',
+    genericHint:
+      'Хранится на сервере и больше не показывается. В теле есть title, body, type, event и fields.',
+    what: 'Что отправлять',
+    whatHint: 'Выберите задачи, моменты и другие события.',
+    group_tasks: 'Задачи',
+    group_phases: 'Когда',
+    group_events: 'Другие события',
+    task_doctor: 'Доктор',
+    task_upgrade: 'Улучшение библиотеки (обложки, тексты, теги)',
+    task_ratings: 'Оценки звёздами',
+    task_wanted: 'Догрузка недостающего',
+    task_backup: 'Резервные копии',
+    phase_start: 'Начата',
+    phase_progress: 'Ход выполнения',
+    phase_finish: 'Завершена',
+    phase_fail: 'Ошибка',
+    event_download_failed: 'Загрузка не удалась',
+    event_download_done: 'Песни загружены',
+    event_new_releases: 'Найдены новые релизы',
+    event_watch_done: 'Загрузки отслеживаний',
+    test: 'Проверка',
+    testHint:
+      'Сразу отправляет одно сообщение с тем, что заполнено выше, сохранено оно или нет.',
+    sendTest: 'Отправить проверку',
+    testSent: 'Проверочное сообщение отправлено',
+    testFailed: 'Проверка не удалась: {error}',
+    lastError: 'Последнее сообщение не отправилось: {error}',
+    secretSaved: 'Сохранено (введите, чтобы заменить)',
+    remove: 'Удалить',
+    save: 'Сохранить уведомления',
+    saved: 'Уведомления сохранены',
+    unsaved: 'Есть несохранённые изменения',
   },
   port: {
     label: 'Порт',

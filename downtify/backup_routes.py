@@ -26,7 +26,7 @@ from fastapi.responses import FileResponse
 from loguru import logger
 from pydantic import BaseModel
 
-from . import __version__, api, backup
+from . import __version__, api, backup, notifications
 from .monitor import ALL_RELEASE_TYPES, KIND_PLAYLIST
 
 router = APIRouter(prefix='/api/backups')
@@ -104,8 +104,19 @@ async def back_up(trigger: str) -> backup.BackupInfo:
                 error=str(exc) or type(exc).__name__,
                 trigger=trigger,
             )
+            notifications.task_finished(
+                'backup', 'Backup', failed=True, error=_last_error['error']
+            )
             raise
         _last_error.clear()
+        notifications.task_finished(
+            'backup',
+            'Backup',
+            summary=[
+                ('Watches', f'{info.watches:,}'),
+                ('Songs', f'{info.songs:,}'),
+            ],
+        )
         return info
 
 
