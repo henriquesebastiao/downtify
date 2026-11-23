@@ -351,6 +351,9 @@ def _past_deadline(deadline: float) -> bool:
 
 
 _AUDIO_EXTENSIONS = frozenset({'mp3', 'flac', 'm4a', 'ogg', 'opus'})
+#: A file the deep scan takes for a transfer may be at most this much
+#: bigger than slskd said the transfer is (it is the same file).
+_DISK_SCAN_MAX_SIZE_SHARE = 1.05
 _PATH_PENALTY_KEYWORDS = (
     'unreleased',
     'bootleg',
@@ -1736,7 +1739,20 @@ def _find_on_disk_for_song(
     title = _normalize_token(str(song.get('name') or ''))
     if len(title) < 3:
         return None
+    # The scan looks for the requested transfer saved under another name,
+    # so only a file of its format and size will do: another file with
+    # the title in its name - a FLAC of the same song left in slskd's
+    # folder by an older download or another app, a long mix - would
+    # otherwise be imported in its place, whatever formats are allowed.
+    requested_ext = _file_extension(soulseek_filename)
     exts = extensions or _AUDIO_EXTENSIONS
+    if requested_ext:
+        exts = frozenset({requested_ext}) & frozenset(
+            e.lower().lstrip('.') for e in exts
+        )
+    max_size = (
+        int(expected_size * _DISK_SCAN_MAX_SIZE_SHARE) if expected_size else 0
+    )
     best: Optional[Path] = None
     best_mtime = 0.0
     for root in roots:
@@ -1758,7 +1774,7 @@ def _find_on_disk_for_song(
                     mtime = candidate.stat().st_mtime
                 except OSError:
                     continue
-                if size < min_size:
+                if size < min_size or (max_size and size > max_size):
                     continue
                 if mtime >= best_mtime:
                     best = candidate
