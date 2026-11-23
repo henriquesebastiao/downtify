@@ -548,7 +548,7 @@ Whoever asks for a download owns the tracks: a second user asking for the same s
 
 ### `POST /api/download/url`
 
-Download a single track. Blocks until complete.
+Download a single track. Blocks until complete. Meanwhile its job reads `queued` in `GET /api/queue` until a download slot is free, then `downloading`. A job that fails is kept across restarts and comes back as `error` with its message (it is never retried on its own); retrying, removing it or clearing the queue forgets it.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|

@@ -402,6 +402,25 @@ describe('queue index lifecycle', () => {
     expect(item.state).toBe('done')
   })
 
+  it('waits a retried failed track in the queue until the server starts it', async () => {
+    let finish
+    fixture.api.download.mockReturnValue(
+      new Promise((resolve) => {
+        finish = resolve
+      })
+    )
+    const song = { song_id: 'waiting', url: 'https://youtu.be/waiting' }
+    const item = tracker.appendSong(song)
+    item.setError()
+    const retrying = manager.retry(song)
+    expect(item.state).toBe('queued')
+    send({ song, status: 'downloading', progress: 5, message: '' })
+    expect(item.state).toBe('active')
+    finish({ data: 'waiting.mp3' })
+    await retrying
+    expect(item.state).toBe('done')
+  })
+
   it('retries with a SoundCloud track instead of an earlier video', async () => {
     const item = tracker.appendSong({ song_id: 'a', youtube_id: 'old-video' })
     item.setError()

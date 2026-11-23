@@ -389,7 +389,10 @@ export function useDownloadManager() {
 
   async function download(song) {
     const item = findItem(song) || appendSong(song)
-    item.setDownloading()
+    // Waiting until the server gives it a download slot: its WebSocket
+    // `downloading` frame moves it to In progress (issue #678).
+    if (!item.isDownloading()) item.setStatus(STATUS.QUEUED)
+    ensureQueuePoll()
     try {
       const res = await API.download(song)
       item.setFile(res.data)

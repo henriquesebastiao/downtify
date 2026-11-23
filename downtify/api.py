@@ -4660,6 +4660,42 @@ def _drop_pending(song_ids: Optional[Collection[str]] = None) -> None:
         logger.exception('Could not update the saved download queue')
 
 
+def _drop_failed(song_ids: Optional[Collection[str]] = None) -> None:
+    """Forget saved failed jobs (every one when *song_ids* is ``None``)."""
+
+    store = state.pending_downloads
+    if store is None:
+        return
+    try:
+        if song_ids is None:
+            store.clear_failed()
+        else:
+            store.forget_failed(song_ids)
+    except Exception:
+        logger.exception('Could not update the saved failed downloads')
+
+
+#: Marks a job whose failure is saved (:meth:`PendingDownloads.save_failed`)
+#: so retrying it forgets the saved copy - and only then.
+_SAVED_FAILED = 'saved_failed'
+
+
+async def _remember_failed(
+    job: dict[str, Any], row: PendingDownload, message: str
+) -> None:
+    """Keep a failed job so the Failed tab survives a restart (#678)."""
+
+    store = state.pending_downloads
+    # A job taken off the queue meanwhile isn't brought back.
+    if store is None or state.download_jobs.get(row.song_id) is not job:
+        return
+    try:
+        await asyncio.to_thread(store.save_failed, row, message)
+        job[_SAVED_FAILED] = True
+    except Exception:
+        logger.exception('Could not save the failed download')
+
+
 async def _remember_pending(rows: list[PendingDownload]) -> None:
     """Save unfinished jobs so a restart queues them again (best effort)."""
 
@@ -4694,7 +4730,7 @@ async def _queue_turn(
     """Wait while the queue is paused; whether the job should still run.
 
     The paused job keeps its concurrency slot and shows as waiting again
-    (a single download registers as ``downloading``). A job taken off
+    (every job waits as ``queued`` until it has a slot). A job taken off
     the queue meanwhile (``DELETE /api/queue...``) is dropped here
     instead of started.
     """
@@ -4776,6 +4812,10 @@ async def _run_download(
             users.add(user_id)
         else:
             job['user_ids'] = _job_users(job) | {user_id}
+
+    if job.pop(_SAVED_FAILED, False):
+        # Retried: it is no longer a failure to bring back after a restart.
+        await asyncio.to_thread(_drop_failed, [song_id])
 
     if not pending_saved:
         await _remember_pending([
@@ -5016,6 +5056,20 @@ async def _run_download_locked(
             message = f'Error: {exc}'
         job['status'] = 'error'
         job['message'] = message
+        await _remember_failed(
+            job,
+            _pending_download(
+                song,
+                song_id,
+                user_id=user_id,
+                subdir=subdir,
+                delay_seconds=delay_seconds,
+                playlist_name=playlist_name,
+                spotify_playlist_id=spotify_playlist_id,
+                track_order=track_order,
+            ),
+            message,
+        )
         notifications.emit('download_failed', song_label(song), message)
         await state.connections.broadcast_job(
             _job_users(job),
@@ -5144,7 +5198,9 @@ async def download_endpoint(
         pl_ctx.get('playlist_name'),
     )
     user_id = request_user_id(request)
-    song_id = _register_job(song, status='downloading', user_id=user_id)
+    # Waiting until it has a download slot, like a batch's rows: a retry
+    # lands in Waiting, not In progress (issue #678).
+    song_id = _register_job(song, status='queued', user_id=user_id)
     await log_activity(
         request, 'download', song_label(song) or url[:200], {'url': url[:500]}
     )
@@ -9326,6 +9382,7 @@ def get_queue(request: Request) -> list[dict[str, Any]]:
         if not _queue_job_visible(job, request):
             continue
         row = dict(job)
+        row.pop(_SAVED_FAILED, None)
         if job.get('status') in {'queued', 'downloading'}:
             position += 1
             row['position'] = position
@@ -9344,6 +9401,7 @@ def clear_queue(request: Request) -> dict:
     if request_is_admin(request):
         state.download_jobs.clear()
         _drop_pending()
+        _drop_failed()
         return {'cleared': True}
     removed = [
         key
@@ -9353,6 +9411,7 @@ def clear_queue(request: Request) -> dict:
     for song_id in removed:
         del state.download_jobs[song_id]
     _drop_pending(removed)
+    _drop_failed(removed)
     return {'cleared': True}
 
 
@@ -9375,6 +9434,7 @@ def remove_queue_item(request: Request, song_id: str = Query(...)) -> dict:
     if job is not None and _queue_job_visible(job, request):
         del state.download_jobs[song_id]
         _drop_pending([song_id])
+        _drop_failed([song_id])
         return {'removed': True}
     return {'removed': False}
 
@@ -9456,6 +9516,7 @@ async def restore_download_queue() -> int:
     if await asyncio.to_thread(store.paused):
         queue_pause.pause()
     rows = await asyncio.to_thread(store.rows)
+    await _restore_failed_jobs(store, {row.song_id for row in rows})
     if not rows or state.downloader is None:
         return 0
     if library_only.enabled(state.settings):
@@ -9477,6 +9538,39 @@ async def restore_download_queue() -> int:
     )
     spawn_task(_run_restored_queue(rows), name='queue-restore')
     return len(rows)
+
+
+async def _restore_failed_jobs(
+    store: PendingDownloads, skip: Collection[str]
+) -> int:
+    """Put the saved failed jobs back on the queue as failed - with
+    their message, for the same accounts - so **Retry failed** still
+    works after a restart (#678). They never run on their own."""
+
+    try:
+        failed = await asyncio.to_thread(store.failed_rows)
+    except Exception:
+        logger.exception('Could not read the saved failed downloads')
+        return 0
+    restored = 0
+    for row in failed:
+        if row.song_id in skip or row.song_id in state.download_jobs:
+            continue
+        song = row.song
+        if not (song.get('song_id') or song.get('url')):
+            song['song_id'] = row.song_id
+        song_id = ''
+        for uid in row.user_ids or [0]:
+            song_id = _register_job(song, status='error', user_id=uid)
+        job = state.download_jobs.get(song_id)
+        if job is None:
+            continue
+        job['message'] = row.message
+        job[_SAVED_FAILED] = True
+        restored += 1
+    if restored:
+        logger.info('Download queue: {} failed job(s) restored', restored)
+    return restored
 
 
 async def _run_restored_queue(rows: list[PendingDownload]) -> None:

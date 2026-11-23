@@ -351,6 +351,151 @@ def test_library_only_mode_keeps_saved_jobs_for_later(queue, monkeypatch):
     assert downloader.started == []
 
 
+# ── failed jobs across restarts (issue #678) ────────────────────────────
+
+
+class _FailingDownloader(_Downloader):
+    def download(self, song, progress, subdir=None):
+        self.started.append(song['song_id'])
+        raise RuntimeError('no audio here')
+
+
+def test_failed_rows_round_trip_and_merge_waiters(tmp_path: Path):
+    store = PendingDownloads(tmp_path / 'library.db')
+    store.save_failed(
+        PendingDownload('a', _song('a'), {'subdir': 'x'}, [1]), 'boom'
+    )
+    store.save_failed(PendingDownload('b', _song('b')), 'nope')
+    store.save_failed(PendingDownload('a', _song('a'), {}, [2]), 'again')
+
+    rows = store.failed_rows()
+
+    # A job failing again moves to the end, with both waiters.
+    assert [row.song_id for row in rows] == ['b', 'a']
+    assert rows[1].message == 'again'
+    assert rows[1].user_ids == [1, 2]
+    assert rows[1].song == _song('a')
+    # Failures are kept apart from the jobs still to run.
+    assert store.rows() == []
+
+    store.forget_failed(['b'])
+    assert [row.song_id for row in store.failed_rows()] == ['a']
+    store.clear_failed()
+    assert store.failed_rows() == []
+
+
+def test_failed_rows_are_capped(tmp_path: Path, monkeypatch):
+    monkeypatch.setattr('downtify.download_queue.FAILED_LIMIT', 2)
+    store = PendingDownloads(tmp_path / 'library.db')
+    for sid in ('a', 'b', 'c'):
+        store.save_failed(PendingDownload(sid, _song(sid)), 'x')
+    assert [row.song_id for row in store.failed_rows()] == ['b', 'c']
+
+
+def test_a_failed_download_is_saved_with_why(queue, monkeypatch):
+    _downloader, _connections, store = queue
+    monkeypatch.setattr(api.state, 'downloader', _FailingDownloader())
+    song_id = api._register_job(_song('s1'), status='queued', user_id=4)
+
+    with pytest.raises(RuntimeError):
+        asyncio.run(
+            api._run_download(
+                _song('s1'), song_id, user_id=4, playlist_name='Mix'
+            )
+        )
+
+    assert store.rows() == []
+    [failed] = store.failed_rows()
+    assert failed.song_id == 's1'
+    assert failed.user_ids == [4]
+    assert failed.options['playlist_name'] == 'Mix'
+    assert 'no audio here' in failed.message
+
+
+def test_restart_brings_failed_jobs_back_without_running_them(queue):
+    downloader, _connections, store = queue
+    store.save_failed(
+        PendingDownload('f1', _song('f1'), {}, [3, 5]), 'Error: x'
+    )
+
+    assert asyncio.run(api.restore_download_queue()) == 0
+    job = api.state.download_jobs['f1']
+    assert job['status'] == 'error'
+    assert job['message'] == 'Error: x'
+    assert job['user_ids'] == {3, 5}
+    assert downloader.started == []
+    # The internal mark never reaches the queue's readers.
+    [row] = api.get_queue(_admin_request())
+    assert 'saved_failed' not in row
+
+
+def test_retrying_a_restored_failure_forgets_it(queue):
+    downloader, _connections, store = queue
+    store.save_failed(PendingDownload('f1', _song('f1')), 'Error: x')
+    asyncio.run(api.restore_download_queue())
+    downloader.release.set()
+
+    song_id = api._register_job(_song('f1'), status='queued')
+    asyncio.run(api._run_download(_song('f1'), song_id))
+
+    assert downloader.started == ['f1']
+    assert store.failed_rows() == []
+
+
+def test_clearing_or_removing_forgets_saved_failures(queue):
+    _downloader, _connections, store = queue
+    for sid in ('a', 'b'):
+        store.save_failed(PendingDownload(sid, _song(sid)), 'x')
+    asyncio.run(api.restore_download_queue())
+
+    api.remove_queue_item(_admin_request(), song_id='a')
+    assert [row.song_id for row in store.failed_rows()] == ['b']
+    api.clear_queue(_admin_request())
+    assert store.failed_rows() == []
+
+
+def test_library_only_mode_still_shows_saved_failures(queue, monkeypatch):
+    _downloader, _connections, store = queue
+    store.save_failed(PendingDownload('f1', _song('f1')), 'x')
+    monkeypatch.setitem(api.state.settings, 'library_only', True)
+
+    asyncio.run(api.restore_download_queue())
+
+    assert api.state.download_jobs['f1']['status'] == 'error'
+
+
+def test_a_single_download_waits_as_queued_until_it_has_a_slot(
+    queue, monkeypatch
+):
+    """``POST /api/download/url`` (a retry) waits in Waiting, not In
+    progress, while every slot is taken (issue #678)."""
+
+    downloader, _connections, _store = queue
+
+    async def scenario() -> None:
+        monkeypatch.setattr(
+            api.state, 'download_semaphore', asyncio.Semaphore(1)
+        )
+        first = api._register_job(_song('busy'), status='queued')
+        busy = asyncio.create_task(api._run_download(_song('busy'), first))
+        await _until(lambda: downloader.started == ['busy'])
+        request = _admin_request()
+        retry = asyncio.create_task(
+            api.download_endpoint(request, url='x', client_hints=None)
+        )
+        await _until(lambda: 'next' in api.state.download_jobs)
+        assert api.state.download_jobs['next']['status'] == 'queued'
+        downloader.release.set()
+        await busy
+        await retry
+        assert api.state.download_jobs['next']['status'] == 'done'
+
+    monkeypatch.setattr(
+        api, '_song_from_download_request', lambda url, hints: _song('next')
+    )
+    asyncio.run(scenario())
+
+
 # ── Playlist Monitor ────────────────────────────────────────────────────
 
 

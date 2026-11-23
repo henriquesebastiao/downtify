@@ -9,7 +9,11 @@ Monitor sweeps wait at the same switch before every track.
 
 :class:`PendingDownloads` is the database copy of the jobs that haven't
 finished yet, plus the switch itself, so a restart (or an update) picks
-the queue back up where it stopped - still paused when it was.
+the queue back up where it stopped - still paused when it was. It also
+keeps the jobs that failed (with why), so the queue's Failed tab and its
+**Retry failed** survive a restart too (issue #678): they come back as
+failed, never run on their own, and leave the copy once retried,
+removed or cleared.
 """
 
 from __future__ import annotations
@@ -19,6 +23,7 @@ import contextlib
 import json
 from collections.abc import AsyncIterator, Awaitable, Callable, Collection
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
 
@@ -33,6 +38,8 @@ STATE_PAUSED = 'paused'
 
 #: Keeps every ``IN (...)`` under SQLite's bound-parameter limit.
 _CHUNK = 500
+#: Failed jobs kept across restarts; the oldest go first past this.
+FAILED_LIMIT = 2000
 
 
 def _release(waiter: asyncio.Future[None]) -> None:
@@ -129,6 +136,13 @@ class PendingDownload:
     user_ids: list[int] = field(default_factory=list)
 
 
+@dataclass
+class FailedDownload(PendingDownload):
+    """One saved failed job, and why it failed."""
+
+    message: str = ''
+
+
 class PendingDownloads:
     """Database copy of the unfinished download jobs, in queue order."""
 
@@ -155,6 +169,17 @@ class PendingDownloads:
                     song TEXT NOT NULL,
                     options TEXT NOT NULL DEFAULT '{}',
                     user_ids TEXT NOT NULL DEFAULT '[]'
+                )
+            """)
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS failed_downloads (
+                    seq INTEGER PRIMARY KEY AUTOINCREMENT,
+                    song_id TEXT NOT NULL UNIQUE,
+                    song TEXT NOT NULL,
+                    options TEXT NOT NULL DEFAULT '{}',
+                    user_ids TEXT NOT NULL DEFAULT '[]',
+                    message TEXT NOT NULL DEFAULT '',
+                    failed_at TEXT NOT NULL DEFAULT ''
                 )
             """)
             conn.execute("""
@@ -250,6 +275,96 @@ class PendingDownloads:
                     if isinstance(options_dict, dict)
                     else {},
                     user_ids=_user_ids(user_ids),
+                )
+            )
+        return rows
+
+    # Failed jobs (issue #678)
+
+    def save_failed(self, row: PendingDownload, message: str) -> None:
+        """Keep *row* as failed with *message*, at the end of the list
+        (a job failing again moves there); the accounts on it merge."""
+
+        users = sorted({int(uid) for uid in row.user_ids if uid})
+        with self.db.transaction(lock=True) as conn:
+            saved = conn.execute(
+                'SELECT user_ids FROM failed_downloads '
+                'WHERE song_id = ?' + _row_lock(conn),
+                (row.song_id,),
+            ).fetchone()
+            if saved is not None:
+                users = sorted(set(_user_ids(saved[0])) | set(users))
+                conn.execute(
+                    'DELETE FROM failed_downloads WHERE song_id = ?',
+                    (row.song_id,),
+                )
+            conn.execute(
+                'INSERT INTO failed_downloads '
+                '(song_id, song, options, user_ids, message, failed_at) '
+                'VALUES (?, ?, ?, ?, ?, ?)',
+                (
+                    row.song_id,
+                    json.dumps(row.song, default=str),
+                    json.dumps(row.options, default=str),
+                    json.dumps(users),
+                    str(message or '')[:2000],
+                    datetime.now(timezone.utc).isoformat(),
+                ),
+            )
+            conn.execute(
+                'DELETE FROM failed_downloads WHERE seq NOT IN ('
+                'SELECT seq FROM failed_downloads ORDER BY seq DESC '
+                'LIMIT ?)',
+                (FAILED_LIMIT,),
+            )
+
+    def forget_failed(self, song_ids: Collection[str]) -> None:
+        ids = list(dict.fromkeys(str(sid) for sid in song_ids if sid))
+        if not ids:
+            return
+        with self._connect() as conn:
+            for start in range(0, len(ids), _CHUNK):
+                chunk = ids[start : start + _CHUNK]
+                marks = ','.join('?' * len(chunk))
+                conn.execute(
+                    f'DELETE FROM failed_downloads WHERE song_id IN ({marks})',
+                    chunk,
+                )
+
+    def clear_failed(self) -> None:
+        with self._connect() as conn:
+            conn.execute('DELETE FROM failed_downloads')
+
+    def failed_rows(self) -> list[FailedDownload]:
+        """Every saved failed job, oldest failure first."""
+
+        with self._connect() as conn:
+            found = conn.execute(
+                'SELECT song_id, song, options, user_ids, message '
+                'FROM failed_downloads ORDER BY seq'
+            ).fetchall()
+        rows: list[FailedDownload] = []
+        for raw in found:
+            song_id, song, options, user_ids, message = tuple(raw)
+            try:
+                song_dict = json.loads(song)
+                options_dict = json.loads(options or '{}')
+            except ValueError:
+                logger.warning(
+                    'Skipping unreadable failed download {}', song_id
+                )
+                continue
+            if not isinstance(song_dict, dict):
+                continue
+            rows.append(
+                FailedDownload(
+                    song_id=str(song_id),
+                    song=song_dict,
+                    options=options_dict
+                    if isinstance(options_dict, dict)
+                    else {},
+                    user_ids=_user_ids(user_ids),
+                    message=str(message or ''),
                 )
             )
         return rows
