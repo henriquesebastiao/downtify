@@ -1737,6 +1737,10 @@ export default {
     bitrateHint: '有损格式的比特率。',
     bitrateLossless: 'FLAC 为无损格式，不使用此选项。',
     bitrateOriginal: '保留原始音频格式时不使用。',
+    avoidFormats: '避免的格式',
+    avoidFormatsHint:
+      '下载绝不会把这些格式的文件放进资料库。slskd 会跳过它们另找文件；若某个来源仍给出这种文件，就当作什么也没找到，改试下一个来源。下载格式本身不能列入其中。',
+    avoidFormatsLocked: '下载格式不能被避免',
     filesGroup: '文件',
     template: '文件名',
     templateHint: '使用 / 创建文件夹。',
@@ -1847,7 +1851,8 @@ export default {
     ratingsNext: '下次运行 {when}',
     ratingsNextSoon: '下次运行将在一小时内',
     ratingsNever: '尚未运行',
-    ratingsFailedDeezer: '无法连接 Deezer。已打的星级会保留。',
+    ratingsFailedDeezer:
+      'Deezer 几分钟内都没有响应。已打的星级会保留，下次运行会从这次停下的地方继续。',
     ratingsFailedNavidrome: 'Navidrome 错误：{message}',
     ratingsFailed: '评分运行失败：{message}',
     ratingsNotConfigured: '请先保存 Navidrome 登录信息。',
@@ -2046,6 +2051,21 @@ export default {
     noticeKeptPassword: '你之前设置的密码',
     noticeChange: '然后在“设置 → 常规”中更改密码。',
     noticeOk: '知道了',
+  },
+  aurral: {
+    title: 'Aurral',
+    hint: '让 Aurral 通过 Downtify 下载音乐。可选：在你开启之前什么都不会改变。',
+    enable: '允许 Aurral 通过 Downtify 下载',
+    enableHint:
+      '开启后，Aurral 的 Downtify 插件可以在这里搜索并获取歌曲和专辑。它的下载保存在单独的文件夹中，不会进入你的音乐库，Aurral 取走后即删除。',
+    key: 'Aurral 密钥',
+    keyHint:
+      '连同本服务器的地址一起粘贴到 Aurral 中 Downtify 插件的设置里。它会列在“已配对的应用”中，你可以在那里撤销。',
+    makeKey: '生成密钥',
+    plugin: 'Aurral 插件',
+    keyOnce: '请立即复制：之后不会再显示。',
+    copy: '复制',
+    copied: '已复制',
   },
   apps: {
     serverGroup: '此服务器',
@@ -2553,6 +2573,41 @@ export default {
   },
   source: { from: '下载自 {source}' },
   doctor: {
+    formatsTitle: '要转换的格式',
+    formatsHint:
+      '资料库中你不想要的格式的文件，例如在设定格式规则之前下载的 FLAC。每个文件会转成下载质量的 MP3，并像合并重复项一样接管它的播放列表、喜欢和监控。',
+    formatsPick: '格式',
+    formatsPickHint:
+      '选择要查找的格式。无损格式（FLAC、WAV、AIFF、APE、WavPack）转成 MP3 320 听起来一样；有损格式（M4A、OGG、Opus）再次转换会略有损失。',
+    formatsFind: '查找文件',
+    formatsNone: '资料库中没有 {formats} 文件。',
+    formatsFound: '{formats} 文件：{count} 个，共 {size}。',
+    formatsEstimate: '转为 MP3 {bitrate}k：约 {size}，约节省 {saved}。',
+    formatsDuplicatesFirst: '请先合并重复的歌曲，这样每首歌只转换一次。',
+    formatsListLabel: '要转换的文件',
+    formatsAbout: '约 {size}',
+    formatsConvert: '转换为 MP3 {bitrate}k（{count}）',
+    formatsConvertTitle: '转换这些文件？',
+    formatsConvertBody:
+      '要转换的文件：{count} 个。每个文件会变成 {bitrate}k 的 MP3，保留相同的标签、封面和歌词，接管它的播放列表、喜欢和监控，原文件则{where}。这可能需要一段时间；可以在文件之间停止。',
+    formatsConvertConfirm: '转换',
+    formatsConverted: '已转换：{count}。节省：{saved}。',
+    formatsStopped: '已停止。保持原样：{count}。',
+    formatsInTrash: '原文件在音乐回收站中保留 30 天。',
+    formatsDeleted: '原文件已删除。',
+    formatsFailed: '无法转换，保持原样：{count}',
+    convertError: {
+      missing: '文件已不存在',
+      convert_failed: 'ffmpeg 无法读取',
+      convert_length: '生成的 MP3 时长不同',
+      convert_exists: '已有同名的 MP3',
+      convert_no_ffmpeg: '未安装 ffmpeg',
+      convert_trash: '音乐回收站不涵盖它的文件夹',
+      convert_remove: '无法移除原文件，两者都保留',
+      dedupe_missing: '文件已不存在',
+      dedupe_invalid: '不是资料库中的文件',
+      dedupe_replacement_pending: '“替换音频”仍在处理它',
+    },
     title: '医生',
     intro:
       'Downtify 的新版本会从此修复问题，但旧版本写下的文件和播放列表仍保持原样。医生会找出这些遗留状态，并修复能够证明安全的部分。',
@@ -2563,6 +2618,8 @@ export default {
     runCheckup: '立即检查',
     stop: '停止',
     step: {
+      convert: '正在转换文件…',
+      convert_publish: '正在更新资料库…',
       starting: '正在开始…',
       library: '正在读取音乐库…',
       playlists: '正在读取播放列表…',
@@ -2753,6 +2810,7 @@ export default {
         '这里的大小按 1 GB = 1024³ 字节计算；有些文件浏览器按 1000³ 计算，因此同一文件夹在那里可能显示得更大。',
     },
     badge: {
+      toConvert: '{count} · {size}',
       notChecked: '未检查',
       allGood: '一切正常',
       toDelete: '{count} 个待删除',
@@ -2848,6 +2906,8 @@ export default {
     relinkedLabel: '同一首歌，多个 ID',
     relinkedCounts: '歌曲：{songs} · 多余文件：{extra}',
     error: {
+      formats_none: '请至少选择一种格式。',
+      convert_no_ffmpeg: '服务器上没有安装 ffmpeg，因此无法转换。',
       ai_not_running: 'AI 助手未开启，请先启动。',
       doctor_busy: '医生正在工作。',
       rescan_first: '其他地方的修复改变了这一部分，请先重新检查。',

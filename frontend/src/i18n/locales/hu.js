@@ -1878,6 +1878,10 @@ export default {
     bitrateHint: 'Bitráta veszteséges formátumokhoz.',
     bitrateLossless: 'FLAC-nál nem használt, mert veszteségmentes.',
     bitrateOriginal: 'Az eredeti hangformátum megtartásakor nem használatos.',
+    avoidFormats: 'Kerülendő formátumok',
+    avoidFormatsHint:
+      'A letöltések soha nem hoznak a könyvtárba ilyen formátumú fájlt. Az slskd kihagyja őket és másik fájlt keres; ha egy forrás mégis ilyet ad, az úgy számít, mintha semmit sem talált volna, és a következő forrás jön. A letöltési formátum nem lehet köztük.',
+    avoidFormatsLocked: 'A letöltési formátum nem kerülhető el',
     filesGroup: 'Fájlok',
     template: 'Fájlnév',
     templateHint: 'Mappák létrehozásához használj / jelet.',
@@ -1993,7 +1997,7 @@ export default {
     ratingsNextSoon: 'Következő futtatás egy órán belül',
     ratingsNever: 'Még nem futott',
     ratingsFailedDeezer:
-      'A Deezer nem érhető el. A már megadott csillagok megmaradnak.',
+      'A Deezer több percig nem válaszolt. A már megadott csillagok megmaradnak, és a következő futás ott folytatja, ahol ez abbamaradt.',
     ratingsFailedNavidrome: 'Navidrome-hiba: {message}',
     ratingsFailed: 'Az értékelés sikertelen: {message}',
     ratingsNotConfigured: 'Előbb mentsd el a Navidrome-bejelentkezést.',
@@ -2204,6 +2208,21 @@ export default {
     noticeChange:
       'Utána változtasd meg a jelszót a Beállítások → Általános alatt.',
     noticeOk: 'Értem',
+  },
+  aurral: {
+    title: 'Aurral',
+    hint: 'Engedd, hogy az Aurral a Downtifyon keresztül töltsön le zenét. Nem kötelező: semmi sem változik, amíg be nem kapcsolod.',
+    enable: 'Az Aurral tölthessen le a Downtifyon keresztül',
+    enableHint:
+      'Az Aurral Downtify bővítménye ekkor itt kereshet, és dalokat meg albumokat kérhet. A letöltései külön mappába kerülnek, nem a könyvtáradba, és törlődnek, amint az Aurral megkapta őket.',
+    key: 'Kulcs az Aurralhoz',
+    keyHint:
+      'Másold be az Aurralban a Downtify bővítmény beállításaiba, a szerver címével együtt. A Párosított alkalmazások között látszik, ahol vissza is vonhatod.',
+    makeKey: 'Kulcs készítése',
+    plugin: 'Az Aurral bővítmény',
+    keyOnce: 'Másold ki most: többé nem jelenik meg.',
+    copy: 'Másolás',
+    copied: 'Kimásolva',
   },
   apps: {
     serverGroup: 'Ez a szerver',
@@ -2776,6 +2795,44 @@ export default {
     from: 'Letöltve innen: {source}',
   },
   doctor: {
+    formatsTitle: 'Átalakítandó formátumok',
+    formatsHint:
+      'Nem kívánt formátumú fájlok a könyvtárban, például a formátumszabályok előtti FLAC-ok. Mindegyikből MP3 lesz a letöltési minőségben, amely átveszi a lejátszási listáit, kedveléseit és figyeléseit, ahogy a duplikátumok összevonása.',
+    formatsPick: 'Formátumok',
+    formatsPickHint:
+      'Válaszd ki a keresendő formátumokat. Veszteségmentes formátum (FLAC, WAV, AIFF, APE, WavPack) MP3 320-ként ugyanúgy szól; veszteséges (M4A, OGG, Opus) újra átalakítva kicsit veszít.',
+    formatsFind: 'Fájlok keresése',
+    formatsNone: 'Nincs {formats} fájl a könyvtárban.',
+    formatsFound: 'Fájlok {formats} formátumban: {count}, összesen {size}.',
+    formatsEstimate:
+      'MP3 {bitrate}k-ként: kb. {size}, kb. {saved} megtakarítás.',
+    formatsDuplicatesFirst:
+      'Előbb vond össze a duplikált dalokat, hogy minden dal csak egyszer alakuljon át.',
+    formatsListLabel: 'Átalakítandó fájlok',
+    formatsAbout: 'kb. {size}',
+    formatsConvert: 'Átalakítás MP3 {bitrate}k-ra ({count})',
+    formatsConvertTitle: 'Átalakítod ezeket a fájlokat?',
+    formatsConvertBody:
+      'Átalakítandó fájlok: {count}. Mindegyikből {bitrate}k MP3 lesz ugyanazokkal a címkékkel, borítóval és dalszöveggel, átveszi a lejátszási listáit, kedveléseit és figyeléseit, az eredeti pedig {where} kerül. Eltarthat egy ideig; a fájlok között leállíthatod.',
+    formatsConvertConfirm: 'Átalakítás',
+    formatsConverted: 'Átalakítva: {count}. Megtakarítva: {saved}.',
+    formatsStopped: 'Leállítva. Változatlanul hagyva: {count}.',
+    formatsInTrash: 'Az eredetik 30 napig a zenei lomtárban vannak.',
+    formatsDeleted: 'Az eredetik törölve lettek.',
+    formatsFailed: 'Nem sikerült átalakítani, változatlanul hagyva: {count}',
+    convertError: {
+      missing: 'a fájl eltűnt',
+      convert_failed: 'az ffmpeg nem tudta beolvasni',
+      convert_length: 'az MP3 más hosszúságú lett',
+      convert_exists: 'már van ilyen nevű MP3',
+      convert_no_ffmpeg: 'az ffmpeg nincs telepítve',
+      convert_trash: 'a zenei lomtár nem fedi le a mappáját',
+      convert_remove:
+        'az eredetit nem sikerült eltávolítani, mindkettő megmaradt',
+      dedupe_missing: 'a fájl eltűnt',
+      dedupe_invalid: 'nem a könyvtár fájlja',
+      dedupe_replacement_pending: 'a Hang cseréje még dolgozik rajta',
+    },
     title: 'Doktor',
     intro:
       'A Downtify újabb verziói onnantól javítják a hibákat, de a régebbi verzió által írt fájlok és listák változatlanok maradnak. A Doktor megkeresi ezeket a maradványokat, és megjavítja, amiről igazolni tudja, hogy biztonságos.',
@@ -2786,6 +2843,8 @@ export default {
     runCheckup: 'Felmérés most',
     stop: 'Leállítás',
     step: {
+      convert: 'Fájlok átalakítása…',
+      convert_publish: 'A könyvtár frissítése…',
       starting: 'Indul…',
       library: 'Könyvtár beolvasása…',
       playlists: 'Listák beolvasása…',
@@ -2989,6 +3048,7 @@ export default {
         'A méretek 1 GB-ot 1024³ bájtnak számolnak; egyes fájlböngészők 1000³-nal számolnak, ezért ott ugyanaz a mappa nagyobbnak tűnhet.',
     },
     badge: {
+      toConvert: '{count} · {size}',
       notChecked: 'Nincs ellenőrizve',
       allGood: 'Minden rendben',
       toDelete: '{count} törlendő',
@@ -3091,6 +3151,9 @@ export default {
     relinkedLabel: 'Ugyanaz a dal, több azonosító',
     relinkedCounts: 'Dalok: {songs} · felesleges fájlok: {extra}',
     error: {
+      formats_none: 'Válassz legalább egy formátumot.',
+      convert_no_ffmpeg:
+        'Az ffmpeg nincs telepítve a szerveren, így semmi sem alakítható át.',
       ai_not_running: 'Az MI-segéd ki van kapcsolva. Előbb indítsd el.',
       doctor_busy: 'A Doktor már dolgozik.',
       rescan_first:

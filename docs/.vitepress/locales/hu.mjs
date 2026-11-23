@@ -102,6 +102,7 @@ export default {
       'features/outbound-proxy.md': 'Kimenő proxy',
       'features/slskd-navidrome.md': 'slskd és Navidrome',
       'features/navidrome-ratings.md': 'Értékelések a Deezerből',
+      'features/aurral.md': 'Aurral',
       'features/deemix.md': 'Deemix',
       'features/soundcloud.md': 'SoundCloud',
       'features/library-catalog.md': 'Könyvtárkatalógus',

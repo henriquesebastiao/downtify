@@ -368,7 +368,9 @@
                   :class="item.enabled ? '' : 'opacity-50'"
                 >
                   <CoverArt
-                    :src="tab === 'artist' ? artistCover(item) : ''"
+                    :src="
+                      tab === 'artist' ? artistCover(item) : watchCoverUrl(item)
+                    "
                     :name="item.name"
                     :round="tab === 'artist'"
                     :icon="tab === 'artist' ? 'user' : 'playlist'"
@@ -610,7 +612,13 @@
 
     <WatchEditDialog
       :watch="editing"
-      :cover="editing && tab === 'artist' ? artistCover(editing) : ''"
+      :cover="
+        editing
+          ? tab === 'artist'
+            ? artistCover(editing)
+            : watchCoverUrl(editing)
+          : ''
+      "
       @close="editing = null"
       @saved="onSaved"
     />
@@ -673,6 +681,7 @@ import {
   sortWatches,
   RELEASE_TYPES,
   releaseFilterSummary,
+  watchCoverUrl,
   watchKind,
   watchKindOfUrl,
   artistNameQuery,

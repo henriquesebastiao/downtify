@@ -1035,6 +1035,14 @@ function doctorCancel() {
 }
 
 // Pauses the download queue, then checks every slskd leftover.
+function doctorFormatsScan(formats) {
+  return API.post('/api/doctor/formats/scan', { formats })
+}
+
+function doctorFormatsConvert(files) {
+  return API.post('/api/doctor/formats/convert', { files })
+}
+
 function doctorSlskdScan() {
   return API.post('/api/doctor/slskd/scan')
 }
@@ -1086,6 +1094,11 @@ function doctorDuplicatesKeepReset() {
 
 function doctorNavidromeRepair(payload) {
   return API.post('/api/doctor/navidrome/repair', payload)
+}
+
+// A key for Aurral's Downtify plugin (downtify/aurral_routes.py).
+function aurralKey() {
+  return API.post('/api/aurral/key')
 }
 
 // The Doctor's AI helper (downtify/doctor_ai_routes.py).
@@ -1399,6 +1412,8 @@ export default {
   doctorScan,
   doctorCancel,
   doctorSlskdScan,
+  doctorFormatsScan,
+  doctorFormatsConvert,
   doctorSlskdFiles,
   doctorSlskdClean,
   doctorSlskdRelease,
@@ -1410,6 +1425,7 @@ export default {
   doctorDuplicatesKeep,
   doctorDuplicatesKeepReset,
   doctorNavidromeRepair,
+  aurralKey,
   doctorAiStatus,
   doctorAiStart,
   doctorAiStop,

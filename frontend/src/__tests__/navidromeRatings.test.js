@@ -282,7 +282,7 @@ describe('describeRatings', () => {
         }),
       }).lastError
     expect(failed('deezer_unreachable')).toBe(
-      "Deezer couldn't be reached. Stars already given are kept."
+      "Deezer didn't answer for several minutes. Stars already given are kept, and the next run carries on where this one stopped."
     )
     expect(failed('navidrome_failed')).toBe('Navidrome error: boom')
     expect(failed('ratings_failed')).toBe('The ratings run failed: boom')

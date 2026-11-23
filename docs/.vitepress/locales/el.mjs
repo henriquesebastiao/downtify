@@ -103,6 +103,7 @@ export default {
       'features/outbound-proxy.md': 'Εξερχόμενος διακομιστής μεσολάβησης',
       'features/slskd-navidrome.md': 'slskd και Navidrome',
       'features/navidrome-ratings.md': 'Βαθμολογίες από το Deezer',
+      'features/aurral.md': 'Aurral',
       'features/deemix.md': 'Deemix',
       'features/soundcloud.md': 'SoundCloud',
       'features/library-catalog.md': 'Κατάλογος βιβλιοθήκης',

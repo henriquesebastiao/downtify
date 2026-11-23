@@ -102,6 +102,7 @@ export default {
       'features/outbound-proxy.md': 'Изходящ прокси сървър',
       'features/slskd-navidrome.md': 'slskd и Navidrome',
       'features/navidrome-ratings.md': 'Оценки от Deezer',
+      'features/aurral.md': 'Aurral',
       'features/deemix.md': 'Deemix',
       'features/soundcloud.md': 'SoundCloud',
       'features/library-catalog.md': 'Каталог на библиотеката',

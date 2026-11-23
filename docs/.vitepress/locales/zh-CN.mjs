@@ -101,6 +101,7 @@ export default {
       'features/outbound-proxy.md': '出站代理',
       'features/slskd-navidrome.md': 'slskd 与 Navidrome',
       'features/navidrome-ratings.md': '来自 Deezer 的评分',
+      'features/aurral.md': 'Aurral',
       'features/deemix.md': 'Deemix',
       'features/soundcloud.md': 'SoundCloud',
       'features/library-catalog.md': '媒体库目录',

@@ -1895,6 +1895,10 @@ export default {
     bitrateHint: 'Tasa de bits para formatos con pérdida.',
     bitrateLossless: 'No se usa para FLAC, que es sin pérdida.',
     bitrateOriginal: 'No se usa al conservar el formato de audio original.',
+    avoidFormats: 'Formatos a evitar',
+    avoidFormatsHint:
+      'Las descargas nunca traen a tu biblioteca un archivo en estos formatos. slskd los omite y busca otro archivo; una fuente que entregue uno igualmente cuenta como si no hubiera encontrado nada, y se prueba la siguiente. Tu formato de descarga no puede ser uno de ellos.',
+    avoidFormatsLocked: 'Tu formato de descarga no se puede evitar',
     filesGroup: 'Archivos',
     template: 'Nombre de archivo',
     templateHint: 'Usa / para crear carpetas.',
@@ -2011,7 +2015,7 @@ export default {
     ratingsNextSoon: 'Próxima ejecución en la próxima hora',
     ratingsNever: 'Aún no se ha ejecutado',
     ratingsFailedDeezer:
-      'No se pudo conectar con Deezer. Las estrellas ya asignadas se conservan.',
+      'Deezer no respondió durante varios minutos. Las estrellas ya asignadas se conservan y la próxima ejecución sigue donde se detuvo esta.',
     ratingsFailedNavidrome: 'Error de Navidrome: {message}',
     ratingsFailed: 'La valoración falló: {message}',
     ratingsNotConfigured: 'Guarda primero el acceso a Navidrome.',
@@ -2222,6 +2226,21 @@ export default {
     noticeKeptPassword: 'la contraseña que configuraste antes',
     noticeChange: 'Después, cambia la contraseña en Ajustes → General.',
     noticeOk: 'Entendido',
+  },
+  aurral: {
+    title: 'Aurral',
+    hint: 'Deja que Aurral descargue música a través de Downtify. Opcional: nada cambia hasta que lo actives.',
+    enable: 'Dejar que Aurral descargue a través de Downtify',
+    enableHint:
+      'El plugin de Downtify de Aurral podrá buscar aquí y obtener canciones y álbumes. Sus descargas van a una carpeta propia, no a tu biblioteca, y se borran cuando Aurral las tiene.',
+    key: 'Clave para Aurral',
+    keyHint:
+      'Pégala en los ajustes del plugin de Downtify en Aurral, con la dirección de este servidor. Aparece en Apps vinculadas, donde puedes revocarla.',
+    makeKey: 'Crear una clave',
+    plugin: 'El plugin de Aurral',
+    keyOnce: 'Cópiala ahora: no se vuelve a mostrar.',
+    copy: 'Copiar',
+    copied: 'Copiada',
   },
   apps: {
     serverGroup: 'Este servidor',
@@ -2793,6 +2812,45 @@ export default {
     from: 'Descargado desde {source}',
   },
   doctor: {
+    formatsTitle: 'Formatos a convertir',
+    formatsHint:
+      'Archivos de la biblioteca en formatos que no quieres, como FLAC de antes de fijar tus reglas de formato. Cada uno pasa a ser un MP3 con tu calidad de descarga que se queda con sus listas, me gusta y seguimientos, como al unir duplicados.',
+    formatsPick: 'Formatos',
+    formatsPickHint:
+      'Elige los formatos a buscar. Un formato sin pérdida (FLAC, WAV, AIFF, APE, WavPack) convertido a MP3 320 suena igual; uno con pérdida (M4A, OGG, Opus) convertido de nuevo pierde un poco.',
+    formatsFind: 'Buscar archivos',
+    formatsNone: 'No hay archivos {formats} en la biblioteca.',
+    formatsFound: 'Archivos en {formats}: {count}, {size} en total.',
+    formatsEstimate:
+      'Como MP3 {bitrate}k: unos {size}, ahorrando unos {saved}.',
+    formatsDuplicatesFirst:
+      'Une primero las canciones duplicadas, para que cada canción se convierta una sola vez.',
+    formatsListLabel: 'Archivos a convertir',
+    formatsAbout: 'unos {size}',
+    formatsConvert: 'Convertir a MP3 {bitrate}k ({count})',
+    formatsConvertTitle: '¿Convertir estos archivos?',
+    formatsConvertBody:
+      'Archivos a convertir: {count}. Cada uno pasa a ser un MP3 a {bitrate}k con las mismas etiquetas, portada y letra, se queda con sus listas, me gusta y seguimientos, y el original va {where}. Puede tardar; puedes detenerlo entre archivos.',
+    formatsConvertConfirm: 'Convertir',
+    formatsConverted: 'Convertidos: {count}. Ahorrado: {saved}.',
+    formatsStopped: 'Detenido. Sin cambios: {count}.',
+    formatsInTrash:
+      'Los originales están en la papelera de música durante 30 días.',
+    formatsDeleted: 'Los originales se eliminaron.',
+    formatsFailed: 'No se pudieron convertir, sin cambios: {count}',
+    convertError: {
+      missing: 'el archivo ya no está',
+      convert_failed: 'ffmpeg no pudo leerlo',
+      convert_length: 'el MP3 salió con otra duración',
+      convert_exists: 'ya hay un MP3 con ese nombre',
+      convert_no_ffmpeg: 'ffmpeg no está instalado',
+      convert_trash: 'la papelera de música no cubre su carpeta',
+      convert_remove: 'no se pudo quitar el original, se conservan ambos',
+      dedupe_missing: 'el archivo ya no está',
+      dedupe_invalid: 'no es un archivo de la biblioteca',
+      dedupe_replacement_pending:
+        'Reemplazar audio todavía está trabajando en él',
+    },
     title: 'Doctor',
     intro:
       'Las versiones nuevas de Downtify corrigen problemas a partir de entonces, pero los archivos y listas que escribió una versión antigua siguen igual. El Doctor encuentra esos restos y repara lo que puede demostrar que es seguro.',
@@ -2803,6 +2861,8 @@ export default {
     runCheckup: 'Revisar ahora',
     stop: 'Detener',
     step: {
+      convert: 'Convirtiendo archivos…',
+      convert_publish: 'Actualizando la biblioteca…',
       starting: 'Empezando…',
       library: 'Leyendo la biblioteca…',
       playlists: 'Leyendo las listas…',
@@ -3006,6 +3066,7 @@ export default {
         'Los tamaños cuentan 1 GB como 1024³ bytes; algunos exploradores de archivos cuentan 1000³, así que la misma carpeta puede verse más grande allí.',
     },
     badge: {
+      toConvert: '{count} · {size}',
       notChecked: 'Sin comprobar',
       allGood: 'Todo bien',
       toDelete: '{count} para borrar',
@@ -3109,6 +3170,9 @@ export default {
     relinkedLabel: 'Misma canción, varios ID',
     relinkedCounts: 'Canciones: {songs} · archivos de más: {extra}',
     error: {
+      formats_none: 'Elige al menos un formato.',
+      convert_no_ffmpeg:
+        'ffmpeg no está instalado en el servidor, así que no se puede convertir nada.',
       ai_not_running: 'El asistente de IA está apagado. Inícialo primero.',
       doctor_busy: 'El Doctor ya está trabajando.',
       rescan_first:

@@ -74,7 +74,7 @@ A Preview shows what a real run would do, so you can try the **Grading** and **S
 
 ### How long it takes
 
-Downtify waits 0.2 seconds after every Deezer request, to stay within Deezer's rate limit. A Deezer search takes about 0.3 to 0.5 seconds, so looking up one song takes roughly 0.5 to 0.7 seconds, and a first run over 10,000 songs takes about 1.5 to 2 hours. With **Skip songs that have stars** on, later runs skip every song that already has stars. They look up again the songs Deezer didn't find and the songs that were given 0 stars (Navidrome stores 0 as no rating), so they are much shorter. Comparing with the top song adds two Deezer requests for every artist or album that has a song to rate.
+Downtify waits 0.2 seconds after every Deezer request, and rests for 10 seconds after every 100, to stay well within Deezer's rate limit on long runs. A Deezer search takes about 0.3 to 0.5 seconds, so looking up one song takes roughly 0.5 to 0.7 seconds, and a first run over 10,000 songs takes about 1.5 to 2 hours. With **Skip songs that have stars** on, later runs skip every song that already has stars. They look up again the songs Deezer didn't find and the songs that were given 0 stars (Navidrome stores 0 as no rating), so they are much shorter. Comparing with the top song adds two Deezer requests for every artist or album that has a song to rate.
 
 ## Repeating
 
@@ -89,7 +89,7 @@ If it has never run, the first check starts one. A run that failed is tried agai
 
 ## When something goes wrong
 
-- If Deezer stops answering or says it is busy or over its limit, Downtify waits 5 seconds and tries once more. If that fails too, the run stops with "Deezer couldn't be reached. Stars already given are kept."
+- If Deezer stops answering or says it is busy or over its limit, Downtify waits and tries again: after 5, 15, 30, 60 and 120 seconds, about four minutes in all. Only if Deezer still doesn't answer does the run stop, with "Deezer didn't answer for several minutes. Stars already given are kept, and the next run carries on where this one stopped." The next run, including the automatic retry 6 hours later, skips the albums that run finished, as long as the options are the same. Stopping a run keeps its place the same way; a run that finishes starts the next one from the beginning. **Stop** also works during the waits.
 - If Deezer refuses one request for another reason, such as having no data for an artist or album, only that item is affected: a song counts as not found, and a missing reference falls back to the worldwide stars.
 - If Navidrome answers with an error, the run stops and shows a short message, never the address or login details. A song or album removed while the run goes is skipped.
 - If the Navidrome login isn't saved, **Run now** asks you to save it first.

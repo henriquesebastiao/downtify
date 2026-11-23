@@ -81,6 +81,7 @@ Minden, amit a Downtify tud, területenként csoportosítva, ahogy az oldalsávo
 | [Deemix](deemix.md) | Használd a saját Deemix-szerveredet és Deezer-fiókodat hangforrásként |
 | [slskd és Navidrome](slskd-navidrome.md) | Tölts le a Soulseekről a slskd-n át, tükrözd a lejátszási listákat a Navidrome-ba, és kövesd a lejátszási listák letöltéseit |
 | [Értékelések a Deezerből](navidrome-ratings.md) | Adj a Navidrome dalainak 0–5 csillagot aszerint, mennyire népszerűek a Deezeren |
+| [Aurral](aurral.md) | Engedd, hogy az Aurral letöltési forrásként használja a Downtifyt: kér, a Downtify letölt, az Aurral a saját könyvtárába teszi az eredményt |
 
 ## Szerver és fiókok
 

@@ -81,6 +81,7 @@ icon: lucide/sparkles
 | [Deemix](deemix.md) | Χρησιμοποίησε τον δικό σου διακομιστή Deemix και τον λογαριασμό σου στο Deezer ως πηγή ήχου |
 | [slskd και Navidrome](slskd-navidrome.md) | Λήψη από το Soulseek μέσω slskd, καθρέφτισμα λιστών στο Navidrome και παρακολούθηση λήψεων λιστών |
 | [Βαθμολογίες από το Deezer](navidrome-ratings.md) | Δώσε στα τραγούδια του Navidrome από 0 έως 5 αστέρια ανάλογα με τη δημοτικότητά τους στο Deezer |
+| [Aurral](aurral.md) | Αφήστε το Aurral να χρησιμοποιεί το Downtify ως πηγή λήψεων: ζητά, το Downtify κατεβάζει, το Aurral βάζει το αποτέλεσμα στη δική του βιβλιοθήκη |
 
 ## Διακομιστής και λογαριασμοί
 

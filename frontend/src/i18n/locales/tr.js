@@ -1860,6 +1860,10 @@ export default {
     bitrateHint: 'Kayıplı biçimler için bit hızı.',
     bitrateLossless: 'Kayıpsız olan FLAC için kullanılmaz.',
     bitrateOriginal: 'Orijinal ses biçimi korunurken kullanılmaz.',
+    avoidFormats: 'Kaçınılacak biçimler',
+    avoidFormatsHint:
+      'İndirmeler bu biçimlerdeki bir dosyayı kütüphaneye asla getirmez. slskd bunları atlayıp başka dosya arar; yine de böyle bir dosya veren kaynak hiçbir şey bulamamış sayılır ve sıradaki kaynak denenir. İndirme biçimin bunlardan biri olamaz.',
+    avoidFormatsLocked: 'İndirme biçiminden kaçınılamaz',
     filesGroup: 'Dosyalar',
     template: 'Dosya adı',
     templateHint: 'Klasör oluşturmak için / kullan.',
@@ -1976,7 +1980,7 @@ export default {
     ratingsNextSoon: 'Sonraki çalıştırma bir saat içinde',
     ratingsNever: 'Henüz çalıştırılmadı',
     ratingsFailedDeezer:
-      'Deezer’a ulaşılamadı. Daha önce verilen yıldızlar korunur.',
+      'Deezer birkaç dakika yanıt vermedi. Daha önce verilen yıldızlar korunur ve sonraki çalıştırma bunun durduğu yerden devam eder.',
     ratingsFailedNavidrome: 'Navidrome hatası: {message}',
     ratingsFailed: 'Puanlama başarısız oldu: {message}',
     ratingsNotConfigured: 'Önce Navidrome girişini kaydet.',
@@ -2185,6 +2189,21 @@ export default {
     noticeKeptPassword: 'daha önce belirlediğiniz parola',
     noticeChange: 'Ardından parolayı Ayarlar → Genel bölümünden değiştirin.',
     noticeOk: 'Anladım',
+  },
+  aurral: {
+    title: 'Aurral',
+    hint: "Aurral'ın Downtify üzerinden müzik indirmesine izin verin. İsteğe bağlı: açana kadar hiçbir şey değişmez.",
+    enable: 'Aurral, Downtify üzerinden indirsin',
+    enableHint:
+      "Aurral'ın Downtify eklentisi o zaman burada arama yapıp şarkı ve albüm alabilir. İndirmeleri kitaplığınıza değil kendi klasörüne gider ve Aurral aldığında silinir.",
+    key: 'Aurral için anahtar',
+    keyHint:
+      "Bu sunucunun adresiyle birlikte Aurral'daki Downtify eklentisinin ayarlarına yapıştırın. Eşlenen uygulamalar altında görünür, oradan iptal edebilirsiniz.",
+    makeKey: 'Anahtar oluştur',
+    plugin: 'Aurral eklentisi',
+    keyOnce: 'Şimdi kopyalayın: bir daha gösterilmez.',
+    copy: 'Kopyala',
+    copied: 'Kopyalandı',
   },
   apps: {
     serverGroup: 'Bu sunucu',
@@ -2752,6 +2771,43 @@ export default {
     from: '{source} kaynağından indirildi',
   },
   doctor: {
+    formatsTitle: 'Dönüştürülecek biçimler',
+    formatsHint:
+      'Kütüphanede istemediğin biçimlerdeki dosyalar; örneğin biçim kurallarını koymadan önceki FLAC’lar. Her biri indirme kalitende bir MP3 olur ve yinelenen birleştirmesindeki gibi çalma listelerini, beğenilerini ve izlemelerini devralır.',
+    formatsPick: 'Biçimler',
+    formatsPickHint:
+      'Aranacak biçimleri seç. Kayıpsız bir biçim (FLAC, WAV, AIFF, APE, WavPack) MP3 320’ye dönüşünce aynı duyulur; kayıplı biri (M4A, OGG, Opus) yeniden dönüşünce biraz kaybeder.',
+    formatsFind: 'Dosyaları bul',
+    formatsNone: 'Kütüphanede {formats} dosyası yok.',
+    formatsFound: '{formats} dosyaları: {count}, toplam {size}.',
+    formatsEstimate:
+      'MP3 {bitrate}k olarak: yaklaşık {size}, yaklaşık {saved} tasarruf.',
+    formatsDuplicatesFirst:
+      'Her şarkı yalnızca bir kez dönüşsün diye önce yinelenen şarkıları birleştir.',
+    formatsListLabel: 'Dönüştürülecek dosyalar',
+    formatsAbout: 'yaklaşık {size}',
+    formatsConvert: 'MP3 {bitrate}k’ye dönüştür ({count})',
+    formatsConvertTitle: 'Bu dosyalar dönüştürülsün mü?',
+    formatsConvertBody:
+      'Dönüştürülecek dosyalar: {count}. Her biri aynı etiket, kapak ve sözlerle {bitrate}k MP3 olur, çalma listelerini, beğenilerini ve izlemelerini devralır; orijinal {where} gider. Biraz sürebilir; dosyalar arasında durdurabilirsin.',
+    formatsConvertConfirm: 'Dönüştür',
+    formatsConverted: 'Dönüştürülen: {count}. Kazanılan: {saved}.',
+    formatsStopped: 'Durduruldu. Olduğu gibi bırakılan: {count}.',
+    formatsInTrash: 'Orijinaller 30 gün müzik çöp kutusunda.',
+    formatsDeleted: 'Orijinaller silindi.',
+    formatsFailed: 'Dönüştürülemedi, olduğu gibi bırakıldı: {count}',
+    convertError: {
+      missing: 'dosya yok',
+      convert_failed: 'ffmpeg okuyamadı',
+      convert_length: 'MP3 farklı uzunlukta çıktı',
+      convert_exists: 'bu adda bir MP3 zaten var',
+      convert_no_ffmpeg: 'ffmpeg kurulu değil',
+      convert_trash: 'müzik çöp kutusu klasörünü kapsamıyor',
+      convert_remove: 'orijinal kaldırılamadı, ikisi de tutuldu',
+      dedupe_missing: 'dosya yok',
+      dedupe_invalid: 'kütüphane dosyası değil',
+      dedupe_replacement_pending: 'Sesi değiştir hâlâ üzerinde çalışıyor',
+    },
     title: 'Doktor',
     intro:
       'Downtify’ın yeni sürümleri sorunları o andan itibaren düzeltir, ancak eski bir sürümün yazdığı dosyalar ve listeler olduğu gibi kalır. Doktor bu kalıntıları bulur ve güvenli olduğunu kanıtlayabildiklerini onarır.',
@@ -2762,6 +2818,8 @@ export default {
     runCheckup: 'Şimdi kontrol et',
     stop: 'Durdur',
     step: {
+      convert: 'Dosyalar dönüştürülüyor…',
+      convert_publish: 'Kütüphane güncelleniyor…',
       starting: 'Başlıyor…',
       library: 'Kitaplık okunuyor…',
       playlists: 'Çalma listeleri okunuyor…',
@@ -2962,6 +3020,7 @@ export default {
         'Boyutlar 1 GB’ı 1024³ bayt sayar; bazı dosya tarayıcıları 1000³ sayar, bu yüzden aynı klasör orada daha büyük görünebilir.',
     },
     badge: {
+      toConvert: '{count} · {size}',
       notChecked: 'Kontrol edilmedi',
       allGood: 'Her şey yolunda',
       toDelete: '{count} silinecek',
@@ -3065,6 +3124,9 @@ export default {
     relinkedLabel: 'Aynı şarkı, birkaç kimlik',
     relinkedCounts: 'Şarkılar: {songs} · fazla dosyalar: {extra}',
     error: {
+      formats_none: 'En az bir biçim seç.',
+      convert_no_ffmpeg:
+        'Sunucuda ffmpeg kurulu değil, bu yüzden hiçbir şey dönüştürülemez.',
       ai_not_running: 'Yapay zekâ yardımcısı kapalı. Önce başlat.',
       doctor_busy: 'Doktor zaten çalışıyor.',
       rescan_first:

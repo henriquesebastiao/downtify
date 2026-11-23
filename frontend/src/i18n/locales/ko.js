@@ -1855,6 +1855,10 @@ export default {
     bitrateHint: '손실 압축 포맷의 비트레이트입니다.',
     bitrateLossless: '무손실 포맷인 FLAC에는 적용되지 않습니다.',
     bitrateOriginal: '원본 오디오 포맷을 유지할 때는 적용되지 않습니다.',
+    avoidFormats: '피할 형식',
+    avoidFormatsHint:
+      '다운로드는 이 형식의 파일을 라이브러리에 절대 들이지 않습니다. slskd는 이 형식을 건너뛰고 다른 파일을 찾으며, 어떤 소스가 그래도 이 형식을 주면 아무것도 찾지 못한 것으로 보고 다음 소스를 시도합니다. 다운로드 형식은 여기에 넣을 수 없습니다.',
+    avoidFormatsLocked: '다운로드 형식은 피할 수 없습니다',
     filesGroup: '파일',
     template: '파일명 템플릿',
     templateHint: '/ 문자를 사용하여 하위 폴더를 구성할 수 있습니다.',
@@ -1972,7 +1976,7 @@ export default {
     ratingsNextSoon: '한 시간 안에 다음 실행',
     ratingsNever: '아직 실행하지 않음',
     ratingsFailedDeezer:
-      'Deezer에 연결할 수 없습니다. 이미 준 별점은 그대로 유지됩니다.',
+      'Deezer가 몇 분 동안 응답하지 않았습니다. 이미 준 별점은 그대로 유지되며, 다음 실행은 이번에 멈춘 곳부터 이어서 진행합니다.',
     ratingsFailedNavidrome: 'Navidrome 오류: {message}',
     ratingsFailed: '별점 실행에 실패했습니다: {message}',
     ratingsNotConfigured: '먼저 Navidrome 로그인 정보를 저장하세요.',
@@ -2182,6 +2186,21 @@ export default {
     noticeKeptPassword: '이전에 설정한 비밀번호',
     noticeChange: '로그인 후 설정 → 일반에서 비밀번호를 변경하세요.',
     noticeOk: '확인',
+  },
+  aurral: {
+    title: 'Aurral',
+    hint: 'Aurral이 Downtify를 통해 음악을 받게 합니다. 선택 사항: 켜기 전에는 아무것도 바뀌지 않습니다.',
+    enable: 'Aurral이 Downtify로 다운로드하도록 허용',
+    enableHint:
+      '그러면 Aurral의 Downtify 플러그인이 여기서 검색하고 곡과 앨범을 받을 수 있습니다. 다운로드는 라이브러리가 아닌 별도 폴더에 저장되고, Aurral이 가져가면 삭제됩니다.',
+    key: 'Aurral용 키',
+    keyHint:
+      'Aurral의 Downtify 플러그인 설정에 이 서버 주소와 함께 붙여 넣으세요. 연결된 앱 목록에 표시되며 거기서 해제할 수 있습니다.',
+    makeKey: '키 만들기',
+    plugin: 'Aurral 플러그인',
+    keyOnce: '지금 복사하세요. 다시 표시되지 않습니다.',
+    copy: '복사',
+    copied: '복사됨',
   },
   apps: {
     serverGroup: '현재 서버',
@@ -2740,6 +2759,42 @@ export default {
     from: '{source}에서 다운로드됨',
   },
   doctor: {
+    formatsTitle: '변환할 형식',
+    formatsHint:
+      '형식 규칙을 정하기 전에 받은 FLAC처럼 원하지 않는 형식의 라이브러리 파일입니다. 각 파일은 다운로드 품질의 MP3가 되어, 중복 병합처럼 재생목록·좋아요·감시를 넘겨받습니다.',
+    formatsPick: '형식',
+    formatsPickHint:
+      '찾을 형식을 고르세요. 무손실 형식(FLAC, WAV, AIFF, APE, WavPack)은 MP3 320으로 변환해도 똑같이 들리고, 손실 형식(M4A, OGG, Opus)은 다시 변환하면 조금 손실됩니다.',
+    formatsFind: '파일 찾기',
+    formatsNone: '라이브러리에 {formats} 파일이 없습니다.',
+    formatsFound: '{formats} 파일: {count}개, 모두 {size}.',
+    formatsEstimate: 'MP3 {bitrate}k로: 약 {size}, 약 {saved} 절약.',
+    formatsDuplicatesFirst:
+      '각 곡이 한 번만 변환되도록 중복 곡을 먼저 병합하세요.',
+    formatsListLabel: '변환할 파일',
+    formatsAbout: '약 {size}',
+    formatsConvert: 'MP3 {bitrate}k로 변환 ({count})',
+    formatsConvertTitle: '이 파일들을 변환할까요?',
+    formatsConvertBody:
+      '변환할 파일: {count}개. 각 파일은 같은 태그·커버·가사를 가진 {bitrate}k MP3가 되어 재생목록·좋아요·감시를 넘겨받고, 원본은 {where} 이동합니다. 시간이 걸릴 수 있으며 파일 사이에서 멈출 수 있습니다.',
+    formatsConvertConfirm: '변환',
+    formatsConverted: '변환됨: {count}. 절약: {saved}.',
+    formatsStopped: '멈춤. 그대로 둔 파일: {count}.',
+    formatsInTrash: '원본은 30일 동안 음악 휴지통에 있습니다.',
+    formatsDeleted: '원본을 삭제했습니다.',
+    formatsFailed: '변환하지 못해 그대로 둔 파일: {count}',
+    convertError: {
+      missing: '파일이 없습니다',
+      convert_failed: 'ffmpeg가 읽지 못했습니다',
+      convert_length: 'MP3 길이가 다르게 나왔습니다',
+      convert_exists: '같은 이름의 MP3가 이미 있습니다',
+      convert_no_ffmpeg: 'ffmpeg가 설치되어 있지 않습니다',
+      convert_trash: '음악 휴지통이 그 폴더를 다루지 않습니다',
+      convert_remove: '원본을 지우지 못해 둘 다 남겼습니다',
+      dedupe_missing: '파일이 없습니다',
+      dedupe_invalid: '라이브러리 파일이 아닙니다',
+      dedupe_replacement_pending: '오디오 교체가 아직 작업 중입니다',
+    },
     title: '닥터',
     intro:
       '새 버전의 Downtify는 그때부터 문제를 고치지만, 예전 버전이 쓴 파일과 재생목록은 그대로 남습니다. 닥터는 그런 잔여 상태를 찾아 안전하다고 증명할 수 있는 것만 고칩니다.',
@@ -2750,6 +2805,8 @@ export default {
     runCheckup: '지금 점검',
     stop: '중지',
     step: {
+      convert: '파일 변환 중…',
+      convert_publish: '라이브러리 업데이트 중…',
       starting: '시작하는 중…',
       library: '라이브러리 읽는 중…',
       playlists: '재생목록 읽는 중…',
@@ -2949,6 +3006,7 @@ export default {
         '크기는 1GB를 1024³바이트로 셉니다. 일부 파일 탐색기는 1000³으로 세므로 같은 폴더가 더 크게 보일 수 있습니다.',
     },
     badge: {
+      toConvert: '{count} · {size}',
       notChecked: '확인 안 함',
       allGood: '문제 없음',
       toDelete: '삭제할 항목 {count}개',
@@ -3049,6 +3107,9 @@ export default {
     relinkedLabel: '같은 노래, 여러 ID',
     relinkedCounts: '노래: {songs} · 여분 파일: {extra}',
     error: {
+      formats_none: '형식을 하나 이상 고르세요.',
+      convert_no_ffmpeg:
+        '서버에 ffmpeg가 설치되어 있지 않아 변환할 수 없습니다.',
       ai_not_running: 'AI 도우미가 꺼져 있습니다. 먼저 시작하세요.',
       doctor_busy: '닥터가 이미 작업 중입니다.',
       rescan_first:

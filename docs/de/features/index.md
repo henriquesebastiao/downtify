@@ -81,6 +81,7 @@ Alles, was Downtify kann, nach Bereichen gruppiert wie in der Seitenleiste. Jede
 | [Deemix](deemix.md) | Den eigenen Deemix-Server und das eigene Deezer-Konto als Audioquelle nutzen |
 | [slskd und Navidrome](slskd-navidrome.md) | Über slskd von Soulseek herunterladen, Playlists in Navidrome spiegeln und Playlist-Downloads verfolgen |
 | [Bewertungen von Deezer](navidrome-ratings.md) | Navidrome-Songs je nach ihrer Beliebtheit bei Deezer 0 bis 5 Sterne geben |
+| [Aurral](aurral.md) | Aurral Downtify als Downloadquelle nutzen lassen: Aurral fragt, Downtify lädt herunter, Aurral legt das Ergebnis in seiner eigenen Bibliothek ab |
 
 ## Server & Konten
 

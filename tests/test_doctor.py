@@ -589,7 +589,8 @@ def test_a_failed_repair_still_marks_what_it_may_have_changed(monkeypatch):
     doctor_routes._mark('health', done=False)
     assert 'duplicates' in doctor_routes._stale
     doctor_routes._mark('health', done=True)
-    assert doctor_routes._stale == {'slskd'}
+    # The slskd and format checks are their own, not the health check's.
+    assert doctor_routes._stale == {'slskd', 'formats'}
 
 
 def test_slskd_folder_breakdown_explains_what_the_library_leaves_out():

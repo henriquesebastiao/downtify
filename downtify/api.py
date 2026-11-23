@@ -425,7 +425,7 @@ from fastapi import (
     WebSocket,
     WebSocketDisconnect,
 )
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from loguru import logger
 from starlette.requests import HTTPConnection
 
@@ -457,6 +457,7 @@ from . import (
 )
 from .activity import ActivityLog, NowPlaying, describe_user_agent
 from .artist_suggestions import artist_candidates, artist_suggestions
+from .audio_formats import normalize_formats
 from .auth import (
     AuthStore,
     PairingStore,
@@ -608,6 +609,8 @@ from .monitor import (
     playlist_watch_key,
     take_inventory,
 )
+from .monitor import saved_watch_cover as monitor_saved_watch_cover
+from .monitor import watch_cover_url as monitor_watch_cover_url
 from .navidrome import (
     NavidromeClient,
     _effective_navidrome_settings,
@@ -726,6 +729,9 @@ DEFAULT_SETTINGS: dict[str, Any] = {
     'lyrics_lrc_dir': lyrics.DEFAULT_LYRICS_LRC_DIR,
     'format': 'mp3',
     'bitrate': '320',
+    # Formats a download never brings into the library, whatever the
+    # source (see downtify/audio_formats.py).
+    'avoid_formats': [],
     'output': '{artists} - {title}.{output-ext}',
     'generate_m3u': True,
     'download_cover_art_playlists': True,
@@ -764,6 +770,9 @@ DEFAULT_SETTINGS: dict[str, Any] = {
     'cover_largest': False,
     # Write each download's ISRC, the recording's own code (downtify.isrc).
     'write_isrc': True,
+    # Let Aurral use Downtify as a download source (downtify/aurral.py,
+    # Settings > Apps > Aurral). Off: nothing changes.
+    'aurral_enabled': False,
     'download_cover_art': True,
     'overwrite_existing_files': True,
     'organize_by_artist': True,
@@ -1064,6 +1073,10 @@ def _effective_slskd_settings(settings: dict[str, Any]) -> dict[str, Any]:
         **normalize_slskd_quality(raw),
         'max_parallel_downloads': _setting_int(
             settings, 'max_parallel_downloads', 3, minimum=1, maximum=8
+        ),
+        'avoid_formats': normalize_formats(
+            settings.get('avoid_formats'),
+            exclude=[settings.get('format') or 'mp3'],
         ),
     }
 
@@ -9311,7 +9324,11 @@ async def update_settings_endpoint(
                 state.settings[key] = _clamp_cover_min_resolution(raw_value)
             elif key == 'backup_interval_hours':
                 state.settings[key] = backup.clamp_interval(raw_value)
-            elif key in {'cover_largest', 'artist_watch_complete_albums'}:
+            elif key in {
+                'cover_largest',
+                'artist_watch_complete_albums',
+                'aurral_enabled',
+            }:
                 state.settings[key] = raw_value is True
             elif key == 'ui_language':
                 # Not a language code: the saved one stays.
@@ -9328,6 +9345,13 @@ async def update_settings_endpoint(
                 }
             elif key == 'navidrome':
                 state.settings[key] = navidrome_cfg
+            elif key == 'avoid_formats':
+                state.settings[key] = normalize_formats(
+                    raw_value,
+                    exclude=[
+                        payload.get('format') or state.settings['format']
+                    ],
+                )
             elif key == 'navidrome_ratings':
                 state.settings[key] = navidrome_ratings.effective_settings(
                     raw_value
@@ -9350,6 +9374,12 @@ async def update_settings_endpoint(
             state.settings['audio_providers'] = _effective_audio_providers(
                 state.settings
             )
+        if 'format' in payload:
+            # The Downloads format can't be one to avoid.
+            state.settings['avoid_formats'] = normalize_formats(
+                state.settings.get('avoid_formats'),
+                exclude=[state.settings['format']],
+            )
         if state.downloader is not None:
             state.downloader.deemix_settings = deemix_cfg
             if {
@@ -9357,6 +9387,8 @@ async def update_settings_endpoint(
                 'slskd',
                 'deemix',
                 'max_parallel_downloads',
+                'avoid_formats',
+                'format',
             } & set(payload):
                 state.downloader.slskd_settings = (
                     state.downloader._normalize_slskd_settings(
@@ -10826,6 +10858,36 @@ async def list_monitor_playlists(request: Request) -> list[dict[str, Any]]:
     scope = None if request_is_admin(request) else request_user_id(request)
     playlists = await asyncio.to_thread(db.list_playlists, scope)
     return [p.to_dict() for p in playlists]
+
+
+@router.get('/api/monitor/playlists/{playlist_id}/cover')
+async def monitor_playlist_cover(playlist_id: int, request: Request) -> Any:
+    """A watched playlist's picture for the Monitor page: the cover saved
+    beside its M3U when there is one, else a redirect to the cover its
+    service (Spotify, YouTube Music, Deezer) shows, looked up once and
+    remembered (:func:`downtify.monitor.watch_cover_url`). 404 for an
+    artist, or when there is neither; the page then keeps the initials."""
+
+    _require_monitor_db()
+    watch = await asyncio.to_thread(
+        _monitor_watch_for_request, playlist_id, request
+    )
+    if watch is None or watch.kind != KIND_PLAYLIST:
+        raise HTTPException(status_code=404, detail='No cover')
+    headers = {'Cache-Control': 'private, max-age=3600'}
+    downloader = state.downloader
+    if downloader is not None:
+        saved = await asyncio.to_thread(
+            monitor_saved_watch_cover, watch, downloader
+        )
+        if saved is not None:
+            return FileResponse(
+                saved, media_type='image/jpeg', headers=headers
+            )
+    url = await asyncio.to_thread(monitor_watch_cover_url, watch)
+    if not url:
+        raise HTTPException(status_code=404, detail='No cover')
+    return RedirectResponse(url, status_code=302, headers=headers)
 
 
 @router.post('/api/monitor/playlists')
