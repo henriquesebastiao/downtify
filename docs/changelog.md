@@ -4,6 +4,76 @@ icon: lucide/history
 
 # Changelog
 
+## [3.14.0](https://github.com/henriquesebastiao/downtify/tree/3.14.0) (2026-11-23)
+
+[Full Changelog](https://github.com/henriquesebastiao/downtify/compare/3.13.0...3.14.0)
+
+**Implemented enhancements:**
+
+- Settings switches for Artist Watch's Deezer and MusicBrainz sources [\#670](https://github.com/henriquesebastiao/downtify/issues/670)
+- Prevent duplicate versions of songs already in the library \(catalog ID and song\_key guard, per-track album progress\) [\#636](https://github.com/henriquesebastiao/downtify/issues/636)
+- Monitoring Button does not change state [\#631](https://github.com/henriquesebastiao/downtify/issues/631)
+- Feature request: optional per-user libraries \(each user has their own, unshared library\) [\#620](https://github.com/henriquesebastiao/downtify/issues/620)
+- Artist Watch can't see an artist's whole catalogue — proposal: a Lidarr-style catalogue \(Deezer now, MusicBrainz next\) [\#581](https://github.com/henriquesebastiao/downtify/issues/581)
+- Allow Adding of existing tracks to imported playlist [\#550](https://github.com/henriquesebastiao/downtify/issues/550)
+- Either Bug Fix or Feature Request [\#546](https://github.com/henriquesebastiao/downtify/issues/546)
+- Playlists as compilation or standalone album [\#531](https://github.com/henriquesebastiao/downtify/issues/531)
+- Allow clients to add/edit playlists [\#477](https://github.com/henriquesebastiao/downtify/issues/477)
+- Discover section include plays from navidrome [\#423](https://github.com/henriquesebastiao/downtify/issues/423)
+- For each User a Download Folder Path [\#418](https://github.com/henriquesebastiao/downtify/issues/418)
+- feedbacks Downtify 3.2 [\#405](https://github.com/henriquesebastiao/downtify/issues/405)
+
+**Fixed bugs:**
+
+- Artist Watch: with "Keep every album complete" on, an album listed by both YouTube Music and Deezer is downloaded twice [\#669](https://github.com/henriquesebastiao/downtify/issues/669)
+- \[Bug\]: Missing submit button on the Similar page prevents manual search \(v3.13.0\) [\#664](https://github.com/henriquesebastiao/downtify/issues/664)
+- Artist watch saves the same audio under several tracks of an album \(official-audio swap is cached by video id only\) [\#662](https://github.com/henriquesebastiao/downtify/issues/662)
+- The audio stream is unavailable [\#564](https://github.com/henriquesebastiao/downtify/issues/564)
+- \(Big/Hidden \[Bug\]\) Playlist Monitor appears to download tracks that don't match personalized Spotify mixes and has been for a decent chunk of time [\#489](https://github.com/henriquesebastiao/downtify/issues/489)
+- Unable to toggle off YouTube Music in Audio Sources \(Where audio comes from\) and slskd as the only source [\#471](https://github.com/henriquesebastiao/downtify/issues/471)
+- Large playlist duplicated in web ui library [\#414](https://github.com/henriquesebastiao/downtify/issues/414)
+- Local playlist is empty when m3u file generation is turned off [\#412](https://github.com/henriquesebastiao/downtify/issues/412)
+- Slskd results are not moved into folder of playlist [\#370](https://github.com/henriquesebastiao/downtify/issues/370)
+
+**Closed issues:**
+
+- Large monitored playlists keep downloading songs months after they finished, with no changes on Spotify [\#573](https://github.com/henriquesebastiao/downtify/issues/573)
+
+**Merged pull requests:**
+
+- feat\(ui\): skeletons, lazy loading and one motion system for the SPA [\#676](https://github.com/henriquesebastiao/downtify/pull/676) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- feat\(settings\): switches for Artist Watch's Deezer and MusicBrainz [\#675](https://github.com/henriquesebastiao/downtify/pull/675) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- fix\(monitor\): download a release two catalogues list once [\#674](https://github.com/henriquesebastiao/downtify/pull/674) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- fix\(providers\): give each album track its own recording [\#673](https://github.com/henriquesebastiao/downtify/pull/673) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- feat\(mobile\): let apps delete a Library playlist [\#672](https://github.com/henriquesebastiao/downtify/pull/672) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- fix\(library\): list downloaded playlists with M3U files off [\#671](https://github.com/henriquesebastiao/downtify/pull/671) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- feat\(download\): download a playlist as one album [\#668](https://github.com/henriquesebastiao/downtify/pull/668) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- feat\(api\): let clients skip songs the library already has [\#667](https://github.com/henriquesebastiao/downtify/pull/667) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- feat\(users\): optional per-user libraries [\#666](https://github.com/henriquesebastiao/downtify/pull/666) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- fix\(similar\): let Enter submit the Similar form [\#665](https://github.com/henriquesebastiao/downtify/pull/665) ([monarchsofchaos004-gif](https://github.com/monarchsofchaos004-gif))
+- feat\(upgrade\): identify songs by sound with AcoustID, opt-in [\#661](https://github.com/henriquesebastiao/downtify/pull/661) ([BigBrownMF69](https://github.com/BigBrownMF69))
+- feat: notifications on Discord \(with commands\), ntfy, Gotify and webhooks [\#660](https://github.com/henriquesebastiao/downtify/pull/660) ([BigBrownMF69](https://github.com/BigBrownMF69))
+- feat\(player\): easier seeking on the mini player's progress bar [\#659](https://github.com/henriquesebastiao/downtify/pull/659) ([BigBrownMF69](https://github.com/BigBrownMF69))
+- feat\(aurral\): let Aurral use Downtify as a download source [\#658](https://github.com/henriquesebastiao/downtify/pull/658) ([BigBrownMF69](https://github.com/BigBrownMF69))
+- feat: formats to avoid, and a Doctor section that converts them to MP3 [\#657](https://github.com/henriquesebastiao/downtify/pull/657) ([BigBrownMF69](https://github.com/BigBrownMF69))
+- fix\(slskd\): never import another file for the one requested [\#656](https://github.com/henriquesebastiao/downtify/pull/656) ([BigBrownMF69](https://github.com/BigBrownMF69))
+- feat\(monitor\): show each watched playlist's picture in the list [\#655](https://github.com/henriquesebastiao/downtify/pull/655) ([BigBrownMF69](https://github.com/BigBrownMF69))
+- fix\(monitor\): keep artist watch songs a few seconds off the catalogue [\#654](https://github.com/henriquesebastiao/downtify/pull/654) ([BigBrownMF69](https://github.com/BigBrownMF69))
+- fix\(playlists\): only warm the Spotify cache with Spotify playlist ids [\#653](https://github.com/henriquesebastiao/downtify/pull/653) ([BigBrownMF69](https://github.com/BigBrownMF69))
+- ci\(smokeshow\): download coverage from fork PRs too [\#652](https://github.com/henriquesebastiao/downtify/pull/652) ([BigBrownMF69](https://github.com/BigBrownMF69))
+- feat\(slskd\): remember failed peers, cancel transfers Downtify gave up on [\#651](https://github.com/henriquesebastiao/downtify/pull/651) ([BigBrownMF69](https://github.com/BigBrownMF69))
+- fix\(ratings\): ride out Deezer hiccups, rest between batches, resume where it stopped [\#650](https://github.com/henriquesebastiao/downtify/pull/650) ([BigBrownMF69](https://github.com/BigBrownMF69))
+- feat\(doctor\): show artwork on every Doctor card [\#649](https://github.com/henriquesebastiao/downtify/pull/649) ([BigBrownMF69](https://github.com/BigBrownMF69))
+- ci: add coverage ci and badge to README [\#648](https://github.com/henriquesebastiao/downtify/pull/648) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- feat\(monitor\): show when an artist or playlist is already watched [\#647](https://github.com/henriquesebastiao/downtify/pull/647) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- fix\(monitor\): stop finished playlists from downloading songs again [\#646](https://github.com/henriquesebastiao/downtify/pull/646) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- feat\(playlists\): add songs the library already has to an imported pla… [\#645](https://github.com/henriquesebastiao/downtify/pull/645) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- feat\(albums\): let every album keep its own copy of a shared song [\#644](https://github.com/henriquesebastiao/downtify/pull/644) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- feat\(monitor\): warn about Spotify mixes made for one listener [\#643](https://github.com/henriquesebastiao/downtify/pull/643) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- fix\(settings\): keep slskd as the only audio source when chosen [\#642](https://github.com/henriquesebastiao/downtify/pull/642) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- fix\(slskd\): find the songs Nicotine+ finds, and keep them [\#637](https://github.com/henriquesebastiao/downtify/pull/637) ([BigBrownMF69](https://github.com/BigBrownMF69))
+- Russian language [\#526](https://github.com/henriquesebastiao/downtify/pull/526) ([MrBrillik](https://github.com/MrBrillik))
+
 ## [3.13.0](https://github.com/henriquesebastiao/downtify/tree/3.13.0) (2026-11-21)
 
 [Full Changelog](https://github.com/henriquesebastiao/downtify/compare/3.12.0...3.13.0)
