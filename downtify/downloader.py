@@ -890,7 +890,9 @@ class Downloader:
         exact = self.existing_filename_for(song, subdir)
         if exact is not None:
             if song.get('_monitor_release'):
-                if not matches_release(self.download_dir / exact, song):
+                if not matches_release(
+                    self.download_dir / exact, song, self.slskd_settings
+                ):
                     raise FileExistsError(
                         'A different recording occupies the requested release path'
                     )
@@ -923,7 +925,9 @@ class Downloader:
                     if folders[-len(parents) :] != parents:
                         continue
                 if release:
-                    if not matches_release(root_dir / rel, release):
+                    if not matches_release(
+                        root_dir / rel, release, self.slskd_settings
+                    ):
                         continue
                 return rel.as_posix()
         return None

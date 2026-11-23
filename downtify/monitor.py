@@ -2090,7 +2090,9 @@ def _release_file_present(
     settings: dict[str, Any],
 ) -> bool:
     path = _locate(filename, downloader, settings)
-    return path is not None and matches_release(path, song)
+    return path is not None and matches_release(
+        path, song, getattr(downloader, 'slskd_settings', None)
+    )
 
 
 def _library_file_exists(
