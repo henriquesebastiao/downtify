@@ -2083,6 +2083,21 @@ export default {
     noticeChange: '之後請在「設定 → 一般」變更密碼。',
     noticeOk: '知道了',
   },
+  aurral: {
+    title: 'Aurral',
+    hint: '讓 Aurral 透過 Downtify 下載音樂。可選：在你開啟之前什麼都不會改變。',
+    enable: '允許 Aurral 透過 Downtify 下載',
+    enableHint:
+      '開啟後，Aurral 的 Downtify 外掛可以在這裡搜尋並取得歌曲和專輯。它的下載存放在獨立的資料夾，不會進入你的音樂庫，Aurral 取走後即刪除。',
+    key: 'Aurral 金鑰',
+    keyHint:
+      '連同本伺服器的位址一起貼到 Aurral 中 Downtify 外掛的設定裡。它會列在「已配對的應用程式」中，你可以在那裡撤銷。',
+    makeKey: '產生金鑰',
+    plugin: 'Aurral 外掛',
+    keyOnce: '請立即複製：之後不會再顯示。',
+    copy: '複製',
+    copied: '已複製',
+  },
   apps: {
     serverGroup: '這台伺服器',
     serverGroupHint: 'Downtify 應用程式看到的伺服器資訊。',

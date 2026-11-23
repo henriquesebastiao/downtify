@@ -102,6 +102,7 @@ export default {
       'features/outbound-proxy.md': 'Proxy sortant',
       'features/slskd-navidrome.md': 'slskd et Navidrome',
       'features/navidrome-ratings.md': 'Notes depuis Deezer',
+      'features/aurral.md': 'Aurral',
       'features/deemix.md': 'Deemix',
       'features/soundcloud.md': 'SoundCloud',
       'features/library-catalog.md': 'Catalogue de la bibliothèque',

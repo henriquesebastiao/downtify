@@ -126,6 +126,7 @@ export const NAV = [
       { title: 'Deemix', page: 'features/deemix.md' },
       { title: 'slskd & Navidrome', page: 'features/slskd-navidrome.md' },
       { title: 'Ratings from Deezer', page: 'features/navidrome-ratings.md' },
+      { title: 'Aurral', page: 'features/aurral.md' },
     ],
   },
   {

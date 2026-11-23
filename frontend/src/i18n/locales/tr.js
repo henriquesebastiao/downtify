@@ -2189,6 +2189,21 @@ export default {
     noticeChange: 'Ardından parolayı Ayarlar → Genel bölümünden değiştirin.',
     noticeOk: 'Anladım',
   },
+  aurral: {
+    title: 'Aurral',
+    hint: "Aurral'ın Downtify üzerinden müzik indirmesine izin verin. İsteğe bağlı: açana kadar hiçbir şey değişmez.",
+    enable: 'Aurral, Downtify üzerinden indirsin',
+    enableHint:
+      "Aurral'ın Downtify eklentisi o zaman burada arama yapıp şarkı ve albüm alabilir. İndirmeleri kitaplığınıza değil kendi klasörüne gider ve Aurral aldığında silinir.",
+    key: 'Aurral için anahtar',
+    keyHint:
+      "Bu sunucunun adresiyle birlikte Aurral'daki Downtify eklentisinin ayarlarına yapıştırın. Eşlenen uygulamalar altında görünür, oradan iptal edebilirsiniz.",
+    makeKey: 'Anahtar oluştur',
+    plugin: 'Aurral eklentisi',
+    keyOnce: 'Şimdi kopyalayın: bir daha gösterilmez.',
+    copy: 'Kopyala',
+    copied: 'Kopyalandı',
+  },
   apps: {
     serverGroup: 'Bu sunucu',
     serverGroupHint: 'Downtify uygulamalarının bu sunucuyu nasıl gördüğü.',

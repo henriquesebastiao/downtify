@@ -81,6 +81,7 @@ Downtify가 하는 모든 일을 사이드바와 같은 영역별로 묶었습�
 | [Deemix](deemix.md) | 직접 운영하는 Deemix 서버와 Deezer 계정을 오디오 소스로 사용 |
 | [slskd와 Navidrome](slskd-navidrome.md) | slskd로 Soulseek에서 내려받고, 재생목록을 Navidrome에 반영하고, 재생목록 다운로드 추적 |
 | [Deezer 별점](navidrome-ratings.md) | Deezer에서의 인기도에 따라 Navidrome 곡에 0~5개의 별점 부여 |
+| [Aurral](aurral.md) | Aurral이 Downtify를 다운로드 소스로 쓰게 하기: Aurral이 요청하면 Downtify가 받고, Aurral이 자기 라이브러리에 정리 |
 
 ## 서버와 계정
 

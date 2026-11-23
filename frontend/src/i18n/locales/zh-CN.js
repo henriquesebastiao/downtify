@@ -2051,6 +2051,21 @@ export default {
     noticeChange: '然后在“设置 → 常规”中更改密码。',
     noticeOk: '知道了',
   },
+  aurral: {
+    title: 'Aurral',
+    hint: '让 Aurral 通过 Downtify 下载音乐。可选：在你开启之前什么都不会改变。',
+    enable: '允许 Aurral 通过 Downtify 下载',
+    enableHint:
+      '开启后，Aurral 的 Downtify 插件可以在这里搜索并获取歌曲和专辑。它的下载保存在单独的文件夹中，不会进入你的音乐库，Aurral 取走后即删除。',
+    key: 'Aurral 密钥',
+    keyHint:
+      '连同本服务器的地址一起粘贴到 Aurral 中 Downtify 插件的设置里。它会列在“已配对的应用”中，你可以在那里撤销。',
+    makeKey: '生成密钥',
+    plugin: 'Aurral 插件',
+    keyOnce: '请立即复制：之后不会再显示。',
+    copy: '复制',
+    copied: '已复制',
+  },
   apps: {
     serverGroup: '此服务器',
     serverGroupHint: 'Downtify 应用看到的服务器信息。',

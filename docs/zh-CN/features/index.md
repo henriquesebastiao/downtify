@@ -81,6 +81,7 @@ Downtify 的全部功能，按侧边栏中的领域分组。每个功能都有�
 | [Deemix](deemix.md) | 使用你自己的 Deemix 服务器和 Deezer 账号作为音源 |
 | [slskd 与 Navidrome](slskd-navidrome.md) | 通过 slskd 从 Soulseek 下载、将播放列表同步到 Navidrome，并跟踪播放列表下载 |
 | [来自 Deezer 的评分](navidrome-ratings.md) | 根据歌曲在 Deezer 上的热度，为 Navidrome 中的歌曲打 0–5 星 |
+| [Aurral](aurral.md) | 让 Aurral 把 Downtify 当作下载来源：Aurral 发出请求，Downtify 下载，Aurral 把结果放进自己的音乐库 |
 
 ## 服务器与账户
 
