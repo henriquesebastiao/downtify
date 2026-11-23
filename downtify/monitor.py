@@ -2117,6 +2117,35 @@ def _library_songs(library: Optional[LibraryStores]) -> Optional[LibrarySongs]:
         return None
 
 
+def _same_release_files(
+    db: PlaylistMonitorDB,
+    playlist_id: int,
+    album: dict[str, Any],
+    albums: list[dict[str, Any]],
+) -> set[str]:
+    """The files recorded for the other listings of *album* in the
+    discography *albums*: the same release (name and type, see
+    :func:`release_key`) as another catalogue lists it - YouTube Music's
+    and Deezer's *Certified Lover Boy*."""
+
+    key = (release_key(str(album.get('name') or '')), release_type_of(album))
+    files: set[str] = set()
+    for other in albums:
+        other_id = other.get('album_id')
+        if (
+            not other_id
+            or other_id == album.get('album_id')
+            or (
+                release_key(str(other.get('name') or '')),
+                release_type_of(other),
+            )
+            != key
+        ):
+            continue
+        files.update(db.releases.tracks(playlist_id, str(other_id)).values())
+    return files
+
+
 def _download_release_track(
     downloader: Downloader,
     song: dict[str, Any],
@@ -2340,6 +2369,16 @@ async def check_artist(  # noqa: PLR0914  # one sweep: discography, releases, tr
         release_tracks = await asyncio.to_thread(
             db.releases.tracks, playlist.id, album_id
         )
+        # "Keep every album complete" is about different releases: the
+        # files another catalogue's listing of this very release brought
+        # in are still linked (issue #669).
+        same_release = (
+            await asyncio.to_thread(
+                _same_release_files, db, playlist.id, album, albums
+            )
+            if complete_albums
+            else set()
+        )
         for position, song in enumerate(tracks, start=1):
             track_id = song.get('song_id')
             if not track_id:
@@ -2366,12 +2405,11 @@ async def check_artist(  # noqa: PLR0914  # one sweep: discography, releases, tr
                 continue
             # "Keep every album complete": each release gets its own copy
             # of a song it shares with another (a greatest hits, a deluxe
-            # edition, a single) instead of linking the one already there.
-            same = (
-                songs.find(song)
-                if songs is not None and not complete_albums
-                else None
-            )
+            # edition, a single) instead of linking the one already there -
+            # but not a second copy for another listing of the same one.
+            same = songs.find(song) if songs is not None else None
+            if complete_albums and same not in same_release:
+                same = None
             if same and await asyncio.to_thread(
                 _library_file_exists, same, downloader, settings or {}
             ):
