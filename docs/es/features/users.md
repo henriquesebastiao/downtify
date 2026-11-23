@@ -93,6 +93,15 @@ Controla lo que ven las cuentas en la app, no quién puede obtener un archivo cu
 
 Ocultar y mostrar quedan registrados en el [registro de actividad](#activity).
 
+### Una biblioteca para cada usuario
+
+Por defecto la biblioteca es compartida. Para que cada cuenta tenga su propia biblioteca, un administrador activa **Ajustes › Biblioteca › Cada usuario tiene su propia biblioteca**. Entonces un usuario ve:
+
+- las canciones que descargó, incluido lo que trajeron sus propias vigilancias de playlists y de artistas;
+- las canciones de las playlists que puede abrir: las suyas, las [compartidas con él](#sharing-playlists) y las públicas que sigue, para que una playlist compartida siga teniendo sus canciones.
+
+Todo lo demás desaparece de su biblioteca, de las marcas «en la biblioteca» de la búsqueda y de lo que sincroniza un teléfono vinculado. Cuando dos personas descargan la misma canción, se sigue guardando una sola vez y ambas la ven. Los administradores siguen viéndolo todo, y las canciones que nadie descargó con una cuenta (añadidas a mano a la carpeta, o de antes de que existieran las cuentas) solo se muestran a los administradores. Como [ocultar](#hiding-from-users), controla lo que se lista, no quién puede obtener un archivo cuya dirección ya conoce.
+
 ### Borrar canciones
 
 Borrar una canción la quita del disco para todos, así que sigue a quien la descargó. Un admin puede borrar cualquier cosa. Un usuario puede borrar una canción que descargó él mismo; cuando otra persona descargó también la misma canción, borrar solo renuncia a su propia propiedad y la canción se queda en la biblioteca compartida. Una canción que nadie descargó mediante una cuenta (un barrido del monitor de playlists, una descarga anterior a las cuentas, una [carpeta extra](external-library.md)) solo la puede borrar un admin. Borrar una playlist tuya nunca se lleva archivos de nadie más.

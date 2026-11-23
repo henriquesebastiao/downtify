@@ -948,6 +948,54 @@ class NavidromeClient:
         )
 
 
+def played_and_starred(
+    client: NavidromeClient, *, max_albums: int = 1000
+) -> dict[str, Any]:
+    """What *client*'s account listens to: ``{albums, starred}``.
+
+    ``albums`` are its most played (``getAlbumList2`` *frequent*, 500
+    at a time, up to *max_albums*) as ``{artist, plays, played}``,
+    ``played`` the last time one was (ISO, may be ``''``); ``starred``
+    its starred songs (``getStarred2``) as ``{artist}``. Subsonic only
+    tells the signed-in account's own plays and stars.
+    """
+
+    albums: list[dict[str, Any]] = []
+    offset = 0
+    while offset < max_albums:
+        body = client._request(
+            'getAlbumList2',
+            {'type': 'frequent', 'size': 500, 'offset': offset},
+        )
+        root = body.get('albumList2') if isinstance(body, dict) else None
+        batch = client._as_list(
+            root.get('album') if isinstance(root, dict) else None
+        )
+        for album in batch:
+            try:
+                plays = int(album.get('playCount') or 0)
+            except (TypeError, ValueError):
+                plays = 0
+            if plays > 0:
+                albums.append({
+                    'artist': str(album.get('artist') or ''),
+                    'plays': plays,
+                    'played': str(album.get('played') or ''),
+                })
+        if len(batch) < 500:
+            break
+        offset += 500
+    body = client._request('getStarred2')
+    root = body.get('starred2') if isinstance(body, dict) else None
+    starred = [
+        {'artist': str(song.get('artist') or '')}
+        for song in client._as_list(
+            root.get('song') if isinstance(root, dict) else None
+        )
+    ]
+    return {'albums': albums, 'starred': starred}
+
+
 def _song_label(song: dict[str, Any]) -> str:
     tags_row = dict(song)
     title, artists = _library_tags(song)

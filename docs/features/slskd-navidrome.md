@@ -150,6 +150,8 @@ Tracks are matched to Navidrome songs by path first, then by tags. **Make Navidr
 
 Navidrome also imports every M3U file in its music folder as a playlist of its own (with the cover beside it), so with both on, each playlist appears twice. Turn on **Let Navidrome import the M3U playlists** to keep only Navidrome's import: Downtify then has Navidrome rescan instead of creating a playlist, and removes the copy it created earlier. **Settings → Doctor** finds and removes the existing duplicates.
 
+**Use Navidrome plays in Discover** lets the plays and starred songs of this Navidrome account shape admins' Discover suggestions (see *What counts as a listen* on the Discover page).
+
 A library scan can make playback stutter or stop on some setups. **Wait for scans until nobody is listening** (off by default) holds the scan Downtify starts after downloads while any Navidrome app is playing (Navidrome's *now playing* list, for every user). It checks every minute and starts one scan once nothing is playing; scans asked for meanwhile become that one scan. The download and playlist sync don't wait for it, so new songs show up in Navidrome once playback stops. A Navidrome that can't be asked counts as nobody listening, so scans are never held by an error. Scans you start yourself in **Settings → Doctor** aren't held.
 
 ::: warning Files whose tags don't match the playlist are deleted

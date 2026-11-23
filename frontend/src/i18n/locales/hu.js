@@ -1755,6 +1755,9 @@ export default {
     allowPlaylistSharing: 'Felhasználók listamegosztásának engedélyezése',
     allowPlaylistSharingHint:
       'A felhasználók megoszthatják listáikat másokkal, vagy nyilvánossá tehetik azokat. Kikapcsolva minden megosztott lista rejtve marad, amíg vissza nem kapcsolod.',
+    perUserLibrary: 'Minden felhasználónak saját könyvtára van',
+    perUserLibraryHint:
+      'A felhasználók csak az általuk letöltött dalokat látják, valamint azokét a lejátszási listákét, amelyeket megnyithatnak. Az adminisztrátorok továbbra is mindent látnak. Azokat a dalokat, amelyeket senki sem a Downtifyjal töltött le (kézzel kerültek a mappába), ekkor csak az adminisztrátorok látják.',
     searchAlbums: 'Albumok a találatok között',
     searchAlbumsHint:
       'Albumokat is keres, és felkínálja a teljes album letöltését.',
@@ -2102,6 +2105,9 @@ export default {
     navidromeM3uImport: 'A Navidrome importálja az M3U lejátszási listákat',
     navidromeM3uImportHint:
       'A Navidrome minden M3U-ból, amit a Downtify ír, borítóval ellátott listát készít. Bekapcsolva a Downtify nem hoz létre másodikat az API-n keresztül.',
+    discoverNavidromePlays: 'Navidrome-lejátszások használata a Felfedezésben',
+    discoverNavidromePlaysHint:
+      'Amit ez a Navidrome-fiók lejátszik és csillaggal jelöl, beleszámít a Felfedezés javaslataiba az adminisztrátoroknál (a Navidrome csak a saját fiók lejátszásait adja meg).',
     navidromeScanWhenIdle: 'Olvasás csak akkor, ha senki sem hallgat',
     navidromeScanWhenIdleHint:
       'Amíg egy Navidrome-alkalmazás lejátszik, a Downtify letöltések utáni beolvasása vár (percenként ellenőrizve), hogy ne szakítsa meg a lejátszást. Az új dalok a lejátszás végén jelennek meg a Navidrome-ban.',

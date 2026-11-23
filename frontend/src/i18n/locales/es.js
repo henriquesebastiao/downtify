@@ -1772,6 +1772,9 @@ export default {
     allowPlaylistSharing: 'Permitir que los usuarios compartan playlists',
     allowPlaylistSharingHint:
       'Los usuarios pueden compartir sus playlists con otros o hacerlas públicas. Si se desactiva, todas las playlists compartidas quedan ocultas hasta que lo reactives.',
+    perUserLibrary: 'Cada usuario tiene su propia biblioteca',
+    perUserLibraryHint:
+      'Los usuarios solo ven las canciones que descargaron, más las de las playlists que pueden abrir. Los administradores siguen viéndolo todo. Las canciones que nadie descargó con Downtify (añadidas a mano a la carpeta) solo se muestran entonces a los administradores.',
     searchAlbums: 'Mostrar álbumes en los resultados',
     searchAlbumsHint:
       'Buscar también álbumes, con la opción de descargar el álbum completo.',
@@ -2121,6 +2124,9 @@ export default {
     navidromeM3uImport: 'Dejar que Navidrome importe las listas M3U',
     navidromeM3uImportHint:
       'Navidrome convierte cada M3U que escribe Downtify en una lista con su portada. Con esto activado, Downtify no crea una segunda por la API.',
+    discoverNavidromePlays: 'Usar las reproducciones de Navidrome en Descubrir',
+    discoverNavidromePlaysHint:
+      'Lo que esta cuenta de Navidrome reproduce y marca con estrella cuenta en las sugerencias de Descubrir, para los administradores (Navidrome solo informa las reproducciones de la propia cuenta).',
     navidromeScanWhenIdle: 'Esperar a que nadie escuche para escanear',
     navidromeScanWhenIdleHint:
       'Mientras una app de Navidrome está reproduciendo, el escaneo que Downtify inicia tras las descargas espera (se comprueba cada minuto), para no cortar la reproducción. Las canciones nuevas aparecen en Navidrome cuando se detiene.',

@@ -1734,6 +1734,9 @@ export default {
     allowPlaylistSharing: '사용자의 재생목록 공유 허용',
     allowPlaylistSharingHint:
       '사용자가 재생목록을 다른 사용자와 공유하거나 공개할 수 있습니다. 끄면 다시 켤 때까지 공유된 재생목록이 모두 숨겨집니다.',
+    perUserLibrary: '사용자마다 자신만의 라이브러리',
+    perUserLibraryHint:
+      '사용자는 자신이 다운로드한 곡과 열 수 있는 플레이리스트의 곡만 봅니다. 관리자는 계속 모든 곡을 봅니다. 아무도 Downtify로 다운로드하지 않은 곡(폴더에 직접 넣은 곡)은 이때 관리자에게만 보입니다.',
     searchAlbums: '검색 결과에 앨범 표시',
     searchAlbumsHint:
       '검색 시 앨범도 함께 검색하며 전체 앨범 다운로드 옵션을 제공합니다.',
@@ -2082,6 +2085,9 @@ export default {
     navidromeM3uImport: 'Navidrome이 M3U 재생목록을 가져오게 하기',
     navidromeM3uImportHint:
       'Navidrome은 Downtify가 쓰는 각 M3U를 커버가 있는 재생목록으로 만듭니다. 켜면 Downtify가 API로 두 번째 재생목록을 만들지 않습니다.',
+    discoverNavidromePlays: '둘러보기에 Navidrome 재생 기록 사용',
+    discoverNavidromePlaysHint:
+      '이 Navidrome 계정이 재생하고 별표한 곡이 관리자의 둘러보기 추천에 반영됩니다(Navidrome은 계정 자신의 재생 기록만 알려 줍니다).',
     navidromeScanWhenIdle: '아무도 듣지 않을 때까지 스캔 대기',
     navidromeScanWhenIdleHint:
       'Navidrome 앱에서 재생 중이면 Downtify가 다운로드 뒤에 시작하는 스캔이 기다립니다(1분마다 확인). 재생이 끊기지 않으며, 새 노래는 재생이 멈추면 Navidrome에 나타납니다.',

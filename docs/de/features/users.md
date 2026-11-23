@@ -93,6 +93,15 @@ Es steuert, was Konten in der App sehen, nicht wer eine Datei abrufen kann, dere
 
 Verbergen und Zeigen werden im [Aktivitätsprotokoll](#activity) festgehalten.
 
+### Eine Bibliothek für jeden Benutzer
+
+Standardmäßig ist die Bibliothek gemeinsam. Damit stattdessen jedes Konto eine eigene Bibliothek hat, schaltet ein Admin **Einstellungen › Bibliothek › Jeder Benutzer hat seine eigene Bibliothek** ein. Dann sieht ein Benutzer:
+
+- die Songs, die er heruntergeladen hat, einschließlich dessen, was seine eigenen Playlist- und Künstlerbeobachtungen geholt haben;
+- die Songs der Playlists, die er öffnen darf: seine eigenen, die [mit ihm geteilten](#sharing-playlists) und die öffentlichen, denen er folgt, damit eine geteilte Playlist ihre Songs behält.
+
+Alles andere verschwindet aus seiner Bibliothek, aus den „in der Bibliothek“-Markierungen der Suche und aus dem, was ein gekoppeltes Handy synchronisiert. Laden zwei Personen denselben Song herunter, wird er weiterhin nur einmal gespeichert, und beide sehen ihn. Admins sehen weiterhin alles, und Songs, die niemand über ein Konto heruntergeladen hat (von Hand in den Ordner gelegt oder aus der Zeit vor den Konten), sehen nur Admins. Wie das [Verbergen](#hiding-from-users) steuert es, was aufgelistet wird, nicht, wer eine Datei abrufen kann, deren Adresse er schon kennt.
+
 ### Songs löschen
 
 Das Löschen eines Songs nimmt ihn für alle von der Festplatte, daher folgt es dem, der ihn heruntergeladen hat. Ein Admin kann alles löschen. Ein Benutzer kann einen Song löschen, den er selbst heruntergeladen hat; hat jemand anderes denselben Song ebenfalls heruntergeladen, gibt das Löschen nur den eigenen Anspruch auf, und der Song bleibt in der geteilten Bibliothek. Einen Song, den niemand über ein Konto heruntergeladen hat (ein Durchlauf der Playlist-Überwachung, ein Download aus der Zeit vor den Konten, ein [zusätzlicher Ordner](external-library.md)), kann nur ein Admin löschen. Das Löschen einer deiner Playlists nimmt nie die Dateien anderer mit.

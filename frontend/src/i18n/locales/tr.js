@@ -1741,6 +1741,9 @@ export default {
     allowPlaylistSharing: 'Kullanıcıların liste paylaşmasına izin ver',
     allowPlaylistSharingHint:
       'Kullanıcılar listelerini başkalarıyla paylaşabilir veya herkese açık yapabilir. Kapalıyken paylaşılan tüm listeler, yeniden açana kadar gizli kalır.',
+    perUserLibrary: 'Her kullanıcının kendi kütüphanesi olsun',
+    perUserLibraryHint:
+      'Kullanıcılar yalnızca indirdikleri şarkıları ve açabildikleri çalma listelerinin şarkılarını görür. Yöneticiler her şeyi görmeye devam eder. Kimsenin Downtify ile indirmediği şarkılar (klasöre elle eklenenler) bu durumda yalnızca yöneticilere gösterilir.',
     searchAlbums: 'Arama sonuçlarında albümleri göster',
     searchAlbumsHint:
       'Aramada albümleri de getir ve albümün tamamını indirme seçeneği sun.',
@@ -2085,6 +2088,9 @@ export default {
     navidromeM3uImport: 'M3U çalma listelerini Navidrome içe aktarsın',
     navidromeM3uImportHint:
       'Navidrome, Downtify’ın yazdığı her M3U’dan kapaklı bir çalma listesi yapar. Bu açıkken Downtify API üzerinden ikinci bir liste oluşturmaz.',
+    discoverNavidromePlays: "Keşfet'te Navidrome dinlemelerini kullan",
+    discoverNavidromePlaysHint:
+      'Bu Navidrome hesabının dinledikleri ve yıldızladıkları, yöneticiler için Keşfet önerilerinde sayılır (Navidrome yalnızca hesabın kendi dinlemelerini bildirir).',
     navidromeScanWhenIdle: 'Kimse dinlemiyorken tara',
     navidromeScanWhenIdleHint:
       'Bir Navidrome uygulaması çalarken Downtify’ın indirmelerden sonra başlattığı tarama bekler (her dakika kontrol edilir), böylece çalma kesilmez. Yeni şarkılar çalma durunca Navidrome’da görünür.',

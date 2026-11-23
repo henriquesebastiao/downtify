@@ -559,6 +559,8 @@ Download a single track. Blocks until complete.
 
 **Response:** Filename string of the downloaded file — a `slskd/…` path for a slskd download left in place. `404` when no audio source has a match for the track.
 
+With `"skip_if_in_library": true` in the body, a song the library already has is not downloaded: the response is `{ "status": "already_in_library", "filename", "match" }` instead, `match` being `catalog_id` or `song_key`. A song counts as owned with the same Spotify track, the same YouTube video or SoundCloud track a library file was downloaded from (recorded since 3.12), or the same ISRC; otherwise the same lead artist and title, with feat./with credits and remaster tags folded (so a remaster or another release counts, a live version or a remix doesn't). Only songs the caller can see count. Without the flag nothing changes, whatever **Download again if the file exists** says.
+
 ---
 
 ### `POST /api/download/batch`
@@ -583,6 +585,7 @@ Download multiple tracks concurrently, gated by the [`max_parallel_downloads` se
 | `cover_url` | string | Optional. Image saved as the playlist's [cover art](features/playlist-cover-art.md) when there is no `playlist_url`. Only used when `generate_m3u` is true, a `playlist_name` is set and the cover art setting is on. |
 | `generate_m3u` | boolean | Whether to write an M3U after the batch finishes. Default: `true`. |
 | `as_album` | boolean | Optional. Save the playlist as one album: album = the playlist's name, album artist "Various Artists" with the compilation flag, tracks numbered in `downtify_track_order`, `cover_url` (when given) as every track's cover, filed in one folder. A song the library has elsewhere is downloaded again into the album. See [Downloading a playlist as an album](features/file-organization.md#downloading-a-playlist-as-an-album). Default: `false`. |
+| `skip_if_in_library` | boolean | Optional. Leave out the songs the library already has (same rule as [`POST /api/download/url`](#post-apidownloadurl)); the response then lists them under `already_in_library` as `{ "input_index", "song_id", "filename", "match" }`. A batch of only such songs queues nothing (`count: 0`). Default: `false`. |
 
 **Response:**
 
@@ -602,8 +605,12 @@ Download every track of a YouTube Music album/browse URL, resolving the full tra
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `url` | string | yes | YouTube Music album/browse URL |
+| `wait` | boolean | no | `false` queues one job per track and answers at once (see below). Default `true`: answers once every track finished |
+| `skip_if_in_library` | boolean | no | Leave out the tracks the library already has (same rule as [`POST /api/download/url`](#post-apidownloadurl)) |
 
-**Response:** Object mapping `song_id -> downloaded filename` for every track that downloaded successfully (failed tracks are omitted, not raised).
+**Response:** Object mapping `song_id -> downloaded filename` for every track that downloaded successfully (failed tracks are omitted, not raised); with `skip_if_in_library`, tracks already in the library map to their existing file.
+
+With `wait=false`: `{ "album", "album_artist", "track_count", "job_ids" }` right away (plus `already_in_library`, as in [`POST /api/download/batch`](#post-apidownloadbatch), with `skip_if_in_library`). `track_count` is the album's, before any track is left out. Follow the jobs in [`GET /api/queue`](#get-apiqueue).
 
 ---
 
@@ -1401,6 +1408,8 @@ Paired apps pick the change up on their next sync: tracks that became hidden arr
 ### `POST /api/library/lookup`
 
 Search / link / top-songs pages send the songs on screen (`{ "songs": [{ "artist", "name" }] }`, up to 200). The response is the matching `GET /tracks` rows already in the library (not the ones hidden from the caller), so "in library" and Play work without downloading the whole catalog.
+
+With `"detailed": true` the answer is per requested song instead: `{ "matches": [{ "input_index", "id", "match", "row" }] }`, one for each song the library has, where `input_index` is its position in `songs`, `id` echoes the song's own `id` when it sent one, `match` is `catalog_id` or `song_key` and `row` is the `GET /tracks` row. Songs may then carry `song_id`, `url`, `youtube_id`, `soundcloud_url` and `isrc` besides artist and title: a song counts as owned with the same Spotify track, the same YouTube video or SoundCloud track a library file was downloaded from (recorded since 3.12), or the same ISRC; otherwise the same lead artist and title, with feat./with credits and remaster tags folded (so a remaster or another release counts, a live version or a remix doesn't). Only songs the caller can see count.
 
 ---
 

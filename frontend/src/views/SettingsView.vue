@@ -1003,6 +1003,15 @@
                     :aria-label="t('settings.navidromeScanWhenIdle')"
                   />
                 </SettingRow>
+                <SettingRow
+                  :label="t('settings.discoverNavidromePlays')"
+                  :description="t('settings.discoverNavidromePlaysHint')"
+                >
+                  <UiSwitch
+                    v-model="s.discover_navidrome_plays"
+                    :aria-label="t('settings.discoverNavidromePlays')"
+                  />
+                </SettingRow>
               </template>
             </SettingGroup>
             <SettingGroup
@@ -1065,6 +1074,15 @@
                 <UiSwitch
                   v-model="s.allow_playlist_sharing"
                   :aria-label="t('settings.allowPlaylistSharing')"
+                />
+              </SettingRow>
+              <SettingRow
+                :label="t('settings.perUserLibrary')"
+                :description="t('settings.perUserLibraryHint')"
+              >
+                <UiSwitch
+                  v-model="s.per_user_library"
+                  :aria-label="t('settings.perUserLibrary')"
                 />
               </SettingRow>
               <SettingRow

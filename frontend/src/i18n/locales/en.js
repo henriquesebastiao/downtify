@@ -1718,6 +1718,9 @@ export default {
     allowPlaylistSharing: 'Allow users to share playlists',
     allowPlaylistSharingHint:
       'Users can share their playlists with other users, or make them public. When off, every shared playlist stays hidden until you turn it back on.',
+    perUserLibrary: 'Each user has their own library',
+    perUserLibraryHint:
+      'Users see only the songs they downloaded, plus those of the playlists they can open. Admins still see everything. Songs nobody downloaded through Downtify (added to the folder by hand) are then only shown to admins.',
     searchAlbums: 'Show albums in search results',
     searchAlbumsHint:
       'Also look up albums when searching, with an option to download the whole thing.',
@@ -2058,6 +2061,9 @@ export default {
     navidromeM3uImport: 'Let Navidrome import the M3U playlists',
     navidromeM3uImportHint:
       'Navidrome turns each M3U Downtify writes into a playlist with its cover. With this on, Downtify doesn’t create a second one through the API.',
+    discoverNavidromePlays: 'Use Navidrome plays in Discover',
+    discoverNavidromePlaysHint:
+      "What this Navidrome account plays and stars counts in Discover's suggestions, for admins (Navidrome only tells an account's own plays).",
     navidromeScanWhenIdle: 'Wait for scans until nobody is listening',
     navidromeScanWhenIdleHint:
       'While any Navidrome app is playing, the scan Downtify starts after downloads waits, checked every minute, so playback isn’t interrupted. New songs show up in Navidrome once playback stops.',
