@@ -1918,6 +1918,15 @@ export default {
     completeAlbums: 'Minden album maradjon teljes',
     completeAlbumsHint:
       'Az előadófigyelés minden kiadáshoz újra letölti a dalt, amelyen szerepel (album, válogatás, deluxe kiadás), ahelyett hogy a meglévő példányt kapcsolná hozzá. Több tárhelyet foglal.',
+    artistWatchDeezer: 'Az előadófigyelés a Deezert is olvassa',
+    artistWatchDeezerHint:
+      'Hozzáadja azokat a kiadásokat, amelyeket az előadó YouTube Music-oldala kihagy. Később bekapcsolva a következő ellenőrzés végigmegy a Deezer minden kiadásán; a meglévő dalokat hozzákapcsolja.',
+    artistWatchMusicbrainz: 'Az előadófigyelés a MusicBrainzt is olvassa',
+    artistWatchMusicbrainzHint:
+      'Hozzáadja a mixtape-eket és régebbi kiadásokat, amelyeket sem a YouTube Music, sem a Deezer nem listáz. Később bekapcsolva a következő ellenőrzés végigmegy minden hozzáadott kiadáson; egy nagy előadó első ellenőrzése néhány percig tart.',
+    artistWatchKinds: 'MusicBrainz kiadástípusok',
+    artistWatchKindsHint:
+      'Az albumok, EP-k és kislemezek mellett töltődnek le, hacsak egy figyelés a saját oldalán nem választ mást.',
     m3u: 'M3U listák írása',
     m3uHint:
       'Minden letöltött listához .m3u fájlt ment Jellyfinhez, Plexhez, Navidrome-hoz és másokhoz.',

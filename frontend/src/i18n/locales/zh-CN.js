@@ -1774,6 +1774,15 @@ export default {
     completeAlbums: '保持每张专辑完整',
     completeAlbumsHint:
       '艺人监控会为歌曲所在的每个发行（专辑、精选集、豪华版）重新下载一份，而不是链接你已有的副本。会占用更多磁盘空间。',
+    artistWatchDeezer: '艺人监控同时读取 Deezer',
+    artistWatchDeezerHint:
+      '补上 YouTube Music 艺人页漏掉的发行。之后再开启时，下一次检查会遍历 Deezer 列出的所有发行；你已有的歌曲会被链接。',
+    artistWatchMusicbrainz: '艺人监控同时读取 MusicBrainz',
+    artistWatchMusicbrainzHint:
+      '补上 YouTube Music 和 Deezer 都没有列出的混音带和较早的发行。之后再开启时，下一次检查会遍历它补上的所有发行；大牌艺人的首次检查需要几分钟。',
+    artistWatchKinds: 'MusicBrainz 发行类型',
+    artistWatchKindsHint:
+      '除专辑、EP 和单曲外也会下载，除非某个监控在自己的页面上另选。',
     m3u: '生成 M3U 播放列表',
     m3uHint:
       '为每个下载的播放列表保存 .m3u 文件，供 Jellyfin、Plex、Navidrome 等使用。',

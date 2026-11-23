@@ -1878,6 +1878,15 @@ export default {
     completeAlbums: 'Keep every album complete',
     completeAlbumsHint:
       "Artist Watch downloads a song again for each release it's on (an album, a greatest hits, a deluxe edition) instead of linking the copy you already have. Uses more disk space.",
+    artistWatchDeezer: 'Artist Watch also reads Deezer',
+    artistWatchDeezerHint:
+      "Adds the releases YouTube Music's artist page leaves out. Turned on later, the next check goes through every release Deezer lists; songs you already have are linked.",
+    artistWatchMusicbrainz: 'Artist Watch also reads MusicBrainz',
+    artistWatchMusicbrainzHint:
+      "Adds the mixtapes and older releases neither YouTube Music nor Deezer lists. Turned on later, the next check goes through every release it adds; a big artist's first check takes a few minutes.",
+    artistWatchKinds: 'MusicBrainz release kinds',
+    artistWatchKindsHint:
+      'Downloaded besides albums, EPs and singles, unless a watch picks its own on its page.',
     m3u: 'Write M3U playlists',
     m3uHint:
       'Save a .m3u file for each downloaded playlist, for Jellyfin, Plex, Navidrome and others.',

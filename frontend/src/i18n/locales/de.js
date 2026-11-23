@@ -1962,6 +1962,15 @@ export default {
     completeAlbums: 'Jedes Album vollständig halten',
     completeAlbumsHint:
       'Die Künstlerbeobachtung lädt einen Song für jede Veröffentlichung, auf der er ist (ein Album, ein Best-of, eine Deluxe-Edition), erneut herunter, statt die vorhandene Kopie zu verknüpfen. Braucht mehr Speicherplatz.',
+    artistWatchDeezer: 'Künstlerbeobachtung liest auch Deezer',
+    artistWatchDeezerHint:
+      'Ergänzt die Veröffentlichungen, die die Künstlerseite auf YouTube Music auslässt. Später eingeschaltet, geht die nächste Prüfung jede Veröffentlichung durch, die Deezer listet; Songs, die du schon hast, werden verknüpft.',
+    artistWatchMusicbrainz: 'Künstlerbeobachtung liest auch MusicBrainz',
+    artistWatchMusicbrainzHint:
+      'Ergänzt Mixtapes und ältere Veröffentlichungen, die weder YouTube Music noch Deezer listen. Später eingeschaltet, geht die nächste Prüfung jede Veröffentlichung durch, die dazukommt; die erste Prüfung eines großen Künstlers dauert ein paar Minuten.',
+    artistWatchKinds: 'MusicBrainz-Veröffentlichungsarten',
+    artistWatchKindsHint:
+      'Werden zusätzlich zu Alben, EPs und Singles geladen, außer eine Beobachtung wählt auf ihrer Seite eigene.',
     m3u: 'M3U-Playlists erstellen',
     m3uHint:
       'Speichere für jede heruntergeladene Playlist eine .m3u-Datei für Jellyfin, Plex, Navidrome und andere.',
