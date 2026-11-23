@@ -2011,7 +2011,7 @@ export default {
     ratingsNextSoon: 'Próxima ejecución en la próxima hora',
     ratingsNever: 'Aún no se ha ejecutado',
     ratingsFailedDeezer:
-      'No se pudo conectar con Deezer. Las estrellas ya asignadas se conservan.',
+      'Deezer no respondió durante varios minutos. Las estrellas ya asignadas se conservan y la próxima ejecución sigue donde se detuvo esta.',
     ratingsFailedNavidrome: 'Error de Navidrome: {message}',
     ratingsFailed: 'La valoración falló: {message}',
     ratingsNotConfigured: 'Guarda primero el acceso a Navidrome.',

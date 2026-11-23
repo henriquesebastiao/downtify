@@ -514,7 +514,7 @@ def test_album_under_two_artists_is_rated_once(monkeypatch):
     assert summary['total'] == 1
 
 
-def test_deezer_failing_twice_stops_the_run(monkeypatch):
+def test_deezer_failing_after_every_retry_stops_the_run(monkeypatch):
     client = FakeClient(one_album(song('s1', 'A'), song('s2', 'B')))
     fail = ValueError('down')
     routes = {
@@ -525,7 +525,10 @@ def test_deezer_failing_twice_stops_the_run(monkeypatch):
     with pytest.raises(navidrome_ratings.DeezerUnavailable):
         run.run()
     assert client.set_calls == [('s1', 5)]
-    assert 5.0 in sleeps
+    # Every retry pause was waited out (in steps of at most 5 s) first.
+    waited = sum(s for s in sleeps if s != navidrome_ratings.DEEZER_PAUSE)
+    assert waited == sum(navidrome_ratings.RETRY_PAUSES)
+    assert max(sleeps) <= 5.0
 
 
 def test_one_failure_is_retried(monkeypatch):
@@ -626,13 +629,93 @@ def test_song_search_refused_counts_as_not_found(monkeypatch):
 
 
 @pytest.mark.parametrize('code', [4, 700])
-def test_quota_or_busy_twice_is_unavailable(monkeypatch, code):
+def test_quota_or_busy_every_time_is_unavailable(monkeypatch, code):
     client = FakeClient(one_album(song('s1', 'A')))
-    routes = {(SEARCH, 'Drake A'): [refused(code), refused(code)]}
-    run, _fake, sleeps = make_run(monkeypatch, client, routes)
+    routes = {(SEARCH, 'Drake A'): [refused(code)]}
+    run, fake, sleeps = make_run(monkeypatch, client, routes)
     with pytest.raises(navidrome_ratings.DeezerUnavailable):
         run.run()
-    assert sleeps == [5.0]
+    assert len(fake.calls) == len(navidrome_ratings.RETRY_PAUSES) + 1
+    assert sum(sleeps) == sum(navidrome_ratings.RETRY_PAUSES)
+
+
+def test_a_few_failures_in_a_row_are_waited_out(monkeypatch):
+    client = FakeClient(one_album(song('s1', 'A')))
+    down = ValueError('down')
+    routes = {(SEARCH, 'Drake A'): [down, refused(4), down, hit(900_000)]}
+    run, _fake, sleeps = make_run(monkeypatch, client, routes)
+    summary = run.run()
+    assert summary['state'] == 'done'
+    assert client.set_calls == [('s1', 5)]
+    # 5 + 15 + 30 s of waiting (in steps), then the usual pacing.
+    assert sum(sleeps) == pytest.approx(50.2)
+
+
+def test_stop_during_a_retry_wait_stops_without_failing(monkeypatch):
+    client = FakeClient(one_album(song('s1', 'A'), song('s2', 'B')))
+    routes = {(SEARCH, 'Drake A'): [ValueError('down')]}
+    stop = {'now': False}
+    run, _fake, sleeps = make_run(
+        monkeypatch, client, routes, cancelled=lambda: stop['now']
+    )
+
+    def sleep(seconds):
+        sleeps.append(seconds)
+        stop['now'] = True  # the user presses Stop during the wait
+
+    run._sleep = sleep
+    summary = run.run()
+    assert summary['state'] == 'stopped'
+    assert client.set_calls == []
+    assert len(sleeps) == 1
+
+
+def test_long_runs_rest_between_batches(monkeypatch):
+    songs = [song(f's{n}', f'T{n}') for n in range(250)]
+    client = FakeClient(one_album(*songs))
+    run, fake, sleeps = make_run(monkeypatch, client, {})
+    run.run()
+    assert len(fake.calls) == 250
+    # A rest before the 101st and the 201st call.
+    rests = sum(sleeps) - 250 * navidrome_ratings.DEEZER_PAUSE
+    assert rests == pytest.approx(2 * navidrome_ratings.BATCH_PAUSE)
+
+
+def test_albums_a_previous_run_finished_are_skipped(monkeypatch):
+    library = {
+        'Drake': [('al1', 'Views', 'Drake', [song('s1', 'A')])],
+        'Future': [('al2', 'Hndrxx', 'Future', [song('s2', 'B')])],
+    }
+    client = FakeClient(library)
+    routes = {
+        (SEARCH, 'Drake A'): hit(900_000),
+        (SEARCH, 'Future B'): hit(900_000),
+    }
+    finished = []
+    run, fake, _ = make_run(
+        monkeypatch,
+        client,
+        routes,
+        done_albums={'al1'},
+        album_done=finished.append,
+    )
+    summary = run.run()
+    assert queries(fake) == ['Future B']
+    assert client.set_calls == [('s2', 5)]
+    assert summary['skipped'] == 1
+    assert finished == ['al2']
+
+
+def test_an_album_cut_short_is_not_counted_as_finished(monkeypatch):
+    client = FakeClient(one_album(song('s1', 'A'), song('s2', 'B')))
+    routes = {(SEARCH, 'Drake B'): [ValueError('down')]}
+    finished = []
+    run, _fake, _ = make_run(
+        monkeypatch, client, routes, album_done=finished.append
+    )
+    with pytest.raises(navidrome_ratings.DeezerUnavailable):
+        run.run()
+    assert finished == []
 
 
 def test_quota_once_is_retried(monkeypatch):

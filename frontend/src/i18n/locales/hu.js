@@ -1993,7 +1993,7 @@ export default {
     ratingsNextSoon: 'Következő futtatás egy órán belül',
     ratingsNever: 'Még nem futott',
     ratingsFailedDeezer:
-      'A Deezer nem érhető el. A már megadott csillagok megmaradnak.',
+      'A Deezer több percig nem válaszolt. A már megadott csillagok megmaradnak, és a következő futás ott folytatja, ahol ez abbamaradt.',
     ratingsFailedNavidrome: 'Navidrome-hiba: {message}',
     ratingsFailed: 'Az értékelés sikertelen: {message}',
     ratingsNotConfigured: 'Előbb mentsd el a Navidrome-bejelentkezést.',

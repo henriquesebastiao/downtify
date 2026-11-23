@@ -1952,7 +1952,7 @@ export default {
     ratingsNextSoon: 'Next run within the hour',
     ratingsNever: 'Not run yet',
     ratingsFailedDeezer:
-      "Deezer couldn't be reached. Stars already given are kept.",
+      "Deezer didn't answer for several minutes. Stars already given are kept, and the next run carries on where this one stopped.",
     ratingsFailedNavidrome: 'Navidrome error: {message}',
     ratingsFailed: 'The ratings run failed: {message}',
     ratingsNotConfigured: 'Save the Navidrome login first.',

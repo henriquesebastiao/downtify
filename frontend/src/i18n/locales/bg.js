@@ -1972,7 +1972,7 @@ export default {
     ratingsNextSoon: 'Следващо пускане до един час',
     ratingsNever: 'Още не е пускано',
     ratingsFailedDeezer:
-      'Deezer не може да бъде достигнат. Вече дадените звезди остават.',
+      'Deezer не отговори няколко минути. Вече дадените звезди остават, а следващото пускане продължава оттам, където спря това.',
     ratingsFailedNavidrome: 'Грешка от Navidrome: {message}',
     ratingsFailed: 'Оценяването не успя: {message}',
     ratingsNotConfigured: 'Първо запази входа в Navidrome.',

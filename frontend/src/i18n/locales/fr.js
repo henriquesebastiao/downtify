@@ -2031,7 +2031,7 @@ export default {
     ratingsNextSoon: "Prochaine exécution dans l'heure",
     ratingsNever: 'Pas encore exécutée',
     ratingsFailedDeezer:
-      'Deezer est injoignable. Les étoiles déjà attribuées sont conservées.',
+      'Deezer n’a pas répondu pendant plusieurs minutes. Les étoiles déjà attribuées sont conservées, et la prochaine exécution reprend là où celle-ci s’est arrêtée.',
     ratingsFailedNavidrome: 'Erreur Navidrome : {message}',
     ratingsFailed: 'La notation a échoué : {message}',
     ratingsNotConfigured: "Enregistre d'abord la connexion à Navidrome.",

@@ -61,9 +61,18 @@ REPEAT_DAYS = {'off': 0, 'daily': 1, 'weekly': 7, 'monthly': 30}
 #: How a song's Deezer rank is turned into stars.
 GRADINGS = ('absolute', 'artist', 'album')
 
-#: Seconds to wait between Deezer calls, and before retrying one.
+#: Seconds to wait between Deezer calls.
 DEEZER_PAUSE = 0.2
-RETRY_PAUSE = 5.0
+#: Seconds to wait before each retry of a failed Deezer call. A blip on a
+#: big library used to end the whole run after one retry; now Deezer gets
+#: about four minutes to answer again before the run gives up.
+RETRY_PAUSES = (5.0, 15.0, 30.0, 60.0, 120.0)
+#: After this many Deezer calls, rest for BATCH_PAUSE seconds: long runs
+#: go in small batches, well under Deezer's 50 calls per 5 seconds.
+BATCH_SIZE = 100
+BATCH_PAUSE = 10.0
+#: Longest single sleep, so Stop is noticed during a long wait.
+_WAIT_STEP = 5.0
 
 #: A failed run is retried after this long, whatever the repeat is.
 RETRY_AFTER_FAILURE = timedelta(hours=6)
@@ -196,8 +205,15 @@ class RatingRun:
         cancelled: Callable[[], bool] = _never,
         progress: Callable[[int, int, str], None] = _ignore,
         sleep: Callable[[float], None] = time.sleep,
+        done_albums: Optional[set[str]] = None,
+        album_done: Callable[[str], None] = lambda _album_id: None,
     ) -> None:
         self._client = client
+        # Albums a previous run finished before it stopped: skipped, so
+        # an interrupted run carries on where it was.
+        self._done_albums = set(done_albums or ())
+        self._album_done = album_done
+        self._calls = 0
         self._options = effective_settings(options)
         self._preview = preview
         self._cancelled = cancelled
@@ -221,6 +237,13 @@ class RatingRun:
         for artist_name, album_id, song_count in albums:
             if self._stopped:
                 break
+            if album_id in self._done_albums:
+                self._skipped += song_count
+                self._done += song_count
+                self._progress(
+                    self._done, max(self._total, self._done), 'rating'
+                )
+                continue
             try:
                 album = self._client.album(album_id)
             except SubsonicError as exc:
@@ -234,6 +257,8 @@ class RatingRun:
                 )
                 continue
             self._rate_album(artist_name, album)
+            if not self._stopped:
+                self._album_done(album_id)
         return self._summary()
 
     # -- the library pass ---------------------------------------------
@@ -316,28 +341,49 @@ class RatingRun:
 
     # -- Deezer -------------------------------------------------------
 
-    def _call(self, url: str, **params: Any) -> dict[str, Any]:
-        """A Deezer GET, paced.
+    def _wait(self, seconds: float) -> None:
+        """Sleep *seconds* in steps, noticing Stop between them."""
 
-        A transport failure, quota (4) or busy (700) is retried once,
-        then :class:`DeezerUnavailable`. Any other refusal (such as 800,
-        no data) is final for that item and reads as an empty answer.
+        while seconds > 0 and not self._cancelled():
+            step = min(seconds, _WAIT_STEP)
+            self._sleep(step)
+            seconds -= step
+
+    def _call(self, url: str, **params: Any) -> dict[str, Any]:
+        """A Deezer GET, paced, in batches.
+
+        A transport failure, quota (4) or busy (700) is retried after
+        each of :data:`RETRY_PAUSES`, then :class:`DeezerUnavailable`.
+        Any other refusal (such as 800, no data) is final for that item
+        and reads as an empty answer.
         """
+        self._calls += 1
+        if self._calls > 1 and (self._calls - 1) % BATCH_SIZE == 0:
+            self._wait(BATCH_PAUSE)
         data: dict[str, Any] = {}
-        for attempt in (1, 2):
+        failure: Optional[ValueError] = None
+        for pause in (*RETRY_PAUSES, None):
             try:
                 data = deezer._get_json(url, **params)
+                failure = None
                 break
             except deezer.DeezerRefused as exc:
                 if exc.code not in DEEZER_RETRY_CODES:
                     data = {}
+                    failure = None
                     break
-                failure: ValueError = exc
+                failure = exc
             except ValueError as exc:
                 failure = exc
-            if attempt == 2:
-                raise DeezerUnavailable('Deezer is not answering') from failure
-            self._sleep(RETRY_PAUSE)
+            if pause is None or self._cancelled():
+                break
+            self._wait(pause)
+        if failure is not None:
+            if self._cancelled():
+                # Stopped during the retries: no failure, just a stop.
+                self._stopped = True
+                return {}
+            raise DeezerUnavailable('Deezer is not answering') from failure
         self._sleep(DEEZER_PAUSE)
         return data
 

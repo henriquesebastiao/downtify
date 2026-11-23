@@ -1976,7 +1976,7 @@ export default {
     ratingsNextSoon: 'Sonraki çalıştırma bir saat içinde',
     ratingsNever: 'Henüz çalıştırılmadı',
     ratingsFailedDeezer:
-      'Deezer’a ulaşılamadı. Daha önce verilen yıldızlar korunur.',
+      'Deezer birkaç dakika yanıt vermedi. Daha önce verilen yıldızlar korunur ve sonraki çalıştırma bunun durduğu yerden devam eder.',
     ratingsFailedNavidrome: 'Navidrome hatası: {message}',
     ratingsFailed: 'Puanlama başarısız oldu: {message}',
     ratingsNotConfigured: 'Önce Navidrome girişini kaydet.',

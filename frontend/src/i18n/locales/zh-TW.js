@@ -1876,7 +1876,8 @@ export default {
     ratingsNext: '下次執行 {when}',
     ratingsNextSoon: '下次執行將在一小時內',
     ratingsNever: '尚未執行',
-    ratingsFailedDeezer: '無法連線到 Deezer。已打的星級會保留。',
+    ratingsFailedDeezer:
+      'Deezer 幾分鐘內都沒有回應。已打的星級會保留，下次執行會從這次停下的地方繼續。',
     ratingsFailedNavidrome: 'Navidrome 錯誤：{message}',
     ratingsFailed: '評分執行失敗：{message}',
     ratingsNotConfigured: '請先儲存 Navidrome 登入資訊。',
