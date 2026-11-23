@@ -24,6 +24,7 @@ jobs:
         with:
           workflow: test.yml
           commit: ${{ github.event.workflow_run.head_sha }}
+          allow_forks: true
 
       - run: smokeshow upload coverage-html
         env:
