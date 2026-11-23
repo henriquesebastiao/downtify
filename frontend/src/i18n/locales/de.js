@@ -1793,6 +1793,9 @@ export default {
     allowPlaylistSharing: 'Nutzern das Teilen von Playlists erlauben',
     allowPlaylistSharingHint:
       'Nutzer können ihre Playlists mit anderen teilen oder öffentlich machen. Ausgeschaltet bleiben alle geteilten Playlists verborgen, bis du es wieder einschaltest.',
+    perUserLibrary: 'Jeder Benutzer hat seine eigene Bibliothek',
+    perUserLibraryHint:
+      'Benutzer sehen nur die Songs, die sie heruntergeladen haben, und die der Playlists, die sie öffnen dürfen. Admins sehen weiterhin alles. Songs, die niemand über Downtify heruntergeladen hat (von Hand in den Ordner gelegt), sehen dann nur Admins.',
     searchAlbums: 'Alben in Suchergebnissen anzeigen',
     searchAlbumsHint:
       'Suche auch nach Alben und biete die Möglichkeit, das gesamte Album herunterzuladen.',

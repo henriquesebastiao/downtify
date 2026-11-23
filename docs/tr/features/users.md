@@ -93,6 +93,15 @@ Hesapların uygulamada ne gördüğünü denetler, adresini zaten bildikleri bir
 
 Gizleme ve gösterme [etkinlik günlüğüne](#activity) kaydedilir.
 
+### Her kullanıcıya ayrı kütüphane
+
+Varsayılan olarak kütüphane ortaktır. Bunun yerine her hesaba kendi kütüphanesini vermek için bir yönetici **Ayarlar › Kütüphane › Her kullanıcının kendi kütüphanesi olsun** seçeneğini açar. Bu durumda kullanıcı şunları görür:
+
+- indirdiği şarkılar, kendi çalma listesi ve sanatçı takiplerinin getirdikleri dahil;
+- açabildiği çalma listelerinin şarkıları: kendi listeleri, [onunla paylaşılanlar](#sharing-playlists) ve takip ettiği herkese açık listeler; böylece paylaşılan bir liste şarkılarını korur.
+
+Geri kalan her şey kütüphanesinden, aramadaki "kütüphanede" işaretlerinden ve eşleştirilmiş bir telefonun eşitlediklerinden çıkar. İki kişi aynı şarkıyı indirdiğinde şarkı yine bir kez saklanır ve ikisi de görür. Yöneticiler her şeyi görmeye devam eder; kimsenin bir hesapla indirmediği şarkılar (klasöre elle eklenenler ya da hesaplardan öncekiler) yalnızca yöneticilere gösterilir. [Gizleme](#hiding-from-users) gibi, neyin listelendiğini belirler; adresini zaten bilen birinin dosyayı almasını engellemez.
+
 ### Şarkıları silme
 
 Bir şarkıyı silmek onu herkes için diskten kaldırır, bu yüzden onu indirene bağlıdır. Bir yönetici her şeyi silebilir. Bir kullanıcı kendi indirdiği bir şarkıyı silebilir; başkası da aynı şarkıyı indirdiyse silmek yalnızca kendi hak iddiasından vazgeçer ve şarkı paylaşılan kitaplıkta kalır. Bir hesap üzerinden kimsenin indirmediği bir şarkıyı (bir çalma listesi izleyici taraması, hesaplardan önceki bir indirme, bir [ek klasör](external-library.md)) yalnızca bir yönetici silebilir. Kendi çalma listenizi silmek başkasının dosyalarını asla beraberinde götürmez.

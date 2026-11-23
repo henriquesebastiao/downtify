@@ -1715,6 +1715,9 @@ export default {
     allowPlaylistSharing: 'Allow users to share playlists',
     allowPlaylistSharingHint:
       'Users can share their playlists with other users, or make them public. When off, every shared playlist stays hidden until you turn it back on.',
+    perUserLibrary: 'Each user has their own library',
+    perUserLibraryHint:
+      'Users see only the songs they downloaded, plus those of the playlists they can open. Admins still see everything. Songs nobody downloaded through Downtify (added to the folder by hand) are then only shown to admins.',
     searchAlbums: 'Show albums in search results',
     searchAlbumsHint:
       'Also look up albums when searching, with an option to download the whole thing.',

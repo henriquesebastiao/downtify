@@ -411,7 +411,14 @@ import uuid
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, AsyncIterator, Collection, Iterable, Optional
+from typing import (
+    Any,
+    AsyncIterator,
+    Callable,
+    Collection,
+    Iterable,
+    Optional,
+)
 from urllib.parse import quote
 
 from fastapi import (
@@ -827,6 +834,10 @@ DEFAULT_SETTINGS: dict[str, Any] = {
     # Whether users may share their playlists with other users (each user
     # also chooses whether to see public ones: ``show_public_playlists``).
     'allow_playlist_sharing': True,
+    # Each user sees only their own songs (issue #620): the ones they
+    # downloaded and those of the playlists they may open. Admins still
+    # see everything. See ``allowed_entry_keys``.
+    'per_user_library': False,
     'navidrome': {
         'enabled': False,
         'url': '',
@@ -1522,13 +1533,54 @@ def allowed_entry_keys(request: Optional[Request]) -> Optional[set[str]]:
     if not request_user_id(request):
         return set()
     rules = hidden_rules()
-    if not rules:
+    own = own_entry_test(request)
+    if not rules and own is None:
         return None
     return {
         entry_content_key(entry)
         for entry in listing_for_request(library_context())
-        if not rules.hides(entry)
+        if not (rules and rules.hides(entry)) and (own is None or own(entry))
     }
+
+
+def per_user_library() -> bool:
+    """Whether each user has a library of their own (Settings)."""
+
+    return state.settings.get('per_user_library') is True
+
+
+def own_entry_test(
+    request: Optional[Request],
+) -> Optional[Callable[[dict[str, Any]], bool]]:
+    """With per-user libraries on, which library rows are a non-admin's
+    own: the files they downloaded (``track_owners``, monitor sweeps of
+    their watches included) and those of the playlists they may open -
+    theirs, shared with them or followed, so a playlist someone shares
+    still has its songs. ``None`` when everything counts (shared library,
+    or an admin).
+
+    It narrows listings like the hide rules do, nothing more: streaming
+    a file by its path is not gated.
+    """
+
+    if not per_user_library() or request_is_admin(request):
+        return None
+    user_id = request_user_id(request)
+    owned: set[str] = set()
+    if user_id and state.track_owners is not None:
+        try:
+            owned = set(state.track_owners.owned_keys(user_id))
+        except Exception:
+            logger.opt(exception=True).debug('Could not read track owners')
+    files = {
+        str(file or '').replace('\\', '/')
+        for playlist in playlists_for_request(request)
+        for file in playlist.get('files') or []
+    }
+    return lambda entry: (
+        entry_content_key(entry) in owned
+        or str(entry.get('file') or '') in files
+    )
 
 
 def _playlist_owner_maps() -> tuple[dict[str, int], dict[str, int]]:
@@ -1876,7 +1928,11 @@ def visible_entries(
 def entries_for_request(request: Optional[Request]) -> list[dict[str, Any]]:
     """``GET /tracks`` rows *request* may browse."""
 
-    return _filter_entries_for(listing_for_request(library_context()), request)
+    entries = listing_for_request(library_context())
+    own = own_entry_test(request)
+    if own is not None:
+        entries = [entry for entry in entries if own(entry)]
+    return _filter_entries_for(entries, request)
 
 
 def filter_paths_for_request(
@@ -9332,6 +9388,7 @@ async def update_settings_endpoint(
                 'cover_largest',
                 'artist_watch_complete_albums',
                 'aurral_enabled',
+                'per_user_library',
             }:
                 state.settings[key] = raw_value is True
             elif key == 'ui_language':

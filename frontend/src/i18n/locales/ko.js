@@ -1731,6 +1731,9 @@ export default {
     allowPlaylistSharing: '사용자의 재생목록 공유 허용',
     allowPlaylistSharingHint:
       '사용자가 재생목록을 다른 사용자와 공유하거나 공개할 수 있습니다. 끄면 다시 켤 때까지 공유된 재생목록이 모두 숨겨집니다.',
+    perUserLibrary: '사용자마다 자신만의 라이브러리',
+    perUserLibraryHint:
+      '사용자는 자신이 다운로드한 곡과 열 수 있는 플레이리스트의 곡만 봅니다. 관리자는 계속 모든 곡을 봅니다. 아무도 Downtify로 다운로드하지 않은 곡(폴더에 직접 넣은 곡)은 이때 관리자에게만 보입니다.',
     searchAlbums: '검색 결과에 앨범 표시',
     searchAlbumsHint:
       '검색 시 앨범도 함께 검색하며 전체 앨범 다운로드 옵션을 제공합니다.',
