@@ -1187,6 +1187,8 @@ export default {
     closeNowPlaying: 'Затвори „Сега звучи“',
     queue: 'Опашка',
     upNext: 'Следват',
+    hideUpNext: 'Скриване на „Следват“',
+    showUpNext: 'Показване на „Следват“',
     lyrics: 'Текст',
     karaoke: 'Караоке',
     karaokeWindow: 'Отваряне в нов прозорец',

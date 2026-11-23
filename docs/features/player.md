@@ -35,6 +35,8 @@ Five panels sit next to the cover on wide screens, or replace it on phones:
 - **Details** — title, artist, album, track number, year, length, format, size, date added and file path.
 - **Equalizer** — shape the sound with ten frequency bands; see [Equalizer](#equalizer).
 
+On very wide screens an **Up next** column also stays beside the Lyrics, Details and Equalizer panels. The **Hide up next** button just left of the panel tabs folds it away for a cleaner, cinematic view: the lyrics move to a centred column, a size larger, with the cover still on the left. **Show up next** brings it back. The choice is remembered in this browser.
+
 Now playing is part of the page address (`?np=1`, plus `&panel=lyrics|karaoke|queue|details|equalizer`), so the browser's Back button closes it and a reload keeps it open.
 
 To project the karaoke, use the **Open in a new window** button in the Karaoke header, on wide screens. It opens the lyrics in a window of their own for a projector or second screen, and closes Now playing on the main screen so you can browse Downtify while people sing.

@@ -1199,6 +1199,8 @@ export default {
     closeNowPlaying: 'Most szóló bezárása',
     queue: 'Sor',
     upNext: 'Következik',
+    hideUpNext: '„Következik” elrejtése',
+    showUpNext: '„Következik” megjelenítése',
     lyrics: 'Dalszöveg',
     karaoke: 'Karaoke',
     karaokeWindow: 'Megnyitás új ablakban',

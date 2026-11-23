@@ -3,8 +3,10 @@ import { describe, expect, it } from 'vitest'
 import {
   PANEL_IDS,
   availablePanels,
+  canShowUpNextBeside,
   defaultPanel,
   requestedPanel,
+  showsUpNextBeside,
 } from '../lib/panels.js'
 
 describe('availablePanels', () => {
@@ -86,5 +88,23 @@ describe('defaultPanel', () => {
   it('falls back to the queue for a streamed track', () => {
     expect(defaultPanel({ lyrics: true, isStream: true })).toBe('queue')
     expect(availablePanels({ lyrics: true, isStream: true })).toContain('queue')
+  })
+})
+
+describe('Up next beside the panel', () => {
+  it('sits beside the lyrics, details and equalizer only', () => {
+    for (const id of ['lyrics', 'details', 'equalizer']) {
+      expect(canShowUpNextBeside(id)).toBe(true)
+      expect(showsUpNextBeside(id)).toBe(true)
+    }
+    expect(canShowUpNextBeside('queue')).toBe(false)
+    expect(canShowUpNextBeside('karaoke')).toBe(false)
+  })
+
+  it('stays out of the way once the viewer hides it', () => {
+    expect(showsUpNextBeside('lyrics', false)).toBe(false)
+    expect(showsUpNextBeside('lyrics', true)).toBe(true)
+    // Hiding it never brings it back where it can't be.
+    expect(showsUpNextBeside('queue', true)).toBe(false)
   })
 })

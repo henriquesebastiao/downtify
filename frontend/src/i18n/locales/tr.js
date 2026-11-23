@@ -1193,6 +1193,8 @@ export default {
     closeNowPlaying: 'Şimdi çalanı kapat',
     queue: 'Kuyruk',
     upNext: 'Sıradaki',
+    hideUpNext: 'Sıradakileri gizle',
+    showUpNext: 'Sıradakileri göster',
     lyrics: 'Şarkı sözleri',
     karaoke: 'Karaoke',
     karaokeWindow: 'Yeni pencerede aç',

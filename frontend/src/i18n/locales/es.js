@@ -1207,6 +1207,8 @@ export default {
     closeNowPlaying: 'Cerrar reproducción actual',
     queue: 'Cola',
     upNext: 'A continuación',
+    hideUpNext: 'Ocultar a continuación',
+    showUpNext: 'Mostrar a continuación',
     lyrics: 'Letra',
     karaoke: 'Karaoke',
     karaokeWindow: 'Abrir en una ventana nueva',

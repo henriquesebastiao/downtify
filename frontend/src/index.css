@@ -58,6 +58,11 @@
 .now-playing-lyric {
   font-size: clamp(1.125rem, 2.2vh + 0.55vw, 2.125rem);
 }
+.now-playing-lyric--wide {
+  @media (min-width: 1280px) {
+    font-size: clamp(1.25rem, 2.8vh + 0.7vw, 2.75rem);
+  }
+}
 .now-playing-lyric-compact {
   font-size: clamp(1.125rem, 2.4vw + 1vh, 1.5rem);
 }

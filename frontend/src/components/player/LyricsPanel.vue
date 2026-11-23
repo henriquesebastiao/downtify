@@ -36,6 +36,7 @@
           ? 'py-[calc(50dvh-140px)] lg:py-[calc(50dvh-66px)]'
           : 'py-[min(30vh,9rem)]',
         { 'pointer-events-none': readonly },
+        wide && !karaoke ? 'xl:mx-auto xl:w-full xl:max-w-[46rem]' : '',
       ]"
       @wheel.passive="userScrolled"
       @touchmove.passive="userScrolled"
@@ -63,6 +64,7 @@
     <div
       v-else-if="plain"
       class="flex-1 overflow-y-auto px-2 py-6 [scrollbar-width:thin]"
+      :class="wide && !karaoke ? 'xl:mx-auto xl:w-full xl:max-w-[46rem]' : ''"
     >
       <p
         class="text-display leading-relaxed font-medium whitespace-pre-line text-white/80"
@@ -114,6 +116,9 @@ const props = defineProps({
   player: { type: Object, required: true },
   // Projected: nothing here to click or scroll.
   readonly: { type: Boolean, default: false },
+  // Nothing beside it (Up next hidden): on wide screens the words sit in
+  // a centred column, a size up (issue #679).
+  wide: { type: Boolean, default: false },
 })
 
 const { t } = useI18n()
@@ -150,7 +155,11 @@ const countIn = computed(() =>
 function lineClass(i) {
   return [
     'origin-left py-2 text-left leading-tight font-semibold',
-    props.compact ? 'now-playing-lyric-compact' : 'now-playing-lyric',
+    props.compact
+      ? 'now-playing-lyric-compact'
+      : props.wide
+        ? 'now-playing-lyric now-playing-lyric--wide'
+        : 'now-playing-lyric',
     i === active.value
       ? 'scale-100 text-white'
       : i < active.value

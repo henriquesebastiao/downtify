@@ -1225,6 +1225,8 @@ export default {
     closeNowPlaying: 'Wiedergabe schließen',
     queue: 'Warteschlange',
     upNext: 'Als Nächstes',
+    hideUpNext: 'Als Nächstes ausblenden',
+    showUpNext: 'Als Nächstes einblenden',
     lyrics: 'Songtexte',
     karaoke: 'Karaoke',
     karaokeWindow: 'In neuem Fenster öffnen',

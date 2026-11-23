@@ -46,3 +46,20 @@ export function defaultPanel({
   // artwork, and it already hides the "Up next" column so it isn't twice.
   return lyrics && !isPodcast && !isStream ? 'lyrics' : 'queue'
 }
+
+/**
+ * Whether the panel can sit beside an "Up next" column on wide screens:
+ * not when it is the queue itself (it would show twice) or karaoke
+ * (the words take the whole screen).
+ */
+export function canShowUpNextBeside(panel) {
+  return panel !== 'queue' && panel !== 'karaoke'
+}
+
+/**
+ * Whether the "Up next" column shows beside *panel*: when it can, unless
+ * the viewer hid it for a bigger view of the words (issue #679).
+ */
+export function showsUpNextBeside(panel, wanted = true) {
+  return canShowUpNextBeside(panel) && wanted !== false
+}
