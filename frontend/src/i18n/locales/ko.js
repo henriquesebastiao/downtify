@@ -1189,6 +1189,8 @@ export default {
     closeNowPlaying: '현재 재생 화면 닫기',
     queue: '대기열',
     upNext: '다음 재생 곡',
+    hideUpNext: '다음 재생 곡 숨기기',
+    showUpNext: '다음 재생 곡 보기',
     lyrics: '가사',
     karaoke: '노래방',
     karaokeWindow: '새 창에서 열기',

@@ -1225,6 +1225,8 @@ export default {
     closeNowPlaying: 'Fermer la lecture en cours',
     queue: 'File',
     upNext: 'À suivre',
+    hideUpNext: 'Masquer « À suivre »',
+    showUpNext: 'Afficher « À suivre »',
     lyrics: 'Paroles',
     karaoke: 'Karaoké',
     karaokeWindow: 'Ouvrir dans une nouvelle fenêtre',

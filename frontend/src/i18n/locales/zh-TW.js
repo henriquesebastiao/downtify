@@ -1125,6 +1125,8 @@ export default {
     closeNowPlaying: '關閉正在播放',
     queue: '佇列',
     upNext: '接下來播放',
+    hideUpNext: '隱藏接下來播放',
+    showUpNext: '顯示接下來播放',
     lyrics: '歌詞',
     karaoke: '卡拉OK',
     karaokeWindow: '在新視窗中開啟',

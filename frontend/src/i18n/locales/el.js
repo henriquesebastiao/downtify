@@ -1211,6 +1211,8 @@ export default {
     closeNowPlaying: 'Κλείσιμο αναπαραγωγής',
     queue: 'Ουρά',
     upNext: 'Επόμενα',
+    hideUpNext: 'Απόκρυψη επόμενων',
+    showUpNext: 'Εμφάνιση επόμενων',
     lyrics: 'Στίχοι',
     karaoke: 'Καραόκε',
     karaokeWindow: 'Άνοιγμα σε νέο παράθυρο',

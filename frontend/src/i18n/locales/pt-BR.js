@@ -1198,6 +1198,8 @@ export default {
     closeNowPlaying: 'Fechar tocando agora',
     queue: 'Fila',
     upNext: 'A seguir',
+    hideUpNext: 'Ocultar a seguir',
+    showUpNext: 'Mostrar a seguir',
     lyrics: 'Letra',
     karaoke: 'Karaoke',
     karaokeWindow: 'Abrir em uma nova janela',

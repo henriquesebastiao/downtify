@@ -1178,6 +1178,8 @@ export default {
     closeNowPlaying: 'Close now playing',
     queue: 'Queue',
     upNext: 'Up next',
+    hideUpNext: 'Hide up next',
+    showUpNext: 'Show up next',
     lyrics: 'Lyrics',
     karaoke: 'Karaoke',
     karaokeWindow: 'Open in a new window',

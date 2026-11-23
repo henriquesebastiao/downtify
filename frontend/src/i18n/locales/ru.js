@@ -1329,6 +1329,8 @@ export default {
     closeNowPlaying: 'Закрыть экран плеера',
     queue: 'Очередь',
     upNext: 'Далее',
+    hideUpNext: 'Скрыть «Далее»',
+    showUpNext: 'Показать «Далее»',
     lyrics: 'Текст песни',
     karaoke: 'Караоке',
     karaokeWindow: 'Открыть в новом окне',
