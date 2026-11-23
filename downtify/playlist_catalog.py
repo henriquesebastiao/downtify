@@ -506,7 +506,8 @@ class PlaylistCatalog:
     def all_track_rows(self) -> list[dict[str, Any]]:
         with self._connect() as conn:
             rows = conn.execute(
-                """SELECT playlist_name, track_spotify_id, content_key, filename
+                """SELECT playlist_name, track_spotify_id, content_key,
+                          filename, track_order
                    FROM playlist_tracks"""
             ).fetchall()
         return [
@@ -515,6 +516,7 @@ class PlaylistCatalog:
                 'track_spotify_id': str(row['track_spotify_id']),
                 'content_key': row['content_key'],
                 'filename': _norm_path(str(row['filename'])),
+                'track_order': int(row['track_order'] or 0),
             }
             for row in rows
         ]

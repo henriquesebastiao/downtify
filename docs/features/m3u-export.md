@@ -23,7 +23,7 @@ Track paths inside the M3U are written **relative to the M3U file itself**, not 
 
 ## Enabling / disabling
 
-M3U generation is controlled by **Settings → Downloads & files → Write M3U playlists** (on by default). Turning it off skips M3U creation entirely; the rest of the download flow is unchanged.
+M3U generation is controlled by **Settings → Downloads & files → Write M3U playlists** (on by default). Turning it off skips M3U creation entirely; the rest of the download flow is unchanged. The Library still lists every downloaded playlist with all its songs: Downtify reads them from its own records instead of the M3U files, and an M3U written before you turned the setting off no longer decides which songs a playlist shows.
 
 ## Cover art
 
