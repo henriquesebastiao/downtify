@@ -621,6 +621,58 @@
                 />
               </SettingRow>
               <SettingRow
+                :label="t('settings.artistWatchDeezer')"
+                :description="t('settings.artistWatchDeezerHint')"
+              >
+                <UiSwitch
+                  v-model="s.artist_watch_deezer"
+                  :aria-label="t('settings.artistWatchDeezer')"
+                />
+              </SettingRow>
+              <SettingRow
+                :label="t('settings.artistWatchMusicbrainz')"
+                :description="t('settings.artistWatchMusicbrainzHint')"
+              >
+                <UiSwitch
+                  v-model="s.artist_watch_musicbrainz"
+                  :aria-label="t('settings.artistWatchMusicbrainz')"
+                />
+              </SettingRow>
+              <SettingRow
+                v-if="s.artist_watch_musicbrainz"
+                :label="t('settings.artistWatchKinds')"
+                :description="t('settings.artistWatchKindsHint')"
+                stacked
+              >
+                <div class="flex flex-wrap gap-2">
+                  <button
+                    v-for="kind in MUSICBRAINZ_KINDS"
+                    :key="kind"
+                    type="button"
+                    class="inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-[13px] font-medium transition-colors"
+                    :class="
+                      musicbrainzKinds.includes(kind)
+                        ? 'bg-fg text-bg'
+                        : 'bg-surface-2 text-fg-3 hover:bg-raised'
+                    "
+                    :aria-pressed="musicbrainzKinds.includes(kind)"
+                    @click="
+                      s.artist_watch_musicbrainz_kinds = toggledKinds(
+                        musicbrainzKinds,
+                        kind
+                      )
+                    "
+                  >
+                    <AppIcon
+                      v-if="musicbrainzKinds.includes(kind)"
+                      name="check"
+                      :size="14"
+                    />
+                    {{ t(`artistReleases.kind.${kind}`) }}
+                  </button>
+                </div>
+              </SettingRow>
+              <SettingRow
                 :label="t('settings.m3u')"
                 :description="t('settings.m3uHint')"
               >
@@ -1313,6 +1365,7 @@ import SourceOrder from '/src/components/settings/SourceOrder.vue'
 import { onlyOwnServers as onlyOwnServersEnabled } from '/src/lib/providerOrder'
 import LyricsOrder from '/src/components/settings/LyricsOrder.vue'
 import API from '/src/model/api'
+import { MUSICBRAINZ_KINDS, toggledKinds } from '/src/lib/artistReleases'
 import {
   clampCoverResolution,
   clampDownloadDelaySeconds,
@@ -1351,6 +1404,12 @@ const lockedAvoidFormats = computed(() => {
   const own = downloadsFormat(s.value.format)
   return own ? [own] : []
 })
+// Artist Watch's default MusicBrainz kinds (a watch can pick its own).
+const musicbrainzKinds = computed(() =>
+  Array.isArray(s.value.artist_watch_musicbrainz_kinds)
+    ? s.value.artist_watch_musicbrainz_kinds
+    : []
+)
 // The minimum cover size raises the first cover request too (capped at
 // the largest cover size), so cover sizes below it make no difference.
 const coverFloor = computed(() =>

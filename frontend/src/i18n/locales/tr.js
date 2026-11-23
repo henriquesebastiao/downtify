@@ -1900,6 +1900,15 @@ export default {
     completeAlbums: 'Her albümü eksiksiz tut',
     completeAlbumsHint:
       'Sanatçı İzleme, bir şarkıyı yer aldığı her yayın için (albüm, en iyiler derlemesi, deluxe sürüm) zaten sahip olduğun kopyayı bağlamak yerine yeniden indirir. Daha fazla disk alanı kullanır.',
+    artistWatchDeezer: "Sanatçı İzleme Deezer'ı da okur",
+    artistWatchDeezerHint:
+      "Sanatçının YouTube Music sayfasında olmayan yayınları ekler. Sonradan açılırsa sonraki kontrol Deezer'ın listelediği her yayını gözden geçirir; zaten sahip olduğun şarkılar bağlanır.",
+    artistWatchMusicbrainz: "Sanatçı İzleme MusicBrainz'i de okur",
+    artistWatchMusicbrainzHint:
+      "Ne YouTube Music'in ne de Deezer'ın listelediği mixtape'leri ve eski yayınları ekler. Sonradan açılırsa sonraki kontrol eklediği her yayını gözden geçirir; büyük bir sanatçının ilk kontrolü birkaç dakika sürer.",
+    artistWatchKinds: 'MusicBrainz yayın türleri',
+    artistWatchKindsHint:
+      "Albüm, EP ve single'ların yanında indirilir; bir izleme kendi sayfasında başkalarını seçmedikçe.",
     m3u: 'M3U çalma listeleri yaz',
     m3uHint:
       'Jellyfin, Plex, Navidrome ve diğerleri için indirilen her çalma listesine .m3u kaydet.',

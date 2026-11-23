@@ -9610,8 +9610,14 @@ async def update_settings_endpoint(
                 state.settings[key] = _clamp_cover_min_resolution(raw_value)
             elif key == 'backup_interval_hours':
                 state.settings[key] = backup.clamp_interval(raw_value)
+            elif key == 'artist_watch_musicbrainz_kinds':
+                state.settings[key] = _default_musicbrainz_kinds(
+                    raw_value, state.settings.get(key)
+                )
             elif key in {
                 'cover_largest',
+                'artist_watch_deezer',
+                'artist_watch_musicbrainz',
                 'artist_watch_complete_albums',
                 'aurral_enabled',
                 'per_user_library',
@@ -11503,6 +11509,17 @@ async def delete_monitor_playlist(
             status_code=404, detail='Monitored playlist not found'
         )
     return {'deleted': True, 'id': playlist_id}
+
+
+def _default_musicbrainz_kinds(value: Any, saved: Any) -> list[str]:
+    """The ``artist_watch_musicbrainz_kinds`` setting from a save: the
+    ``musicbrainz.KINDS`` names in *value*, in their order (unknown ones
+    dropped); the *saved* list when *value* isn't a list."""
+
+    if not isinstance(value, list):
+        value = saved if isinstance(saved, list) else []
+    names = {str(kind) for kind in value}
+    return [kind for kind in musicbrainz.KINDS if kind in names]
 
 
 def _musicbrainz_kinds_from(value: Any) -> Optional[str]:

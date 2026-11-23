@@ -1919,6 +1919,15 @@ export default {
     completeAlbums: 'Manter todo álbum completo',
     completeAlbumsHint:
       'O monitoramento de artistas baixa a música de novo para cada lançamento em que ela aparece (um álbum, uma coletânea, uma edição deluxe) em vez de usar a cópia que você já tem. Ocupa mais espaço em disco.',
+    artistWatchDeezer: 'Monitoramento de artistas também lê o Deezer',
+    artistWatchDeezerHint:
+      'Acrescenta os lançamentos que a página do artista no YouTube Music deixa de fora. Ligado depois, a próxima verificação passa por todos os lançamentos que o Deezer lista; as músicas que você já tem são reaproveitadas.',
+    artistWatchMusicbrainz: 'Monitoramento de artistas também lê o MusicBrainz',
+    artistWatchMusicbrainzHint:
+      'Acrescenta as mixtapes e os lançamentos antigos que nem o YouTube Music nem o Deezer listam. Ligado depois, a próxima verificação passa por todos os lançamentos que ele acrescenta; a primeira verificação de um artista grande leva alguns minutos.',
+    artistWatchKinds: 'Tipos de lançamento do MusicBrainz',
+    artistWatchKindsHint:
+      'Baixados além de álbuns, EPs e singles, a menos que o monitoramento escolha os seus na própria página.',
     m3u: 'Gerar playlists M3U',
     m3uHint:
       'Salva um .m3u para cada playlist baixada, para Jellyfin, Plex, Navidrome e outros.',

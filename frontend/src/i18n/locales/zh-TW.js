@@ -1803,6 +1803,15 @@ export default {
     completeAlbums: '保持每張專輯完整',
     completeAlbumsHint:
       '藝人監看會為歌曲所在的每個發行（專輯、精選輯、豪華版）重新下載一份，而不是連結你已有的副本。會佔用更多磁碟空間。',
+    artistWatchDeezer: '藝人監看同時讀取 Deezer',
+    artistWatchDeezerHint:
+      '補上 YouTube Music 藝人頁漏掉的發行。之後再開啟時，下一次檢查會逐一看過 Deezer 列出的所有發行；你已有的歌曲會被連結。',
+    artistWatchMusicbrainz: '藝人監看同時讀取 MusicBrainz',
+    artistWatchMusicbrainzHint:
+      '補上 YouTube Music 和 Deezer 都沒有列出的混音帶和較早的發行。之後再開啟時，下一次檢查會逐一看過它補上的所有發行；大牌藝人的首次檢查需要幾分鐘。',
+    artistWatchKinds: 'MusicBrainz 發行類型',
+    artistWatchKindsHint:
+      '除專輯、EP 和單曲外也會下載，除非某個監看在自己的頁面上另選。',
     m3u: '寫入 M3U 播放清單',
     m3uHint:
       '為每份下載的播放清單儲存 .m3u 檔案，供 Jellyfin、Plex、Navidrome 等使用。',

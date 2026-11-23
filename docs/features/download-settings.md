@@ -131,7 +131,7 @@ Changing this value in Settings takes effect immediately — it does not require
 
 On by default, matching Downtify's historical behavior: every download runs through the pipeline (audio fetch, tagging, cover art, lyrics) and overwrites whatever file already sits at the computed output path.
 
-On an album's page (a pasted album link), a song only counts as already in your library when you have it on that album: one you only have from another release — a greatest hits, a single — is offered for download, so the album can be completed. **Keep every album complete**, the switch below this one, does the same for Artist Watch, which otherwise links the copy you already have.
+On an album's page (a pasted album link), a song only counts as already in your library when you have it on that album: one you only have from another release — a greatest hits, a single — is offered for download, so the album can be completed. **Keep every album complete**, the switch below this one, does the same for Artist Watch, which otherwise links the copy you already have. The two switches after it, **Artist Watch also reads Deezer** and **Artist Watch also reads MusicBrainz**, choose which catalogues an artist watch reads besides YouTube Music (see the Playlist Monitor page).
 
 ### What "again" actually means
 

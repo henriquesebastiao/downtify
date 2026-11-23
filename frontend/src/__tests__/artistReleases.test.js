@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  MUSICBRAINZ_KINDS,
   canSwitch,
   filterCounts,
   isOn,
@@ -7,6 +8,7 @@ import {
   sectioned,
   sourceNames,
   stateTone,
+  toggledKinds,
 } from '../lib/artistReleases.js'
 
 const release = (name, state, extra = {}) => ({
@@ -77,5 +79,30 @@ describe('artist releases', () => {
     expect(stateTone('complete')).toBe('accent')
     expect(stateTone('partly')).toBe('warn')
     expect(stateTone('nope')).toBe('neutral')
+  })
+})
+
+describe('MusicBrainz kinds (Settings → Downloads)', () => {
+  it('switches a kind on and off, in the server order', () => {
+    expect(toggledKinds(['soundtrack'], 'mixtape')).toEqual([
+      'mixtape',
+      'soundtrack',
+    ])
+    expect(toggledKinds(['mixtape', 'soundtrack'], 'mixtape')).toEqual([
+      'soundtrack',
+    ])
+    expect(toggledKinds(undefined, 'demo')).toEqual(['demo'])
+  })
+
+  it('lists every kind the server knows', () => {
+    expect(MUSICBRAINZ_KINDS).toEqual([
+      'mixtape',
+      'soundtrack',
+      'live',
+      'compilation',
+      'remix',
+      'dj-mix',
+      'demo',
+    ])
   })
 })

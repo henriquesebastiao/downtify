@@ -5,6 +5,26 @@
 // Listed in this order, each under its own heading.
 export const SECTIONS = ['album', 'mixtape', 'ep', 'single', 'other']
 
+// The MusicBrainz release kinds a watch can let in (musicbrainz.KINDS),
+// in the server's order.
+export const MUSICBRAINZ_KINDS = [
+  'mixtape',
+  'soundtrack',
+  'live',
+  'compilation',
+  'remix',
+  'dj-mix',
+  'demo',
+]
+
+// *kinds* with *kind* switched on or off, in MUSICBRAINZ_KINDS order.
+export function toggledKinds(kinds, kind) {
+  const on = new Set(kinds || [])
+  if (on.has(kind)) on.delete(kind)
+  else on.add(kind)
+  return MUSICBRAINZ_KINDS.filter((k) => on.has(k))
+}
+
 // Filter chips, in order; `all` shows every release a user can act on
 // (not guest spots and bootlegs, which have their own chip).
 export const FILTERS = [

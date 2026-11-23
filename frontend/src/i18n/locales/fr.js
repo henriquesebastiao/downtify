@@ -1955,6 +1955,15 @@ export default {
     completeAlbums: 'Garder chaque album complet',
     completeAlbumsHint:
       "Le suivi d'artistes retélécharge un titre pour chaque sortie où il figure (un album, un best-of, une édition deluxe) au lieu de lier la copie que vous avez déjà. Prend plus de place sur le disque.",
+    artistWatchDeezer: "Le suivi d'artistes lit aussi Deezer",
+    artistWatchDeezerHint:
+      "Ajoute les sorties que la page de l'artiste sur YouTube Music omet. Activé plus tard, la vérification suivante parcourt toutes les sorties que Deezer liste ; les titres que vous avez déjà sont liés.",
+    artistWatchMusicbrainz: "Le suivi d'artistes lit aussi MusicBrainz",
+    artistWatchMusicbrainzHint:
+      "Ajoute les mixtapes et les sorties anciennes que ni YouTube Music ni Deezer ne listent. Activé plus tard, la vérification suivante parcourt toutes les sorties qu'il ajoute ; la première vérification d'un grand artiste prend quelques minutes.",
+    artistWatchKinds: 'Types de sortie MusicBrainz',
+    artistWatchKindsHint:
+      'Téléchargés en plus des albums, EP et singles, sauf si un suivi choisit les siens sur sa page.',
     m3u: 'Écrire des playlists M3U',
     m3uHint:
       'Enregistre un .m3u pour chaque playlist téléchargée, pour Jellyfin, Plex, Navidrome et d’autres.',

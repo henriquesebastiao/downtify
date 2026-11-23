@@ -1895,6 +1895,15 @@ export default {
     completeAlbums: '모든 앨범을 완전하게 유지',
     completeAlbumsHint:
       '아티스트 모니터링이 곡이 실린 각 릴리스(앨범, 베스트 앨범, 디럭스 에디션)마다 이미 있는 사본을 연결하지 않고 곡을 다시 다운로드합니다. 디스크 공간을 더 사용합니다.',
+    artistWatchDeezer: '아티스트 모니터링에 Deezer도 사용',
+    artistWatchDeezerHint:
+      'YouTube Music 아티스트 페이지에 없는 릴리스를 추가합니다. 나중에 켜면 다음 확인에서 Deezer의 모든 릴리스를 살펴보며, 이미 있는 곡은 연결됩니다.',
+    artistWatchMusicbrainz: '아티스트 모니터링에 MusicBrainz도 사용',
+    artistWatchMusicbrainzHint:
+      'YouTube Music과 Deezer 모두에 없는 믹스테이프와 오래된 릴리스를 추가합니다. 나중에 켜면 다음 확인에서 추가되는 모든 릴리스를 살펴보며, 큰 아티스트의 첫 확인은 몇 분 걸립니다.',
+    artistWatchKinds: 'MusicBrainz 릴리스 종류',
+    artistWatchKindsHint:
+      '앨범, EP, 싱글 외에 다운로드됩니다. 모니터링 페이지에서 따로 고를 수도 있습니다.',
     m3u: 'M3U 재생목록 생성',
     m3uHint:
       '다운로드한 각 재생목록마다 .m3u 파일을 생성하여 Jellyfin, Plex, Navidrome 등과 연동합니다.',
