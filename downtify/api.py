@@ -456,6 +456,7 @@ from . import (
 )
 from .activity import ActivityLog, NowPlaying, describe_user_agent
 from .artist_suggestions import artist_candidates, artist_suggestions
+from .audio_formats import normalize_formats
 from .auth import (
     AuthStore,
     PairingStore,
@@ -727,6 +728,9 @@ DEFAULT_SETTINGS: dict[str, Any] = {
     'lyrics_lrc_dir': lyrics.DEFAULT_LYRICS_LRC_DIR,
     'format': 'mp3',
     'bitrate': '320',
+    # Formats a download never brings into the library, whatever the
+    # source (see downtify/audio_formats.py).
+    'avoid_formats': [],
     'output': '{artists} - {title}.{output-ext}',
     'generate_m3u': True,
     'download_cover_art_playlists': True,
@@ -1065,6 +1069,10 @@ def _effective_slskd_settings(settings: dict[str, Any]) -> dict[str, Any]:
         **normalize_slskd_quality(raw),
         'max_parallel_downloads': _setting_int(
             settings, 'max_parallel_downloads', 3, minimum=1, maximum=8
+        ),
+        'avoid_formats': normalize_formats(
+            settings.get('avoid_formats'),
+            exclude=[settings.get('format') or 'mp3'],
         ),
     }
 
@@ -9327,6 +9335,13 @@ async def update_settings_endpoint(
                 }
             elif key == 'navidrome':
                 state.settings[key] = navidrome_cfg
+            elif key == 'avoid_formats':
+                state.settings[key] = normalize_formats(
+                    raw_value,
+                    exclude=[
+                        payload.get('format') or state.settings['format']
+                    ],
+                )
             elif key == 'navidrome_ratings':
                 state.settings[key] = navidrome_ratings.effective_settings(
                     raw_value
@@ -9349,6 +9364,12 @@ async def update_settings_endpoint(
             state.settings['audio_providers'] = _effective_audio_providers(
                 state.settings
             )
+        if 'format' in payload:
+            # The Downloads format can't be one to avoid.
+            state.settings['avoid_formats'] = normalize_formats(
+                state.settings.get('avoid_formats'),
+                exclude=[state.settings['format']],
+            )
         if state.downloader is not None:
             state.downloader.deemix_settings = deemix_cfg
             if {
@@ -9356,6 +9377,8 @@ async def update_settings_endpoint(
                 'slskd',
                 'deemix',
                 'max_parallel_downloads',
+                'avoid_formats',
+                'format',
             } & set(payload):
                 state.downloader.slskd_settings = (
                     state.downloader._normalize_slskd_settings(

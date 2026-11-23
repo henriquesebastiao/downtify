@@ -44,6 +44,7 @@ from . import isrc as isrc_mod
 from . import lyrics as lyrics_mod
 from . import spotify as spotify_mod
 from .album_artist import VARIOUS_ARTISTS, filing_artist
+from .audio_formats import avoided, normalize_formats
 from .content_advisory import (
     ADVISORY_EXPLICIT,
     ADVISORY_TAG,
@@ -577,6 +578,7 @@ class Downloader:
             **normalize_slskd_quality(raw),
             'leave_in_place': bool(raw.get('leave_in_place', True)),
             'keep_file_cover': bool(raw.get('keep_file_cover', False)),
+            'avoid_formats': normalize_formats(raw.get('avoid_formats')),
             'max_parallel_downloads': _int(
                 raw.get('max_parallel_downloads'), 3, 1, 8
             ),
@@ -624,7 +626,7 @@ class Downloader:
                     progress_cb=progress_cb,
                     **({'cancel_check': cancel_check} if cancel_check else {}),
                 )
-                if local is not None:
+                if local is not None and not self._avoided(local, 'deemix'):
                     return None, None, 'deemix', local
                 _report(progress_cb, 0.0, 'Trying next source', 'deemix')
             elif provider == 'slskd':
@@ -636,6 +638,14 @@ class Downloader:
                     progress_cb=progress_cb,
                     **({'cancel_check': cancel_check} if cancel_check else {}),
                 )
+                if local is not None and self._avoided(local, 'slskd'):
+                    take_slskd_miss()
+                    _SLSKD_MISS.value = {
+                        'reason': 'quality_filtered',
+                        'detail': f'{local.name} is in a format to avoid',
+                    }
+                    _report(progress_cb, 0.0, 'Trying next source', 'slskd')
+                    continue
                 if local is not None:
                     return None, None, 'slskd', local
                 # Why: told with the outcome (see _report_outcome).
@@ -680,6 +690,23 @@ class Downloader:
                 )
                 _report(progress_cb, 0.0, 'Trying next source', 'soundcloud')
         return None, None, None, None
+
+    def _avoided(self, local: Any, provider: str) -> bool:
+        """Whether *local*, a file *provider* delivered, is in one of the
+        formats to avoid: it is then left where it is and the next source
+        is tried, so it never reaches the library."""
+
+        formats = (self.slskd_settings or {}).get('avoid_formats') or ()
+        if not avoided(local, formats):
+            return False
+        logger.info(
+            'Audio provider {}: {} is in a format to avoid ({}); trying the '
+            'next source',
+            provider,
+            Path(str(local)).name,
+            ', '.join(formats),
+        )
+        return True
 
     def _resolve_cookies_file(self) -> str:
         """Path to the cookies.txt yt-dlp should use, or ``''``.

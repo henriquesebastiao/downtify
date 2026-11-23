@@ -30,7 +30,7 @@
           :value="progress.total ? progress.done / progress.total : 0"
           :indeterminate="!progress.total"
         />
-        <div v-if="job?.kind === 'slskd'">
+        <div v-if="job?.kind === 'slskd' || job?.kind === 'convert'">
           <UiButton variant="ghost" size="sm" @click="cancelJob">
             {{ t('doctor.stop') }}
           </UiButton>
@@ -172,6 +172,17 @@
           </p>
         </div>
       </DoctorSection>
+
+      <!-- Files in formats the user doesn't want, converted to MP3 -->
+      <FormatsSection
+        :found="formatsFound"
+        :converted="formatsConverted"
+        :busy="busy"
+        :running-kind="runningKind"
+        :stale="isStale('formats')"
+        @scan="runFormatsScan"
+        @convert="convertFormats"
+      />
 
       <template v-if="health">
         <!-- Playlists -->
@@ -697,6 +708,7 @@ import CheckLine from '/src/components/settings/doctor/CheckLine.vue'
 import DoctorSection from '/src/components/settings/doctor/DoctorSection.vue'
 import DoctorCover from '/src/components/settings/doctor/DoctorCover.vue'
 import AiHelper from '/src/components/settings/doctor/AiHelper.vue'
+import FormatsSection from '/src/components/settings/doctor/FormatsSection.vue'
 import SlskdFolderBreakdown from '/src/components/settings/doctor/SlskdFolderBreakdown.vue'
 import { playlistCoverOf } from '/src/components/settings/doctor/covers'
 import PlaylistGroupCard from '/src/components/settings/doctor/PlaylistGroupCard.vue'
@@ -713,6 +725,8 @@ const cleaned = ref(null)
 const merged = ref(null)
 const ndResult = ref(null)
 const deduped = ref(null)
+const formatsFound = ref(null)
+const formatsConverted = ref(null)
 const holdingQueue = ref(false)
 const verifiedFiles = ref([])
 const verifiedTotal = ref(0)
@@ -991,6 +1005,26 @@ function applyJob(current) {
       info.bytes = Math.max(0, info.bytes - result.bytes)
     }
   }
+  if (current.kind === 'formats') {
+    formatsFound.value = result
+    formatsConverted.value = null
+  }
+  if (current.kind === 'convert') {
+    formatsConverted.value = result
+    // What was converted is off the list; the rest can still be.
+    const done = new Set(result.converted.map((c) => c.file))
+    const found = formatsFound.value
+    if (found) {
+      const files = found.files.filter((f) => !done.has(f.file))
+      formatsFound.value = {
+        ...found,
+        files,
+        count: files.length,
+        bytes: files.reduce((sum, f) => sum + f.size, 0),
+        estimated: files.reduce((sum, f) => sum + f.estimated, 0),
+      }
+    }
+  }
   if (current.kind === 'merge') merged.value = result
   if (current.kind === 'playlists') applied.value = result
   if (current.kind === 'navidrome') ndResult.value = result
@@ -1013,6 +1047,9 @@ async function refresh() {
     stale.value = data.stale || []
     if (!health.value && data.last?.health) {
       health.value = data.last.health.result
+    }
+    if (!formatsFound.value && data.last?.formats) {
+      formatsFound.value = data.last.formats.result
     }
     const wasRunning = busy.value
     applyJob(data.job)
@@ -1054,6 +1091,15 @@ async function runSlskdScan() {
   if (!ok) return
   holdingQueue.value = true
   start(() => API.doctorSlskdScan())
+}
+
+function runFormatsScan(formats) {
+  start(() => API.doctorFormatsScan(formats))
+}
+
+function convertFormats(files) {
+  formatsConverted.value = null
+  start(() => API.doctorFormatsConvert(files))
 }
 
 async function loadVerified(offset) {

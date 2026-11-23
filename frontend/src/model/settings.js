@@ -99,6 +99,7 @@ const settings = ref({
   overwrite_existing_files: true,
   artist_watch_complete_albums: false,
   write_isrc: true,
+  avoid_formats: [],
   search_albums: true,
   mini_player_enabled: true,
 })

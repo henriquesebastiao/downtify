@@ -58,22 +58,55 @@ MIN_OVERLAP = 0.8
 
 #: The Doctor's sections. The health check looks at all of them but
 #: ``slskd``, which has its own (slower) check.
-SECTIONS = ('slskd', 'playlists', 'navidrome', 'duplicates', 'relinked')
-HEALTH_SECTIONS = frozenset(SECTIONS) - {'slskd'}
+SECTIONS = (
+    'slskd',
+    'playlists',
+    'navidrome',
+    'duplicates',
+    'relinked',
+    'formats',
+)
+HEALTH_SECTIONS = frozenset(SECTIONS) - {'slskd', 'formats'}
 #: The sections each check finds again.
-CHECKS = {'health': HEALTH_SECTIONS, 'slskd': frozenset({'slskd'})}
+CHECKS = {
+    'health': HEALTH_SECTIONS,
+    'slskd': frozenset({'slskd'}),
+    'formats': frozenset({'formats'}),
+}
 #: The sections whose findings each repair can change. Merging duplicate
 #: songs rewrites M3Us and removes library files a verified slskd
 #: leftover may match; deleting slskd leftovers changes the songs the
 #: duplicate and Navidrome checks counted; merging playlists changes the
 #: M3Us the slskd check counts as references. Merging duplicates leaves
 #: its own list usable - the server takes the merged copies out of it.
+#: Converting files out of a format (``convert``) swaps library files
+#: the way a duplicate merge does, and the files it left are still listed
+#: (the server drops the converted ones from the format list).
 REPAIR_IMPACT = {
-    'slskd_clean': frozenset({'slskd', 'duplicates', 'navidrome', 'relinked'}),
+    'slskd_clean': frozenset({
+        'slskd',
+        'duplicates',
+        'navidrome',
+        'relinked',
+        'formats',
+    }),
     'merge': frozenset({'slskd', 'playlists', 'navidrome', 'duplicates'}),
     'playlists': frozenset({'slskd', 'playlists', 'navidrome', 'duplicates'}),
     'navidrome': frozenset({'navidrome'}),
-    'dedupe': frozenset({'slskd', 'playlists', 'navidrome', 'relinked'}),
+    'dedupe': frozenset({
+        'slskd',
+        'playlists',
+        'navidrome',
+        'relinked',
+        'formats',
+    }),
+    'convert': frozenset({
+        'slskd',
+        'playlists',
+        'navidrome',
+        'duplicates',
+        'relinked',
+    }),
 }
 
 

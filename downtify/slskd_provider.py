@@ -16,6 +16,7 @@ from urllib.parse import quote
 import httpx
 from loguru import logger
 
+from .audio_formats import extensions_of
 from .library_metadata import read_audio_metadata
 from .track_tag_match import (
     MIX_VARIANT_REMOTE_SKIP_KEYWORDS,
@@ -1440,11 +1441,17 @@ def _select_download_candidates(
             return (-bitrate_of(file_row), -score)
         return (-score, -bitrate_of(file_row))
 
+    # Formats to avoid are out whatever the list and the whitelist say.
+    avoid = extensions_of(settings.get('avoid_formats') or ())
+    extensions = [e for e in extensions if e not in avoid]
     candidates = [
         row
         for row in ranked
-        if not whitelist
-        or _file_extension(str(row.get('filename') or '')) in extensions
+        if _file_extension(str(row.get('filename') or '')) not in avoid
+        and (
+            not whitelist
+            or _file_extension(str(row.get('filename') or '')) in extensions
+        )
     ]
 
     def passes_bitrate(file_row: dict[str, Any]) -> bool:
