@@ -150,9 +150,13 @@ downloads are shared, and files are never stored twice.
   songs selection, which isn't backed by a real playlist id; a Deezer
   ``playlist_url`` gets the same per-playlist folder, M3U and cover as a
   Spotify/YouTube Music one, but isn't tracked as a resumable batch)
+* ``skip_if_in_library: true`` (``/url`` body, ``/batch`` body, ``/album``
+  query) leaves out songs the library already has and reports them as
+  ``already_in_library`` - see ``downtify/library_match.py``
 * ``POST /api/download/album`` (YouTube Music album/browse URL only;
   downloads every track from one shared, already-resolved tracklist so
-  metadata stays consistent across the whole release)
+  metadata stays consistent across the whole release; ``wait=false``
+  queues the tracks and answers at once with their job ids)
 * ``POST /api/download/csv`` (import a library-export CSV from Soundiiz,
   TuneMyMusic, Exportify, etc.; JSON body ``{csv, playlist_name,
   generate_m3u}`` - the raw CSV text, read client-side, not a multipart
@@ -171,7 +175,8 @@ downloads are shared, and files are never stored twice.
 * ``GET  /api/library/summary`` (Home page: counts + recent albums)
 * ``GET  /api/library/albums`` (Library albums tab: albums without tracks)
 * ``GET  /api/library/artists`` (Library artists tab / Discover)
-* ``POST /api/library/lookup`` (search/link songs already in the library)
+* ``POST /api/library/lookup`` (search/link songs already in the library;
+  ``detailed: true`` answers per requested song, by catalog id or song key)
 * ``POST /api/library/playlists`` (create an empty editable playlist)
 * ``POST /api/library/playlists/tracks`` (add or remove tracks on a
   manual playlist - its owner's, or one shared with you as an editor;
@@ -530,6 +535,7 @@ from .file_providers import FileProviders, providers_for
 from .fs_suggest import suggest_directories
 from .library_cache_keys import file_content_key_from_name_and_size
 from .library_catalog import (
+    LOOKUP_SONG_MAX,
     LibraryContext,
     drop_library_listing_files,
     entry_content_key,
@@ -549,6 +555,11 @@ from .library_delete import (
     delete_library_files,
     delete_playlist_from_library,
     remove_playlist_shell,
+)
+from .library_match import (
+    LibraryMatcher,
+    build_matcher,
+    request_sources,
 )
 from .library_metadata import read_audio_metadata
 from .library_metadata_cache import LibraryMetadataCache
@@ -4233,6 +4244,9 @@ def _merge_client_track_hints(
 
 _CLIENT_RESOLVED_SOURCES = {'text_search', 'deezer'}
 
+#: The status of a song ``skip_if_in_library`` didn't download (#636).
+ALREADY_IN_LIBRARY = 'already_in_library'
+
 
 def _song_from_download_request(
     url: str, client_hints: Optional[dict[str, Any]]
@@ -4892,6 +4906,17 @@ async def download_endpoint(
     song = await asyncio.to_thread(
         _song_from_download_request, url, client_hints
     )
+    if (
+        isinstance(client_hints, dict)
+        and client_hints.get('skip_if_in_library') is True
+    ):
+        _wanted, owned = await asyncio.to_thread(_split_owned, request, [song])
+        if owned:
+            return {
+                'status': ALREADY_IN_LIBRARY,
+                'filename': owned[0]['filename'],
+                'match': owned[0]['match'],
+            }
     # A retried track from a playlist carries its playlist in the hints,
     # so it lands in that playlist's folder and catalog.
     pl_ctx = await asyncio.to_thread(
@@ -6137,6 +6162,11 @@ async def download_batch_endpoint(request: Request) -> dict[str, Any]:
         raise HTTPException(
             status_code=400, detail='songs must be a non-empty list'
         )
+    owned: list[dict[str, Any]] = []
+    if payload.get('skip_if_in_library') is True:
+        songs, owned = await asyncio.to_thread(_split_owned, request, songs)
+        if not songs:
+            return {'job_ids': [], 'count': 0, ALREADY_IN_LIBRARY: owned}
     playlist_url = str(payload.get('playlist_url') or '')
     generate_m3u = bool(payload.get('generate_m3u', True))
     # No real Spotify/YouTube Music playlist id backs this batch (e.g. an
@@ -6174,7 +6204,7 @@ async def download_batch_endpoint(request: Request) -> dict[str, Any]:
             user_id=batch_user_id,
         )
 
-    return await _submit_playlist_batch(
+    result = await _submit_playlist_batch(
         songs,
         playlist_url,
         generate_m3u=generate_m3u,
@@ -6183,6 +6213,9 @@ async def download_batch_endpoint(request: Request) -> dict[str, Any]:
         cover_url=cover_url,
         user_id=request_user_id(request),
     )
+    if payload.get('skip_if_in_library') is True:
+        result[ALREADY_IN_LIBRARY] = owned
+    return result
 
 
 def _scope_csv_song_ids(songs: list[dict[str, Any]]) -> None:
@@ -6298,8 +6331,11 @@ def _songs_for_album_download(url: str) -> list[dict[str, Any]]:
 
 @router.post('/api/download/album')
 async def download_album_endpoint(
-    request: Request, url: str = Query(...)
-) -> dict[str, str]:
+    request: Request,
+    url: str = Query(...),
+    wait: bool = Query(True),
+    skip_if_in_library: bool = Query(False),
+) -> dict[str, Any]:
     """Download every track of a YouTube Music album/browse URL.
 
     Unlike ``POST /api/download/url`` (which only accepts a single video URL
@@ -6313,6 +6349,13 @@ async def download_album_endpoint(
 
     Returns a mapping of ``song_id -> downloaded filename`` for every track
     that downloaded successfully (failed tracks are omitted, not raised).
+
+    With ``wait=false`` it queues one job per track and answers at once:
+    ``{album, album_artist, track_count, job_ids}``, progress then being
+    ``GET /api/queue``'s. ``skip_if_in_library`` leaves out the tracks
+    the library already has (issue #636): listed under
+    ``already_in_library`` with ``wait=false``, mapped to their existing
+    file otherwise.
     """
     if state.downloader is None:
         raise HTTPException(status_code=500, detail='Downloader not ready')
@@ -6325,6 +6368,31 @@ async def download_album_endpoint(
         str(first_song.get('album_name') or '') or url[:200],
         {'songs': len(songs), 'url': url[:500]},
     )
+    total = len(songs)
+    owned: list[dict[str, Any]] = []
+    # ``is``: called directly (tests), the defaults are Query objects.
+    skip = skip_if_in_library is True
+    if skip:
+        songs, owned = await asyncio.to_thread(_split_owned, request, songs)
+    if wait is False:
+        queued = (
+            await _submit_playlist_batch(
+                songs, '', generate_m3u=False, user_id=request_user_id(request)
+            )
+            if songs
+            else {'job_ids': []}
+        )
+        return {
+            'album': str(first_song.get('album_name') or ''),
+            'album_artist': str(
+                first_song.get('album_artist')
+                or first_song.get('artist')
+                or ''
+            ),
+            'track_count': total,
+            'job_ids': queued['job_ids'],
+            **({ALREADY_IN_LIBRARY: owned} if skip else {}),
+        }
     # See _process_batch: only meaningful when there's a "next" track to
     # wait for, so a single-track album never waits around for nothing.
     delay_seconds = (
@@ -6350,11 +6418,15 @@ async def download_album_endpoint(
         return song_id, filename
 
     results = await asyncio.gather(*(_one(song) for song in songs))
-    return {
+    done = {
         song_id: filename
         for song_id, filename in results
         if song_id and filename
     }
+    for item in owned:
+        if item['song_id']:
+            done[item['song_id']] = item['filename']
+    return done
 
 
 @router.post('/api/library/reconcile')
@@ -7415,16 +7487,77 @@ def _update_visibility(
 
 
 @router.post('/api/library/lookup')
-async def library_lookup(request: Request) -> list[dict[str, Any]]:
-    """Library rows for search/link songs that are already downloaded."""
+async def library_lookup(request: Request) -> Any:
+    """Library rows for search/link songs that are already downloaded.
+
+    With ``detailed: true``: ``{matches: [{input_index, id?, match, row}]}``,
+    one per requested song the library has, matched by catalog id first,
+    then by song key (see :mod:`downtify.library_match`).
+    """
 
     payload = await _json_object(request)
     songs = payload.get('songs')
     if not isinstance(songs, list):
         songs = []
+    if payload.get('detailed') is True:
+        return await asyncio.to_thread(
+            _lookup_detailed, request, songs[:LOOKUP_SONG_MAX]
+        )
     return lookup_library_songs(
         library_context(), songs, allowed_keys=allowed_entry_keys(request)
     )
+
+
+def _library_matcher(request: Request, songs: list[Any]) -> LibraryMatcher:
+    return build_matcher(
+        library_context(),
+        allowed_keys=allowed_entry_keys(request),
+        track_index=state.track_index,
+        download_sources=state.download_sources,
+        sources=request_sources(songs),
+    )
+
+
+def _lookup_detailed(request: Request, songs: list[Any]) -> dict[str, Any]:
+    matcher = _library_matcher(request, songs)
+    matches: list[dict[str, Any]] = []
+    for index, raw in enumerate(songs):
+        hit = matcher.match(raw)
+        if hit is None:
+            continue
+        row, how = hit
+        item: dict[str, Any] = {'input_index': index, 'match': how, 'row': row}
+        if raw.get('id') is not None:
+            item['id'] = raw['id']
+        matches.append(item)
+    return {'matches': matches}
+
+
+def _split_owned(
+    request: Request, songs: list[Any]
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """*songs* the library doesn't have yet, and an ``already_in_library``
+    report for each it has: ``{input_index, song_id, filename, match}``
+    (``skip_if_in_library``, issue #636)."""
+
+    matcher = _library_matcher(request, songs)
+    wanted: list[dict[str, Any]] = []
+    owned: list[dict[str, Any]] = []
+    for index, song in enumerate(songs):
+        if not isinstance(song, dict):
+            continue
+        hit = matcher.match(song)
+        if hit is None:
+            wanted.append(song)
+            continue
+        row, how = hit
+        owned.append({
+            'input_index': index,
+            'song_id': str(song.get('song_id') or ''),
+            'filename': str(row.get('file') or ''),
+            'match': how,
+        })
+    return wanted, owned
 
 
 @router.post('/api/library/playlists')

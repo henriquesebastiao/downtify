@@ -193,6 +193,27 @@ class DownloadSources:
             found['signature'] = None
         return found
 
+    def files_for_sources(self, sources: Iterable[str]) -> dict[str, str]:
+        """``{source: file}`` for the files downloaded from *sources*
+        (video ids, SoundCloud URLs); the newest file when several were."""
+
+        wanted = sorted({str(s).strip() for s in sources if str(s).strip()})
+        found: dict[str, str] = {}
+        # A few hundred at a time keeps under SQLite's bound-parameter cap.
+        for start in range(0, len(wanted), 500):
+            chunk = wanted[start : start + 500]
+            marks = ', '.join('?' for _ in chunk)
+            with self.db.connect() as conn:
+                rows = conn.execute(
+                    'SELECT source, file FROM file_download_sources '
+                    f'WHERE source IN ({marks}) ORDER BY recorded_at',
+                    tuple(chunk),
+                ).fetchall()
+            found.update({
+                str(row['source']): str(row['file']) for row in rows
+            })
+        return found
+
     def replaced_on_disk(self, file: str, full_path: Path) -> bool:
         """Whether the audio at *full_path* is no longer what Downtify
         wrote to *file*: someone swapped the file outside Downtify. A file
