@@ -71,6 +71,124 @@ _TRANSFERS_CACHE: OrderedDict[
 ] = OrderedDict()
 _TRANSFERS_CACHE_LIMIT = 32
 
+# ── Peers and files that just failed ───────────────────────────────────
+# A watch retries a missing song on every check, and the search ranks the
+# same file first each time: a peer whose copy changed size (slskd:
+# "remote size ... does not match expected size") or who stopped sharing
+# it ("File not shared") was asked again and again. A failed file is
+# skipped for a while, and a peer that says it is overwhelmed is tried
+# last for a while. Kept in memory: a restart forgets it.
+
+#: Seconds a file is skipped after slskd says the peer can't serve it.
+BAD_FILE_SECONDS = 24 * 3600
+#: Seconds a file is skipped after it stalled or timed out.
+SLOW_FILE_SECONDS = 3600
+#: Seconds a peer that said it is overwhelmed is tried last.
+BUSY_PEER_SECONDS = 15 * 60
+
+#: Words in slskd's transfer error that mean this file won't come from
+#: this peer however often it is asked.
+_BAD_FILE_ERRORS = (
+    'not shared',
+    'does not match expected size',
+    'file read error',
+    'rejected',
+)
+_BUSY_PEER_ERRORS = ('overwhelmed', 'too many')
+
+_FAILED_LOCK = threading.Lock()
+_FAILED_FILES: dict[tuple[str, str], float] = {}
+_BUSY_PEERS: dict[str, float] = {}
+
+
+def _transfer_error(transfer: Optional[dict[str, Any]]) -> str:
+    """slskd's reason a transfer ended, lower-cased (``''`` without one)."""
+
+    if not transfer:
+        return ''
+    parts = [
+        str(transfer.get(key) or '')
+        for key in ('exception', 'state', 'stateDescription')
+    ]
+    return ' '.join(p for p in parts if p).lower()
+
+
+def remember_failure(
+    username: str,
+    filename: str,
+    transfer: Optional[dict[str, Any]],
+    *,
+    now: Optional[float] = None,
+) -> str:
+    """Remember a candidate that failed; returns how (``bad_file``,
+    ``busy_peer`` or ``slow``)."""
+
+    now = time.monotonic() if now is None else now
+    error = _transfer_error(transfer)
+    key = (username, filename)
+    with _FAILED_LOCK:
+        if any(word in error for word in _BUSY_PEER_ERRORS):
+            _BUSY_PEERS[username] = now + BUSY_PEER_SECONDS
+            return 'busy_peer'
+        if any(word in error for word in _BAD_FILE_ERRORS):
+            _FAILED_FILES[key] = now + BAD_FILE_SECONDS
+            return 'bad_file'
+        _FAILED_FILES[key] = max(
+            _FAILED_FILES.get(key, 0.0), now + SLOW_FILE_SECONDS
+        )
+        return 'slow'
+
+
+def _recently_failed(
+    username: str, filename: str, *, now: Optional[float] = None
+) -> bool:
+    now = time.monotonic() if now is None else now
+    with _FAILED_LOCK:
+        until = _FAILED_FILES.get((username, filename))
+        if until is not None and until <= now:
+            del _FAILED_FILES[(username, filename)]
+            return False
+        return until is not None
+
+
+def _peer_busy(username: str, *, now: Optional[float] = None) -> bool:
+    now = time.monotonic() if now is None else now
+    with _FAILED_LOCK:
+        until = _BUSY_PEERS.get(username)
+        if until is not None and until <= now:
+            del _BUSY_PEERS[username]
+            return False
+        return until is not None
+
+
+def order_by_past_failures(
+    files: list[dict[str, Any]], *, now: Optional[float] = None
+) -> list[dict[str, Any]]:
+    """*files* without the ones that failed recently, with files of peers
+    that said they are overwhelmed moved to the end."""
+
+    kept = [
+        row
+        for row in files
+        if not _recently_failed(
+            str(row.get('username') or ''),
+            str(row.get('filename') or ''),
+            now=now,
+        )
+    ]
+    return sorted(
+        kept,
+        key=lambda row: _peer_busy(str(row.get('username') or ''), now=now),
+    )
+
+
+def forget_failures() -> None:
+    """Forget every remembered failure (tests, and settings changes)."""
+
+    with _FAILED_LOCK:
+        _FAILED_FILES.clear()
+        _BUSY_PEERS.clear()
+
 
 def _poll_env(name: str, default: int, minimum: int, maximum: int) -> int:
     return _int_setting(
@@ -416,6 +534,32 @@ class SlskdClient:
                 exc,
             )
             return False
+
+    def cancel_download(self, username: str, transfer_id: str) -> bool:
+        """Cancel a download Downtify gave up on, so the peer doesn't
+        deliver it later and it doesn't linger in slskd's queue (where a
+        restart of slskd ends it as "Application shut down"). The
+        transfer stays in slskd's history; only its state changes."""
+
+        if not username or not transfer_id:
+            return False
+        endpoint = (
+            f'/api/v0/transfers/downloads/{quote(username)}/'
+            f'{quote(transfer_id)}'
+        )
+        try:
+            self._request('DELETE', endpoint)
+        except Exception as exc:
+            logger.info(
+                'slskd: cancel failed user={!r} id={} err={}',
+                username,
+                transfer_id,
+                exc,
+            )
+            return False
+        with _TRANSFERS_LOCK:
+            _TRANSFERS_CACHE.pop(self._transfers_cache_key(), None)
+        return True
 
     def list_download_transfers(self) -> list[dict[str, Any]]:
         ttl = _poll_env('DOWNTIFY_TRANSFERS_TTL', 3, 0, 60)
@@ -1809,6 +1953,28 @@ def _missed(reason: str, detail: str = '') -> None:
         _miss.value = {'reason': reason, 'detail': str(detail)[:200]}
 
 
+def _give_up_on(client: SlskdClient, username: str, filename: str) -> None:
+    """A candidate didn't arrive: remember why, and cancel its transfer
+    if slskd is still waiting on it (queued, or stalled mid-way)."""
+
+    try:
+        transfer = client.find_transfer(username, filename)
+    except Exception:
+        transfer = None
+    how = remember_failure(username, filename, transfer)
+    # slskd states every ended transfer "Completed, <how>"; anything else
+    # (requested, queued, initializing, in progress) is still waiting.
+    if transfer and 'Completed' not in str(transfer.get('state') or ''):
+        client.cancel_download(username, str(transfer.get('id') or ''))
+    logger.info(
+        'slskd: remembered failure ({}) user={!r} file={!r} error={!r}',
+        how,
+        username,
+        _file_basename(filename)[:120],
+        _transfer_error(transfer)[:160],
+    )
+
+
 def download_from_slskd(  # noqa: PLR0914  # search, rank, enqueue, poll, finalize
     song: dict[str, Any],
     settings: dict[str, Any],
@@ -2068,6 +2234,14 @@ def download_from_slskd(  # noqa: PLR0914  # search, rank, enqueue, poll, finali
         if _root_key(output_dir) not in root_keys:
             roots.append(output_dir)
 
+        before = len(files)
+        files = order_by_past_failures(files)
+        if len(files) < before:
+            logger.info(
+                'slskd: skipping {} file(s) that failed recently title={!r}',
+                before - len(files),
+                song.get('name'),
+            )
         for attempt_idx, file_row in enumerate(files, start=1):
             if cancel_check:
                 cancel_check()
@@ -2152,6 +2326,7 @@ def download_from_slskd(  # noqa: PLR0914  # search, rank, enqueue, poll, finali
                     client.delete_search(search_id)
                 return _finalize_slskd_path(found)
 
+            _give_up_on(client, username, filename)
             logger.info(
                 'slskd: candidate failed candidate={}/{} title={!r} user={!r} file={!r}',
                 attempt_idx,
