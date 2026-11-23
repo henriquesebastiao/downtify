@@ -71,6 +71,15 @@ Une source peut créditer une sortie à un seul artiste alors qu’elle appartie
 
 Seuls les administrateurs voient le bouton. Les serveurs multimédias prennent le changement en compte à leur prochain scan de la bibliothèque.
 
+### Télécharger une playlist comme un album
+
+Pour garder une playlist réunie en un seul album (pratique pour Plex et les autres serveurs qui ignorent les playlists M3U), ouvrez son lien et utilisez **Télécharger comme un album**. Tous les titres de la playlist sont téléchargés et étiquetés comme un album :
+
+- **Album** est le nom de la playlist et **Artiste de l’album** est « Various Artists », avec le drapeau de compilation, pour que les serveurs multimédias affichent un seul album. Chaque titre garde son propre artiste, titre et année.
+- Les pistes sont numérotées dans l’ordre de la playlist, et l’image de la playlist devient la pochette de l’album.
+- Sur le disque, l’album a un seul dossier : `Various Artists/<playlist>/` avec **Classer par artiste** et **Classer par album** activés (`Various Artists/` avec le premier seulement), `<playlist>/` sinon.
+- Un titre que la bibliothèque possède déjà sur un autre album est téléchargé à nouveau dans celui-ci, pour que l’album soit complet. Avec **Retélécharger si le fichier existe** désactivé, seul un titre déjà présent dans le dossier de l’album est ignoré.
+
 ## M3U et dossiers d’artistes
 
 Quand *Classer par artiste* est activé et que vous téléchargez une playlist Spotify avec la génération de M3U également activée, le M3U est placé dans `<downloads>/Playlists/<nom-de-la-playlist>.m3u` plutôt que dans le sous-dossier de la playlist. C’est parce que les titres sont désormais répartis dans plusieurs dossiers d’artistes. Les chemins relatifs à l’intérieur du M3U se résolvent toujours correctement, où que vous montiez la bibliothèque.

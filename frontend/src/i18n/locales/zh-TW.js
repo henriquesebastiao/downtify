@@ -457,6 +457,9 @@ export default {
       other: '下載 {count} 首新歌曲',
     },
     redownloadAll: '全部重新下載',
+    downloadAsAlbum: '下載為專輯',
+    downloadAsAlbumHint:
+      '將所有歌曲儲存為一張以播放清單命名的專輯，演出者為 Various Artists，放在同一個資料夾中。',
     downloadSelected: '下載選取項目',
     allInLibrary: '全部都在媒體庫中',
     allHandled: '已在媒體庫或佇列中',

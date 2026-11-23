@@ -71,6 +71,15 @@ Bir kaynak, birkaç sanatçıya eşit ölçüde ait bir yayını tek bir sanatç
 
 Düğmeyi yalnızca yöneticiler görür. Medya sunucuları değişikliği bir sonraki kitaplık taramasında alır.
 
+### Bir çalma listesini albüm olarak indirme
+
+Bir çalma listesini tek bir albüm olarak bir arada tutmak için (M3U listelerini yok sayan Plex ve diğer sunucular için kullanışlı), bağlantısını açın ve **Albüm olarak indir**'i kullanın. Listenin tüm şarkıları indirilir ve tek bir albüm olarak etiketlenir:
+
+- **Albüm** listenin adıdır, **Albüm sanatçısı** ise derleme işaretiyle birlikte "Various Artists" olur; böylece medya sunucuları tek bir albüm gösterir. Her şarkı kendi sanatçısını, adını ve yılını korur.
+- Parçalar liste sırasına göre numaralanır ve listenin resmi albüm kapağı olur.
+- Diskte albümün tek bir klasörü olur: **Sanatçıya göre düzenle** ve **Albüme göre düzenle** açıkken `Various Artists/<liste>/` (yalnızca ilki açıkken `Various Artists/`), aksi halde `<liste>/`.
+- Kütüphanede başka bir albümde zaten bulunan bir şarkı, albüm eksiksiz olsun diye bu albüme yeniden indirilir. **Dosya varsa yeniden indir** kapalıyken yalnızca albüm klasöründe zaten bulunan şarkı atlanır.
+
 ## M3U ve sanatçı klasörleri
 
 *Sanatçıya göre düzenle* açıkken M3U üretimi de açıkken bir Spotify çalma listesi indirirseniz M3U, çalma listesi alt klasörünün içine değil `<downloads>/Playlists/<çalma-listesi-adı>.m3u` yoluna konur. Bunun nedeni, parçaların artık birden çok sanatçı klasörüne dağılmış olmasıdır. M3U içindeki göreli yollar, kitaplığı nereye bağlarsanız bağlayın doğru çözülmeye devam eder.

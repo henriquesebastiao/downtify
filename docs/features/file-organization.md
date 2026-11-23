@@ -43,7 +43,7 @@ A song often credits several artists. Downtify keeps all of them in the file's *
 - The album artist is the artist the source (Spotify, YouTube Music or Deezer) credits for the **album**, the same for every track on it, and it's written to the **Album artist** tag. When the source doesn't say, it's the track's first artist.
 - A duo or group is one artist. YouTube Music credits some acts as their members, one per entry (`Henrique & Juliano` comes back as `Henrique` and `Juliano`, on the album and on each track - sometimes in the other order, `Mateus` and `Jorge` for `Jorge & Mateus`). Each credited name links to a YouTube Music channel; when one member's link leads to a channel named after the whole act, made of the names credited next to it, Downtify joins those names back into the act's name: the folder, **Album artist**, **Artist** and **ARTISTS** tags all say `Henrique & Juliano`. A real collaboration (each artist under their own channel) keeps every artist. When YouTube Music links no member to the act's channel, the names stay split; the Library still gives no page to a name that is only ever credited next to someone else (see [Library catalog](library-catalog.md#library-page)).
 - A guest never changes it. *The Girl Is Mine*, with a guest on Michael Jackson's *Thriller*, stays in `Michael Jackson/Thriller/`, and *Lady Marmalade* the single (Christina Aguilera, Lil' Kim, Mýa, P!nk) goes to `Christina Aguilera/`.
-- Only an album the source itself credits to **Various Artists** (a soundtrack, a "Now That's What I Call…") is a compilation — unless you [mark it yourself](#marking-an-album-as-various-artists). A single YouTube Music song never is: YouTube Music files the same audio under several releases and may show any of them as its album, often a compilation, so only a whole YouTube Music album download counts. Its tracks get "Various Artists" as their album artist plus the compilation flag (`TCMP` in MP3, `COMPILATION` in FLAC/Ogg/Opus, `cpil` in M4A). That keeps the album whole in Navidrome and other media servers, which group albums by these tags rather than by folder. On disk, though, **Organize by artist** never makes a `Various Artists` folder: each track goes to its own first artist's folder.
+- Only an album the source itself credits to **Various Artists** (a soundtrack, a "Now That's What I Call…") is a compilation — unless you [mark it yourself](#marking-an-album-as-various-artists). A single YouTube Music song never is: YouTube Music files the same audio under several releases and may show any of them as its album, often a compilation, so only a whole YouTube Music album download counts. Its tracks get "Various Artists" as their album artist plus the compilation flag (`TCMP` in MP3, `COMPILATION` in FLAC/Ogg/Opus, `cpil` in M4A). That keeps the album whole in Navidrome and other media servers, which group albums by these tags rather than by folder. On disk, though, **Organize by artist** never makes a `Various Artists` folder: each track goes to its own first artist's folder (a playlist you download as an album, below, is the one exception).
 - Older Downtify versions tagged any song with several artists **Various Artists**, without the compilation flag. The Library keeps listing such a song in its first artist's album, as before; **Mark as Various Artists** makes the album a real compilation.
 
 ```
@@ -70,6 +70,15 @@ A source can credit a release to one artist when it belongs to several equally �
 - On a compilation the same button reads **Unmark as Various Artists**: it undoes the mark and puts back the album artist the album had. It also works on an album its source made a compilation; then the album artist becomes the artist most of its tracks list first, and later downloads of that album aren't marked again.
 
 Only admins see the button. Media servers pick the change up on their next library scan.
+
+### Downloading a playlist as an album
+
+To keep a playlist together as one album instead (handy for Plex and other servers that ignore M3U playlists), open its link and use **Download as an album**. Every song of the playlist is downloaded and tagged as one album:
+
+- **Album** is the playlist's name and **Album artist** is "Various Artists", with the compilation flag, so media servers show a single album. Each song keeps its own artist, title and year.
+- Tracks are numbered in playlist order, and the playlist's picture becomes the album cover.
+- On disk the album gets one folder: `Various Artists/<playlist>/` with **Organize by artist** and **Organize by album** on (`Various Artists/` with only the first), `<playlist>/` otherwise.
+- A song the library already has on another album is downloaded again into this one, so the album is complete. With **Download again if the file exists** off, only a song already in the album's folder is skipped.
 
 ## M3U and artist folders
 

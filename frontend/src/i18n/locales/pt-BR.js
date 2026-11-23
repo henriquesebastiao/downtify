@@ -488,6 +488,9 @@ export default {
     downloadAll: { one: 'Baixar', other: 'Baixar todas as {count}' },
     downloadNew: { one: 'Baixar {count} nova', other: 'Baixar {count} novas' },
     redownloadAll: 'Baixar tudo de novo',
+    downloadAsAlbum: 'Baixar como álbum',
+    downloadAsAlbumHint:
+      'Salva todas as músicas como um único álbum com o nome da playlist, atribuído a Various Artists, em uma só pasta.',
     downloadSelected: 'Baixar selecionadas',
     allHandled: 'Já está na biblioteca ou na fila',
     addPlaylist: 'Adicionar às minhas playlists',

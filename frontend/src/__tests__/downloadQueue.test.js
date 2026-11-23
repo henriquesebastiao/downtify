@@ -358,6 +358,27 @@ describe('queue index lifecycle', () => {
     expect(item.state).toBe('queued')
   })
 
+  it('asks for a playlist saved as one album only when wanted', async () => {
+    const songs = [job('a').song, job('b').song]
+    await manager.fromSongs(songs, {
+      playlistUrl: 'https://open.spotify.com/playlist/x',
+      coverUrl: 'https://img/playlist.jpg',
+      asAlbum: true,
+    })
+    expect(fixture.api.downloadBatch).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        as_album: true,
+        cover_url: 'https://img/playlist.jpg',
+      })
+    )
+    await manager.fromSongs(songs, {
+      playlistUrl: 'https://open.spotify.com/playlist/x',
+    })
+    expect(fixture.api.downloadBatch.mock.lastCall[0]).not.toHaveProperty(
+      'as_album'
+    )
+  })
+
   it('keeps a failed retry visible when the search queue rejects it', async () => {
     const item = tracker.appendSong(job('csv:import:0').song)
     item.setError()

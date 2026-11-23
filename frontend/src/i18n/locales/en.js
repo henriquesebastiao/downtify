@@ -477,6 +477,9 @@ export default {
     downloadAll: { one: 'Download', other: 'Download all {count}' },
     downloadNew: { one: 'Download {count} new', other: 'Download {count} new' },
     redownloadAll: 'Download all again',
+    downloadAsAlbum: 'Download as an album',
+    downloadAsAlbumHint:
+      'Save every song as one album named after the playlist, credited to Various Artists, in a single folder.',
     downloadSelected: 'Download selected',
     allInLibrary: 'All in your library',
     allHandled: 'Already in your library or queue',

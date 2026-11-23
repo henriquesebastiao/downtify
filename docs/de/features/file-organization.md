@@ -71,6 +71,15 @@ Eine Quelle kann eine Veröffentlichung einem Künstler zuschreiben, obwohl sie 
 
 Nur Admins sehen die Schaltfläche. Medienserver übernehmen die Änderung beim nächsten Bibliotheksscan.
 
+### Eine Playlist als Album herunterladen
+
+Um eine Playlist stattdessen als ein Album zusammenzuhalten (praktisch für Plex und andere Server, die M3U-Playlists ignorieren), öffne ihren Link und nutze **Als Album herunterladen**. Alle Songs der Playlist werden heruntergeladen und als ein Album getaggt:
+
+- **Album** ist der Name der Playlist und **Albuminterpret** ist „Various Artists“, mit dem Compilation-Flag, sodass Medienserver ein einziges Album zeigen. Jeder Song behält seinen eigenen Interpreten, Titel und sein Jahr.
+- Die Titel werden in der Reihenfolge der Playlist nummeriert, und das Bild der Playlist wird zum Albumcover.
+- Auf der Festplatte bekommt das Album einen Ordner: `Various Artists/<Playlist>/` mit **Nach Künstler sortieren** und **Nach Album sortieren** (`Various Artists/` nur mit dem ersten), sonst `<Playlist>/`.
+- Ein Song, den die Bibliothek schon auf einem anderen Album hat, wird erneut in dieses heruntergeladen, damit das Album vollständig ist. Mit ausgeschaltetem **Bei vorhandener Datei erneut herunterladen** wird nur ein Song übersprungen, der schon im Ordner des Albums liegt.
+
 ## M3U und Künstlerordner
 
 Ist *Nach Künstler sortieren* aktiv und du lädst eine Spotify-Playlist mit ebenfalls aktivierter M3U-Erzeugung herunter, wird die M3U in `<downloads>/Playlists/<Playlist-Name>.m3u` statt im Playlist-Unterordner abgelegt. Das liegt daran, dass die Titel nun auf mehrere Künstlerordner verteilt sind. Die relativen Pfade in der M3U werden weiterhin korrekt aufgelöst, egal wo du die Bibliothek einbindest.

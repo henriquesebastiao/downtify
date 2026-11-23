@@ -498,6 +498,9 @@ export default {
     downloadAll: { one: 'Λήψη', other: 'Λήψη και των {count}' },
     downloadNew: { one: 'Λήψη {count} νέου', other: 'Λήψη {count} νέων' },
     redownloadAll: 'Λήψη όλων ξανά',
+    downloadAsAlbum: 'Λήψη ως άλμπουμ',
+    downloadAsAlbumHint:
+      'Αποθηκεύει όλα τα τραγούδια ως ένα άλμπουμ με το όνομα της λίστας, με καλλιτέχνη Various Artists, σε έναν φάκελο.',
     downloadSelected: 'Λήψη επιλεγμένων',
     allHandled: 'Ήδη στη βιβλιοθήκη ή στην ουρά',
     addPlaylist: 'Προσθήκη στις λίστες μου',

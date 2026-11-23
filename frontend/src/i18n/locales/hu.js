@@ -486,6 +486,9 @@ export default {
     downloadAll: { one: 'Letöltés', other: 'Mind a(z) {count} letöltése' },
     downloadNew: { one: '{count} új letöltése', other: '{count} új letöltése' },
     redownloadAll: 'Összes újratöltése',
+    downloadAsAlbum: 'Letöltés albumként',
+    downloadAsAlbumHint:
+      'Az összes dalt egyetlen, a lejátszási lista nevét viselő albumként menti, Various Artists előadóval, egy mappába.',
     downloadSelected: 'Kijelöltek letöltése',
     allHandled: 'Már a könyvtárban vagy a sorban',
     addPlaylist: 'Hozzáadás a lejátszási listáimhoz',
