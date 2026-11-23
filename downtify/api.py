@@ -425,7 +425,7 @@ from fastapi import (
     WebSocket,
     WebSocketDisconnect,
 )
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from loguru import logger
 from starlette.requests import HTTPConnection
 
@@ -607,6 +607,8 @@ from .monitor import (
     playlist_watch_key,
     take_inventory,
 )
+from .monitor import saved_watch_cover as monitor_saved_watch_cover
+from .monitor import watch_cover_url as monitor_watch_cover_url
 from .navidrome import (
     NavidromeClient,
     _effective_navidrome_settings,
@@ -10823,6 +10825,36 @@ async def list_monitor_playlists(request: Request) -> list[dict[str, Any]]:
     scope = None if request_is_admin(request) else request_user_id(request)
     playlists = await asyncio.to_thread(db.list_playlists, scope)
     return [p.to_dict() for p in playlists]
+
+
+@router.get('/api/monitor/playlists/{playlist_id}/cover')
+async def monitor_playlist_cover(playlist_id: int, request: Request) -> Any:
+    """A watched playlist's picture for the Monitor page: the cover saved
+    beside its M3U when there is one, else a redirect to the cover its
+    service (Spotify, YouTube Music, Deezer) shows, looked up once and
+    remembered (:func:`downtify.monitor.watch_cover_url`). 404 for an
+    artist, or when there is neither; the page then keeps the initials."""
+
+    _require_monitor_db()
+    watch = await asyncio.to_thread(
+        _monitor_watch_for_request, playlist_id, request
+    )
+    if watch is None or watch.kind != KIND_PLAYLIST:
+        raise HTTPException(status_code=404, detail='No cover')
+    headers = {'Cache-Control': 'private, max-age=3600'}
+    downloader = state.downloader
+    if downloader is not None:
+        saved = await asyncio.to_thread(
+            monitor_saved_watch_cover, watch, downloader
+        )
+        if saved is not None:
+            return FileResponse(
+                saved, media_type='image/jpeg', headers=headers
+            )
+    url = await asyncio.to_thread(monitor_watch_cover_url, watch)
+    if not url:
+        raise HTTPException(status_code=404, detail='No cover')
+    return RedirectResponse(url, status_code=302, headers=headers)
 
 
 @router.post('/api/monitor/playlists')

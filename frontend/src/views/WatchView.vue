@@ -26,6 +26,18 @@
 
     <template v-else>
       <PageHeader :title="watch.name" :subtitle="subtitle">
+        <template #cover>
+          <CoverArt
+            :src="watchPicture"
+            :name="watch.name"
+            :round="watch.kind === 'artist'"
+            :icon="watch.kind === 'artist' ? 'user' : 'playlist'"
+            rounded="rounded-[12px]"
+            :letter-size="24"
+            shadow
+            class="size-16 sm:size-20"
+          />
+        </template>
         <UiButton
           v-if="libraryRoute"
           variant="secondary"
@@ -298,6 +310,7 @@ import { computed, onMounted, ref, watch as watchRef } from 'vue'
 import { useRoute } from 'vue-router'
 import { useLocalStorage } from '@vueuse/core'
 import AppIcon from '/src/components/ui/AppIcon.vue'
+import CoverArt from '/src/components/ui/CoverArt.vue'
 import UiBadge from '/src/components/ui/UiBadge.vue'
 import UiButton from '/src/components/ui/UiButton.vue'
 import UiChips from '/src/components/ui/UiChips.vue'
@@ -310,7 +323,10 @@ import SelectionBar from '/src/components/library/SelectionBar.vue'
 import TrackList from '/src/components/library/TrackList.vue'
 import ArtistReleases from '/src/components/monitor/ArtistReleases.vue'
 import WatchSourceBadge from '/src/components/monitor/WatchSourceBadge.vue'
+import API from '/src/model/api'
 import monitorAPI from '/src/model/monitor'
+import { artistPhotoSource } from '/src/lib/artistPhotoProxy'
+import { watchCoverUrl } from '/src/lib/watches'
 import { useLibrary } from '/src/model/library'
 import { usePlaylistActions } from '/src/model/playlistActions'
 import { useTrackActions } from '/src/model/trackActions'
@@ -341,6 +357,37 @@ const library = useLibrary()
 const watchId = computed(() => Number(route.params.id))
 const watch = ref(null)
 const tracks = ref([])
+
+// The picture by the name: a playlist's cover (see watchCoverUrl), or an
+// artist's saved photo - else the display-only one from the photo proxy,
+// as on the Monitor list. Until the saved-photo lookup answers, the
+// initials show.
+const artistArt = ref({ name: '', entry: null, loaded: false })
+watchRef(
+  () => (watch.value?.kind === 'artist' ? watch.value.name : ''),
+  async (name) => {
+    artistArt.value = { name, entry: null, loaded: false }
+    if (!name) return
+    let entry = null
+    try {
+      entry = (await API.getArtistArt(name)).data || null
+    } catch {
+      // No saved photo known: the proxy's photo, or the initials.
+    }
+    if (artistArt.value.name === name) {
+      artistArt.value = { name, entry, loaded: true }
+    }
+  },
+  { immediate: true }
+)
+const watchPicture = computed(() => {
+  const current = watch.value
+  if (!current) return ''
+  if (current.kind !== 'artist') return watchCoverUrl(current)
+  const art = artistArt.value
+  if (art.name !== current.name) return ''
+  return artistPhotoSource(current.name, art.entry, art.loaded).cover
+})
 const failures = ref([])
 const clearing = ref(false)
 

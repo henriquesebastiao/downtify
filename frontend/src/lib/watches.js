@@ -6,6 +6,22 @@ import { STAT_SORT_KEYS, statValue } from './watchStats'
 
 export const WATCH_KINDS = ['playlist', 'artist']
 
+/**
+ * The picture a playlist watch shows on the Monitor page: the cover saved
+ * beside its M3U, else the one its service shows (the server decides, see
+ * `GET /api/monitor/playlists/{id}/cover`). `''` for an artist watch, which
+ * shows the artist's photo instead. The last check is in the address, so a
+ * playlist whose picture changed (Spotify's mixes) is fetched again after
+ * its next check rather than kept from the browser's cache.
+ */
+export function watchCoverUrl(item) {
+  if (!item?.id || watchKind(item) !== 'playlist') return ''
+  const base = `/api/monitor/playlists/${encodeURIComponent(item.id)}/cover`
+  return item.last_checked
+    ? `${base}?v=${encodeURIComponent(item.last_checked)}`
+    : base
+}
+
 /** A watch's tab. Rows from before artist watches have no kind. */
 export function watchKind(item) {
   return item?.kind === 'artist' ? 'artist' : 'playlist'

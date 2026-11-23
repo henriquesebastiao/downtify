@@ -181,7 +181,7 @@ You can change the interval of an existing playlist at any time from the monitor
 
 ## Managing monitored playlists
 
-Each tab lists only its own kind of watch. Above the list:
+Each tab lists only its own kind of watch. A playlist shows its picture: the cover saved beside its M3U when there is one, else the one Spotify, Deezer or YouTube Music shows for it (looked up once and remembered for a day); an artist shows their photo. Above the list:
 
 - **Filter** — type part of a name or of the link (e.g. a playlist id) to narrow the list
 - **All / Paused** — show only paused watches

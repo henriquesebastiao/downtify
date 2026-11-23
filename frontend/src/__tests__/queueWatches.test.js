@@ -26,12 +26,20 @@ describe('queueWatches', () => {
 })
 
 describe('watchCover', () => {
-  it("uses the artist's photo or the playlist's saved cover", () => {
+  it("uses the artist's photo or the playlist watch's picture", () => {
     expect(watchCover(drake)).toBe('/api/artists/photo-proxy?name=Drake')
-    expect(watchCover(mix)).toBe(
+    // The Monitor's cover route: the saved file, else the service's cover.
+    expect(watchCover(mix)).toBe('/api/monitor/playlists/2/cover')
+    expect(watchCover({ id: 3, kind: 'playlist' })).toBe(
+      '/api/monitor/playlists/3/cover'
+    )
+    expect(watchCover(null)).toBe('')
+  })
+
+  it('keeps the saved file for an event without the watch id', () => {
+    expect(watchCover({ ...mix, id: undefined })).toBe(
       `/playlist-cover?file=${encodeURIComponent('Mix/2010s Mix.jpg')}`
     )
-    expect(watchCover({ id: 3, kind: 'playlist' })).toBe('')
-    expect(watchCover(null)).toBe('')
+    expect(watchCover({ kind: 'playlist' })).toBe('')
   })
 })
