@@ -425,3 +425,81 @@ def test_release_count_counts_a_release_on_both_sources_once(names, count):
     albums = [{'album_id': str(i), 'name': n} for i, n in enumerate(names)]
 
     assert monitor._release_count(albums) == count
+
+
+COMPLETE = {**ON, 'artist_watch_complete_albums': True}
+
+
+def _certified_lover_boy(monkeypatch, *, deluxe=False):
+    _patch(
+        monkeypatch,
+        [_album('CLB', 'Certified Lover Boy')],
+        {
+            'CLB': [
+                _track('tsu', 'TSU', 'Certified Lover Boy', 8, duration=308)
+            ]
+        },
+    )
+    name = 'Certified Lover Boy (Deluxe)' if deluxe else 'Certified Lover Boy'
+    return _Deezer(
+        monkeypatch,
+        [_release('10', name)],
+        {'10': [_dz_track(8, 'TSU', name, duration=308)]},
+    )
+
+
+def test_complete_albums_downloads_a_release_both_catalogues_list_once(
+    monkeypatch, tmp_path
+):
+    """Issue #669: one album that YouTube Music and Deezer both list is
+    one release, also with "Keep every album complete" on."""
+
+    _certified_lover_boy(monkeypatch)
+    db, watch = _watch(tmp_path)
+    dl = _FakeDownloader(tmp_path)
+
+    _sweep(db, watch, dl, COMPLETE)
+
+    assert dl.calls == ['tsu']
+    files = db.get_track_filenames(watch.id)
+    assert files['deezer-Certified Lover Boy-8'] == files['tsu']
+
+
+def test_complete_albums_links_when_deezer_is_turned_on_later(
+    monkeypatch, tmp_path
+):
+    """Deezer's listing is new to a watch that already downloaded the
+    album from YouTube Music: it is linked, not downloaded again."""
+
+    deezer = _certified_lover_boy(monkeypatch)
+    db, watch = _watch(tmp_path)
+    dl = _FakeDownloader(tmp_path)
+
+    _sweep(db, watch, dl, {'artist_watch_complete_albums': True})
+    assert dl.calls == ['tsu']
+    library = [
+        {
+            'file': 'Drake/tsu.mp3',
+            'artist': 'Drake',
+            'title': 'TSU',
+            'duration': 308,
+        }
+    ]
+    _sweep(db, watch, dl, COMPLETE, rows=library)
+
+    assert deezer.lookups == ['Drake']
+    assert dl.calls == ['tsu']
+
+
+def test_complete_albums_still_copies_a_song_for_another_release(
+    monkeypatch, tmp_path
+):
+    """A deluxe edition is another release: it gets its own copy."""
+
+    _certified_lover_boy(monkeypatch, deluxe=True)
+    db, watch = _watch(tmp_path)
+    dl = _FakeDownloader(tmp_path)
+
+    _sweep(db, watch, dl, COMPLETE)
+
+    assert dl.calls == ['tsu', 'deezer-Certified Lover Boy (Deluxe)-8']
