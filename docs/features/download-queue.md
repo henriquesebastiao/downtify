@@ -4,7 +4,7 @@ icon: lucide/circle-pause
 
 # Download Queue
 
-Everything you download goes through the **Queue** page: what is downloading (**In progress**), what is **Waiting** for a free slot, what is **Done** and what **Failed**. How many songs download at once is [Parallel downloads](download-settings.md#parallel-downloads).
+Everything you download goes through the **Queue** page: what is downloading (**In progress**), what is **Waiting** for a free slot, what is **Done** and what **Failed**. How many songs download at once is [Parallel downloads](download-settings.md#parallel-downloads). A song only moves to **In progress** once it has a slot: a single song you download, and a failed song you **Retry** (or every one at once with **Retry failed**), waits in **Waiting** like the rest.
 
 ## Pausing and resuming
 
@@ -47,7 +47,7 @@ Songs you download yourself show no watch.
 
 ## Restarting or updating
 
-The queue outlives a restart, a crash or a container update. The songs that were waiting — and the ones that were mid-download when Downtify stopped, which start over — are queued again on the next start, and a paused queue comes back paused. So with a long queue:
+The queue outlives a restart, a crash or a container update. The songs that were waiting — and the ones that were mid-download when Downtify stopped, which start over — are queued again on the next start, and a paused queue comes back paused. The songs that **Failed** come back in that tab with their error, so **Retry failed** still works after an update (they never retry on their own); removing them or **Clear queue** forgets them. So with a long queue:
 
 1. **Pause downloads** and wait for **Downloads paused**.
 2. Restart or update Downtify, change what you needed to.
@@ -57,7 +57,7 @@ When the songs of a playlist download finish after a restart, its [M3U](m3u-expo
 
 ::: info What isn't kept
 
-- Finished and failed songs: after a restart the queue lists only what is still to do.
+- Finished songs: after a restart the queue lists what is still to do and what failed.
 - [Replace Audio](replace-audio.md) jobs: replace the song again.
 - In [library-only mode](library-only.md) nothing is started: the saved songs wait for a start with it off.
   :::
