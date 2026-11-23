@@ -25,7 +25,7 @@
             : 'border-transparent bg-surface-2'
         "
       >
-        <label class="flex min-w-0 cursor-pointer items-start gap-2">
+        <label class="flex min-w-0 cursor-pointer flex-wrap items-start gap-2">
           <input
             v-model="keep"
             type="radio"
@@ -34,7 +34,8 @@
             :value="file.file"
             :disabled="busy || readonly"
           />
-          <span class="flex min-w-0 flex-1 flex-col">
+          <DoctorCover :file="file.file" :name="file.title || group.title" />
+          <span class="flex min-w-[10rem] flex-1 flex-col">
             <span class="text-fg [overflow-wrap:anywhere]">
               {{ file.file }}
             </span>
@@ -101,6 +102,7 @@ import { formatBytes, formatDuration } from '/src/lib/format'
 import { usePlayer } from '/src/model/player'
 import UiBadge from '/src/components/ui/UiBadge.vue'
 import UiButton from '/src/components/ui/UiButton.vue'
+import DoctorCover from './DoctorCover.vue'
 
 const props = defineProps({
   group: { type: Object, required: true },
