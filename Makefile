@@ -1,6 +1,6 @@
 #!make
 
-DOWNTIFY_VERSION := 3.13.0
+DOWNTIFY_VERSION := 3.14.0
 TARGET := henriquesebastiao/downtify
 
 all: build up
