@@ -93,6 +93,15 @@ Azt szabályozza, mit látnak a fiókok az alkalmazásban, nem azt, ki kérhet l
 
 Az elrejtést és a megjelenítést a [tevékenységnapló](#activity) rögzíti.
 
+### Saját könyvtár minden felhasználónak
+
+Alapértelmezés szerint a könyvtár közös. Ha inkább minden fióknak saját könyvtárat adna, egy adminisztrátor bekapcsolja a **Beállítások › Könyvtár › Minden felhasználónak saját könyvtára van** lehetőséget. Ekkor a felhasználó ezt látja:
+
+- az általa letöltött dalokat, beleértve azt is, amit a saját lejátszásilista- és előadófigyelései hoztak;
+- azoknak a lejátszási listáknak a dalait, amelyeket megnyithat: a sajátjait, a [vele megosztottakat](#sharing-playlists) és az általa követett nyilvánosakat, így egy megosztott lista továbbra is tartalmazza a dalait.
+
+Minden más eltűnik a könyvtárából, a keresés „a könyvtárban” jelöléseiből és abból, amit egy párosított telefon szinkronizál. Ha két ember ugyanazt a dalt tölti le, az továbbra is egyszer tárolódik, és mindketten látják. Az adminisztrátorok továbbra is mindent látnak, és azokat a dalokat, amelyeket senki sem töltött le fiókkal (kézzel kerültek a mappába, vagy a fiókok előttiek), csak az adminisztrátorok látják. Az [elrejtéshez](#hiding-from-users) hasonlóan azt szabályozza, mi jelenik meg, nem azt, ki érhet el egy fájlt, amelynek már ismeri a címét.
+
 ### Dalok törlése
 
 Egy dal törlése mindenki számára eltávolítja a lemezről, ezért követi azt, aki letöltötte. Egy admin bármit törölhet. Egy felhasználó törölhet egy általa letöltött dalt; ha valaki más is letöltötte ugyanazt a dalt, a törlés csak a saját igényéről mond le, és a dal a közös könyvtárban marad. Egy olyan dalt, amelyet senki nem töltött le fiókon keresztül (egy lejátszási lista figyelő átfésülése, egy fiókok előtti letöltés, egy [extra mappa](external-library.md)), csak admin törölhet. Egy saját lista törlése soha nem visz magával más fájljait.

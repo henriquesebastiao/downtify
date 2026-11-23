@@ -1648,6 +1648,9 @@ export default {
     allowPlaylistSharing: '允許使用者分享播放清單',
     allowPlaylistSharingHint:
       '使用者可以將播放清單分享給其他使用者或設為公開。關閉後，所有已分享的播放清單都會隱藏，直到你重新開啟。',
+    perUserLibrary: '每位使用者擁有自己的音樂庫',
+    perUserLibraryHint:
+      '使用者只會看到自己下載的歌曲，以及他們可以開啟的播放清單中的歌曲。管理員仍可看到全部內容。沒有人透過 Downtify 下載的歌曲（手動放入資料夾的）這時只會對管理員顯示。',
     searchAlbums: '在搜尋結果中顯示專輯',
     searchAlbumsHint: '搜尋時也會查詢專輯，並可下載整張專輯。',
     shortcutsGroup: '鍵盤',

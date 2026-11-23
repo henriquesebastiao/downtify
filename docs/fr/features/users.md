@@ -93,6 +93,15 @@ Cela contrôle ce que les comptes voient dans l’application, pas qui peut réc
 
 Masquer et afficher sont consignés dans le [journal d’activité](#activity).
 
+### Une bibliothèque pour chaque utilisateur
+
+Par défaut, la bibliothèque est partagée. Pour donner à chaque compte sa propre bibliothèque, un administrateur active **Réglages › Bibliothèque › Chaque utilisateur a sa propre bibliothèque**. Un utilisateur voit alors :
+
+- les titres qu’il a téléchargés, y compris ce que ses propres surveillances de playlists et d’artistes ont rapporté ;
+- les titres des playlists qu’il peut ouvrir : les siennes, celles [partagées avec lui](#sharing-playlists) et les publiques qu’il suit, pour qu’une playlist partagée garde ses titres.
+
+Tout le reste disparaît de sa bibliothèque, des marques « dans la bibliothèque » de la recherche et de ce qu’un téléphone associé synchronise. Quand deux personnes téléchargent le même titre, il n’est toujours stocké qu’une fois et tous deux le voient. Les administrateurs voient toujours tout, et les titres que personne n’a téléchargés via un compte (ajoutés à la main dans le dossier, ou d’avant les comptes) ne sont visibles que par les administrateurs. Comme le [masquage](#hiding-from-users), cela contrôle ce qui est listé, pas qui peut récupérer un fichier dont il connaît déjà l’adresse.
+
 ### Supprimer des morceaux
 
 Supprimer un morceau le retire du disque pour tout le monde, donc cela suit celui qui l’a téléchargé. Un admin peut tout supprimer. Un utilisateur peut supprimer un morceau qu’il a lui-même téléchargé ; quand quelqu’un d’autre a aussi téléchargé le même morceau, supprimer ne fait qu’abandonner sa propre revendication et le morceau reste dans la bibliothèque partagée. Un morceau que personne n’a téléchargé via un compte (un passage du suivi de playlists, un téléchargement d’avant les comptes, un [dossier supplémentaire](external-library.md)) ne peut être supprimé que par un admin. Supprimer une de vos playlists n’emporte jamais les fichiers de quelqu’un d’autre.

@@ -1738,6 +1738,9 @@ export default {
     allowPlaylistSharing: 'Kullanıcıların liste paylaşmasına izin ver',
     allowPlaylistSharingHint:
       'Kullanıcılar listelerini başkalarıyla paylaşabilir veya herkese açık yapabilir. Kapalıyken paylaşılan tüm listeler, yeniden açana kadar gizli kalır.',
+    perUserLibrary: 'Her kullanıcının kendi kütüphanesi olsun',
+    perUserLibraryHint:
+      'Kullanıcılar yalnızca indirdikleri şarkıları ve açabildikleri çalma listelerinin şarkılarını görür. Yöneticiler her şeyi görmeye devam eder. Kimsenin Downtify ile indirmediği şarkılar (klasöre elle eklenenler) bu durumda yalnızca yöneticilere gösterilir.',
     searchAlbums: 'Arama sonuçlarında albümleri göster',
     searchAlbumsHint:
       'Aramada albümleri de getir ve albümün tamamını indirme seçeneği sun.',

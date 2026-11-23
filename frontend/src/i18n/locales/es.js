@@ -1769,6 +1769,9 @@ export default {
     allowPlaylistSharing: 'Permitir que los usuarios compartan playlists',
     allowPlaylistSharingHint:
       'Los usuarios pueden compartir sus playlists con otros o hacerlas públicas. Si se desactiva, todas las playlists compartidas quedan ocultas hasta que lo reactives.',
+    perUserLibrary: 'Cada usuario tiene su propia biblioteca',
+    perUserLibraryHint:
+      'Los usuarios solo ven las canciones que descargaron, más las de las playlists que pueden abrir. Los administradores siguen viéndolo todo. Las canciones que nadie descargó con Downtify (añadidas a mano a la carpeta) solo se muestran entonces a los administradores.',
     searchAlbums: 'Mostrar álbumes en los resultados',
     searchAlbumsHint:
       'Buscar también álbumes, con la opción de descargar el álbum completo.',

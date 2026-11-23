@@ -1619,6 +1619,9 @@ export default {
     allowPlaylistSharing: '允许用户共享播放列表',
     allowPlaylistSharingHint:
       '用户可向其他用户共享播放列表，或将其公开。关闭后，所有共享列表将隐藏，直到重新开启。',
+    perUserLibrary: '每位用户拥有自己的曲库',
+    perUserLibraryHint:
+      '用户只能看到自己下载的歌曲，以及他们可以打开的歌单中的歌曲。管理员仍能看到全部内容。没有人通过 Downtify 下载的歌曲（手动放入文件夹的）这时只对管理员显示。',
     searchAlbums: '在搜索结果中显示专辑',
     searchAlbumsHint: '搜索时同时查找专辑，并提供整张下载选项。',
     shortcutsGroup: '键盘',

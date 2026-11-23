@@ -46,7 +46,7 @@ A user who tries something that needs an admin gets a message saying so.
 
 ## Your library
 
-The library is shared: every account sees every song anyone downloaded — in the Library, in search results marked as downloaded, and on a paired phone. Files are never stored twice: when two people download the same song it lands on disk once, with one owner each.
+The library is shared (unless an admin gives each user a library of their own, see below): every account sees every song anyone downloaded — in the Library, in search results marked as downloaded, and on a paired phone. Files are never stored twice: when two people download the same song it lands on disk once, with one owner each.
 
 Likes, playlists (downloaded and Library-created) and the download queue stay yours, unless you are an admin — or you [share a playlist](#sharing-playlists) so others can see it. Listening is shared — anyone can play, preview or stream any track, and add anything to their own playlists. Asking for a track someone else is already downloading joins their job instead of fetching it twice: one queue row, one download, and an ownership each — each waiter sees their place in the queue.
 
@@ -92,6 +92,15 @@ It controls what accounts see in the app, not who can fetch a file whose address
 :::
 
 Hiding and showing are recorded in the [activity log](#activity).
+
+### A library for each user
+
+By default the library is shared. To give each account a library of its own instead, an admin turns on **Settings › Library › Each user has their own library**. Then a user sees:
+
+- the songs they downloaded, including what their own playlist watches and artist watches brought in;
+- the songs of the playlists they can open: their own, those [shared with them](#sharing-playlists) and the public ones they follow, so a shared playlist still has its songs.
+
+Everything else leaves their Library, search's "in library" marks and what a paired phone syncs. When two people download the same song it is still stored once, and each of them sees it. Admins keep seeing everything, and songs nobody downloaded through an account (added to the folder by hand, or from before accounts existed) are only shown to admins. Like [hiding](#hiding-from-users), it controls what is listed, not who can fetch a file whose address they already know.
 
 ### Deleting songs
 

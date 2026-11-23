@@ -1752,6 +1752,9 @@ export default {
     allowPlaylistSharing: 'Felhasználók listamegosztásának engedélyezése',
     allowPlaylistSharingHint:
       'A felhasználók megoszthatják listáikat másokkal, vagy nyilvánossá tehetik azokat. Kikapcsolva minden megosztott lista rejtve marad, amíg vissza nem kapcsolod.',
+    perUserLibrary: 'Minden felhasználónak saját könyvtára van',
+    perUserLibraryHint:
+      'A felhasználók csak az általuk letöltött dalokat látják, valamint azokét a lejátszási listákét, amelyeket megnyithatnak. Az adminisztrátorok továbbra is mindent látnak. Azokat a dalokat, amelyeket senki sem a Downtifyjal töltött le (kézzel kerültek a mappába), ekkor csak az adminisztrátorok látják.',
     searchAlbums: 'Albumok a találatok között',
     searchAlbumsHint:
       'Albumokat is keres, és felkínálja a teljes album letöltését.',

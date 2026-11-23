@@ -1077,6 +1077,15 @@
                 />
               </SettingRow>
               <SettingRow
+                :label="t('settings.perUserLibrary')"
+                :description="t('settings.perUserLibraryHint')"
+              >
+                <UiSwitch
+                  v-model="s.per_user_library"
+                  :aria-label="t('settings.perUserLibrary')"
+                />
+              </SettingRow>
+              <SettingRow
                 :label="t('settings.reconcile')"
                 :description="t('settings.reconcileHint')"
                 stacked

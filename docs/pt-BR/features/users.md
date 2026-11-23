@@ -93,6 +93,15 @@ Controla o que as contas veem no app, não quem pode buscar um arquivo cujo ende
 
 Ocultar e mostrar ficam registrados no [registro de atividade](#activity).
 
+### Uma biblioteca para cada usuário
+
+Por padrão a biblioteca é compartilhada. Para dar a cada conta uma biblioteca própria, um administrador liga **Configurações › Biblioteca › Cada usuário tem a própria biblioteca**. Então um usuário vê:
+
+- as músicas que baixou, incluindo o que os próprios monitoramentos de playlists e de artistas trouxeram;
+- as músicas das playlists que pode abrir: as dele, as [compartilhadas com ele](#sharing-playlists) e as públicas que segue, para que uma playlist compartilhada continue com as músicas.
+
+Todo o resto sai da biblioteca dele, das marcas "na biblioteca" da busca e do que um celular pareado sincroniza. Quando duas pessoas baixam a mesma música, ela continua guardada uma vez só e as duas a veem. Os administradores continuam vendo tudo, e músicas que ninguém baixou por uma conta (colocadas à mão na pasta, ou de antes das contas) aparecem só para administradores. Como [ocultar](#hiding-from-users), controla o que é listado, não quem pode buscar um arquivo cujo endereço já conhece.
+
 ### Excluindo músicas
 
 Excluir uma música a tira do disco para todos, então segue quem a baixou. Um admin pode excluir qualquer coisa. Um usuário pode excluir uma música que ele mesmo baixou; quando outra pessoa também baixou a mesma música, excluir só abre mão da posse dele e a música continua na biblioteca compartilhada. Uma música que ninguém baixou por uma conta (uma varredura do monitor de playlists, um download de antes das contas, uma [pasta extra](external-library.md)) só pode ser excluída por um admin. Excluir uma playlist sua nunca leva os arquivos de outra pessoa junto.
