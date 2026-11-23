@@ -390,7 +390,8 @@ downloads are shared, and files are never stored twice.
   ``downtify/account_routes.py``
 * ``/api/v1/...``: the apps' API, by track id - ``GET /api/v1/library``
   (``?since=`` change feed), ``GET /api/v1/tracks/{id}`` (and
-  ``/stream``, ``/cover``, ``/lyrics``), ``GET /api/v1/playlists``,
+  ``/stream``, ``/cover``, ``/lyrics``), ``GET|POST|DELETE
+  /api/v1/playlists`` (``/rename``, ``/tracks``, ``/order``),
   ``POST|DELETE /api/v1/playlists/follow``, ``POST /api/v1/playlists/seen``,
   ``GET|POST /api/v1/playlists/hidden``,
   ``GET /api/v1/usernames``, ``GET|PUT /api/v1/likes`` and

@@ -252,6 +252,28 @@ async def create_mobile_playlist(request: Request) -> dict[str, Any]:
     return await _mobile_playlist_result(result, request)
 
 
+@router.delete('/playlists')
+async def delete_mobile_playlist(request: Request) -> dict[str, Any]:
+    """Delete a Library playlist (``?name=`` or ``{name}``).
+
+    Only the list goes: its songs stay in the library. An imported
+    playlist is refused (``403``) - deleting one deletes its songs from
+    disk, which the web Library asks about first - and so is the liked
+    one, which is the user's likes rather than a list.
+    """
+
+    _require_playlist_writer(request)
+    _sync()
+    name = await _playlist_name(request)
+    entry = api.require_playlist_visible(name, request, manage=True)
+    if not entry.get('manual') or api.is_liked_playlist(entry['name']):
+        raise HTTPException(
+            status_code=403, detail='Only a Library playlist can be deleted'
+        )
+    await api._delete_playlist_by_name(request, entry['name'])
+    return {'name': entry['name'], 'deleted': True}
+
+
 @router.post('/playlists/rename')
 async def rename_mobile_playlist(request: Request) -> dict[str, Any]:
     _require_playlist_writer(request)

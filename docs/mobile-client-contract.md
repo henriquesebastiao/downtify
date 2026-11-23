@@ -38,7 +38,7 @@ Build the address from the resolved host + `port`. Discovery is a convenience: a
   "require_sign_in": true,
   "capabilities": {
     "transcoding": { "available": true, "formats": ["aac", "mp3", "opus"], "bitrates": [96, 128, 160, 192, 256, 320] },
-    "signed_urls": true, "pairing": true, "password_sign_in": true, "podcasts": true, "discover": true, "lyrics": true, "library_sync": true, "playlist_editing": true
+    "signed_urls": true, "pairing": true, "password_sign_in": true, "podcasts": true, "discover": true, "lyrics": true, "library_sync": true, "playlist_editing": true, "playlist_delete": true
   }
 }
 ```
@@ -153,6 +153,7 @@ Other reads, all by track id:
 | `GET /api/v1/playlists/hidden?name=` | `{ "name", "songs": [{ "key", "label", "track_id", "hidden_at" }] }` — the songs the user hid from an imported playlist of theirs (`track_id` is `""` once the file is gone) |
 | `POST /api/v1/playlists/hidden` | Body `{ "name", "hide": [track_ids], "show": [keys] }` — hide tracks from an imported playlist of the user's (they stay out when its watch or link brings them back; the tracks stay in the library), or show hidden ones again. Answers `{ "name", "hidden", "keys", "shown", "restored", "count", "track_ids" }`; send `keys` as `show` to undo. Offer it on `mine` playlists that aren't `manual` or `liked` (`409` otherwise). See [Hidden playlist songs](features/hidden-playlist-songs.md) |
 | `POST /api/v1/playlists` | Body `{ "name" }` — create an empty manual playlist |
+| `DELETE /api/v1/playlists` | `?name=` (or body `{ "name" }`) — delete a manual playlist; its songs stay in the library. `403` for an imported or liked playlist and for editors. Answers `{ "name", "deleted": true }` |
 | `POST /api/v1/playlists/rename` | Body `{ "name", "new_name" }` — rename a manual playlist |
 | `POST /api/v1/playlists/tracks` | Body `{ "name", "add"?: [track_id], "remove"?: [track_id], "remove_entries"?: [{ "track_id", "occurrence" }], "allow_duplicates"?: bool }` — edit a manual playlist by track ID; at most 10,000 total references across all three arrays (`400` above the limit) |
 | `PUT /api/v1/playlists/order` | Body `{ "name", "track_ids": [...] }` — reorder a manual playlist, including repeated occurrences; at most 10,000 IDs (`400` above the limit) |
@@ -161,7 +162,7 @@ Other reads, all by track id:
 
 ### Editing playlists
 
-The `capabilities.playlist_editing` flag in `/api/server/info` is `true` when the server supports these writes. Use the stable track IDs from library sync, never file paths. All four routes operate on manual playlists; this API has no whole-playlist delete route. Create and rename require the owner or an admin. Adding, removing, or reordering requires the owner, an admin, or an editor of a shared playlist.
+The `capabilities.playlist_editing` flag in `/api/server/info` is `true` when the server supports these writes. Use the stable track IDs from library sync, never file paths. These routes operate on manual playlists only. `DELETE /api/v1/playlists` deletes one (its songs stay in the library); servers that have it set `capabilities.playlist_delete`, so hide the action when it is missing. Create, rename and delete require the owner or an admin. Adding, removing, or reordering requires the owner, an admin, or an editor of a shared playlist.
 
 Successful writes return `{ "name", "manual", "count", "track_ids" }`, with `track_ids` in playlist order and repeated once per occurrence. Rename also returns `previous`; track edits may return `added`, `removed`, and `already`.
 
