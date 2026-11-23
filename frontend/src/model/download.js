@@ -236,8 +236,17 @@ function ensureQueuePoll() {
   }, 3000)
 }
 
+// Whether the server's queue has been read once (or failed to be): until
+// then an empty queue is "not known yet", not "nothing queued".
+export const queueSynced = ref(false)
+
 export async function syncQueueFromServer() {
-  const res = await API.getQueue()
+  let res
+  try {
+    res = await API.getQueue()
+  } finally {
+    queueSynced.value = true
+  }
   batchQueueChanges(() => {
     for (const job of res.data || []) {
       if (!job.song) continue

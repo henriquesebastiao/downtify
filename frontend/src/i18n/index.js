@@ -1,41 +1,47 @@
-import { ref } from 'vue'
+import { ref, shallowReactive } from 'vue'
 import en from './locales/en.js'
-import es from './locales/es.js'
-import ptBR from './locales/pt-BR.js'
-import el from './locales/el.js'
-import fr from './locales/fr.js'
-import tr from './locales/tr.js'
-import hu from './locales/hu.js'
-import bg from './locales/bg.js'
-import de from './locales/de.js'
-import ko from './locales/ko.js'
-import ru from './locales/ru.js'
-import zhCN from './locales/zh-CN.js'
-import zhTW from './locales/zh-TW.js'
 
 // Registry of available locales. To add a new language:
 //   1. Create ./locales/<code>.js exporting the same key shape as en.js
-//   2. Import it above
-//   3. Add an entry below — `code` is the value stored in localStorage,
-//      `name` is the label shown in the language picker.
+//   2. Add an entry below — `code` is the value stored in localStorage
+//      and the file's name, `name` is the label shown in the language
+//      picker.
+// Only English (the fallback) ships with the app: every other language is
+// its own file, fetched the first time it is shown (`loadLocale`).
 export const AVAILABLE_LOCALES = [
-  { code: 'en', name: 'English', messages: en },
-  { code: 'es', name: 'Español', messages: es },
-  { code: 'pt-BR', name: 'Português (BR)', messages: ptBR },
-  { code: 'el', name: 'Ελληνικά', messages: el },
-  { code: 'fr', name: 'Français', messages: fr },
-  { code: 'tr', name: 'Türkçe', messages: tr },
-  { code: 'hu', name: 'Magyar', messages: hu },
-  { code: 'bg', name: 'Български', messages: bg },
-  { code: 'de', name: 'Deutsch', messages: de },
-  { code: 'ko', name: '한국어', messages: ko },
-  { code: 'ru', name: 'Русский', messages: ru },
-  { code: 'zh-CN', name: '简体中文', messages: zhCN },
-  { code: 'zh-TW', name: '繁體中文', messages: zhTW },
+  { code: 'en', name: 'English' },
+  { code: 'es', name: 'Español' },
+  { code: 'pt-BR', name: 'Português (BR)' },
+  { code: 'el', name: 'Ελληνικά' },
+  { code: 'fr', name: 'Français' },
+  { code: 'tr', name: 'Türkçe' },
+  { code: 'hu', name: 'Magyar' },
+  { code: 'bg', name: 'Български' },
+  { code: 'de', name: 'Deutsch' },
+  { code: 'ko', name: '한국어' },
+  { code: 'ru', name: 'Русский' },
+  { code: 'zh-CN', name: '简体中文' },
+  { code: 'zh-TW', name: '繁體中文' },
 ]
 
 const DEFAULT_LOCALE = 'en'
 const STORAGE_KEY = 'downtify-locale'
+
+const loaders = import.meta.glob(['./locales/*.js', '!./locales/en.js'])
+// The messages of every language loaded so far, by code.
+const catalogs = shallowReactive({ [DEFAULT_LOCALE]: en })
+
+const known = (code) => AVAILABLE_LOCALES.some((l) => l.code === code)
+
+/** Fetch a language's messages (once); resolves to them, or null. */
+export async function loadLocale(code) {
+  if (catalogs[code]) return catalogs[code]
+  const load = loaders[`./locales/${code}.js`]
+  if (!load) return null
+  const messages = (await load()).default
+  catalogs[code] = messages
+  return messages
+}
 
 const stored = (() => {
   try {
@@ -45,18 +51,28 @@ const stored = (() => {
   }
 })()
 
-const initial = AVAILABLE_LOCALES.find((l) => l.code === stored)
-  ? stored
-  : DEFAULT_LOCALE
+const initial = known(stored) ? stored : DEFAULT_LOCALE
 
+// The language picked, and the one on screen: they differ only while a
+// newly picked language is still being fetched, so the page keeps the
+// previous one meanwhile instead of flashing English.
 export const currentLocale = ref(initial)
+const shownLocale = ref(DEFAULT_LOCALE)
 
-function localeData(code) {
-  return (
-    AVAILABLE_LOCALES.find((l) => l.code === code) ||
-    AVAILABLE_LOCALES.find((l) => l.code === DEFAULT_LOCALE)
-  )
+function show(code) {
+  return loadLocale(code)
+    .then(() => {
+      if (currentLocale.value === code && catalogs[code]) {
+        shownLocale.value = code
+      }
+    })
+    .catch(() => {
+      // Offline or gone: English stays on screen, the next pick retries.
+    })
 }
+
+/** Resolves once the starting language is on screen (main.js waits). */
+export const localeReady = show(initial)
 
 const PLURAL_FORMS = ['zero', 'one', 'two', 'few', 'many', 'other']
 
@@ -100,11 +116,11 @@ function format(template, params, code) {
 }
 
 export function t(key, params) {
-  const code = currentLocale.value
-  let msg = lookup(localeData(code).messages, key)
+  const code = shownLocale.value
+  let msg = lookup(catalogs[code], key)
   let msgCode = code
   if (msg === undefined && code !== DEFAULT_LOCALE) {
-    msg = lookup(localeData(DEFAULT_LOCALE).messages, key)
+    msg = lookup(catalogs[DEFAULT_LOCALE], key)
     msgCode = DEFAULT_LOCALE
   }
   if (msg === undefined) return key
@@ -116,8 +132,12 @@ export function t(key, params) {
   return format(msg, params, code)
 }
 
+/**
+ * Pick a language. The choice is made (and saved) at once; the returned
+ * promise resolves when its messages are on screen.
+ */
 export function setLocale(code) {
-  if (!AVAILABLE_LOCALES.find((l) => l.code === code)) return
+  if (!known(code)) return Promise.resolve()
   currentLocale.value = code
   try {
     localStorage.setItem(STORAGE_KEY, code)
@@ -127,6 +147,11 @@ export function setLocale(code) {
   if (typeof document !== 'undefined') {
     document.documentElement.setAttribute('lang', code)
   }
+  if (catalogs[code]) {
+    shownLocale.value = code
+    return Promise.resolve()
+  }
+  return show(code)
 }
 
 export function useI18n() {

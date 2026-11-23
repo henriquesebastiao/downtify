@@ -53,7 +53,7 @@
         <button
           v-if="photoEditable"
           type="button"
-          class="absolute inset-0 flex items-center justify-center rounded-[16px] bg-black/0 text-white opacity-0 transition-all group-hover/cover:bg-black/45 group-hover/cover:opacity-100"
+          class="absolute inset-0 flex items-center justify-center rounded-[16px] bg-black/0 text-white opacity-0 transition-[background-color,opacity] duration-(--dur-base) ease-out-soft group-hover/cover:bg-black/45 group-hover/cover:opacity-100"
           :class="round ? 'rounded-full' : ''"
           @click="$emit('edit-photo')"
         >

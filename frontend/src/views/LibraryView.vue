@@ -86,15 +86,45 @@
       </div>
     </div>
 
-    <!-- Loading -->
+    <!-- Loading: rows for the song list and the list view, tiles else -->
     <div
-      v-if="!catalogReady && library.loading.value"
+      v-if="
+        !catalogReady &&
+        library.loading.value &&
+        (tab === 'tracks' || view === 'list')
+      "
+      class="flex flex-col gap-4"
+      aria-busy="true"
+    >
+      <div v-if="tab === 'tracks'" class="flex items-center gap-2">
+        <UiSkeleton class="h-10 w-28" />
+        <UiSkeleton class="h-10 w-28" />
+      </div>
+      <UiSkeletonRows
+        :count="10"
+        :cover="tab === 'tracks' ? 'size-10' : 'size-12'"
+        :round="tab === 'artists'"
+        :row-class="tab === 'tracks' ? 'h-14 px-3' : 'h-[72px] px-3'"
+      />
+    </div>
+    <div
+      v-else-if="!catalogReady && library.loading.value"
       class="grid grid-cols-2 gap-x-5 gap-y-7 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6"
+      aria-busy="true"
     >
       <div v-for="n in 12" :key="n" class="flex flex-col gap-2.5">
-        <UiSkeleton class="aspect-square !rounded-cover" />
-        <UiSkeleton class="h-4 w-3/4" />
-        <UiSkeleton class="h-3 w-1/2" />
+        <UiSkeleton
+          class="aspect-square"
+          :class="tab === 'artists' ? '!rounded-full' : '!rounded-cover'"
+        />
+        <UiSkeleton
+          class="h-4 w-3/4"
+          :class="tab === 'artists' ? 'mx-auto' : ''"
+        />
+        <UiSkeleton
+          class="h-3 w-1/2"
+          :class="tab === 'artists' ? 'mx-auto' : ''"
+        />
       </div>
     </div>
 
@@ -288,6 +318,7 @@ import UiMenu from '/src/components/ui/UiMenu.vue'
 import UiSegmented from '/src/components/ui/UiSegmented.vue'
 import UiSelect from '/src/components/ui/UiSelect.vue'
 import UiSkeleton from '/src/components/ui/UiSkeleton.vue'
+import UiSkeletonRows from '/src/components/ui/UiSkeletonRows.vue'
 import UiTabs from '/src/components/ui/UiTabs.vue'
 import MediaRow from '/src/components/library/MediaRow.vue'
 import MediaTile from '/src/components/library/MediaTile.vue'

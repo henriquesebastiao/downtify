@@ -55,111 +55,112 @@
         <UiChips v-model="filter" :items="filters" />
       </div>
 
-      <div v-if="search.loading.value" class="flex flex-col gap-2">
-        <div v-for="n in 6" :key="n" class="flex h-16 items-center gap-3 px-3">
-          <UiSkeleton class="size-11 !rounded-[8px]" />
-          <div class="flex flex-1 flex-col gap-2">
-            <UiSkeleton class="h-3.5 w-1/3" />
-            <UiSkeleton class="h-3 w-1/5" />
-          </div>
+      <Transition name="reveal">
+        <UiSkeletonRows
+          v-if="search.loading.value"
+          :count="6"
+          action
+          :label="t('search.searching')"
+        />
+
+        <UiEmpty
+          v-else-if="search.error.value && !search.songs.value.length"
+          icon="alert"
+          :title="t('search.failed')"
+          :body="search.error.value"
+        >
+          <UiButton icon="refresh" @click="search.searchFor(query)">{{
+            t('common.retry')
+          }}</UiButton>
+        </UiEmpty>
+
+        <UiEmpty
+          v-else-if="!hasResults"
+          icon="search"
+          :title="t('search.noResults')"
+          :body="t('search.noResultsHint')"
+        />
+
+        <div v-else class="flex flex-col gap-8">
+          <section
+            v-if="show('songs') && search.songs.value.length"
+            class="flex flex-col gap-3"
+          >
+            <h2
+              v-if="filter === 'all'"
+              class="text-display text-xl font-semibold"
+            >
+              {{ t('search.songs') }}
+            </h2>
+            <div class="-mx-3 flex flex-col">
+              <SongRow
+                v-for="(song, i) in visibleSongs"
+                :key="song.song_id || song.url"
+                :song="song"
+                :index="i"
+                :songs="visibleSongs"
+              />
+            </div>
+            <button
+              v-if="
+                filter === 'all' &&
+                search.songs.value.length > visibleSongs.length
+              "
+              type="button"
+              class="self-start text-[13px] font-semibold text-muted hover:text-fg"
+              @click="filter = 'songs'"
+            >
+              {{
+                t('search.showAllSongs', { count: search.songs.value.length })
+              }}
+            </button>
+          </section>
+
+          <section
+            v-if="show('albums') && search.albums.value.length"
+            class="flex flex-col gap-4"
+          >
+            <h2
+              v-if="filter === 'all'"
+              class="text-display text-xl font-semibold"
+            >
+              {{ t('search.albums') }}
+            </h2>
+            <div
+              class="grid grid-cols-2 gap-x-5 gap-y-7 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 2xl:grid-cols-6"
+            >
+              <ReleaseCard
+                v-for="album in visibleAlbums"
+                :key="album.album_id || album.url"
+                :release="album"
+              />
+            </div>
+          </section>
+
+          <section
+            v-if="show('artists') && search.artists.value.length"
+            class="flex flex-col gap-4"
+          >
+            <h2
+              v-if="filter === 'all'"
+              class="text-display text-xl font-semibold"
+            >
+              {{ t('search.artists') }}
+            </h2>
+            <div
+              class="grid grid-cols-2 gap-x-5 gap-y-7 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 2xl:grid-cols-6"
+            >
+              <ReleaseCard
+                v-for="artist in visibleArtists"
+                :key="artist.artist_id || artist.url"
+                :release="withPhoto(artist)"
+                :fallback="artist.cover_url"
+                round
+              />
+            </div>
+          </section>
         </div>
-      </div>
-
-      <UiEmpty
-        v-else-if="search.error.value && !search.songs.value.length"
-        icon="alert"
-        :title="t('search.failed')"
-        :body="search.error.value"
-      >
-        <UiButton icon="refresh" @click="search.searchFor(query)">{{
-          t('common.retry')
-        }}</UiButton>
-      </UiEmpty>
-
-      <UiEmpty
-        v-else-if="!hasResults"
-        icon="search"
-        :title="t('search.noResults')"
-        :body="t('search.noResultsHint')"
-      />
-
-      <template v-else>
-        <section
-          v-if="show('songs') && search.songs.value.length"
-          class="flex flex-col gap-3"
-        >
-          <h2
-            v-if="filter === 'all'"
-            class="text-display text-xl font-semibold"
-          >
-            {{ t('search.songs') }}
-          </h2>
-          <div class="-mx-3 flex flex-col">
-            <SongRow
-              v-for="(song, i) in visibleSongs"
-              :key="song.song_id || song.url"
-              :song="song"
-              :index="i"
-              :songs="visibleSongs"
-            />
-          </div>
-          <button
-            v-if="
-              filter === 'all' &&
-              search.songs.value.length > visibleSongs.length
-            "
-            type="button"
-            class="self-start text-[13px] font-semibold text-muted hover:text-fg"
-            @click="filter = 'songs'"
-          >
-            {{ t('search.showAllSongs', { count: search.songs.value.length }) }}
-          </button>
-        </section>
-
-        <section
-          v-if="show('albums') && search.albums.value.length"
-          class="flex flex-col gap-4"
-        >
-          <h2
-            v-if="filter === 'all'"
-            class="text-display text-xl font-semibold"
-          >
-            {{ t('search.albums') }}
-          </h2>
-          <div
-            class="grid grid-cols-2 gap-x-5 gap-y-7 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 2xl:grid-cols-6"
-          >
-            <ReleaseCard
-              v-for="album in visibleAlbums"
-              :key="album.album_id || album.url"
-              :release="album"
-            />
-          </div>
-        </section>
-
-        <section
-          v-if="show('artists') && search.artists.value.length"
-          class="flex flex-col gap-4"
-        >
-          <h2
-            v-if="filter === 'all'"
-            class="text-display text-xl font-semibold"
-          >
-            {{ t('search.artists') }}
-          </h2>
-          <div
-            class="grid grid-cols-2 gap-x-5 gap-y-7 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 2xl:grid-cols-6"
-          >
-            <ReleaseCard
-              v-for="artist in visibleArtists"
-              :key="artist.artist_id || artist.url"
-              :release="withPhoto(artist)"
-              :fallback="artist.cover_url"
-              round
-            />
-          </div>
-        </section>
-      </template>
+      </Transition>
     </template>
   </div>
 </template>
@@ -172,7 +173,7 @@ import AppIcon from '/src/components/ui/AppIcon.vue'
 import UiButton from '/src/components/ui/UiButton.vue'
 import UiChips from '/src/components/ui/UiChips.vue'
 import UiEmpty from '/src/components/ui/UiEmpty.vue'
-import UiSkeleton from '/src/components/ui/UiSkeleton.vue'
+import UiSkeletonRows from '/src/components/ui/UiSkeletonRows.vue'
 import PageHeader from '/src/components/library/PageHeader.vue'
 import ReleaseCard from '/src/components/search/ReleaseCard.vue'
 import SongRow from '/src/components/search/SongRow.vue'

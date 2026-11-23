@@ -5,7 +5,7 @@
     </slot>
   </span>
   <Teleport to="body">
-    <Transition name="fade">
+    <Transition name="menu">
       <div
         v-if="open"
         ref="menuEl"
@@ -51,6 +51,7 @@
 import { computed, nextTick, onBeforeUnmount, ref } from 'vue'
 import AppIcon from './AppIcon.vue'
 import UiIconButton from './UiIconButton.vue'
+import { popoverOrigin } from '/src/lib/motion'
 
 const props = defineProps({
   items: { type: Array, required: true },
@@ -79,7 +80,16 @@ function place() {
   let top = a.y + a.height + 6
   if (top + h > vh - 8) top = Math.max(8, a.y - h - 6)
   left = Math.min(Math.max(8, left), vw - w - 8)
-  position.value = { left: `${left}px`, top: `${top}px` }
+  // It grows out of its trigger (or the pointer), not from its middle.
+  const origin = popoverOrigin(
+    { left, top, width: w, height: h },
+    { left: a.x, top: a.y, width: a.width, height: a.height }
+  )
+  position.value = {
+    left: `${left}px`,
+    top: `${top}px`,
+    transformOrigin: origin,
+  }
 }
 
 async function show(nextAnchor) {

@@ -1,19 +1,23 @@
 <template>
   <Teleport to="body">
-    <Transition name="fade">
+    <Transition name="modal" :duration="duration">
       <!-- Above UiModal's z-[80]: ui.confirm() is routinely called from
            inside an already-open modal (e.g. a delete confirmation), so
            this has to win the stack regardless of DOM/mount order. -->
       <div
         v-if="dialog"
-        class="fixed inset-0 z-[90] flex items-end justify-center bg-black/55 p-4 backdrop-blur-sm sm:items-center"
-        @click.self="closeDialog(false)"
+        class="fixed inset-0 z-[90] flex items-end justify-center p-4 sm:items-center"
       >
+        <div
+          class="modal-backdrop absolute inset-0 bg-black/55 backdrop-blur-sm"
+          aria-hidden="true"
+          @click="closeDialog(false)"
+        />
         <div
           role="alertdialog"
           aria-modal="true"
           :aria-labelledby="titleId"
-          class="w-full max-w-md animate-rise rounded-panel border border-line-3 bg-surface p-6 shadow-float"
+          class="modal-panel modal-sheet relative w-full max-w-md rounded-panel border border-line-3 bg-surface p-6 shadow-float"
         >
           <h2 :id="titleId" class="text-display text-lg font-semibold text-fg">
             {{ dialog.title }}
@@ -49,11 +53,13 @@ import { nextTick, ref, watch } from 'vue'
 import UiButton from './UiButton.vue'
 import { useUi } from '/src/model/ui'
 import { useI18n } from '/src/i18n'
+import { useMotionDuration } from '/src/lib/motion'
 
 const { dialog, closeDialog } = useUi()
 const { t } = useI18n()
 const titleId = 'dialog-title'
 const confirmButton = ref(null)
+const duration = useMotionDuration(420, 300)
 
 watch(dialog, async (value) => {
   if (!value) return

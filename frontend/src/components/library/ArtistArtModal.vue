@@ -112,8 +112,27 @@
           </p>
 
           <div
-            v-if="cards.length"
+            v-if="loading && !cards.length"
             class="grid grid-cols-3 gap-3"
+            :class="
+              activeTab === 'banner' ? 'sm:grid-cols-2' : 'sm:grid-cols-3'
+            "
+            aria-busy="true"
+          >
+            <div v-for="n in 6" :key="n" class="flex flex-col gap-1.5">
+              <UiSkeleton
+                class="w-full"
+                :class="[
+                  activeTab === 'banner' ? 'aspect-video' : 'aspect-square',
+                  activeTab === 'photo' ? '!rounded-full' : '!rounded-cover',
+                ]"
+              />
+              <UiSkeleton class="h-3 w-2/3" />
+            </div>
+          </div>
+          <div
+            v-else-if="cards.length"
+            class="grid animate-reveal grid-cols-3 gap-3"
             :class="
               activeTab === 'banner' ? 'sm:grid-cols-2' : 'sm:grid-cols-3'
             "
@@ -132,7 +151,7 @@
                 :name="candidate.name"
                 :round="activeTab === 'photo'"
                 shadow
-                class="transition-transform group-hover:scale-[1.02]"
+                class="transition-transform duration-(--dur-base) ease-out-soft group-hover:scale-[1.02]"
                 :class="[
                   activeTab === 'banner'
                     ? 'aspect-video w-full'
@@ -175,11 +194,15 @@
               :disabled="!!bioFetching"
               @click="fetchBio(option.source)"
             >
-              <AppIcon
-                :name="option.icon"
-                :size="14"
-                :class="bioFetching === option.source ? 'animate-pulse' : ''"
-              />{{ t(option.label) }}
+              <Transition name="swap" mode="out-in">
+                <span
+                  v-if="bioFetching === option.source"
+                  class="size-3.5 animate-spin rounded-full border-2 border-current border-r-transparent"
+                  aria-hidden="true"
+                />
+                <AppIcon v-else :name="option.icon" :size="14" />
+              </Transition>
+              {{ t(option.label) }}
             </button>
           </div>
           <textarea
@@ -254,6 +277,7 @@ import UiBadge from '../ui/UiBadge.vue'
 import UiButton from '../ui/UiButton.vue'
 import UiInput from '../ui/UiInput.vue'
 import UiModal from '../ui/UiModal.vue'
+import UiSkeleton from '../ui/UiSkeleton.vue'
 import API from '/src/model/api'
 import {
   artCandidates,

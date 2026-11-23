@@ -1,6 +1,16 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import { AVAILABLE_LOCALES, setLocale, t } from '../i18n'
+import { AVAILABLE_LOCALES, loadLocale, setLocale, t } from '../i18n'
 import en from '../i18n/locales/en.js'
+
+// Every language file, read up front: the app only fetches the one in use.
+const files = import.meta.glob('../i18n/locales/*.js', {
+  eager: true,
+  import: 'default',
+})
+const catalogs = AVAILABLE_LOCALES.map(({ code }) => ({
+  code,
+  messages: files[`../i18n/locales/${code}.js`],
+}))
 
 /**
  * Recursively collect every dotted key path in an i18n object.
@@ -44,7 +54,12 @@ const placeholders = (text) =>
   [...text.matchAll(/\{(\w+)\}/g)].map((m) => m[1]).sort()
 
 describe('i18n locale key consistency', () => {
-  for (const { code, messages } of AVAILABLE_LOCALES) {
+  it('has a file for every listed language, and lists every file', () => {
+    expect(catalogs.every(({ messages }) => messages)).toBe(true)
+    expect(Object.keys(files).length).toBe(AVAILABLE_LOCALES.length)
+  })
+
+  for (const { code, messages } of catalogs) {
     describe(code, () => {
       it('has exactly the same key shape as en', () => {
         // Every plural message maps to one path, so a language may add
@@ -126,13 +141,39 @@ describe('t()', () => {
     expect(t('common.tracks', { count: 1200 })).toBe('1,200 tracks')
   })
 
-  it('uses the locale plural rules', () => {
-    setLocale('pt-BR')
+  it('uses the locale plural rules', async () => {
+    await setLocale('pt-BR')
     expect(t('common.tracks', { count: 2 })).toBe('2 faixas')
     expect(t('common.tracks', { count: 1 })).toBe('1 faixa')
   })
 
   it('returns the key when a message is missing', () => {
     expect(t('nope.missing')).toBe('nope.missing')
+  })
+})
+
+describe('loading languages on demand', () => {
+  afterEach(() => setLocale('en'))
+
+  it('keeps the language on screen until the picked one is in', async () => {
+    await setLocale('en')
+    const picking = setLocale('de')
+    // Picked at once, still English on screen until German arrives.
+    expect(t('nav.library')).toBe('Library')
+    await picking
+    expect(t('nav.library')).toBe(files['../i18n/locales/de.js'].nav.library)
+  })
+
+  it('shows only the last pick when two overlap', async () => {
+    const first = setLocale('fr')
+    const second = setLocale('es')
+    await Promise.all([first, second])
+    expect(t('nav.library')).toBe(files['../i18n/locales/es.js'].nav.library)
+  })
+
+  it('loads a language once and knows no others', async () => {
+    const messages = await loadLocale('ko')
+    expect(await loadLocale('ko')).toBe(messages)
+    expect(await loadLocale('xx')).toBeNull()
   })
 })

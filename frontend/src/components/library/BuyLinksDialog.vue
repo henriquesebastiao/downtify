@@ -10,11 +10,9 @@
       <p class="truncate text-sm font-semibold">{{ heading }}</p>
 
       <ul v-if="loading" class="flex flex-col gap-2" aria-busy="true">
-        <li
-          v-for="n in 3"
-          :key="n"
-          class="h-[66px] animate-pulse rounded-[12px] bg-surface-2"
-        />
+        <li v-for="n in 3" :key="n">
+          <UiSkeleton class="h-[66px] !rounded-[12px]" />
+        </li>
       </ul>
       <div
         v-else-if="error"
@@ -26,7 +24,7 @@
           {{ t('common.retry') }}
         </UiButton>
       </div>
-      <ul v-else class="flex flex-col gap-2">
+      <ul v-else class="flex animate-reveal flex-col gap-2">
         <li v-for="link in links" :key="link.store">
           <a
             :href="link.href"
@@ -71,6 +69,7 @@ import AppIcon from '../ui/AppIcon.vue'
 import UiBadge from '../ui/UiBadge.vue'
 import UiButton from '../ui/UiButton.vue'
 import UiModal from '../ui/UiModal.vue'
+import UiSkeleton from '../ui/UiSkeleton.vue'
 import { useBuyLinks } from '/src/model/buyLinks'
 import { formatPrice, storeIcon } from '/src/lib/buyLinks'
 import { linkHost, safeLinkUrl } from '/src/lib/artistLinks'

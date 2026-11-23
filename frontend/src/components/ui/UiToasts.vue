@@ -5,7 +5,7 @@
     class="pointer-events-none fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+9.5rem)] z-[100] flex flex-col items-center gap-2 px-4 lg:bottom-28"
     aria-live="polite"
   >
-    <TransitionGroup name="list">
+    <TransitionGroup name="toast">
       <div
         v-for="item in toasts"
         :key="item.id"

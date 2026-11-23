@@ -165,7 +165,14 @@
           >
             <dt class="text-xs text-muted">{{ stat.label }}</dt>
             <dd class="text-display tabular text-2xl font-semibold">
-              {{ stat.value }}
+              <!-- Not "0" while the library is still being read. -->
+              <Transition name="reveal" mode="out-in">
+                <UiSkeleton
+                  v-if="!library.loaded.value"
+                  class="mt-1 h-7 w-16"
+                />
+                <span v-else class="block">{{ stat.value }}</span>
+              </Transition>
             </dd>
           </div>
         </dl>
@@ -196,10 +203,33 @@
       />
     </div>
 
+    <!-- The library is still being read: the shelves' shape. -->
+    <section
+      v-if="!library.loaded.value"
+      class="flex flex-col gap-4"
+      aria-busy="true"
+    >
+      <UiSkeleton class="h-7 w-48" />
+      <div
+        class="grid grid-cols-2 gap-x-5 gap-y-7 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 2xl:grid-cols-6"
+      >
+        <div
+          v-for="n in 6"
+          :key="n"
+          class="flex flex-col gap-2.5"
+          :class="n > 4 ? 'max-sm:hidden' : ''"
+        >
+          <UiSkeleton class="aspect-square w-full !rounded-cover" />
+          <UiSkeleton class="h-4 w-3/4" />
+          <UiSkeleton class="h-3 w-1/2" />
+        </div>
+      </div>
+    </section>
+
     <!-- Recently added -->
     <section
       v-if="recentAlbums.length"
-      class="flex flex-col gap-4 animate-rise [animation-delay:160ms]"
+      class="flex flex-col gap-4 animate-rise [animation-delay:60ms]"
     >
       <div class="flex items-baseline justify-between gap-4">
         <h2 class="text-display text-xl font-semibold">
@@ -233,7 +263,7 @@
     <!-- Playlists -->
     <section
       v-if="recentPlaylists.length"
-      class="flex flex-col gap-4 animate-rise [animation-delay:240ms]"
+      class="flex flex-col gap-4 animate-rise [animation-delay:120ms]"
     >
       <div class="flex items-baseline justify-between gap-4">
         <h2 class="text-display text-xl font-semibold">
@@ -293,6 +323,7 @@ import HomeShelf from '/src/components/home/HomeShelf.vue'
 import SourceBadge from '/src/components/ui/SourceBadge.vue'
 import UiButton from '/src/components/ui/UiButton.vue'
 import UiProgress from '/src/components/ui/UiProgress.vue'
+import UiSkeleton from '/src/components/ui/UiSkeleton.vue'
 import MediaTile from '/src/components/library/MediaTile.vue'
 import { useDownloadManager, useProgressTracker } from '/src/model/download'
 import { useHistory } from '/src/model/history'

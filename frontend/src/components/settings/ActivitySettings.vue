@@ -74,6 +74,14 @@
       >
         {{ t('activity.logEmpty') }}
       </p>
+      <UiSkeletonRows
+        v-else-if="!entries.length"
+        :count="4"
+        cover="size-8"
+        round
+        row-class="h-16 px-5"
+        gap="gap-0"
+      />
       <ul class="flex flex-col">
         <li
           v-for="entry in entries"
@@ -126,6 +134,7 @@ import UiBadge from '../ui/UiBadge.vue'
 import UiButton from '../ui/UiButton.vue'
 import UiIconButton from '../ui/UiIconButton.vue'
 import UiSelect from '../ui/UiSelect.vue'
+import UiSkeletonRows from '../ui/UiSkeletonRows.vue'
 import SettingGroup from './SettingGroup.vue'
 import API from '/src/model/api'
 import { formatDuration, timeAgo } from '/src/lib/format'
@@ -137,7 +146,8 @@ const { t, locale } = useI18n()
 const playing = ref([])
 const entries = ref([])
 const next = ref(0)
-const loading = ref(false)
+// True from the start: the first page is asked for as soon as it mounts.
+const loading = ref(true)
 const users = ref([])
 const userFilter = ref(0)
 const kindFilter = ref('')

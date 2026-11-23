@@ -140,37 +140,45 @@
       </div>
     </UiPanel>
 
-    <div
-      v-if="loading && !podcasts.shows.value.length"
-      class="flex flex-col gap-2"
-    >
-      <UiSkeleton v-for="n in 3" :key="n" class="h-[72px] !rounded-[12px]" />
-    </div>
+    <Transition name="reveal">
+      <!-- The shows' cover grid, in its shape. -->
+      <div
+        v-if="loading && !podcasts.shows.value.length"
+        class="grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6"
+        aria-busy="true"
+      >
+        <div v-for="n in 6" :key="n" class="flex flex-col gap-2.5">
+          <UiSkeleton class="aspect-square w-full !rounded-cover" />
+          <UiSkeleton class="h-4 w-3/4" />
+          <UiSkeleton class="h-3 w-1/2" />
+        </div>
+      </div>
 
-    <UiEmpty
-      v-else-if="!podcasts.shows.value.length"
-      icon="mic"
-      :title="t('podcasts.emptyTitle')"
-      :body="t('podcasts.emptyBody')"
-    />
-
-    <div
-      v-else
-      class="grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6"
-    >
-      <MediaTile
-        v-for="show in podcasts.shows.value"
-        :key="show.id"
-        :to="{ name: 'PodcastShow', query: { id: show.id } }"
-        :title="show.name"
-        :subtitle="showSubtitle(show)"
-        :name="show.name"
-        :cover="show.artwork_url"
+      <UiEmpty
+        v-else-if="!podcasts.shows.value.length"
         icon="mic"
-        :playable="show.downloaded_count > 0"
-        @play="playShow(show)"
+        :title="t('podcasts.emptyTitle')"
+        :body="t('podcasts.emptyBody')"
       />
-    </div>
+
+      <div
+        v-else
+        class="grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6"
+      >
+        <MediaTile
+          v-for="show in podcasts.shows.value"
+          :key="show.id"
+          :to="{ name: 'PodcastShow', query: { id: show.id } }"
+          :title="show.name"
+          :subtitle="showSubtitle(show)"
+          :name="show.name"
+          :cover="show.artwork_url"
+          icon="mic"
+          :playable="show.downloaded_count > 0"
+          @play="playShow(show)"
+        />
+      </div>
+    </Transition>
   </div>
 </template>
 

@@ -1,19 +1,23 @@
 <template>
   <Teleport to="body">
-    <Transition name="fade">
+    <Transition name="modal" :duration="duration">
       <div
         v-if="open"
-        class="fixed inset-0 z-[80] flex items-end justify-center bg-black/55 backdrop-blur-sm sm:items-center sm:p-4"
-        @pointerdown.self="pressedBackdrop = true"
-        @click.self="onBackdrop"
+        class="fixed inset-0 z-[80] flex items-end justify-center sm:items-center sm:p-4"
       >
+        <div
+          class="modal-backdrop absolute inset-0 bg-black/55 backdrop-blur-sm"
+          aria-hidden="true"
+          @pointerdown="pressedBackdrop = true"
+          @click="onBackdrop"
+        />
         <div
           ref="panel"
           role="dialog"
           aria-modal="true"
           :aria-labelledby="titleId"
           tabindex="-1"
-          class="flex max-h-[92dvh] outline-none w-full animate-rise flex-col overflow-hidden rounded-t-[22px] border border-line-3 bg-surface shadow-float sm:rounded-panel"
+          class="modal-panel modal-sheet relative flex max-h-[92dvh] outline-none w-full flex-col overflow-hidden rounded-t-[22px] border border-line-3 bg-surface shadow-float sm:rounded-panel"
           :class="width"
           @keydown="onKeydown"
         >
@@ -58,6 +62,7 @@ import { nextTick, onBeforeUnmount, ref, useId, watch } from 'vue'
 import UiIconButton from './UiIconButton.vue'
 import { useUi } from '/src/model/ui'
 import { useI18n } from '/src/i18n'
+import { useMotionDuration } from '/src/lib/motion'
 
 const props = defineProps({
   open: { type: Boolean, default: false },
@@ -70,6 +75,8 @@ const emit = defineEmits(['close'])
 const { t } = useI18n()
 const ui = useUi()
 const titleId = `modal-${useId()}`
+// A bottom sheet on phones takes longest (styles/motion.css → .modal-*).
+const duration = useMotionDuration(420, 300)
 const panel = ref(null)
 // Only a click that also started on the backdrop closes the dialog, so
 // selecting text in a field and releasing outside doesn't.

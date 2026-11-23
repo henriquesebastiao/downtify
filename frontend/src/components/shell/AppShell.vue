@@ -1,6 +1,7 @@
 <template>
   <SignIn v-if="auth.mustSignIn.value" />
   <div v-else class="flex min-h-dvh bg-bg text-fg">
+    <RouteProgress />
     <SideNav class="hidden md:flex" />
     <div class="flex min-w-0 flex-1 flex-col">
       <TopBar />
@@ -8,10 +9,14 @@
         <RouterView v-slot="{ Component, route: viewRoute }">
           <Transition name="page" mode="out-in">
             <component
-              v-if="policyLoaded"
+              v-if="policyLoaded && Component"
               :is="Component"
               :key="viewKey(viewRoute) + ':' + libraryOnly"
             />
+            <!-- What the app may show is still being asked, or the first
+                 page's code is still on its way: the shape of a page
+                 instead of a blank one. -->
+            <PageSkeleton v-else />
           </Transition>
         </RouterView>
       </main>
@@ -23,7 +28,8 @@
       <div class="h-[calc(4.75rem+env(safe-area-inset-bottom))] md:hidden" />
     </div>
     <BottomNav class="md:hidden" />
-    <NowPlaying />
+    <!-- Loaded the first time it opens (or fetched ahead while idle). -->
+    <NowPlaying v-if="nowPlayingWanted" />
     <ShortcutsDialog v-model:open="shortcutsOpen" />
     <UiToasts />
     <UiDialog />
@@ -40,7 +46,7 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted, onUnmounted } from 'vue'
+import { defineAsyncComponent, ref, watch, onMounted, onUnmounted } from 'vue'
 import {
   libraryOnly,
   policyLoaded,
@@ -51,8 +57,9 @@ import SideNav from './SideNav.vue'
 import TopBar from './TopBar.vue'
 import BottomNav from './BottomNav.vue'
 import MiniPlayer from './MiniPlayer.vue'
-import NowPlaying from './NowPlaying.vue'
 import ShortcutsDialog from './ShortcutsDialog.vue'
+import RouteProgress from './RouteProgress.vue'
+import PageSkeleton from '../ui/PageSkeleton.vue'
 import UiToasts from '../ui/UiToasts.vue'
 import UiDialog from '../ui/UiDialog.vue'
 import CreatePlaylistModal from '../library/CreatePlaylistModal.vue'
@@ -76,6 +83,7 @@ import { useDiscover } from '/src/model/discover'
 import { useKaraokeStage } from '/src/model/karaokeStage'
 import { useNowPlaying, useUi } from '/src/model/ui'
 import { useShortcuts } from './shortcuts'
+import { prefetchRoutes } from '/src/lib/prefetch'
 
 const auth = useAuth()
 const account = useAccount()
@@ -87,9 +95,27 @@ const router = useRouter()
 const ui = useUi()
 const nowPlaying = useNowPlaying()
 const shortcutsOpen = ref(false)
+const PREFETCHED_ROUTES = [
+  'Library',
+  'Queue',
+  'Search',
+  'Album',
+  'Artist',
+  'Playlist',
+  'Discover',
+  'Monitor',
+  'Settings',
+]
+// Now playing is a page of its own in all but name: its code (lyrics,
+// up next, equalizer, karaoke) waits until it is first opened.
+const loadNowPlaying = () => import('./NowPlaying.vue')
+const NowPlaying = defineAsyncComponent(loadNowPlaying)
+const nowPlayingWanted = ref(false)
 let stopPolicy
 onMounted(() => {
   stopPolicy = startMusicPolicy()
+  // The pages people open most, fetched ahead while nothing else happens.
+  prefetchRoutes(router, PREFETCHED_ROUTES, { extra: [loadNowPlaying] })
 })
 onUnmounted(() => stopPolicy?.())
 
@@ -98,6 +124,14 @@ onUnmounted(() => stopPolicy?.())
 function viewKey(viewRoute) {
   return viewRoute.meta.viewKey || viewRoute.path
 }
+
+watch(
+  () => nowPlaying.isOpen.value,
+  (open) => {
+    if (open) nowPlayingWanted.value = true
+  },
+  { immediate: true }
+)
 
 useLibrary().load()
 // The account's own preferences (theme, language...) and telling the

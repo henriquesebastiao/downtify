@@ -35,9 +35,7 @@
         </RouterLink>
       </nav>
 
-      <div v-if="!sm.loaded.value" class="flex flex-col gap-3">
-        <UiSkeleton v-for="n in 4" :key="n" class="h-20 !rounded-panel" />
-      </div>
+      <UiPanelSkeleton v-if="!sm.loaded.value" :count="2" />
 
       <Transition v-else name="page" mode="out-in">
         <div :key="section" class="flex min-w-0 flex-col gap-8">
@@ -1336,7 +1334,7 @@ import UiButton from '/src/components/ui/UiButton.vue'
 import UiInput from '/src/components/ui/UiInput.vue'
 import UiSegmented from '/src/components/ui/UiSegmented.vue'
 import UiSelect from '/src/components/ui/UiSelect.vue'
-import UiSkeleton from '/src/components/ui/UiSkeleton.vue'
+import UiPanelSkeleton from '/src/components/ui/UiPanelSkeleton.vue'
 import UiSwitch from '/src/components/ui/UiSwitch.vue'
 import ExperimentalBadge from '/src/components/ui/ExperimentalBadge.vue'
 import PageHeader from '/src/components/library/PageHeader.vue'
@@ -1345,20 +1343,13 @@ import AcoustidSettings from '/src/components/settings/AcoustidSettings.vue'
 import FormatPicker from '/src/components/settings/FormatPicker.vue'
 import { downloadsFormat } from '/src/lib/audioFormats'
 import ConnectionTest from '/src/components/settings/ConnectionTest.vue'
-import ExternalLibrarySettings from '/src/components/settings/ExternalLibrarySettings.vue'
 import PathSuggestInput from '/src/components/settings/PathSuggestInput.vue'
 import PresetPicker from '/src/components/settings/PresetPicker.vue'
 import AccountSettings from '/src/components/settings/AccountSettings.vue'
 import NormalizationSettings from '/src/components/settings/NormalizationSettings.vue'
-import ActivitySettings from '/src/components/settings/ActivitySettings.vue'
-import DoctorSettings from '/src/components/settings/DoctorSettings.vue'
 import NavidromeRatings from '/src/components/settings/NavidromeRatings.vue'
-import AppsSettings from '/src/components/settings/AppsSettings.vue'
-import BackupSettings from '/src/components/settings/BackupSettings.vue'
-import NotificationSettings from '/src/components/settings/NotificationSettings.vue'
 import ServerPortSetting from '/src/components/settings/ServerPortSetting.vue'
-import HiddenLibrarySettings from '/src/components/settings/HiddenLibrarySettings.vue'
-import UsersSettings from '/src/components/settings/UsersSettings.vue'
+import { lazyComponent } from '/src/components/ui/lazy'
 import SettingGroup from '/src/components/settings/SettingGroup.vue'
 import SettingRow from '/src/components/settings/SettingRow.vue'
 import SourceOrder from '/src/components/settings/SourceOrder.vue'
@@ -1384,6 +1375,32 @@ import { useUi } from '/src/model/ui'
 import { useUpdateCheck } from '/src/model/updateCheck'
 import { useWhatsNew } from '/src/model/whatsNew'
 import { useI18n } from '/src/i18n'
+
+// Sections only some visits open: loaded when shown, a skeleton meanwhile.
+const ExternalLibrarySettings = lazyComponent(
+  () => import('/src/components/settings/ExternalLibrarySettings.vue')
+)
+const ActivitySettings = lazyComponent(
+  () => import('/src/components/settings/ActivitySettings.vue')
+)
+const DoctorSettings = lazyComponent(
+  () => import('/src/components/settings/DoctorSettings.vue')
+)
+const AppsSettings = lazyComponent(
+  () => import('/src/components/settings/AppsSettings.vue')
+)
+const BackupSettings = lazyComponent(
+  () => import('/src/components/settings/BackupSettings.vue')
+)
+const NotificationSettings = lazyComponent(
+  () => import('/src/components/settings/NotificationSettings.vue')
+)
+const HiddenLibrarySettings = lazyComponent(
+  () => import('/src/components/settings/HiddenLibrarySettings.vue')
+)
+const UsersSettings = lazyComponent(
+  () => import('/src/components/settings/UsersSettings.vue')
+)
 
 const { t, locale, setLocale, locales } = useI18n()
 const route = useRoute()

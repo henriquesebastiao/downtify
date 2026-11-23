@@ -20,13 +20,14 @@
       @change="$emit('update:modelValue', $event.target.checked)"
     />
     <span
-      class="relative mt-0.5 h-5 w-9 shrink-0 rounded-full transition-colors duration-200 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-accent"
+      class="relative mt-0.5 h-5 w-9 shrink-0 rounded-full transition-colors duration-(--dur-base) ease-out-soft peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-accent"
       :class="modelValue ? 'bg-accent' : 'bg-raised'"
       aria-hidden="true"
     >
+      <!-- The knob slides (a transform, not `left`). -->
       <span
-        class="absolute top-0.5 size-4 rounded-full bg-white shadow transition-[left] duration-200 ease-out-soft"
-        :class="modelValue ? 'left-[18px]' : 'left-0.5'"
+        class="absolute top-0.5 left-0.5 size-4 rounded-full bg-white shadow transition-transform duration-(--dur-base) ease-out-soft"
+        :class="modelValue ? 'translate-x-4' : 'translate-x-0'"
       />
     </span>
   </label>

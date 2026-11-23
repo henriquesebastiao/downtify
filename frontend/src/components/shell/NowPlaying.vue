@@ -1,6 +1,8 @@
 <template>
   <Teleport to="body">
-    <Transition name="now-playing">
+    <!-- `appear`: the first time, it is mounted already open (AppShell
+         loads it on demand), and still slides in. -->
+    <Transition name="now-playing" appear>
       <div
         v-if="nowPlaying.isOpen.value && track"
         class="fixed inset-0 z-50 flex flex-col overflow-hidden bg-[#07080b] text-white"

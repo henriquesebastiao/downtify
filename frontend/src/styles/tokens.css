@@ -114,15 +114,39 @@
   --radius-cover: 12px;
   --radius-panel: 18px;
 
+  /* Motion. Arriving things ease out (fast start, gentle stop), leaving
+     things ease in and go faster and smaller than they came, things that
+     change while staying on screen ease in and out. The drawer curve is
+     the iOS sheet's, for anything that slides in from an edge. Never the
+     bare `ease` / `ease-in-out`: they lack strength. */
   --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-soft: cubic-bezier(0.55, 0, 1, 0.45);
+  --ease-in-out-soft: cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
 
-  --animate-rise: rise 420ms var(--ease-out-soft) both;
-  --animate-eq: eq 1s ease-in-out infinite;
+  --animate-rise: rise 360ms var(--ease-out-soft) both;
+  --animate-reveal: reveal 280ms var(--ease-out-soft) both;
+  --animate-materialize: materialize 320ms var(--ease-out-soft) both;
+  --animate-eq: eq 1s var(--ease-in-out-soft) infinite;
   --animate-shimmer: shimmer 1.6s linear infinite;
 
   --breakpoint-xs: 400px;
 }
 
+/* Durations, smaller and more frequent things faster: a press or a hover
+   is `--dur-fast`, a menu `--dur-base`, a dialog or a toast `--dur-slow`,
+   a sheet sliding in from an edge `--dur-sheet`. Exits use the step below
+   their enter. */
+:root {
+  --dur-instant: 100ms;
+  --dur-fast: 150ms;
+  --dur-base: 200ms;
+  --dur-slow: 300ms;
+  --dur-sheet: 420ms;
+}
+
+/* A section arriving with the page. No blur: it can be the whole page,
+   and blurring that much is costly on a phone. */
 @keyframes rise {
   from {
     opacity: 0;
@@ -131,6 +155,33 @@
   to {
     opacity: 1;
     transform: none;
+  }
+}
+
+/* What replaces a skeleton: a shorter, smaller rise. */
+@keyframes reveal {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* A small surface coming into focus (a popover, a card, a dialog body):
+   opacity, a little lift and a blur that sharpens. */
+@keyframes materialize {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+    filter: blur(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: none;
   }
 }
 
@@ -221,30 +272,39 @@
   }
 }
 
-/* Route change */
-.page-enter-active,
-.page-leave-active {
+/* Route change. Pages change all day long, so the old one only fades,
+   quickly (the new one waits for it), and the new one rises a little. */
+.page-enter-active {
   transition:
-    opacity 180ms ease,
-    transform 220ms var(--ease-out-soft);
+    opacity var(--dur-base) var(--ease-out-soft),
+    transform var(--dur-slow) var(--ease-out-soft);
+}
+.page-leave-active {
+  transition: opacity var(--dur-instant) var(--ease-in-soft);
 }
 .page-enter-from {
   opacity: 0;
-  transform: translateY(8px);
+  transform: translateY(6px);
 }
 .page-leave-to {
   opacity: 0;
 }
 
-.fade-enter-active,
+.fade-enter-active {
+  transition: opacity var(--dur-base) var(--ease-out-soft);
+}
 .fade-leave-active {
-  transition: opacity 160ms ease;
+  transition: opacity var(--dur-fast) var(--ease-in-soft);
 }
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
 }
 
+/* Reduced motion: animations and transitions end at once, in their final
+   state, so nothing moves yet every layout still lands where it should.
+   Loops (skeleton sweep, spinners, an indeterminate bar) are replaced by
+   still versions where they are defined. */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

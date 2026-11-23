@@ -142,8 +142,14 @@
       }}
     </p>
 
+    <!-- Asking where the last scan got to: not "never scanned" meanwhile. -->
+    <div v-if="!loaded && !error" class="flex flex-col gap-4" aria-busy="true">
+      <UiSkeleton class="h-28 w-full !rounded-panel" />
+      <UiSkeleton class="h-48 w-full !rounded-panel" />
+    </div>
+
     <!-- Scanning -->
-    <UiPanel v-if="isScanning" :title="t('upgrade.scanning')">
+    <UiPanel v-else-if="isScanning" :title="t('upgrade.scanning')">
       <UiProgress :value="scan.pct" :indeterminate="!scan.total" :height="6" />
       <p class="mt-2.5 text-[13px] text-muted">
         {{
@@ -432,6 +438,7 @@ import UiPanel from '/src/components/ui/UiPanel.vue'
 import UiProgress from '/src/components/ui/UiProgress.vue'
 import UiSelect from '/src/components/ui/UiSelect.vue'
 import UiSwitch from '/src/components/ui/UiSwitch.vue'
+import UiSkeleton from '/src/components/ui/UiSkeleton.vue'
 import PageHeader from '/src/components/library/PageHeader.vue'
 import DeemixRecordingDialog from '/src/components/library/DeemixRecordingDialog.vue'
 import { formatBytes } from '/src/lib/format'
@@ -456,6 +463,7 @@ const {
   selected,
   willRun,
   loading,
+  loaded,
   error,
   load,
   startScan,

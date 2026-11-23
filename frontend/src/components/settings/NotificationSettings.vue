@@ -1,5 +1,12 @@
 <template>
-  <SettingGroup :title="t('notify.title')" :description="t('notify.hint')">
+  <!-- The saved channels, not an empty form that fills in a moment later. -->
+  <UiPanelSkeleton v-if="!loaded" :rows="4" />
+  <SettingGroup
+    v-else
+    class="animate-reveal"
+    :title="t('notify.title')"
+    :description="t('notify.hint')"
+  >
     <SettingRow
       :label="t('notify.enabled')"
       :description="t('notify.enabledHint')"
@@ -268,7 +275,7 @@
     </template>
   </SettingGroup>
 
-  <div class="flex items-center gap-3">
+  <div v-if="loaded" class="flex items-center gap-3">
     <UiButton :loading="saving" :disabled="saving || !dirty" @click="save">
       {{ t('notify.save') }}
     </UiButton>
@@ -288,6 +295,7 @@ import UiButton from '../ui/UiButton.vue'
 import UiInput from '../ui/UiInput.vue'
 import UiSegmented from '../ui/UiSegmented.vue'
 import UiSwitch from '../ui/UiSwitch.vue'
+import UiPanelSkeleton from '../ui/UiPanelSkeleton.vue'
 import SettingGroup from './SettingGroup.vue'
 import SettingRow from './SettingRow.vue'
 import API from '/src/model/api'
@@ -316,6 +324,7 @@ const form = ref(formFrom(emptySettings()))
 const clear = ref([])
 const saved = ref('')
 const saving = ref(false)
+const loaded = ref(false)
 const testing = ref('')
 let timer = null
 
@@ -428,6 +437,8 @@ async function load(options) {
     apply((await API.getNotifications()).data, options)
   } catch {
     // Leave the form as it is; the next refresh tries again.
+  } finally {
+    loaded.value = true
   }
 }
 

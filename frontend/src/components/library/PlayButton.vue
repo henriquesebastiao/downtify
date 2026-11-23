@@ -1,7 +1,7 @@
 <template>
   <button
     type="button"
-    class="flex size-14 shrink-0 items-center justify-center rounded-full bg-accent text-on-accent shadow-[0_10px_30px_color-mix(in_srgb,var(--c-accent)_35%,transparent)] transition-transform hover:scale-105 active:scale-95 disabled:opacity-50"
+    class="flex size-14 shrink-0 items-center justify-center rounded-full bg-accent text-on-accent shadow-[0_10px_30px_color-mix(in_srgb,var(--c-accent)_35%,transparent)] transition-transform duration-(--dur-fast) ease-out-soft hover:scale-105 active:scale-95 disabled:opacity-50"
     :aria-label="playing ? t('player.pause') : label"
     :disabled="disabled"
     @click="$emit('click')"

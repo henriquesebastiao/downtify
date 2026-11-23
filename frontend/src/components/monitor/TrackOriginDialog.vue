@@ -12,11 +12,7 @@
       </p>
 
       <div v-if="loading" class="flex flex-col gap-2" aria-busy="true">
-        <div
-          v-for="n in 2"
-          :key="n"
-          class="h-[72px] animate-pulse rounded-[12px] bg-surface-2"
-        />
+        <UiSkeleton v-for="n in 2" :key="n" class="h-[72px] !rounded-[12px]" />
       </div>
       <div
         v-else-if="error"
@@ -29,7 +25,7 @@
         </UiButton>
       </div>
 
-      <template v-else-if="answer">
+      <div v-else-if="answer" class="flex animate-reveal flex-col gap-5">
         <section class="flex flex-col gap-2">
           <h3
             class="text-[11px] font-semibold tracking-[0.06em] text-faint uppercase"
@@ -160,7 +156,7 @@
             {{ t('origin.oneFile') }}
           </p>
         </section>
-      </template>
+      </div>
     </div>
   </UiModal>
 </template>
@@ -173,6 +169,7 @@ import { computed, ref, watch } from 'vue'
 import UiBadge from '../ui/UiBadge.vue'
 import UiButton from '../ui/UiButton.vue'
 import UiModal from '../ui/UiModal.vue'
+import UiSkeleton from '../ui/UiSkeleton.vue'
 import WatchSourceBadge from './WatchSourceBadge.vue'
 import monitorAPI from '/src/model/monitor'
 import { useTrackOrigin } from '/src/model/trackOrigin'

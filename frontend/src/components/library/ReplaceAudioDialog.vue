@@ -106,9 +106,16 @@
           {{ t('replace.none') }}
         </p>
 
+        <UiSkeletonRows
+          v-if="loading && !candidates.length"
+          :count="4"
+          cover="h-11 w-[4.5rem]"
+          row-class="px-2.5 py-2"
+          :label="t('replace.search')"
+        />
         <ul
-          v-if="candidates.length"
-          class="flex flex-col gap-1"
+          v-else-if="candidates.length"
+          class="flex animate-reveal flex-col gap-1"
           role="radiogroup"
           :aria-label="t('replace.results')"
         >
@@ -265,6 +272,7 @@ import UiButton from '../ui/UiButton.vue'
 import UiInput from '../ui/UiInput.vue'
 import UiModal from '../ui/UiModal.vue'
 import UiProgress from '../ui/UiProgress.vue'
+import UiSkeletonRows from '../ui/UiSkeletonRows.vue'
 import API from '/src/model/api'
 import { useLibrary } from '/src/model/library'
 import { useReplaceAudio } from '/src/model/replaceAudio'

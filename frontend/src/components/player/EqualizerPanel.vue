@@ -35,8 +35,8 @@
           aria-hidden="true"
         >
           <span
-            class="absolute top-1 size-4 rounded-full bg-white shadow transition-[left] duration-200 ease-out-soft"
-            :class="eq.enabled.value ? 'left-5' : 'left-1'"
+            class="absolute top-1 left-1 size-4 rounded-full bg-white shadow transition-transform duration-(--dur-base) ease-out-soft"
+            :class="eq.enabled.value ? 'translate-x-4' : 'translate-x-0'"
           />
         </span>
         {{

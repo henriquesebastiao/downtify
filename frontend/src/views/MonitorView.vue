@@ -106,12 +106,15 @@
       }}
     </p>
 
-    <div
+    <UiSkeletonRows
       v-if="tab !== 'wanted' && loading && !items.length"
-      class="flex flex-col gap-2"
-    >
-      <UiSkeleton v-for="n in 4" :key="n" class="h-[72px] !rounded-[12px]" />
-    </div>
+      :count="4"
+      cover="size-12"
+      :round="tab === 'artist'"
+      action
+      row-class="h-[72px] px-4"
+      gap="gap-0"
+    />
 
     <UiEmpty
       v-else-if="tab !== 'wanted' && !inTab.length"
@@ -649,6 +652,7 @@ import UiMenu from '/src/components/ui/UiMenu.vue'
 import UiSelect from '/src/components/ui/UiSelect.vue'
 import UiSegmented from '/src/components/ui/UiSegmented.vue'
 import UiSkeleton from '/src/components/ui/UiSkeleton.vue'
+import UiSkeletonRows from '/src/components/ui/UiSkeletonRows.vue'
 import UiSwitch from '/src/components/ui/UiSwitch.vue'
 import UiTabs from '/src/components/ui/UiTabs.vue'
 import PageHeader from '/src/components/library/PageHeader.vue'

@@ -84,8 +84,16 @@
 
     <div class="grid items-start gap-8 xl:grid-cols-[minmax(0,1fr)_340px]">
       <div class="flex min-w-0 flex-col gap-3">
+        <!-- The server's queue isn't read yet: not "nothing queued". -->
+        <UiSkeletonRows
+          v-if="!queue.length && !queueSynced"
+          :count="4"
+          action
+          row-class="h-[72px] rounded-[14px] border border-line-2 bg-surface px-4"
+          gap="gap-2"
+        />
         <UiEmpty
-          v-if="!queue.length"
+          v-else-if="!queue.length"
           icon="download"
           :title="t('queue.emptyTitle')"
           :body="t('queue.emptyBody')"
@@ -256,6 +264,7 @@ import UiEmpty from '/src/components/ui/UiEmpty.vue'
 import UiPanel from '/src/components/ui/UiPanel.vue'
 import UiProgress from '/src/components/ui/UiProgress.vue'
 import UiTabs from '/src/components/ui/UiTabs.vue'
+import UiSkeletonRows from '/src/components/ui/UiSkeletonRows.vue'
 import SourceBadge from '/src/components/ui/SourceBadge.vue'
 import CoverArt from '/src/components/ui/CoverArt.vue'
 import PageHeader from '/src/components/library/PageHeader.vue'
@@ -264,6 +273,7 @@ import DownloadExclusions from '/src/components/queue/DownloadExclusions.vue'
 import CsvImport from '/src/components/queue/CsvImport.vue'
 import SlskdMisses from '/src/components/queue/SlskdMisses.vue'
 import {
+  queueSynced,
   useDownloadManager,
   useProgressTracker,
   syncQueueFromServer,

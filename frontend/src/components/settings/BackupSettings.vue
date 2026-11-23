@@ -34,10 +34,18 @@
         >
           {{ t('backup.failed', { error: status.last_error.error }) }}
         </p>
-        <p v-if="!status?.backups?.length" class="text-[13px] text-faint">
+        <UiSkeletonRows
+          v-if="!loaded"
+          :count="2"
+          cover=""
+          action
+          row-class="h-11"
+          gap="gap-0"
+        />
+        <p v-else-if="!status?.backups?.length" class="text-[13px] text-faint">
           {{ t('backup.none') }}
         </p>
-        <ul v-else class="flex flex-col divide-y divide-line">
+        <ul v-else class="flex animate-reveal flex-col divide-y divide-line">
           <li
             v-for="item in status.backups"
             :key="item.name"
@@ -128,6 +136,7 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import UiButton from '../ui/UiButton.vue'
 import UiSegmented from '../ui/UiSegmented.vue'
 import UiSwitch from '../ui/UiSwitch.vue'
+import UiSkeletonRows from '../ui/UiSkeletonRows.vue'
 import SettingGroup from './SettingGroup.vue'
 import SettingRow from './SettingRow.vue'
 import API from '/src/model/api'
@@ -142,6 +151,7 @@ const { t, locale } = useI18n()
 const ui = useUi()
 
 const status = ref(null)
+const loaded = ref(false)
 const busy = ref('')
 const result = ref(null)
 const fileInput = ref(null)
@@ -180,6 +190,8 @@ async function load() {
     status.value = (await API.getBackups()).data
   } catch {
     status.value = null
+  } finally {
+    loaded.value = true
   }
 }
 

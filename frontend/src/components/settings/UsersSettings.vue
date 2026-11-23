@@ -2,7 +2,8 @@
   <div class="flex min-w-0 flex-col gap-8">
     <SettingGroup :title="t('users.title')" :description="t('users.hint')">
       <div class="flex items-center justify-between gap-3 px-5 py-4">
-        <p class="text-sm text-muted">
+        <UiSkeleton v-if="!loaded" class="h-4 w-24" />
+        <p v-else class="text-sm text-muted">
           {{ t('users.count', { count: users.length }) }}
         </p>
         <UiButton variant="primary" icon="plus" @click="openCreate">
@@ -12,7 +13,16 @@
       <p v-if="totalsLine()" class="px-5 pb-4 text-[12px] text-muted">
         {{ t('users.usageTotal') }}: {{ totalsLine() }}
       </p>
-      <ul class="flex flex-col">
+      <UiSkeletonRows
+        v-if="!loaded"
+        :count="3"
+        cover="size-10"
+        round
+        action
+        row-class="h-16 px-5"
+        gap="gap-0"
+      />
+      <ul v-else class="flex animate-reveal flex-col">
         <li
           v-for="user in users"
           :key="user.id"
@@ -152,6 +162,8 @@ import UiIconButton from '../ui/UiIconButton.vue'
 import UiInput from '../ui/UiInput.vue'
 import UiModal from '../ui/UiModal.vue'
 import UiSegmented from '../ui/UiSegmented.vue'
+import UiSkeleton from '../ui/UiSkeleton.vue'
+import UiSkeletonRows from '../ui/UiSkeletonRows.vue'
 import SettingGroup from './SettingGroup.vue'
 import SettingRow from './SettingRow.vue'
 import API from '/src/model/api'
@@ -167,6 +179,7 @@ const me = auth.user
 const minLength = computed(() => auth.status.value?.min_password_length || 8)
 
 const users = ref([])
+const loaded = ref(false)
 const stats = ref(null)
 const editing = ref(null)
 const saving = ref(false)
@@ -181,6 +194,8 @@ async function load() {
     users.value = (await API.listUsers()).data || []
   } catch (err) {
     ui.toast(errorOf(err), { kind: 'error' })
+  } finally {
+    loaded.value = true
   }
   try {
     stats.value = (await API.getUserStats()).data || null

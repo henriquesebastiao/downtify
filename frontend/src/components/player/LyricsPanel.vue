@@ -18,10 +18,11 @@
       class="flex flex-1 flex-col justify-center gap-5 px-2"
       aria-hidden="true"
     >
-      <div
+      <UiSkeleton
         v-for="n in 6"
         :key="n"
-        class="h-7 animate-pulse rounded-lg bg-white/10"
+        glass
+        class="h-7 !rounded-lg"
         :style="{ width: `${50 + ((n * 37) % 45)}%` }"
       />
     </div>
@@ -44,7 +45,7 @@
         :key="i"
         :ref="(el) => (lineEls[i] = el)"
         type="button"
-        class="text-display block w-full transition-all duration-300"
+        class="text-display block w-full transition-[color,opacity,scale] duration-(--dur-slow) ease-out-soft"
         :class="karaoke ? karaokeLineClass(i) : lineClass(i)"
         :tabindex="readonly ? -1 : undefined"
         @click="player.seek(line.time)"
@@ -97,6 +98,7 @@
 <script setup>
 import { computed, nextTick, ref, watch } from 'vue'
 import AppIcon from '../ui/AppIcon.vue'
+import UiSkeleton from '../ui/UiSkeleton.vue'
 import { loadLyrics } from '/src/model/lyrics'
 import { activeLineIndex, countInBeats, lineProgress } from '/src/lib/lrc'
 import { centerLine } from '/src/lib/lyricsScroll'

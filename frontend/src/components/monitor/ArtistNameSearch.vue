@@ -27,6 +27,23 @@
     >
       {{ t('artistSuggestions.notFound', { name: query }) }}
     </p>
+    <!-- Shaped like ArtistCandidateList's cards. -->
+    <ul
+      v-else-if="loading && !candidates.length"
+      class="grid gap-3 sm:grid-cols-2"
+      aria-busy="true"
+    >
+      <li v-for="n in 2" :key="n" class="rounded-xl border border-line-2 p-3">
+        <div class="flex items-center gap-3">
+          <UiSkeleton class="size-16 flex-none !rounded-full" />
+          <div class="flex flex-1 flex-col gap-2">
+            <UiSkeleton class="h-4 w-2/3" />
+            <UiSkeleton class="h-3 w-1/3" />
+          </div>
+        </div>
+        <UiSkeleton class="mt-3 h-8 w-full" />
+      </li>
+    </ul>
     <template v-else-if="candidates.length">
       <p class="text-[13px] text-muted">
         {{ t('monitor.searchArtistsHelp') }}
@@ -47,6 +64,7 @@ import { onBeforeUnmount, ref, watch } from 'vue'
 import { useI18n } from '/src/i18n'
 import monitorAPI from '/src/model/monitor'
 import AppIcon from '/src/components/ui/AppIcon.vue'
+import UiSkeleton from '/src/components/ui/UiSkeleton.vue'
 import ArtistCandidateList from './ArtistCandidateList.vue'
 
 const props = defineProps({

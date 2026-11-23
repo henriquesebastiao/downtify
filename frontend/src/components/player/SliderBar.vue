@@ -13,17 +13,19 @@
     @pointerdown="onDown"
     @keydown="onKey"
   >
+    <!-- Thin at rest, fuller under the pointer: a scale, not a height. The
+         fill slides along it instead of being resized. -->
     <div
-      class="relative w-full overflow-hidden rounded-full transition-[height] duration-150"
+      class="relative h-1.5 w-full overflow-hidden rounded-full transition-transform duration-(--dur-fast) ease-out-soft"
       :class="[
         trackClass,
-        dragging ? 'h-1.5' : thin ? 'h-1 group-hover:h-1.5' : 'h-1.5',
+        thin && !dragging ? 'scale-y-[0.67] group-hover:scale-y-100' : '',
       ]"
     >
       <div
-        class="absolute inset-y-0 left-0 rounded-full"
+        class="absolute inset-0 rounded-full"
         :class="fillClass"
-        :style="{ width: `${percent}%` }"
+        :style="{ transform: `translateX(${percent - 100}%)` }"
       />
     </div>
     <span

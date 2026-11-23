@@ -11,7 +11,7 @@ Entry point: `main.py` (CLI flag `web` boots the FastAPI app on `DOWNTIFY_PORT`,
 ## Stack
 
 - **Backend**: Python 3.10–3.15 (Docker image pins 3.15), FastAPI, Uvicorn, `loguru`, `yt-dlp`, `mutagen`, `requests`, `ytmusicapi`.
-- **Frontend**: Vue 3 + Vue Router, Tailwind CSS v4 (design tokens in `frontend/src/styles/tokens.css`, shared with the docs site), VueUse, Vite, Vitest.
+- **Frontend**: Vue 3 + Vue Router, Tailwind CSS v4 (design tokens in `frontend/src/styles/tokens.css`, shared with the docs site; motion in `styles/motion.css`), VueUse, Vite, Vitest.
 - **Packaging**: `uv` (lockfile is `uv.lock`; `requirements.txt` is exported for Docker only — do **not** hand-edit).
 - **Container**: Alpine + `ffmpeg` + `tini` + `su-exec` (UID/GID/UMASK env-controlled).
 - **CI**: GitHub Actions (`build.yml`, `test.yml`, `docs.yml`, `codeflash.yaml`).
@@ -62,6 +62,20 @@ Version bump: `make version 2.7.1` — runs `version.sh`, rebuilds the frontend,
 - Keep the existing API surface stable. The Vue frontend depends on the exact endpoint shapes documented in `downtify/api.py`'s module docstring. Add new endpoints rather than renaming.
 - No new top-level dependencies without a clear need — `yt-dlp`, `mutagen`, `ytmusicapi`, `fastapi`, `loguru` cover the vast majority of cases.
 
+## Motion, skeletons and lazy loading (web UI)
+
+Every screen of the SPA follows one motion system: `frontend/src/styles/motion.css` (transitions, skeletons, loaders), with its tokens in `styles/tokens.css`. It was designed with the `design-motion-principles` skill, weighted **Jakub Krehel first** (subtle production polish) and **Emil Kowalski second** (restraint for what happens all day); Jhey Tompkins only for delighters (Now playing, empty states). Every new or changed screen keeps to it — load that skill when designing new motion, and extend `motion.css` rather than writing one-off animations.
+
+- **Tokens, never literals.** Durations `--dur-instant|fast|base|slow|sheet` (100/150/200/300/420 ms; smaller and more frequent = faster); easings `ease-out-soft` (arriving), `ease-in-soft` (leaving), `ease-in-out-soft` (changing on screen), `ease-drawer` (sheets). In templates: `duration-(--dur-base) ease-out-soft`. Never bare `ease` / `ease-in-out`, `transition-all`, or a hand-typed duration.
+- **Only `opacity`, `transform` / `translate` / `scale`, `filter` and `clip-path` move.** Never `width`, `height`, `top`, `left` or margins: a bar is full width and slid with `translateX` (`UiProgress`), a sliding pill is a `clip-path` (`UiSegmented`), a tab underline is translate + scaleX (`UiTabs`), a knob is `translate-x` (`UiSwitch`). Known exceptions: the sidebar collapse (`SideNav`) and the Finder's columns.
+- **Enter vs exit.** Enter = opacity + a small lift, plus a 2–4 px blur that sharpens on small floating surfaces (dialogs, toasts, icon swaps). Exit is one duration step faster, smaller, `ease-in-soft`. Never start from `scale(0)` (0.95 at least). No blur on whole pages, big grids, or frosted-glass bars (a filter on an ancestor switches their `backdrop-blur` off).
+- **Frequency gate.** Route changes, menus, tabs, rows and play/pause are fast or instant; what opens from the keyboard doesn't animate at all (`ShortcutsDialog`); hover lifts only under `@media (hover: hover)`. No looping attention-seekers (pulsing dots, breathing buttons, `animate-pulse`): the only loops are loading indicators (skeleton sheen, spinner, indeterminate bar).
+- **Reduced motion is not optional.** The global rule in `tokens.css` ends every animation and transition at once; a loop gets a still version in `motion.css`'s reduced-motion block; a `<Transition>` whose children animate while its root doesn't takes `:duration="useMotionDuration(enter, leave)"` (`lib/motion.js`), which is 0 under reduced motion.
+- **Ready-made transitions** (`<Transition name="…">`): `page` (routes), `modal` with `.modal-backdrop` + `.modal-panel` (`.modal-sheet` = bottom sheet on phones, `.modal-edge` = always a sheet) — build overlays on `UiModal` / `UiDialog`, not new ones; `menu` (popovers, `transform-origin` from `popoverOrigin`), `toast`, `float-bar` (mini player, selection bar), `now-playing`, `list` (short `<TransitionGroup>`s), `swap` (icon/state swaps, `mode="out-in"`), `text-swap` (a title replaced by another), `collapse`, `reveal` (skeleton → content). Utilities: `press transition-press` on every button (scale 0.97 while pressed — `UiButton` / `UiIconButton` have it), `animate-rise` (a section arriving with its page), `animate-reveal` (content that just loaded, where a `reveal` Transition doesn't fit), `animate-materialize`.
+- **Every loading state is a skeleton shaped like what is coming** — never a blank area, a bare "Loading…" line, or the empty state ("No songs yet", "0 people", "never scanned") shown before the answer is known. Use `UiSkeleton` (one block; `glass` on Now playing), `UiSkeletonRows` (list rows: cover, one or two lines, an action; `label` for screen readers), `UiPanelSkeleton` (settings groups, cards), `PageSkeleton` (a whole page), `DetailState` (album/artist/playlist/show pages). Skeletons hold themselves back 120 ms, so a quick answer never flashes one. Keep a "loaded" flag apart from "empty" (`queueSynced` in `model/download.js`, `loaded` in the settings sections). Put the skeleton branch and the content branch in one `<Transition name="reveal">` (single-root branches): the content rises in only when it replaces a skeleton, not when it was already there.
+- **Progress.** `UiProgress` for bars (determinate or `indeterminate`), `UiButton :loading` for actions (its icon turns into the spinner), `RouteProgress` (automatic) while a page's code loads.
+- **Lazy loading.** Routes stay `() => import()` in `router/index.js`; the most used are fetched ahead when idle (`PREFETCHED_ROUTES` in `AppShell.vue`, `lib/prefetch.js`, off on Save-Data / 2G). Heavy parts only some visits need are `lazyComponent(() => import(...))` (`components/ui/lazy.js`, a skeleton meanwhile): the larger settings sections; Now playing is mounted on first open. Only English ships in the main bundle — every other language is its own chunk fetched by `i18n/index.js` (`setLocale` returns a promise, `await` it in tests; `main.js` mounts after `localeReady`). Add a language to `AVAILABLE_LOCALES` only; never import a locale file statically. Images go through `CoverArt` (native lazy loading, held back while scrolling past, fades in once decoded).
+
 ## Domain gotchas (do not rediscover these)
 
 - **Spotify embed schema**: playlist tracks expose `subtitle` (joined artist string), **not** an `artists` list, and have **no per-track cover** — fall back to the playlist cover. See `downtify/spotify.py`.
@@ -106,7 +120,7 @@ Cross-check both against the code, not against each other — a stale doc citing
 3. New code paths covered by a test, or a clear note in the PR why not.
 4. No new permissive `extend-ignore` / per-file ignore entries.
 5. If the change affects download behavior: manually run `make run`, pull one Spotify track + one playlist, confirm metadata, cover art, and (when enabled) lyrics embed correctly. State the manual verification explicitly — type checks do not validate this.
-6. If the change affects the SPA: `npm --prefix frontend run build` succeeds and the resulting `frontend/dist` is served correctly by the backend.
+6. If the change affects the SPA: `npm --prefix frontend run build` succeeds and the resulting `frontend/dist` is served correctly by the backend. Every loading state it adds or touches has a skeleton, its motion follows [Motion, skeletons and lazy loading](#motion-skeletons-and-lazy-loading-web-ui), and it still works with the system's *reduce motion* setting on.
 7. Docker: if Python deps changed, run `make export` so `requirements.txt` matches `uv.lock` before merging — the Docker build uses `requirements.txt`, not `uv.lock`.
 8. **Before calling any task finished**, check whether it changed user-facing behavior (new/changed setting, env var, endpoint, UI control, supported input type, language, limit). If it did, update `README.md` (brief overview + link) and the matching `docs/` page(s) in the same change — see [Documentation](#documentation). If nothing user-facing changed (internal refactor, test-only change, CI config), say so explicitly instead of silently skipping this.
 9. Every change is described in `commit-message.md` — this repo's, and `~/git/downtify-android`'s if the task touched the app. See [Server and Android client together](#server-and-android-client-together).
@@ -142,6 +156,7 @@ The server lives in `~/git/downtify` (this repo), the Android client in `~/git/d
 - Add network calls to tests without a recorded fixture.
 - Hand-edit `requirements.txt` — regenerate via `make export`.
 - Skip hooks (`--no-verify`) on commits.
+- Show a blank area, a bare "Loading…" text or an empty state while the SPA waits for data — use a skeleton. Animate layout properties, use bare `ease` / `transition-all`, or ship motion without its reduced-motion path.
 
 ## Useful entry points when investigating
 

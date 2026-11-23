@@ -5,14 +5,25 @@
     :type="tag === 'button' ? type : undefined"
     :disabled="tag === 'button' ? disabled || loading : undefined"
     :aria-disabled="disabled || loading || undefined"
-    class="inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-control border font-semibold transition-colors duration-150 disabled:opacity-50"
+    class="press transition-press inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-control border font-semibold disabled:opacity-50"
     :class="[sizeClass, variantClass]"
+    :aria-busy="loading || undefined"
   >
-    <span
-      v-if="loading"
-      class="size-4 animate-spin rounded-full border-2 border-current border-r-transparent"
-    />
-    <AppIcon v-else-if="icon" :name="icon" :size="iconSize" stroke-width="2" />
+    <!-- The icon turns into the spinner and back, instead of flickering. -->
+    <Transition name="swap" mode="out-in">
+      <span
+        v-if="loading"
+        key="loading"
+        class="size-4 animate-spin rounded-full border-2 border-current border-r-transparent"
+      />
+      <AppIcon
+        v-else-if="icon"
+        :key="icon"
+        :name="icon"
+        :size="iconSize"
+        stroke-width="2"
+      />
+    </Transition>
     <slot />
     <AppIcon
       v-if="iconRight"

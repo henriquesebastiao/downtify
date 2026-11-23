@@ -9,8 +9,14 @@
       <AppIcon name="arrow-left" :size="16" />{{ t('monitor.title') }}
     </RouterLink>
 
-    <div v-if="loading && !watch" class="flex flex-col gap-3">
-      <UiSkeleton class="h-10 w-1/2" />
+    <div v-if="loading && !watch" class="flex flex-col gap-3" aria-busy="true">
+      <div class="flex items-center gap-4">
+        <UiSkeleton class="size-16 shrink-0 !rounded-cover" />
+        <div class="flex flex-1 flex-col gap-2">
+          <UiSkeleton class="h-9 w-1/2" />
+          <UiSkeleton class="h-4 w-1/3" />
+        </div>
+      </div>
       <UiSkeleton class="h-24 w-full !rounded-panel" />
       <UiSkeleton class="h-64 w-full !rounded-panel" />
     </div>
