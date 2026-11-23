@@ -557,7 +557,7 @@ Download a single track. Blocks until complete.
 
 **Request body (optional):** the song object as returned by search/resolve. Its `track_number`/`album_track_total` survive the re-fetch by URL, `youtube_id` (a video id) or `soundcloud_url` (a SoundCloud track URL) forces the audio source — one replaces the other, and either is used at its source's place in `audio_providers` — and `downtify_playlist_url` (a Spotify playlist URL) registers the track as part of that playlist's download. A body with `"source": "deezer"` (a Deezer chart or resolved-link row) is taken as-is instead of re-fetching by `url` - Deezer isn't a URL this endpoint otherwise resolves on its own.
 
-**Response:** Filename string of the downloaded file — a `slskd/…` path for a slskd download left in place. `404` when no audio source has a match for the track.
+**Response:** Filename string of the downloaded file — a `slskd/…` path for a slskd download left in place. `404` when no audio source has a match for the track. `507` when the account is out of [storage quota](features/storage-quotas.md) — the `detail` gives the space used and left; `POST /api/download/batch`, `/album` and `/csv` answer the same, and a queued job that starts once its account is out of space ends with that message.
 
 With `"skip_if_in_library": true` in the body, a song the library already has is not downloaded: the response is `{ "status": "already_in_library", "filename", "match" }` instead, `match` being `catalog_id` or `song_key`. A song counts as owned with the same Spotify track, the same YouTube video or SoundCloud track a library file was downloaded from (recorded since 3.12), or the same ISRC; otherwise the same lead artist and title, with feat./with credits and remaster tags folded (so a remaster or another release counts, a live version or a remix doesn't). Only songs the caller can see count. Without the flag nothing changes, whatever **Download again if the file exists** says.
 
@@ -3483,6 +3483,36 @@ Admin. Change an account — any of `{ "username", "role", "password" }`. A new 
 ### `DELETE /api/users/{id}`
 
 Admin. Delete an account: its apps are unpaired and its sessions ended. `400` for your own account or the last admin, `404` when unknown. **Response:** `{ "id": 2, "deleted": true }`.
+
+---
+
+### `GET /api/me/storage`
+
+Client. Your [storage quota](features/storage-quotas.md): `{ "used", "limit", "remaining", "unlimited", "exceeded", "source", "own" }` — sizes in bytes; `limit` and `remaining` are `null` when unlimited; `source` is `admin` (admins are never limited), `user` (a quota of your own) or `default`; `own` is your own setting (`null` = the default, `-1` = unlimited).
+
+---
+
+### `GET /api/users/storage`
+
+Admin. Every account's storage: `{ "default", "users": [{ "id", "username", "role", "used", "limit", "remaining", "unlimited", "exceeded", "source", "own" }] }` — `default` is the default quota in bytes, `null` when there is none.
+
+---
+
+### `PUT /api/users/storage/default`
+
+Admin. `{ "quota_bytes": 2147483648 }` sets the default quota; `null` (or `-1`) removes it. `400` for `0`, a negative number other than `-1`, or anything that isn't a number. **Response:** as `GET /api/users/storage`.
+
+---
+
+### `PUT /api/users/{id}/storage`
+
+Admin. `{ "quota_bytes": … }`: a quota of the account's own in bytes, `-1` for unlimited, `null` to follow the default. `404` for an unknown account. **Response:** that account's status, as `GET /api/me/storage`.
+
+---
+
+### `POST /api/users/{id}/storage/reset`
+
+Admin. Forgets which files the account downloaded, so its usage starts from zero. No file is deleted; the account just stops counting as their downloader (it can no longer delete them as such, and with a library for each user they leave its library). **Response:** that account's status.
 
 ---
 

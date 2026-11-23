@@ -105,6 +105,7 @@ export default {
       'features/collaborative-playlists.md': 'Совместные плейлисты',
       'features/playlist-order.md': 'Порядок плейлиста и повторы песен',
       'features/users.md': 'Пользователи и вход',
+      'features/storage-quotas.md': 'Квоты хранилища',
       'features/mobile-apps.md': 'Мобильные приложения',
       'features/library-only.md': 'Только библиотека',
       'features/server.md': 'Настройки сервера',

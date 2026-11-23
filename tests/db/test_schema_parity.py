@@ -54,6 +54,7 @@ from downtify.playlist_shares import PlaylistShares
 from downtify.playlist_spotify_cache import PlaylistSpotifyCache
 from downtify.podcasts import PodcastStore
 from downtify.slskd_misses import SlskdMisses
+from downtify.storage_quota import StorageQuotas
 from downtify.track_index import TrackIndex
 from downtify.track_owners import TrackOwners
 from downtify.traffic import TrafficCounters
@@ -88,6 +89,7 @@ _LIBRARY_STORES: tuple[Callable[[Path], Any], ...] = (
     LyricsLookupCache,
     LikedTracks,
     TrackOwners,
+    StorageQuotas,
     LibraryVisibility,
     CompilationMarks,
     PodcastStore,

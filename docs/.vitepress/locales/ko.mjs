@@ -95,6 +95,7 @@ export default {
       'features/collaborative-playlists.md': '함께 편집하는 재생목록',
       'features/playlist-order.md': '재생목록 순서와 반복 곡',
       'features/users.md': '사용자와 로그인',
+      'features/storage-quotas.md': '저장 공간 할당량',
       'features/mobile-apps.md': '모바일 앱',
       'features/library-only.md': '라이브러리 전용 모드',
       'features/server.md': '서버 설정',

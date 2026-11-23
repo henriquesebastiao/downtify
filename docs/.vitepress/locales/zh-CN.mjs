@@ -95,6 +95,7 @@ export default {
       'features/collaborative-playlists.md': '协作播放列表',
       'features/playlist-order.md': '播放列表顺序与重复歌曲',
       'features/users.md': '用户与登录',
+      'features/storage-quotas.md': '存储配额',
       'features/mobile-apps.md': '移动应用',
       'features/library-only.md': '仅媒体库模式',
       'features/server.md': '服务器设置',

@@ -22,6 +22,40 @@
       </UiButton>
     </div>
 
+    <!-- Storage quota (issue #677): what your downloads take, and the
+         limit an admin set. -->
+    <div v-if="storageState !== 'failed'" class="flex flex-col gap-2 px-5 py-4">
+      <div
+        class="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1"
+      >
+        <p class="text-sm font-semibold text-fg">{{ t('quota.title') }}</p>
+        <Transition name="reveal" mode="out-in">
+          <UiSkeleton
+            v-if="storageState === 'loading'"
+            key="skeleton"
+            class="h-3.5 w-36"
+          />
+          <p
+            v-else
+            key="line"
+            class="text-[13px] text-muted tabular-nums"
+            aria-live="polite"
+          >
+            {{ storageLine }}
+          </p>
+        </Transition>
+      </div>
+      <UiProgress
+        v-if="storage && !storage.unlimited"
+        :value="quotaPercent(storage)"
+        :color="toneClass"
+        :aria-label="t('quota.title')"
+      />
+      <p v-if="storage?.exceeded" class="text-[13px] text-pretty text-danger">
+        {{ t('quota.full') }}
+      </p>
+    </div>
+
     <div
       v-if="user?.default_password"
       class="flex items-start gap-3 bg-warn/10 px-5 py-3 text-[13px] text-pretty text-warn"
@@ -108,16 +142,20 @@
 // Settings > General > Account: who is signed in, their username and
 // password, and signing out. Everyone manages their own here; admins
 // manage the others in Settings > Users.
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import AppIcon from '../ui/AppIcon.vue'
 import UiButton from '../ui/UiButton.vue'
 import UiInput from '../ui/UiInput.vue'
+import UiProgress from '../ui/UiProgress.vue'
+import UiSkeleton from '../ui/UiSkeleton.vue'
 import SettingGroup from './SettingGroup.vue'
 import SettingRow from './SettingRow.vue'
 import API from '/src/model/api'
 import { useAuth } from '/src/model/auth'
 import { useUi } from '/src/model/ui'
 import { useI18n } from '/src/i18n'
+import { formatBytes } from '/src/lib/format'
+import { quotaPercent, quotaTone } from '/src/lib/storageQuota'
 
 const { t } = useI18n()
 const ui = useUi()
@@ -128,6 +166,38 @@ const minLength = computed(() => auth.status.value?.min_password_length || 8)
 function errorOf(err) {
   return err?.response?.data?.detail || t('toast.actionFailed')
 }
+
+// 'loading' | 'ready' | 'failed' - kept apart from the answer itself, so
+// the skeleton shows until it is known (and nothing when it can't be).
+const storage = ref(null)
+const storageState = ref('loading')
+
+async function loadStorage() {
+  try {
+    storage.value = (await API.getMyStorage()).data
+    storageState.value = 'ready'
+  } catch {
+    storageState.value = 'failed'
+  }
+}
+
+const storageLine = computed(() => {
+  const value = storage.value
+  if (!value) return ''
+  const used = formatBytes(value.used)
+  if (value.unlimited) return t('quota.usedUnlimited', { used })
+  return `${t('quota.used', { used, limit: formatBytes(value.limit) })} · ${t(
+    'quota.left',
+    { left: formatBytes(value.remaining) }
+  )}`
+})
+
+const toneClass = computed(
+  () =>
+    ({ danger: 'bg-danger', warn: 'bg-warn' })[quotaTone(storage.value)] || ''
+)
+
+onMounted(loadStorage)
 
 const username = ref(user.value?.username || '')
 const usernameError = ref('')

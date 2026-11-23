@@ -1348,8 +1348,9 @@ def test_users_stats_aggregates_per_account(monkeypatch, tmp_path):
     traffic.add(2, DIRECTION_IN, 100)
     traffic.add(2, DIRECTION_OUT, 200)
     monkeypatch.setattr(api.state, 'traffic', traffic)
+    monkeypatch.setattr(api, 'library_context', lambda: None)
     monkeypatch.setattr(
-        account_routes,
+        api,
         'listing_for_request',
         lambda ctx: [
             {'file': 'a.mp3', 'size': 100},

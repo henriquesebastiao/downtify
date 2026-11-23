@@ -45,6 +45,7 @@ from downtify import (
     mobile_routes,
     navidrome_ratings_routes,
     notification_routes,
+    storage_quota_routes,
     trash_routes,
     wanted_routes,
 )
@@ -148,6 +149,7 @@ from downtify.server_port import (
     write_runtime_port,
 )
 from downtify.slskd_misses import SlskdMisses
+from downtify.storage_quota import StorageQuotas
 from downtify.stream import stream_cache_from_env
 from downtify.telemetry import redact_url_secrets
 from downtify.track_index import TrackIndex
@@ -478,6 +480,8 @@ def _open_library_stores(monitor_db_path: Path | Database) -> None:
     api.state.lyrics_cache = LyricsLookupCache(library_db)
     api.state.likes = LikedTracks(library_db)
     api.state.track_owners = TrackOwners(library_db)
+    # Per-user storage quotas (downtify/storage_quota.py).
+    api.state.storage_quotas = StorageQuotas(library_db)
     api.state.library_visibility = LibraryVisibility(library_db)
     api.state.traffic = TrafficCounters(library_db)
     # Albums an admin marked (or unmarked) as Various Artists by hand.
@@ -947,6 +951,7 @@ def build_app() -> FastAPI:
     app.include_router(api.router)
     app.include_router(auth_routes.router)
     app.include_router(account_routes.router)
+    app.include_router(storage_quota_routes.router)
     app.include_router(mobile_routes.router)
     app.include_router(trash_routes.router)
     app.include_router(doctor_routes.router)

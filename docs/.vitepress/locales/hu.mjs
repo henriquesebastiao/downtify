@@ -96,6 +96,7 @@ export default {
       'features/collaborative-playlists.md': 'Közösen szerkesztett listák',
       'features/playlist-order.md': 'Sorrend és ismétlődő számok',
       'features/users.md': 'Felhasználók és bejelentkezés',
+      'features/storage-quotas.md': 'Tárhelykvóták',
       'features/mobile-apps.md': 'Mobilalkalmazások',
       'features/library-only.md': 'Csak könyvtár mód',
       'features/server.md': 'Szerverbeállítások',
