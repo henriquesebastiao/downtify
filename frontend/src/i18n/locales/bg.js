@@ -2082,6 +2082,9 @@ export default {
     navidromeM3uImport: 'Navidrome да импортира M3U плейлистите',
     navidromeM3uImportHint:
       'Navidrome превръща всеки M3U, записан от Downtify, в плейлист с обложка. Когато е включено, Downtify не създава втори през API.',
+    discoverNavidromePlays: 'Използвай слушанията от Navidrome в Откриване',
+    discoverNavidromePlaysHint:
+      'Каквото този акаунт в Navidrome слуша и отбелязва със звезда, се взема предвид в предложенията на Откриване, за администраторите (Navidrome казва само слушанията на собствения акаунт).',
     navidromeScanWhenIdle: 'Сканиране, когато никой не слуша',
     navidromeScanWhenIdleHint:
       'Докато някое приложение на Navidrome възпроизвежда, сканирането, което Downtify пуска след изтегляния, изчаква (проверка всяка минута), за да не прекъсва възпроизвеждането. Новите песни се появяват в Navidrome, щом възпроизвеждането спре.',

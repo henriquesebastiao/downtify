@@ -626,6 +626,11 @@ from .navidrome import (
     sync_playlist_to_navidrome,
 )
 from .navidrome_index import NavidromeIndex
+from .navidrome_listens import (
+    StoreWithNavidrome,
+    navidrome_taste,
+    with_starred,
+)
 from .playlist_batches import (
     LibrarySnapshot,
     PlaylistBatchStore,
@@ -838,6 +843,9 @@ DEFAULT_SETTINGS: dict[str, Any] = {
     # downloaded and those of the playlists they may open. Admins still
     # see everything. See ``allowed_entry_keys``.
     'per_user_library': False,
+    # The Navidrome account's plays and stars count in admins' Discover
+    # (issue #423, ``downtify/navidrome_listens.py``).
+    'discover_navidrome_plays': False,
     'navidrome': {
         'enabled': False,
         'url': '',
@@ -9389,6 +9397,7 @@ async def update_settings_endpoint(
                 'artist_watch_complete_albums',
                 'aurral_enabled',
                 'per_user_library',
+                'discover_navidrome_plays',
             }:
                 state.settings[key] = raw_value is True
             elif key == 'ui_language':
@@ -9811,6 +9820,30 @@ def _require_discover() -> DiscoverStore:
     return state.discover
 
 
+def _discover_inputs(
+    request: Request, store: DiscoverStore, library: list[Any]
+) -> tuple[Any, list[Any]]:
+    """The listens and library Discover weighs for *request*: with
+    *Use Navidrome plays in Discover* on, an admin's also have the
+    Navidrome account's plays and starred songs (see
+    :mod:`downtify.navidrome_listens`). Unchanged otherwise."""
+
+    if state.settings.get(
+        'discover_navidrome_plays'
+    ) is not True or not request_is_admin(request):
+        return store, library
+    cfg = _effective_navidrome_settings(state.settings)
+    if not cfg['enabled'] or not NavidromeClient(cfg).configured():
+        return store, library
+    taste = navidrome_taste(cfg, NavidromeClient)
+    if not taste:
+        return store, library
+    return (
+        StoreWithNavidrome(store, taste['listens']),
+        with_starred(library, taste['starred']),
+    )
+
+
 @router.post('/api/discover')
 async def discover_endpoint(request: Request) -> dict[str, Any]:
     """Artists the library doesn't have yet, suggested from the ones it
@@ -9830,6 +9863,9 @@ async def discover_endpoint(request: Request) -> dict[str, Any]:
     library = payload.get('library')
     if not isinstance(library, list):
         raise HTTPException(status_code=400, detail='library is required')
+    store, library = await asyncio.to_thread(
+        _discover_inputs, request, store, library
+    )
     return await asyncio.to_thread(
         recommendations, store, library, user_id=request_user_id(request)
     )
@@ -9852,6 +9888,9 @@ async def discover_collections_endpoint(request: Request) -> dict[str, Any]:
     library = payload.get('library')
     if not isinstance(library, list):
         raise HTTPException(status_code=400, detail='library is required')
+    store, library = await asyncio.to_thread(
+        _discover_inputs, request, store, library
+    )
     albums = payload.get('albums')
     playlist_ids = payload.get('playlist_ids')
     return await asyncio.to_thread(
@@ -9887,6 +9926,9 @@ async def discover_deezer_collections_endpoint(
     library = payload.get('library')
     if not isinstance(library, list):
         raise HTTPException(status_code=400, detail='library is required')
+    store, library = await asyncio.to_thread(
+        _discover_inputs, request, store, library
+    )
     return await asyncio.to_thread(
         deezer_collections,
         store,
@@ -9921,6 +9963,9 @@ async def discover_spotify_collections_endpoint(
     library = payload.get('library')
     if not isinstance(library, list):
         raise HTTPException(status_code=400, detail='library is required')
+    store, library = await asyncio.to_thread(
+        _discover_inputs, request, store, library
+    )
     return await asyncio.to_thread(
         spotify_collections,
         store,

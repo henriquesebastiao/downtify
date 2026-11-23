@@ -2153,6 +2153,9 @@ export default {
     navidromeM3uImport: 'Navidrome die M3U-Playlists importieren lassen',
     navidromeM3uImportHint:
       'Navidrome macht aus jeder M3U, die Downtify schreibt, eine Playlist mit Cover. Ist das an, legt Downtify keine zweite über die API an.',
+    discoverNavidromePlays: 'Navidrome-Wiedergaben in Entdecken nutzen',
+    discoverNavidromePlaysHint:
+      'Was dieses Navidrome-Konto abspielt und mit Sternen markiert, zählt für die Vorschläge in Entdecken, für Admins (Navidrome verrät nur die Wiedergaben des eigenen Kontos).',
     navidromeScanWhenIdle: 'Scans warten, bis niemand zuhört',
     navidromeScanWhenIdleHint:
       'Solange eine Navidrome-App abspielt, wartet der Scan, den Downtify nach Downloads startet (geprüft jede Minute), damit die Wiedergabe nicht unterbrochen wird. Neue Songs erscheinen in Navidrome, sobald die Wiedergabe endet.',

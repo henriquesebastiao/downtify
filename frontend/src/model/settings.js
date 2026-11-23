@@ -66,6 +66,7 @@ const settings = ref({
   sync_navidrome: true,
   allow_playlist_sharing: true,
   per_user_library: false,
+  discover_navidrome_plays: false,
   navidrome: {
     enabled: false,
     url: '',

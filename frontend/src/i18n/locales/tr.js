@@ -2085,6 +2085,9 @@ export default {
     navidromeM3uImport: 'M3U çalma listelerini Navidrome içe aktarsın',
     navidromeM3uImportHint:
       'Navidrome, Downtify’ın yazdığı her M3U’dan kapaklı bir çalma listesi yapar. Bu açıkken Downtify API üzerinden ikinci bir liste oluşturmaz.',
+    discoverNavidromePlays: "Keşfet'te Navidrome dinlemelerini kullan",
+    discoverNavidromePlaysHint:
+      'Bu Navidrome hesabının dinledikleri ve yıldızladıkları, yöneticiler için Keşfet önerilerinde sayılır (Navidrome yalnızca hesabın kendi dinlemelerini bildirir).',
     navidromeScanWhenIdle: 'Kimse dinlemiyorken tara',
     navidromeScanWhenIdleHint:
       'Bir Navidrome uygulaması çalarken Downtify’ın indirmelerden sonra başlattığı tarama bekler (her dakika kontrol edilir), böylece çalma kesilmez. Yeni şarkılar çalma durunca Navidrome’da görünür.',

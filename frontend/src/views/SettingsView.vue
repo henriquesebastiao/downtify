@@ -1003,6 +1003,15 @@
                     :aria-label="t('settings.navidromeScanWhenIdle')"
                   />
                 </SettingRow>
+                <SettingRow
+                  :label="t('settings.discoverNavidromePlays')"
+                  :description="t('settings.discoverNavidromePlaysHint')"
+                >
+                  <UiSwitch
+                    v-model="s.discover_navidrome_plays"
+                    :aria-label="t('settings.discoverNavidromePlays')"
+                  />
+                </SettingRow>
               </template>
             </SettingGroup>
             <SettingGroup
