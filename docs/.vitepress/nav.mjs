@@ -77,6 +77,7 @@ export const NAV = [
     items: [
       { title: 'File Organization', page: 'features/file-organization.md' },
       { title: 'Lyrics', page: 'features/lyrics.md' },
+      { title: 'Music Videos', page: 'features/music-videos.md' },
       { title: 'Explicit Marker', page: 'features/explicit-marker.md' },
     ],
   },

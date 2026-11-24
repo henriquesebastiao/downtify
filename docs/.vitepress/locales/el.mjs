@@ -125,6 +125,7 @@ export default {
       'features/support-artists.md': 'Στηρίξτε τον καλλιτέχνη',
       'features/file-organization.md': 'Οργάνωση αρχείων',
       'features/lyrics.md': 'Στίχοι',
+      'features/music-videos.md': 'Βίντεο κλιπ',
       'features/explicit-marker.md': 'Σήμανση ακατάλληλου περιεχομένου',
       'features/youtube-cookies.md': 'Cookies του YouTube',
       'features/internationalization.md': 'Διεθνοποίηση',

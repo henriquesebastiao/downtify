@@ -1199,6 +1199,7 @@ export default {
     closeNowPlaying: 'Most szóló bezárása',
     queue: 'Sor',
     upNext: 'Következik',
+    musicVideo: '{name} videoklipje',
     hideUpNext: '„Következik” elrejtése',
     showUpNext: '„Következik” megjelenítése',
     lyrics: 'Dalszöveg',
@@ -1749,6 +1750,19 @@ export default {
     showLyrics: 'Dalszövegek megjelenítése a lejátszóban',
     showLyricsHint:
       'Kikapcsolva elrejti a dalszöveg panelt, a gombját és a billentyűparancsát. A fájlok megtartják a dalszövegeket, a letöltések pedig továbbra is lekérik őket.',
+    playVideos: 'Videoklipek lejátszása',
+    playVideosHint:
+      'Ha egy dalhoz van videoklip, a Most szól a borító helyett azt mutatja, hang nélkül – a dal ugyanúgy szól tovább.',
+    musicVideosGroup: 'Videoklipek',
+    musicVideos: 'Videoklipek letöltése',
+    musicVideosHint:
+      'Minden letöltött dal hivatalos videoklipjét ugyanabba a mappába menti, a Plex, a Jellyfin és a lejátszó számára. A videók egyenként, a dal után töltődnek le, legfeljebb 1080p-ben.',
+    musicVideoName: 'A videó fájlneve',
+    musicVideoNameHint:
+      'Kiterjesztés nélkül. Változók: {variables}. Az alapértelmezett – a dal fájlneve és „-video” – így kapcsolja a Plex a videót a számhoz.',
+    musicVideoFormat: 'Videóformátum',
+    musicVideoFormatHint:
+      'Az MP4 mindenhol lejátszható. Válaszd az MKV-t, ha a médiaszervered dalként listázza az MP4 videókat.',
     searchGroup: 'Keresés',
     playlistsGroup: 'Lejátszási listák',
     showPublicPlaylists: 'Nyilvános listák megjelenítése',

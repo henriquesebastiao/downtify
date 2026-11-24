@@ -122,6 +122,7 @@ export default {
       'features/support-artists.md': '아티스트 응원하기',
       'features/file-organization.md': '파일 정리',
       'features/lyrics.md': '가사',
+      'features/music-videos.md': '뮤직비디오',
       'features/explicit-marker.md': '성인 콘텐츠 표시',
       'features/youtube-cookies.md': 'YouTube 쿠키',
       'features/internationalization.md': '다국어 지원',

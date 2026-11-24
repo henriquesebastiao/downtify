@@ -123,6 +123,7 @@ export default {
       'features/support-artists.md': 'Подкрепете артиста',
       'features/file-organization.md': 'Организация на файловете',
       'features/lyrics.md': 'Текстове',
+      'features/music-videos.md': 'Видеоклипове',
       'features/explicit-marker.md': 'Маркер за неподходящо съдържание',
       'features/youtube-cookies.md': 'Бисквитки на YouTube',
       'features/internationalization.md': 'Интернационализация',

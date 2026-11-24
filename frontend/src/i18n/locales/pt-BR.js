@@ -1198,6 +1198,7 @@ export default {
     closeNowPlaying: 'Fechar tocando agora',
     queue: 'Fila',
     upNext: 'A seguir',
+    musicVideo: 'Videoclipe de {name}',
     hideUpNext: 'Ocultar a seguir',
     showUpNext: 'Mostrar a seguir',
     lyrics: 'Letra',
@@ -1751,6 +1752,19 @@ export default {
     showLyrics: 'Mostrar letras no player',
     showLyricsHint:
       'Desative para esconder o painel de letras, o botão e o atalho. Seus arquivos mantêm as letras, e os downloads continuam buscando.',
+    playVideos: 'Reproduzir videoclipes',
+    playVideosHint:
+      'Quando uma música tem videoclipe, o Tocando agora mostra o vídeo no lugar da capa, sem som — a música continua tocando como sempre.',
+    musicVideosGroup: 'Videoclipes',
+    musicVideos: 'Baixar videoclipes',
+    musicVideosHint:
+      'Salva o videoclipe oficial de cada música baixada na mesma pasta, para Plex, Jellyfin e o player. Os vídeos são buscados um por vez depois da música, até 1080p.',
+    musicVideoName: 'Nome do arquivo do vídeo',
+    musicVideoNameHint:
+      'Sem a extensão. Variáveis: {variables}. O padrão, o nome do arquivo da música mais “-video”, é como o Plex liga um vídeo à faixa.',
+    musicVideoFormat: 'Formato do vídeo',
+    musicVideoFormatHint:
+      'MP4 toca em qualquer lugar. Escolha MKV se o seu servidor de mídia listar vídeos MP4 como músicas.',
     searchGroup: 'Busca',
     playlistsGroup: 'Playlists',
     showPublicPlaylists: 'Mostrar playlists públicas',

@@ -123,6 +123,7 @@ export default {
       'features/support-artists.md': 'Soutenir l’artiste',
       'features/file-organization.md': 'Organisation des fichiers',
       'features/lyrics.md': 'Paroles',
+      'features/music-videos.md': 'Clips vidéo',
       'features/explicit-marker.md': 'Marque de contenu explicite',
       'features/youtube-cookies.md': 'Cookies YouTube',
       'features/internationalization.md': 'Internationalisation',

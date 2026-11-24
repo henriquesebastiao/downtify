@@ -121,6 +121,7 @@ from downtify.monitor import (
     reconcile_loop,
     share_download_slots,
 )
+from downtify.music_video import MusicVideos
 from downtify.navidrome_index import NavidromeIndex
 from downtify.oidc import (
     OIDCConfig,
@@ -480,6 +481,8 @@ def _open_library_stores(monitor_db_path: Path | Database) -> None:
     api.state.lyrics_cache = LyricsLookupCache(library_db)
     api.state.likes = LikedTracks(library_db)
     api.state.track_owners = TrackOwners(library_db)
+    # Each song's music video (downtify/music_video.py, issue #680).
+    api.state.music_videos = MusicVideos(library_db)
     # Per-user storage quotas (downtify/storage_quota.py).
     api.state.storage_quotas = StorageQuotas(library_db)
     api.state.library_visibility = LibraryVisibility(library_db)

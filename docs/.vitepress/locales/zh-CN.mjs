@@ -122,6 +122,7 @@ export default {
       'features/support-artists.md': '支持艺人',
       'features/file-organization.md': '文件整理',
       'features/lyrics.md': '歌词',
+      'features/music-videos.md': '音乐视频',
       'features/explicit-marker.md': '显式内容标记',
       'features/youtube-cookies.md': 'YouTube Cookie',
       'features/internationalization.md': '国际化',

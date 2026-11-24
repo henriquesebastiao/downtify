@@ -769,6 +769,11 @@ function deleteUser(id) {
   return API.delete(`/api/users/${encodeURIComponent(id)}`)
 }
 
+/** A library song's music video: `{video, url}`, 404 when it has none. */
+function getMusicVideo(file) {
+  return API.get('/api/music-video', { params: { file }, quiet: true })
+}
+
 function getUserStats() {
   return API.get('/api/users/stats')
 }
@@ -1386,6 +1391,7 @@ export default {
   updateUser,
   deleteUser,
   getUserStats,
+  getMusicVideo,
   getMyStorage,
   getUsersStorage,
   setDefaultStorageQuota,

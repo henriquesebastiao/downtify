@@ -193,6 +193,23 @@ def _resolve_within_library(
     return None
 
 
+#: A song's music video (downtify/music_video.py): never listed as a song.
+VIDEO_EXTENSIONS = frozenset({'.mp4', '.mkv', '.webm'})
+
+
+def resolve_library_video(stored: str, ctx: LibraryContext) -> Optional[Path]:
+    """A library-relative path to a saved music video, confined to the
+    library like :func:`resolve_library_file`."""
+
+    return _resolve_within_library(
+        stored,
+        ctx,
+        lambda path: (
+            path.is_file() and path.suffix.lower() in VIDEO_EXTENSIONS
+        ),
+    )
+
+
 def resolve_library_file(stored: str, ctx: LibraryContext) -> Optional[Path]:
     """Resolve a library-relative path if it points to an allowed audio file."""
 

@@ -16,6 +16,7 @@ from .library_catalog import (
     drop_library_listing_files,
     library_context_from_state,
     resolve_library_file,
+    resolve_library_video,
 )
 from .library_cleanup import prune_empty_parent_dirs, remove_track_leftovers
 from .library_paths import library_file_root, library_stored_path
@@ -178,6 +179,27 @@ def _log_failed_deletes(
         )
 
 
+def _delete_music_video(
+    store: Any, file_key: str, ctx: LibraryContext
+) -> None:
+    """Take a deleted song's music video with it (best effort)."""
+
+    try:
+        video = store.forget(file_key)
+    except Exception:
+        logger.opt(exception=True).debug('No music video row for {}', file_key)
+        return
+    full = resolve_library_video(video, ctx) if video else None
+    if full is None:
+        return
+    try:
+        full.unlink()
+    except OSError as exc:
+        logger.warning('Library delete: could not unlink {}: {}', full, exc)
+        return
+    logger.info('Library delete: removed its music video {}', video)
+
+
 def delete_library_file(
     stored_path: str,
     ctx: LibraryContext,
@@ -188,8 +210,13 @@ def delete_library_file(
     track_index: Any = None,
     navidrome_index: Any = None,
     invalidate_paths: bool = True,
+    music_videos: Any = None,
 ) -> dict[str, Any]:
-    """Remove one library file and catalog rows. Does not refresh playlists."""
+    """Remove one library file and catalog rows. Does not refresh playlists.
+
+    Its music video goes too (*music_videos*, see
+    :mod:`downtify.music_video`).
+    """
 
     file_key = str(stored_path or '').strip().replace('\\', '/')
     if not file_key:
@@ -218,6 +245,8 @@ def delete_library_file(
     root, _rel = library_file_root(
         file_key, ctx.download_dir, ctx.slskd_dir, ctx.extra_dirs
     )
+    if music_videos is not None:
+        _delete_music_video(music_videos, file_key, ctx)
     remove_track_leftovers(full, root)
 
     affected_playlists: list[str] = []
@@ -290,6 +319,7 @@ def delete_library_files(
             track_index=state.track_index,
             navidrome_index=state.navidrome_index,
             invalidate_paths=False,
+            music_videos=getattr(state, 'music_videos', None),
         )
         if result.get('deleted'):
             deleted.append(key)
@@ -414,6 +444,7 @@ def _delete_audio_under_dir(
             track_index=state.track_index,
             navidrome_index=state.navidrome_index,
             invalidate_paths=False,
+            music_videos=getattr(state, 'music_videos', None),
         )
         if result.get('deleted'):
             deleted.append(stored)

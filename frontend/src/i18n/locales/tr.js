@@ -1193,6 +1193,7 @@ export default {
     closeNowPlaying: 'Şimdi çalanı kapat',
     queue: 'Kuyruk',
     upNext: 'Sıradaki',
+    musicVideo: '{name} müzik videosu',
     hideUpNext: 'Sıradakileri gizle',
     showUpNext: 'Sıradakileri göster',
     lyrics: 'Şarkı sözleri',
@@ -1735,6 +1736,19 @@ export default {
     showLyrics: 'Oynatıcıda şarkı sözlerini göster',
     showLyricsHint:
       'Şarkı sözü panelini, düğmesini ve kısayolunu gizlemek için kapatın. Dosyalarınız sözlerini korur ve indirmeler onları getirmeye devam eder.',
+    playVideos: 'Müzik videolarını oynat',
+    playVideosHint:
+      'Bir şarkının müzik videosu varsa Şimdi çalıyor onu kapak yerine sessiz gösterir — şarkı her zamanki gibi çalmaya devam eder.',
+    musicVideosGroup: 'Müzik videoları',
+    musicVideos: 'Müzik videolarını indir',
+    musicVideosHint:
+      'İndirilen her şarkının resmi müzik videosunu aynı klasöre kaydeder; Plex, Jellyfin ve oynatıcı için. Videolar şarkıdan sonra tek tek, en fazla 1080p alınır.',
+    musicVideoName: 'Video dosya adı',
+    musicVideoNameHint:
+      'Uzantı olmadan. Değişkenler: {variables}. Varsayılan, şarkının dosya adı artı “-video”: Plex bir videoyu parçasına böyle bağlar.',
+    musicVideoFormat: 'Video biçimi',
+    musicVideoFormatHint:
+      'MP4 her yerde oynar. Medya sunucun MP4 videoları şarkı olarak listeliyorsa MKV seç.',
     searchGroup: 'Arama',
     playlistsGroup: 'Çalma listeleri',
     showPublicPlaylists: 'Herkese açık listeleri göster',

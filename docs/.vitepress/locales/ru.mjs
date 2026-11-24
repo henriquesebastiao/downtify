@@ -132,6 +132,7 @@ export default {
       'features/support-artists.md': 'Поддержка артиста',
       'features/file-organization.md': 'Организация файлов',
       'features/lyrics.md': 'Тексты песен',
+      'features/music-videos.md': 'Клипы',
       'features/explicit-marker.md': 'Пометка Explicit',
       'features/youtube-cookies.md': 'Куки YouTube',
       'features/internationalization.md': 'Перевод (i18n)',
