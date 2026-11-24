@@ -418,6 +418,12 @@ function getLyrics(file) {
   return API.get('/lyrics', { params: { file } })
 }
 
+// Move a song's time-synced lyrics later (> 0) or sooner (< 0), saved in
+// its .lrc and tags (issue #663).
+function shiftLyrics(file, offsetMs) {
+  return API.post('/api/library/lyrics/offset', { file, offset_ms: offsetMs })
+}
+
 function deleteDownload(file) {
   return API.delete('/delete', { params: { file } })
 }
@@ -1340,6 +1346,7 @@ export default {
   updateLibraryVisibility,
   lookupLibrarySongs,
   getLyrics,
+  shiftLyrics,
   deleteDownload,
   deleteDownloadsBatch,
   deleteLibraryPlaylist,

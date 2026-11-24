@@ -8,11 +8,11 @@ permissions:
   contents: read
   pages: write
   id-token: write
+concurrency:
+  group: pages
+  cancel-in-progress: false
 jobs:
-  deploy:
-    environment:
-      name: docs
-      url: ${{ steps.deployment.outputs.page_url }}
+  build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/configure-pages@v6
@@ -32,5 +32,15 @@ jobs:
       - uses: actions/upload-pages-artifact@v5
         with:
           path: docs/.vitepress/dist
+  # A job of its own, as in GitHub's Pages starter: deploy-pages called
+  # in the same job, right after the upload, sometimes listed the run's
+  # artifacts before the new one showed up ("Found 0 artifact(s)").
+  deploy:
+    needs: build
+    environment:
+      name: docs
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
       - uses: actions/deploy-pages@v5
         id: deployment

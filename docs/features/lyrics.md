@@ -61,6 +61,17 @@ When synced lyrics are available, Downtify also saves a `.lrc` file. By default 
 
 Deleting the track from the Library page removes the `.lrc` (beside the file and in the dedicated folder) along with the audio, so lyrics never linger as an orphaned file.
 
+## Adjusting the timing
+
+Lyrics found online are sometimes a little early or late for the audio that was actually downloaded: another edit of the song, a longer intro. To fix a song, play it, open **Now playing → Lyrics** and press the timer button at the top right of the lyrics, **Adjust lyrics timing**:
+
+- **−** shows the lyrics sooner and **+** later, a tenth of a second per press, up to a minute either way. The lyrics follow the new timing right away, so you can try it while the song plays.
+- **Save** writes it into the song's files; **Reset** goes back to the saved timing.
+
+Saving rewrites the timestamps themselves, in the `.lrc` sidecar and, when the file's tags hold time-synced lyrics, in those too (MP3 `SYLT` frames included). So the fix also shows in other players that read the `.lrc` or the tags, and in the apps. A read-only file keeps its tags; only the sidecar changes. An `[offset:N]` line in a `.lrc` is folded into the times when you save, and the built-in player honours one meanwhile.
+
+The button only appears for library songs with time-synced lyrics. Any signed-in user can adjust them; the change shows in the [activity log](users.md#activity) as **Lyrics timing adjusted**. The endpoint is [`POST /api/library/lyrics/offset`](../api-reference.md#post-apilibrarylyricsoffset).
+
 ## When nothing is found
 
 If no provider has the song, the download continues normally — the audio file is saved without lyrics, and no error is raised.

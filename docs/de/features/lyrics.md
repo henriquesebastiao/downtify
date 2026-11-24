@@ -61,6 +61,17 @@ Sind synchrone Songtexte verfügbar, speichert Downtify zusätzlich eine `.lrc`-
 
 Das Löschen des Titels auf der Bibliotheksseite entfernt die `.lrc` (neben der Datei und im eigenen Ordner) zusammen mit dem Audio, sodass Songtexte nie als verwaiste Datei liegen bleiben.
 
+## Das Timing anpassen
+
+Online gefundene Liedtexte laufen manchmal etwas vor oder nach dem heruntergeladenen Audio: eine andere Fassung des Songs, ein längeres Intro. Um einen Song zu korrigieren, spiele ihn ab, öffne **Wiedergabe → Songtexte** und tippe oben rechts im Liedtext auf den Stoppuhr-Button, **Liedtext-Timing anpassen**:
+
+- **−** zeigt den Liedtext früher und **+** später, eine Zehntelsekunde pro Tipp, bis zu einer Minute in jede Richtung. Der Liedtext folgt dem neuen Timing sofort, du kannst es also während der Wiedergabe ausprobieren.
+- **Speichern** schreibt es in die Dateien des Songs; **Zurücksetzen** kehrt zum gespeicherten Timing zurück.
+
+Beim Speichern werden die Zeitstempel selbst neu geschrieben, in der `.lrc`-Datei und, wenn die Tags der Datei synchronisierte Liedtexte enthalten, auch dort (einschließlich `SYLT`-Frames von MP3s). Die Korrektur zeigt sich so auch in anderen Playern, die die `.lrc` oder die Tags lesen, und in den Apps. Eine schreibgeschützte Datei behält ihre Tags; nur die `.lrc` ändert sich. Eine `[offset:N]`-Zeile in einer `.lrc` wird beim Speichern in die Zeiten eingerechnet, und der Player von Downtify berücksichtigt sie schon vorher.
+
+Der Button erscheint nur bei Songs der Bibliothek mit synchronisiertem Liedtext. Jeder angemeldete Benutzer kann ihn anpassen; die Änderung erscheint im [Aktivitätsprotokoll](users.md#activity) als **Liedtext-Timing angepasst**. Der Endpoint ist [`POST /api/library/lyrics/offset`](../api-reference.md#post-apilibrarylyricsoffset).
+
 ## Wenn nichts gefunden wird
 
 Hat kein Anbieter den Song, läuft der Download normal weiter — die Audiodatei wird ohne Songtexte gespeichert, und es tritt kein Fehler auf.

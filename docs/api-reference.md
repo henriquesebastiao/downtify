@@ -1277,6 +1277,38 @@ Return the lyrics saved for a library file — used by the player's lyrics panel
 
 ---
 
+### `POST /api/library/lyrics/offset`
+
+Move a song's time-synced lyrics later or sooner, for lyrics that are a little out of step with the audio. Used by the *Adjust lyrics timing* control of the player's lyrics panel. Any user signed in to the web app may (not a paired app), as with editing tags.
+
+**Body:**
+
+```json
+{ "file": "Artist/Album/Song.mp3", "offset_ms": 300 }
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `file` | string | Relative path to the file (as returned by `/list`) |
+| `offset_ms` | integer | Milliseconds to move every line: positive shows them later, negative sooner. Not `0`, at most `60000` either way |
+
+The timestamps themselves are rewritten, so other players see the fix too: the `.lrc` sidecar the player reads and, when the file's tags hold time-synced lyrics (LRC text in `USLT` / `©lyr` / `LYRICS`, or an ID3 `SYLT` frame), those as well, unless the file is read-only. A line moved before the start stops at `00:00.00`. An `[offset:N]` header in the `.lrc` is folded into the times and dropped, since many players ignore it. The change is recorded in the activity log as `lyrics_offset`.
+
+**Response:**
+
+```json
+{
+  "file": "Artist/Album/Song.mp3",
+  "offset_ms": 300,
+  "changed": ["sidecar", "tags"],
+  "synced": "[00:12.30]First line\n[00:15.80]Second line"
+}
+```
+
+`changed` says what was rewritten; `synced` is the new LRC text, as [`GET /lyrics`](#get-lyrics) would now return it. `400` for a bad `offset_ms`, `401` when not signed in, `404` when the file isn't in the library (or is hidden from you) or has no time-synced lyrics, `409` when the `.lrc` can't be written. See [Adjusting the timing](features/lyrics.md#adjusting-the-timing).
+
+---
+
 ## Library
 
 ### `POST /api/library/archive`
@@ -3571,7 +3603,7 @@ Admin. The activity log, newest first.
 }
 ```
 
-`kind` is one of `login`, `login_failed`, `logout`, `playback` (a song started), `download`, `like`, `unlike`, `delete`, `device_paired`, `device_unpaired`, `user_created`, `user_updated`, `user_deleted`, `password_changed`, `settings_changed` (`summary` lists the setting names, never their values). `client` is the app's name or `Web (Firefox on Linux)`. Entries are kept for 90 days.
+`kind` is one of `login`, `login_failed`, `logout`, `playback` (a song started), `download`, `like`, `unlike`, `delete`, `lyrics_offset` (a song's lyrics timing moved, see [`POST /api/library/lyrics/offset`](#post-apilibrarylyricsoffset)), `device_paired`, `device_unpaired`, `user_created`, `user_updated`, `user_deleted`, `password_changed`, `settings_changed` (`summary` lists the setting names, never their values). `client` is the app's name or `Web (Firefox on Linux)`. Entries are kept for 90 days.
 
 ---
 

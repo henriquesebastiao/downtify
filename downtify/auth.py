@@ -1017,6 +1017,8 @@ RULES: list[tuple[frozenset[str], re.Pattern[str], str]] = [
         (_ALL, r'^/api/library/playlist', USER),
         (_m('POST'), r'^/api/library/archive', USER),
         (_READ, r'^/api/library/archive/', USER),
+        # Moving a song's lyrics timing, like editing its tags (#663).
+        (_m('POST'), r'^/api/library/lyrics/offset$', USER),
         (_m('DELETE'), r'^/api/queue', USER),
         (_m('POST'), r'^/api/likes/clear$', USER),
         (_m('POST'), r'^/api/download/csv$', USER),

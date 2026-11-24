@@ -97,6 +97,12 @@ describe('parseLrc', () => {
     expect(parseLrc(LRC)[3]).toEqual({ time: 59, text: '' })
   })
 
+  it('shows lines sooner by an [offset:N] header, never before 0', () => {
+    const lines = parseLrc('[offset:+500]\n[00:00.20]Intro\n[00:10.00]Verse')
+    expect(lines.map((l) => l.time)).toEqual([0, 9.5])
+    expect(parseLrc('[offset:-250]\n[00:10.00]Verse')[0].time).toBe(10.25)
+  })
+
   it('returns nothing for plain text', () => {
     expect(parseLrc('just words\nno timestamps')).toEqual([])
     expect(parseLrc('')).toEqual([])

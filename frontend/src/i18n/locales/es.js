@@ -1249,6 +1249,16 @@ export default {
     noLyricsHint:
       'Activa «Descargar letras» en Ajustes para guardarlas con las nuevas descargas.',
     lyricsNotSynced: 'Esta letra no está sincronizada.',
+    lyricsTiming: 'Ajustar sincronía de la letra',
+    lyricsSooner: 'Mostrar la letra antes',
+    lyricsLater: 'Mostrar la letra después',
+    lyricsOffsetValue: '{value} s',
+    lyricsOffsetHint:
+      'Mueve la letra hasta que coincida con el canto y guarda. Otros reproductores también verán el cambio.',
+    lyricsOffsetSave: 'Guardar',
+    lyricsOffsetReset: 'Restablecer',
+    lyricsOffsetSaved: 'Sincronía de la letra guardada',
+    lyricsOffsetFailed: 'No se pudo guardar la sincronía de la letra',
     cannotPlay: 'Este archivo no se puede reproducir.',
     sleepTimer: 'Temporizador',
     sleepMinutes: { one: 'En {count} minuto', other: 'En {count} minutos' },
@@ -2666,6 +2676,7 @@ export default {
       delete: 'Archivos eliminados',
       audio_replaced: 'Audios reemplazados',
       album_compilation: 'Recopilaciones marcadas',
+      lyrics_offset: 'Sincronía de letras ajustada',
       library_hidden: 'Elementos ocultos a los usuarios',
       library_shown: 'Elementos mostrados a los usuarios',
       device_paired: 'Apps vinculadas',
@@ -2688,6 +2699,7 @@ export default {
       audio_replaced: 'reemplazó el audio de {what}',
       album_compilation:
         'cambió si {what} es una recopilación de Varios artistas',
+      lyrics_offset: 'ajustó la sincronía de la letra de {what}',
       library_hidden: 'ocultó {what} a los usuarios',
       library_shown: 'mostró {what} a los usuarios',
       device_paired: 'vinculó {what}',

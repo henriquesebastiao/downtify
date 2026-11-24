@@ -1234,6 +1234,16 @@ export default {
     noLyricsHint:
       'Yeni indirmelerle kaydetmek için Ayarlar’da “Şarkı sözlerini indir”i aç.',
     lyricsNotSynced: 'Bu sözler zamanlı değil.',
+    lyricsTiming: 'Söz zamanlamasını ayarla',
+    lyricsSooner: 'Sözleri daha erken göster',
+    lyricsLater: 'Sözleri daha geç göster',
+    lyricsOffsetValue: '{value} sn',
+    lyricsOffsetHint:
+      'Sözleri şarkıyla eşleşene kadar kaydırın, sonra kaydedin. Diğer oynatıcılar da değişikliği görür.',
+    lyricsOffsetSave: 'Kaydet',
+    lyricsOffsetReset: 'Sıfırla',
+    lyricsOffsetSaved: 'Söz zamanlaması kaydedildi',
+    lyricsOffsetFailed: 'Söz zamanlaması kaydedilemedi',
     cannotPlay: 'Bu dosya çalınamıyor.',
     sleepTimer: 'Uyku zamanlayıcısı',
     sleepMinutes: {
@@ -2631,6 +2641,7 @@ export default {
       delete: 'Silinen dosyalar',
       audio_replaced: 'Değiştirilen sesler',
       album_compilation: 'İşaretlenen derlemeler',
+      lyrics_offset: 'Söz zamanlaması ayarlandı',
       library_hidden: 'Kullanıcılardan gizlenen öğeler',
       library_shown: 'Kullanıcılara gösterilen öğeler',
       device_paired: 'Eşlenen uygulamalar',
@@ -2653,6 +2664,7 @@ export default {
       audio_replaced: 'şunun sesini değiştirdi: {what}',
       album_compilation:
         '{what} albümünün Çeşitli Sanatçılar derlemesi olup olmadığını değiştirdi',
+      lyrics_offset: '{what} için söz zamanlamasını ayarladı',
       library_hidden: '{what} öğesini kullanıcılardan gizledi',
       library_shown: '{what} öğesini kullanıcılara gösterdi',
       device_paired: 'eşledi: {what}',

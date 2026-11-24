@@ -1267,6 +1267,17 @@ export default {
     noLyricsHint:
       'Activez « Télécharger les paroles » dans les paramètres pour les enregistrer avec les prochains téléchargements.',
     lyricsNotSynced: 'Ces paroles ne sont pas synchronisées.',
+    lyricsTiming: 'Ajuster la synchronisation des paroles',
+    lyricsSooner: 'Afficher les paroles plus tôt',
+    lyricsLater: 'Afficher les paroles plus tard',
+    lyricsOffsetValue: '{value} s',
+    lyricsOffsetHint:
+      'Décalez les paroles jusqu’à ce qu’elles suivent le chant, puis enregistrez. Les autres lecteurs verront aussi la modification.',
+    lyricsOffsetSave: 'Enregistrer',
+    lyricsOffsetReset: 'Réinitialiser',
+    lyricsOffsetSaved: 'Synchronisation des paroles enregistrée',
+    lyricsOffsetFailed:
+      'Impossible d’enregistrer la synchronisation des paroles',
     cannotPlay: 'Ce fichier ne peut pas être lu.',
     sleepTimer: 'Minuterie de veille',
     sleepMinutes: { one: 'Dans {count} minute', other: 'Dans {count} minutes' },
@@ -2692,6 +2703,7 @@ export default {
       delete: 'Fichiers supprimés',
       audio_replaced: 'Audios remplacés',
       album_compilation: 'Compilations marquées',
+      lyrics_offset: 'Synchronisation des paroles ajustée',
       library_hidden: 'Éléments masqués aux utilisateurs',
       library_shown: 'Éléments affichés aux utilisateurs',
       device_paired: 'Applis associées',
@@ -2714,6 +2726,7 @@ export default {
       audio_replaced: 'a remplacé l’audio de {what}',
       album_compilation:
         'a changé si {what} est une compilation d’Artistes divers',
+      lyrics_offset: 'a ajusté la synchronisation des paroles de {what}',
       library_hidden: 'a masqué {what} aux utilisateurs',
       library_shown: 'a affiché {what} aux utilisateurs',
       device_paired: 'a associé {what}',

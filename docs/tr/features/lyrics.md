@@ -61,6 +61,17 @@ Eşzamanlı sözler olduğunda Downtify ayrıca bir `.lrc` dosyası kaydeder. Va
 
 Parçayı Kitaplık sayfasından silmek, `.lrc` dosyasını (dosyanın yanındakini ve ayrılmış klasördekini) sesle birlikte kaldırır; böylece sözler hiçbir zaman sahipsiz bir dosya olarak kalmaz.
 
+## Zamanlamayı ayarlama
+
+İnternette bulunan sözler bazen indirilen sese göre biraz erken ya da geç kalır: şarkının başka bir versiyonu, daha uzun bir giriş. Bir şarkıyı düzeltmek için onu çalın, **Şimdi çalıyor → Şarkı sözleri** bölümünü açın ve sözlerin sağ üstündeki kronometre düğmesine, **Söz zamanlamasını ayarla** düğmesine basın:
+
+- **−** sözleri daha erken, **+** daha geç gösterir; her basışta saniyenin onda biri, her iki yönde en fazla bir dakika. Sözler yeni zamanlamayı hemen izler, böylece şarkı çalarken deneyebilirsiniz.
+- **Kaydet** ayarı şarkının dosyalarına yazar; **Sıfırla** kayıtlı zamanlamaya döner.
+
+Kaydetmek zaman damgalarının kendisini yeniden yazar: `.lrc` dosyasında ve dosyanın etiketlerinde zamanlı sözler varsa onlarda da (MP3 `SYLT` çerçeveleri dahil). Böylece düzeltme `.lrc` dosyasını ya da etiketleri okuyan diğer oynatıcılarda ve uygulamalarda da görünür. Salt okunur bir dosya etiketlerini korur; yalnızca `.lrc` değişir. Bir `.lrc` içindeki `[offset:N]` satırı kaydederken zamanlara katılır; Downtify oynatıcısı ise ona o zamana kadar da uyar.
+
+Düğme yalnızca zamanlı sözleri olan kütüphane şarkılarında görünür. Oturum açmış her kullanıcı ayarlayabilir; değişiklik [etkinlik günlüğünde](users.md#activity) **Söz zamanlaması ayarlandı** olarak görünür. Endpoint: [`POST /api/library/lyrics/offset`](../api-reference.md#post-apilibrarylyricsoffset).
+
 ## Hiçbir şey bulunamazsa
 
 Hiçbir sağlayıcıda şarkı yoksa indirme normal şekilde sürer — ses dosyası sözsüz kaydedilir ve hata oluşmaz.

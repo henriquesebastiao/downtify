@@ -1252,6 +1252,16 @@ export default {
     noLyricsHint:
       'Ενεργοποίησε τη «Λήψη στίχων» στις Ρυθμίσεις για να αποθηκεύονται με τις νέες λήψεις.',
     lyricsNotSynced: 'Αυτοί οι στίχοι δεν είναι συγχρονισμένοι.',
+    lyricsTiming: 'Ρύθμιση συγχρονισμού στίχων',
+    lyricsSooner: 'Εμφάνιση στίχων νωρίτερα',
+    lyricsLater: 'Εμφάνιση στίχων αργότερα',
+    lyricsOffsetValue: '{value} s',
+    lyricsOffsetHint:
+      'Μετακινήστε τους στίχους μέχρι να ταιριάζουν με το τραγούδι και αποθηκεύστε. Η αλλαγή φαίνεται και σε άλλες εφαρμογές αναπαραγωγής.',
+    lyricsOffsetSave: 'Αποθήκευση',
+    lyricsOffsetReset: 'Επαναφορά',
+    lyricsOffsetSaved: 'Ο συγχρονισμός στίχων αποθηκεύτηκε',
+    lyricsOffsetFailed: 'Δεν ήταν δυνατή η αποθήκευση του συγχρονισμού στίχων',
     cannotPlay: 'Αυτό το αρχείο δεν μπορεί να αναπαραχθεί.',
     sleepTimer: 'Χρονοδιακόπτης ύπνου',
     sleepMinutes: { one: 'Σε {count} λεπτό', other: 'Σε {count} λεπτά' },
@@ -2678,6 +2688,7 @@ export default {
       delete: 'Διαγραμμένα αρχεία',
       audio_replaced: 'Αντικαταστάσεις ήχου',
       album_compilation: 'Συλλογές που σημειώθηκαν',
+      lyrics_offset: 'Προσαρμογές συγχρονισμού στίχων',
       library_hidden: 'Στοιχεία που κρύφτηκαν από τους χρήστες',
       library_shown: 'Στοιχεία που εμφανίστηκαν στους χρήστες',
       device_paired: 'Συνδεδεμένες εφαρμογές',
@@ -2700,6 +2711,7 @@ export default {
       audio_replaced: 'αντικατέστησε τον ήχο του {what}',
       album_compilation:
         'άλλαξε αν το {what} είναι συλλογή Διαφόρων καλλιτεχνών',
+      lyrics_offset: 'ρύθμισε τον συγχρονισμό στίχων του {what}',
       library_hidden: 'έκρυψε το {what} από τους χρήστες',
       library_shown: 'εμφάνισε το {what} στους χρήστες',
       device_paired: 'σύνδεσε {what}',

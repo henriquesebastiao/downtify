@@ -1240,6 +1240,16 @@ export default {
     noLyricsHint:
       'Kapcsold be a „Dalszövegek letöltése” opciót a Beállításokban, hogy az új letöltésekkel mentődjenek.',
     lyricsNotSynced: 'Ez a dalszöveg nincs időzítve.',
+    lyricsTiming: 'Dalszöveg időzítésének igazítása',
+    lyricsSooner: 'Dalszöveg korábban',
+    lyricsLater: 'Dalszöveg később',
+    lyricsOffsetValue: '{value} mp',
+    lyricsOffsetHint:
+      'Told el a dalszöveget, amíg együtt nem halad az énekkel, majd mentsd. Más lejátszók is látják a változást.',
+    lyricsOffsetSave: 'Mentés',
+    lyricsOffsetReset: 'Visszaállítás',
+    lyricsOffsetSaved: 'Dalszöveg időzítése mentve',
+    lyricsOffsetFailed: 'Nem sikerült menteni a dalszöveg időzítését',
     cannotPlay: 'Ez a fájl nem játszható le.',
     sleepTimer: 'Elalvási időzítő',
     sleepMinutes: { one: '{count} perc múlva', other: '{count} perc múlva' },
@@ -2652,6 +2662,7 @@ export default {
       delete: 'Törölt fájlok',
       audio_replaced: 'Lecserélt hangok',
       album_compilation: 'Megjelölt válogatások',
+      lyrics_offset: 'Dalszöveg-időzítések igazítva',
       library_hidden: 'A felhasználók elől elrejtett elemek',
       library_shown: 'A felhasználóknak megjelenített elemek',
       device_paired: 'Párosított alkalmazások',
@@ -2674,6 +2685,7 @@ export default {
       audio_replaced: 'lecserélte ennek a hangját: {what}',
       album_compilation:
         'módosította, hogy a(z) {what} Különböző előadók válogatás-e',
+      lyrics_offset: 'igazította {what} dalszövegének időzítését',
       library_hidden: 'elrejtette a felhasználók elől: {what}',
       library_shown: 'megjelenítette a felhasználóknak: {what}',
       device_paired: 'párosította: {what}',

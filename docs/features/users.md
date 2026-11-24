@@ -158,7 +158,7 @@ To turn off username/password login for both the web page and the app's password
 **Settings → Activity** (admins) shows, like Jellyfin's dashboard:
 
 - **Playing now** — what each browser and app is playing, by whom, where it is in the song, and whether it's paused. It refreshes every few seconds.
-- **History** — sign-ins (and failed ones, with the address they came from), sign-outs, songs played, downloads, likes, deleted files, songs hidden from or shown to users, apps paired and unpaired, accounts added, changed or deleted, passwords and settings changed. Filter by user or by kind. Saved settings are listed by name only, never their values. Entries are kept for 90 days.
+- **History** — sign-ins (and failed ones, with the address they came from), sign-outs, songs played, downloads, likes, deleted files, lyrics timing adjusted, songs hidden from or shown to users, apps paired and unpaired, accounts added, changed or deleted, passwords and settings changed. Filter by user or by kind. Saved settings are listed by name only, never their values. Entries are kept for 90 days.
 
 Apps report what they play too — see the [mobile client contract](../mobile-client-contract.md#8-report-plays).
 
