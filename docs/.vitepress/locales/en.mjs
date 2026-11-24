@@ -131,6 +131,7 @@ export default {
       'features/support-artists.md': 'Support the Artist',
       'features/file-organization.md': 'File Organization',
       'features/lyrics.md': 'Lyrics',
+      'features/music-videos.md': 'Music Videos',
       'features/explicit-marker.md': 'Explicit Marker',
       'features/youtube-cookies.md': 'YouTube Cookies',
       'features/internationalization.md': 'Internationalization',

@@ -364,6 +364,10 @@ downloads are shared, and files are never stored twice.
    short-lived direct URL - ``?video_id=`` - for third-party clients;
    the web player behind a song that isn't downloaded yet uses
    ``/api/stream/file`` below instead - see ``downtify.stream``)
+ * ``GET  /api/music-video`` (``?file=`` a library song: ``{video,
+   url}`` for its saved music video, ``404`` when it has none) and ``GET
+   /api/music-video/file`` (``?file=``: that video, seekable) - see
+   ``downtify/music_video.py``
  * ``GET  /api/stream/file`` (that same audio downloaded once into
    ``/data/stream_cache`` and served from this server with seeking
    support - ``?video_id=``; what the web player streams, so playback
@@ -435,7 +439,7 @@ from typing import (
     Iterable,
     Optional,
 )
-from urllib.parse import quote
+from urllib.parse import quote, urlencode
 
 from fastapi import (
     APIRouter,
@@ -471,6 +475,7 @@ from . import (
     library_visibility,
     lyrics,
     m3u,
+    music_video,
     musicbrainz,
     navidrome_ratings,
     notifications,
@@ -562,6 +567,7 @@ from .library_catalog import (
     merge_library_listing_file,
     refresh_library_listing_files,
     resolve_library_file,
+    resolve_library_video,
 )
 from .library_delete import (
     delete_library_files,
@@ -778,6 +784,11 @@ DEFAULT_SETTINGS: dict[str, Any] = {
     'avoid_formats': [],
     'output': '{artists} - {title}.{output-ext}',
     'generate_m3u': True,
+    # Save each downloaded song's music video next to it (issue #680,
+    # downtify/music_video.py), named by ``music_video_name``.
+    'download_music_videos': False,
+    'music_video_name': music_video.DEFAULT_NAME,
+    'music_video_format': music_video.DEFAULT_FORMAT,
     'download_cover_art_playlists': True,
     # Whether Downtify may save an artist's photo/banner on its own: when
     # their Library page is first opened and when one of their tracks
@@ -1397,6 +1408,7 @@ class AppState:
     external_sync: Optional[ExternalSyncJob] = None
     likes: Optional[LikedTracks] = None
     track_owners: Optional[TrackOwners] = None
+    music_videos: Optional[music_video.MusicVideos] = None
     storage_quotas: Optional[StorageQuotas] = None
     library_visibility: Optional[LibraryVisibility] = None
     manual_playlist_owners: Optional[ManualPlaylistOwners] = None
@@ -5147,8 +5159,96 @@ async def _record_finished_download(
     except Exception:
         logger.exception('Could not register {} in the library', filename)
         return
+    schedule_music_video(song, filename)
     if refresh_playlists and affected:
         await _schedule_playlist_refresh_after_download(affected)
+
+
+def _fetch_music_video(song: dict[str, Any], stored: str) -> Optional[str]:
+    """Blocking body of :func:`schedule_music_video`; never raises."""
+
+    downloader = state.downloader
+    store = state.music_videos
+    if downloader is None or store is None:
+        return None
+    try:
+        ctx = library_context()
+        full = locate_library_file(
+            stored, ctx.download_dir, ctx.slskd_dir, ctx.extra_dirs
+        )
+        if full is None:
+            return None
+        return music_video.fetch_for_track(
+            song=song,
+            stored=stored,
+            full=full,
+            downloader=downloader,
+            store=store,
+            settings=state.settings,
+            stored_of=lambda path: library_stored_path(
+                path, ctx.download_dir, ctx.slskd_dir, ctx.extra_dirs
+            ),
+        )
+    except Exception as exc:
+        logger.warning('Could not save the music video of {}: {}', stored, exc)
+        return None
+
+
+def schedule_music_video(song: dict[str, Any], stored: str) -> bool:
+    """With *Download music videos* on, queue the music video of the
+    song just saved at *stored* (one at a time, apart from the download
+    queue). Whether one was queued."""
+
+    if not state.settings.get('download_music_videos') or not stored:
+        return False
+    if state.music_videos is None or 'replace' in song:
+        return False
+    music_video.executor().submit(_fetch_music_video, dict(song), stored)
+    return True
+
+
+@router.get('/api/music-video')
+def get_music_video(
+    request: Request, file: str = Query(...)
+) -> dict[str, Any]:
+    """The music video saved for the library song *file*: ``{video,
+    url, crop}`` (``url`` streams it; ``crop`` is the picture's box when
+    black bars are burnt into it, else ``null``), ``404`` when it has
+    none. A video saved before its bars were measured is measured now."""
+
+    store = state.music_videos
+    ctx = library_context()
+    if store is None or resolve_library_file(file, ctx) is None:
+        raise HTTPException(status_code=404, detail='No music video')
+    video = store.get(file)
+    full = resolve_library_video(video, ctx) if video else None
+    if full is None:
+        raise HTTPException(status_code=404, detail='No music video')
+    crop = store.crop(file)
+    if not crop:
+        crop = music_video.format_crop(music_video.detect_crop(full))
+        store.set_crop(file, crop)
+    return {
+        'video': video,
+        'url': '/api/music-video/file?' + urlencode({'file': file}),
+        'crop': music_video.parse_crop(crop),
+    }
+
+
+@router.get('/api/music-video/file')
+def stream_music_video(file: str = Query(...)) -> FileResponse:
+    """The music video of the library song *file* (seekable)."""
+
+    store = state.music_videos
+    ctx = library_context()
+    video = store.get(file) if store is not None else None
+    full = resolve_library_video(video, ctx) if video else None
+    if full is None or resolve_library_file(file, ctx) is None:
+        raise HTTPException(status_code=404, detail='No music video')
+    return FileResponse(
+        full,
+        media_type=mimetypes.guess_type(str(full))[0] or 'video/mp4',
+    )
 
 
 @router.post('/api/download/url')
@@ -9896,6 +9996,12 @@ async def update_settings_endpoint(
                 })
             elif key == 'lyrics_lrc_beside':
                 state.settings[key] = lyrics.coerce_bool(raw_value, True)
+            elif key == 'download_music_videos':
+                state.settings[key] = raw_value is True
+            elif key == 'music_video_name':
+                state.settings[key] = music_video.clean_template(raw_value)
+            elif key == 'music_video_format':
+                state.settings[key] = music_video.clean_format(raw_value)
             elif key == 'lyrics_lrc_dir':
                 state.settings[key] = str(raw_value or '').strip()
             else:

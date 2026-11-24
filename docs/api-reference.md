@@ -2420,6 +2420,18 @@ Where to buy a song, an album or an artist's music, to support them — the **Su
 
 ## Streaming
 
+### `GET /api/music-video`
+
+Client. The music video saved for a library song (see [Music Videos](features/music-videos.md)): `?file=` the song's library path. **Response:** `{ "video": "Artist/Album/03 - Song-video.mp4", "url": "/api/music-video/file?file=…", "crop": { "width": 464, "height": 360, "x": 88, "y": 0, "video_width": 640, "video_height": 360 } }` — `crop` is the picture's box when black bars are burnt into the video (measured with ffmpeg the first time it is asked for, if not when it was saved), `null` when there are none; `404` when the song has none (or isn't in the library, or is hidden from you).
+
+---
+
+### `GET /api/music-video/file`
+
+Client. That video itself (`?file=` the song's library path, not the video's), with `Range` support for seeking. `404` as above.
+
+---
+
 ### `GET /api/stream/file`
 
 A track's full audio, downloaded once into `/data/stream_cache` and served from this server with seeking support — what plays in the built-in player when the song behind a row isn't downloaded yet. This is what keeps playback working where the browser itself can't reach YouTube (or only slowly): the only YouTube traffic is server-side, and the second play of a track never touches YouTube at all.
@@ -3434,7 +3446,7 @@ Your own account, every account (admins), and what everyone does — see [Users 
 
 ### `GET /api/me`
 
-Client. Who is signed in, and their preferences: `{ "user": { … }, "preferences": { "theme": "dark", "locale": "pt-BR", "show_lyrics": true, "search_albums": false, "show_public_playlists": true }, "playlist_sharing": true }` — a preference not set yet is missing. `playlist_sharing` is whether the admin lets users [share playlists](features/users.md#sharing-playlists).
+Client. Who is signed in, and their preferences: `{ "user": { … }, "preferences": { "theme": "dark", "locale": "pt-BR", "show_lyrics": true, "play_videos": true, "search_albums": false, "show_public_playlists": true }, "playlist_sharing": true }` — a preference not set yet is missing. `playlist_sharing` is whether the admin lets users [share playlists](features/users.md#sharing-playlists).
 
 ---
 
@@ -3452,7 +3464,7 @@ User. Change your password: `{ "current_password": "…", "new_password": "…" 
 
 ### `GET /api/me/preferences` · `PUT /api/me/preferences`
 
-User. Your preferences (Settings → General): `theme` (`dark`/`light`/`system`), `locale`, `show_lyrics`, `search_albums`, `show_public_playlists` (other people's public playlists in your lists; on unless set to `false`, and the playlists you follow show either way). `PUT` merges what it's sent into them and answers the result; other keys are ignored. `search_albums: false` makes `GET /api/albums/search` answer `[]` for you, whatever the server's setting.
+User. Your preferences (Settings → General): `theme` (`dark`/`light`/`system`), `locale`, `show_lyrics`, `play_videos` (show a song's [music video](features/music-videos.md) in Now playing), `search_albums`, `show_public_playlists` (other people's public playlists in your lists; on unless set to `false`, and the playlists you follow show either way). `PUT` merges what it's sent into them and answers the result; other keys are ignored. `search_albums: false` makes `GET /api/albums/search` answer `[]` for you, whatever the server's setting.
 
 ---
 

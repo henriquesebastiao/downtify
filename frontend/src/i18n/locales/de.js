@@ -1790,6 +1790,19 @@ export default {
     showLyrics: 'Songtexte im Player anzeigen',
     showLyricsHint:
       'Deaktiviere die Option, um das Songtextfeld, die Schaltfläche und den Tastaturkurzbefehl auszublenden. Songtexte bleiben in deinen Dateien und werden weiterhin heruntergeladen.',
+    playVideos: 'Musikvideos abspielen',
+    playVideosHint:
+      'Hat ein Song ein Musikvideo, zeigt „Wiedergabe“ es abgedunkelt und ohne Ton im Hintergrund – Cover, Songtext und Song bleiben, wie sie sind.',
+    musicVideosGroup: 'Musikvideos',
+    musicVideos: 'Musikvideos herunterladen',
+    musicVideosHint:
+      'Speichert das offizielle Musikvideo jedes heruntergeladenen Songs im selben Ordner, für Plex, Jellyfin und den Player. Videos werden nacheinander nach dem Song geholt, bis 1080p.',
+    musicVideoName: 'Dateiname des Videos',
+    musicVideoNameHint:
+      'Ohne Endung. Variablen: {variables}. Standard ist der Dateiname des Songs plus „-video“ – so verknüpft Plex ein Video mit seinem Titel.',
+    musicVideoFormat: 'Videoformat',
+    musicVideoFormatHint:
+      'MP4 läuft überall. Wähle MKV, wenn dein Medienserver MP4-Videos als Songs auflistet.',
     searchGroup: 'Suche',
     playlistsGroup: 'Playlists',
     showPublicPlaylists: 'Öffentliche Playlists anzeigen',

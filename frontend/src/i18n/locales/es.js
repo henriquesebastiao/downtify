@@ -1766,6 +1766,19 @@ export default {
     showLyrics: 'Mostrar letras en el reproductor',
     showLyricsHint:
       'Desactívalo para ocultar el panel de letras, su botón y su atajo. Tus archivos conservan las letras y las descargas siguen buscándolas.',
+    playVideos: 'Reproducir videoclips',
+    playVideosHint:
+      'Cuando una canción tiene videoclip, Reproduciendo lo muestra de fondo, oscurecido y sin sonido: la portada, la letra y la canción siguen igual.',
+    musicVideosGroup: 'Videoclips',
+    musicVideos: 'Descargar videoclips',
+    musicVideosHint:
+      'Guarda el videoclip oficial de cada canción descargada en la misma carpeta, para Plex, Jellyfin y el reproductor. Los vídeos se buscan de uno en uno después de la canción, hasta 1080p.',
+    musicVideoName: 'Nombre del archivo de vídeo',
+    musicVideoNameHint:
+      'Sin la extensión. Variables: {variables}. El predeterminado, el nombre del archivo de la canción más «-video», es como Plex vincula un vídeo a su pista.',
+    musicVideoFormat: 'Formato de vídeo',
+    musicVideoFormatHint:
+      'MP4 se reproduce en todas partes. Elige MKV si tu servidor multimedia muestra los vídeos MP4 como canciones.',
     searchGroup: 'Búsqueda',
     playlistsGroup: 'Playlists',
     showPublicPlaylists: 'Mostrar playlists públicas',

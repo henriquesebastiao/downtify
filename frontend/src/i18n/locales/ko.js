@@ -1728,6 +1728,19 @@ export default {
     showLyrics: '플레이어에 가사 표시',
     showLyricsHint:
       '비활성화하면 가사 패널, 버튼, 단축키가 숨겨집니다. 파일에 포함된 가사는 유지되며 새 다운로드 시에도 정상적으로 수집됩니다.',
+    playVideos: '뮤직비디오 재생',
+    playVideosHint:
+      '곡에 뮤직비디오가 있으면 현재 재생 중 화면의 배경으로 어둡게, 소리 없이 보여 줍니다. 커버, 가사, 곡은 그대로입니다.',
+    musicVideosGroup: '뮤직비디오',
+    musicVideos: '뮤직비디오 다운로드',
+    musicVideosHint:
+      '다운로드한 각 곡의 공식 뮤직비디오를 같은 폴더에 저장합니다. Plex, Jellyfin, 플레이어용입니다. 비디오는 곡 다음에 하나씩, 최대 1080p로 받습니다.',
+    musicVideoName: '비디오 파일 이름',
+    musicVideoNameHint:
+      '확장자 제외. 변수: {variables}. 기본값은 곡 파일 이름 뒤에 “-video”를 붙인 것으로, Plex가 비디오를 트랙에 연결하는 방식입니다.',
+    musicVideoFormat: '비디오 형식',
+    musicVideoFormatHint:
+      'MP4는 어디서나 재생됩니다. 미디어 서버가 MP4 비디오를 곡으로 표시하면 MKV를 고르세요.',
     searchGroup: '검색',
     playlistsGroup: '재생목록',
     showPublicPlaylists: '공개 재생목록 표시',

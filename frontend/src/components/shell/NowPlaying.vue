@@ -15,6 +15,10 @@
           :palette="palette"
           :karaoke="isKaraoke"
           :playing="player.isPlaying.value"
+          :video="videoURL"
+          :crop="videoCrop"
+          :player="player"
+          @video-failed="videoURL = ''"
         />
 
         <div
@@ -573,6 +577,7 @@ import NowPlayingTrackInfo from '../player/NowPlayingTrackInfo.vue'
 import EqualizerPanel from '../player/EqualizerPanel.vue'
 import KaraokeUpNext from '../player/KaraokeUpNext.vue'
 import NowPlayingBackdrop from '../player/NowPlayingBackdrop.vue'
+import { musicVideoCrop, useMusicVideo } from '/src/model/musicVideo'
 import { usePlayer } from '/src/model/player'
 import { useKaraokeStage } from '/src/model/karaokeStage'
 import { useDownloadManager, useProgressTracker } from '/src/model/download'
@@ -600,7 +605,7 @@ const library = useLibrary()
 const dm = useDownloadManager()
 const tracker = useProgressTracker()
 const ui = useUi()
-const { showLyrics, showUpNext } = usePlayerPrefs()
+const { showLyrics, showUpNext, playVideos } = usePlayerPrefs()
 const nowPlaying = useNowPlaying()
 const buyLinks = useBuyLinks()
 const route = useRoute()
@@ -633,6 +638,12 @@ function goSimilar() {
   router.push({ name: 'Similar', query: { artist, track: title } })
 }
 const palette = useCoverPalette(track)
+// The playing song's music video (Settings > General > Play music videos).
+// Shown as the view's background, behind a dark veil (NowPlayingBackdrop).
+const videoURL = useMusicVideo(track, () => playVideos.value !== false)
+const videoCrop = computed(() =>
+  videoURL.value ? musicVideoCrop(track.value?.file) : null
+)
 
 const PANEL_TABS = {
   lyrics: { icon: 'lyrics', label: 'player.lyrics' },

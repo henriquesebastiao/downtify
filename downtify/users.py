@@ -68,6 +68,8 @@ PREFERENCES: dict[str, type] = {
     'theme': str,
     'locale': str,
     'show_lyrics': bool,
+    # Show a song's music video in Now playing (issue #680).
+    'play_videos': bool,
     'normalize_volume': bool,
     'search_albums': bool,
     'show_public_playlists': bool,

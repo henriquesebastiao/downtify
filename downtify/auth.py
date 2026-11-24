@@ -1096,6 +1096,8 @@ RULES: list[tuple[frozenset[str], re.Pattern[str], str]] = [
             CLIENT,
         ),
         (_READ, r'^/api/stream/file$', CLIENT),
+        # A song's music video (downtify/music_video.py).
+        (_READ, r'^/api/music-video(/file)?$', CLIENT),
         (_m('POST'), r'^/api/stream/prefetch$', CLIENT),
         (_m('POST'), r'^/api/download/(url|batch|album)$', CLIENT),
         (_READ, r'^/api/queue(/state)?$', CLIENT),

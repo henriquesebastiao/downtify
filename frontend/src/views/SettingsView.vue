@@ -115,6 +115,15 @@
                   :aria-label="t('settings.showLyrics')"
                 />
               </SettingRow>
+              <SettingRow
+                :label="t('settings.playVideos')"
+                :description="t('settings.playVideosHint')"
+              >
+                <UiSwitch
+                  v-model="playVideos"
+                  :aria-label="t('settings.playVideos')"
+                />
+              </SettingRow>
             </SettingGroup>
             <NormalizationSettings />
             <SettingGroup :title="t('settings.playlistsGroup')">
@@ -709,6 +718,51 @@
                 <UiSwitch
                   v-model="s.download_cover_art_artist_banner"
                   :aria-label="t('settings.artistCoverBanner')"
+                />
+              </SettingRow>
+            </SettingGroup>
+
+            <!-- Music videos (issue #680, downtify/music_video.py) -->
+            <SettingGroup :title="t('settings.musicVideosGroup')">
+              <SettingRow
+                :label="t('settings.musicVideos')"
+                :description="t('settings.musicVideosHint')"
+              >
+                <UiSwitch
+                  v-model="s.download_music_videos"
+                  :aria-label="t('settings.musicVideos')"
+                />
+              </SettingRow>
+              <SettingRow
+                v-if="s.download_music_videos"
+                :label="t('settings.musicVideoName')"
+                :description="
+                  t('settings.musicVideoNameHint', {
+                    variables: MUSIC_VIDEO_VARIABLES,
+                  })
+                "
+                stacked
+              >
+                <UiInput
+                  v-model="s.music_video_name"
+                  class="w-full"
+                  mono
+                  :aria-label="t('settings.musicVideoName')"
+                  placeholder="{filename}-video"
+                />
+              </SettingRow>
+              <SettingRow
+                v-if="s.download_music_videos"
+                :label="t('settings.musicVideoFormat')"
+                :description="t('settings.musicVideoFormatHint')"
+              >
+                <UiSegmented
+                  v-model="s.music_video_format"
+                  show-labels
+                  :options="[
+                    { value: 'mp4', label: 'MP4' },
+                    { value: 'mkv', label: 'MKV' },
+                  ]"
                 />
               </SettingRow>
             </SettingGroup>
@@ -1408,7 +1462,17 @@ const sm = useSettingsManager()
 const auth = useAuth()
 const account = useAccount()
 const theme = useTheme()
-const { showLyrics } = usePlayerPrefs()
+const { showLyrics, playVideos } = usePlayerPrefs()
+// What a music video's file name may use (downtify/music_video.py).
+const MUSIC_VIDEO_VARIABLES = [
+  'filename',
+  'title',
+  'artist',
+  'album',
+  'track_number',
+]
+  .map((name) => `{${name}}`)
+  .join(' ')
 const ui = useUi()
 const player = usePlayer()
 const update = useUpdateCheck().status

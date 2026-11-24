@@ -3605,3 +3605,33 @@ def playlist_cover_url_from_id(playlist_id: str) -> str:
     thumbs = data.get('thumbnails') or []
     cover = thumbs[-1].get('url', '') if thumbs else ''
     return _resize_thumbnail(cover, _PLAYLIST_COVER_SIZE)
+
+
+# ── Music videos (downtify/music_video.py) ──────────────────────────────
+
+
+def search_music_videos(query: str, limit: int = 20) -> list[dict[str, Any]]:
+    """YouTube Music's video results for *query* (empty on failure)."""
+
+    try:
+        rows = _ytm().search(query, filter='videos', limit=limit)
+    except Exception:
+        logger.opt(exception=True).warning('Music video search failed')
+        return []
+    return [row for row in rows or [] if isinstance(row, dict)]
+
+
+def titles_match(target: Any, candidate: Any) -> bool:
+    """Whether two titles name the same recording (the audio match's
+    rule, :func:`_titles_match`)."""
+
+    return _titles_match(target, candidate)
+
+
+def artists_overlap(
+    target_artists: Optional[list[str]], result: dict[str, Any]
+) -> bool:
+    """Whether *result* credits one of *target_artists*
+    (:func:`_artists_overlap`)."""
+
+    return _artists_overlap(target_artists, result)

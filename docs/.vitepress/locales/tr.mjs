@@ -123,6 +123,7 @@ export default {
       'features/support-artists.md': 'Sanatçıyı destekle',
       'features/file-organization.md': 'Dosya düzeni',
       'features/lyrics.md': 'Şarkı sözleri',
+      'features/music-videos.md': 'Müzik videoları',
       'features/explicit-marker.md': 'Müstehcen içerik işareti',
       'features/youtube-cookies.md': 'YouTube çerezleri',
       'features/internationalization.md': 'Uluslararasılaştırma',

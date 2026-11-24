@@ -1785,6 +1785,19 @@ export default {
     showLyrics: 'Afficher les paroles dans le lecteur',
     showLyricsHint:
       'Désactivez pour masquer le panneau des paroles, son bouton et son raccourci. Vos fichiers conservent leurs paroles et les téléchargements continuent de les chercher.',
+    playVideos: 'Lire les clips',
+    playVideosHint:
+      'Quand un titre a un clip, Lecture en cours l’affiche en arrière-plan, assombri et sans le son — la pochette, les paroles et le titre restent tels quels.',
+    musicVideosGroup: 'Clips vidéo',
+    musicVideos: 'Télécharger les clips',
+    musicVideosHint:
+      'Enregistre le clip officiel de chaque titre téléchargé dans le même dossier, pour Plex, Jellyfin et le lecteur. Les vidéos sont récupérées une à une après le titre, jusqu’en 1080p.',
+    musicVideoName: 'Nom du fichier vidéo',
+    musicVideoNameHint:
+      'Sans l’extension. Variables : {variables}. Par défaut, le nom du fichier du titre suivi de « -video » : c’est ainsi que Plex lie une vidéo à sa piste.',
+    musicVideoFormat: 'Format vidéo',
+    musicVideoFormatHint:
+      'Le MP4 se lit partout. Choisissez MKV si votre serveur multimédia affiche les vidéos MP4 comme des titres.',
     searchGroup: 'Recherche',
     playlistsGroup: 'Playlists',
     showPublicPlaylists: 'Afficher les playlists publiques',

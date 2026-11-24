@@ -27,11 +27,12 @@ let started = false
 
 function current() {
   const theme = useTheme()
-  const { showLyrics, normalizeVolume } = usePlayerPrefs()
+  const { showLyrics, normalizeVolume, playVideos } = usePlayerPrefs()
   return {
     theme: theme.mode.value,
     locale: currentLocale.value,
     show_lyrics: showLyrics.value,
+    play_videos: playVideos.value,
     normalize_volume: normalizeVolume.value,
     search_albums: searchAlbums.value,
     show_public_playlists: showPublicPlaylists.value,
@@ -40,12 +41,14 @@ function current() {
 
 function apply(prefs) {
   const theme = useTheme()
-  const { showLyrics, normalizeVolume } = usePlayerPrefs()
+  const { showLyrics, normalizeVolume, playVideos } = usePlayerPrefs()
   if (prefs.theme) theme.setMode(prefs.theme)
   if (prefs.locale && prefs.locale !== currentLocale.value)
     setLocale(prefs.locale)
   if (typeof prefs.show_lyrics === 'boolean')
     showLyrics.value = prefs.show_lyrics
+  if (typeof prefs.play_videos === 'boolean')
+    playVideos.value = prefs.play_videos
   if (typeof prefs.normalize_volume === 'boolean')
     normalizeVolume.value = prefs.normalize_volume
   if (typeof prefs.search_albums === 'boolean')
@@ -80,12 +83,13 @@ async function start() {
   // An account without them adopts this browser's.
   if (Object.keys(prefs).length < 4) save()
   const theme = useTheme()
-  const { showLyrics, normalizeVolume } = usePlayerPrefs()
+  const { showLyrics, normalizeVolume, playVideos } = usePlayerPrefs()
   watch(
     [
       theme.mode,
       currentLocale,
       showLyrics,
+      playVideos,
       normalizeVolume,
       searchAlbums,
       showPublicPlaylists,

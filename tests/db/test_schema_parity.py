@@ -46,6 +46,7 @@ from downtify.likes import LikedTracks
 from downtify.loudness import LoudnessAnalyzer
 from downtify.lyrics_cache import LyricsLookupCache
 from downtify.monitor import PlaylistMonitorDB
+from downtify.music_video import MusicVideos
 from downtify.navidrome_index import NavidromeIndex
 from downtify.playlist_batches import PlaylistBatchStore
 from downtify.playlist_catalog import ManualPlaylistOwners, PlaylistCatalog
@@ -90,6 +91,7 @@ _LIBRARY_STORES: tuple[Callable[[Path], Any], ...] = (
     LikedTracks,
     TrackOwners,
     StorageQuotas,
+    MusicVideos,
     LibraryVisibility,
     CompilationMarks,
     PodcastStore,

@@ -1645,6 +1645,19 @@ export default {
     showLyrics: '在播放器中顯示歌詞',
     showLyricsHint:
       '關閉後會隱藏歌詞面板、按鈕和快速鍵。檔案中的歌詞不受影響，下載時仍會取得歌詞。',
+    playVideos: '播放音樂影片',
+    playVideosHint:
+      '歌曲有音樂影片時，「正在播放」會將其作為背景顯示，調暗且無聲；封面、歌詞和歌曲保持不變。',
+    musicVideosGroup: '音樂影片',
+    musicVideos: '下載音樂影片',
+    musicVideosHint:
+      '將每首已下載歌曲的官方音樂影片儲存在同一資料夾，供 Plex、Jellyfin 和播放器使用。影片在歌曲之後逐一下載，最高 1080p。',
+    musicVideoName: '影片檔名',
+    musicVideoNameHint:
+      '不含副檔名。變數：{variables}。預設是歌曲檔名加「-video」，這是 Plex 將影片連結到曲目的方式。',
+    musicVideoFormat: '影片格式',
+    musicVideoFormatHint:
+      'MP4 處處可播放。如果你的媒體伺服器把 MP4 影片列為歌曲，請選 MKV。',
     searchGroup: '搜尋',
     playlistsGroup: '播放清單',
     showPublicPlaylists: '顯示公開的播放清單',

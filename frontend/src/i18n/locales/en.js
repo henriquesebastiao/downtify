@@ -1712,6 +1712,19 @@ export default {
     showLyrics: 'Show lyrics in the player',
     showLyricsHint:
       'Turn off to hide the lyrics panel, its button and its shortcut. Your files keep their lyrics, and downloads still fetch them.',
+    playVideos: 'Play music videos',
+    playVideosHint:
+      'When a song has a music video, Now playing shows it as the background, darkened and without sound — the cover, the lyrics and the song stay as they are.',
+    musicVideosGroup: 'Music videos',
+    musicVideos: 'Download music videos',
+    musicVideosHint:
+      "Save each downloaded song's official music video in the same folder, for Plex, Jellyfin and the player. Videos are fetched one at a time after the song, up to 1080p.",
+    musicVideoName: 'Video file name',
+    musicVideoNameHint:
+      'Without the extension. Variables: {variables}. The default, the song’s file name plus “-video”, is how Plex links a video to its track.',
+    musicVideoFormat: 'Video format',
+    musicVideoFormatHint:
+      'MP4 plays everywhere. Pick MKV if your media server lists MP4 videos as songs.',
     searchGroup: 'Search',
     playlistsGroup: 'Playlists',
     showPublicPlaylists: 'Show public playlists',

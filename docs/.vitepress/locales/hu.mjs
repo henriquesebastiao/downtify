@@ -123,6 +123,7 @@ export default {
       'features/support-artists.md': 'Az előadó támogatása',
       'features/file-organization.md': 'Fájlszervezés',
       'features/lyrics.md': 'Dalszövegek',
+      'features/music-videos.md': 'Videoklipek',
       'features/explicit-marker.md': 'Explicit jelölés',
       'features/youtube-cookies.md': 'YouTube-sütik',
       'features/internationalization.md': 'Nemzetköziesítés',
