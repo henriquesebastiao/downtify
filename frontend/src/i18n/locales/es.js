@@ -1204,6 +1204,8 @@ export default {
       'Cambiar el tamaño de la sección de controles de reproducción',
     nowPlaying: 'Reproduciendo',
     openNowPlaying: 'Abrir reproducción actual',
+    moreControls: 'Más controles',
+    closePlayer: 'Cerrar reproductor',
     closeNowPlaying: 'Cerrar reproducción actual',
     queue: 'Cola',
     upNext: 'A continuación',

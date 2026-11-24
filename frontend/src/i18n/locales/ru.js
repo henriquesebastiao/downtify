@@ -1326,6 +1326,8 @@ export default {
     resizeTransportSection: 'Изменить размер блока с кнопками воспроизведения',
     nowPlaying: 'Играет сейчас',
     openNowPlaying: 'Открыть экран плеера',
+    moreControls: 'Другие элементы управления',
+    closePlayer: 'Закрыть плеер',
     closeNowPlaying: 'Закрыть экран плеера',
     queue: 'Очередь',
     upNext: 'Далее',

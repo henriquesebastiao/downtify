@@ -8,7 +8,7 @@ Downtify ships with a web player so you can listen to your downloaded music with
 
 ## Player bar
 
-While a track is loaded, a player bar floats at the bottom of every page: cover art, title and artist, shuffle, previous, play/pause, next, repeat, elapsed/total time, and shortcuts to the lyrics and up-next panels (the lyrics one can be [hidden](#hiding-the-lyrics)). On wide screens it also has a volume slider and a seek bar along its top edge; on phones it shrinks to the essentials and shows a thin progress line.
+While a track is loaded, a player bar floats at the bottom of every page: cover art, title and artist, shuffle, previous, play/pause, next, repeat, elapsed/total time, and shortcuts to the lyrics and up-next panels (the lyrics one can be [hidden](#hiding-the-lyrics)). On wide screens it also has a volume slider and a seek bar along its top edge; on phones it shows a thin progress line instead. Previous, play/pause, next and the volume always stay on the bar (phones use the device's volume buttons). When the bar is too narrow for the rest, they move into its **More controls** (⋯) menu one at a time, least used first: the close button, then finding similar songs, the in-library mark, lyrics, up next and Now playing, the like button, shuffle, repeat and lastly the time. In a very narrow bar the volume slider becomes a button that opens it.
 
 Next to the title there is a heart to [like the song](liked-songs.md); phones leave it out of the bar to keep room for the title, and have it in **Now playing** and in the track lists instead.
 

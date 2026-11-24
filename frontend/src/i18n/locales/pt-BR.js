@@ -1195,6 +1195,8 @@ export default {
     resizeTransportSection: 'Redimensionar a seção de controles de reprodução',
     nowPlaying: 'Tocando agora',
     openNowPlaying: 'Abrir tocando agora',
+    moreControls: 'Mais controles',
+    closePlayer: 'Fechar player',
     closeNowPlaying: 'Fechar tocando agora',
     queue: 'Fila',
     upNext: 'A seguir',

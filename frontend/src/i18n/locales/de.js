@@ -1222,6 +1222,8 @@ export default {
     resizeTransportSection: 'Größe der Wiedergabesteuerung ändern',
     nowPlaying: 'Wiedergabe',
     openNowPlaying: 'Wiedergabe öffnen',
+    moreControls: 'Weitere Steuerelemente',
+    closePlayer: 'Player schließen',
     closeNowPlaying: 'Wiedergabe schließen',
     queue: 'Warteschlange',
     upNext: 'Als Nächstes',

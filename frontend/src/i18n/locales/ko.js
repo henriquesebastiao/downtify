@@ -1186,6 +1186,8 @@ export default {
     resizeTransportSection: '재생 컨트롤 영역 크기 조절',
     nowPlaying: '현재 재생 중',
     openNowPlaying: '현재 재생 화면 열기',
+    moreControls: '더 많은 컨트롤',
+    closePlayer: '플레이어 닫기',
     closeNowPlaying: '현재 재생 화면 닫기',
     queue: '대기열',
     upNext: '다음 재생 곡',

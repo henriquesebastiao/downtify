@@ -1222,6 +1222,8 @@ export default {
       'Redimensionner la section des commandes de lecture',
     nowPlaying: 'Lecture en cours',
     openNowPlaying: 'Ouvrir la lecture en cours',
+    moreControls: 'Plus de commandes',
+    closePlayer: 'Fermer le lecteur',
     closeNowPlaying: 'Fermer la lecture en cours',
     queue: 'File',
     upNext: 'À suivre',
