@@ -1196,6 +1196,8 @@ export default {
     resizeTransportSection: 'Lejátszásvezérlők méretének módosítása',
     nowPlaying: 'Most szól',
     openNowPlaying: 'Most szóló megnyitása',
+    moreControls: 'További vezérlők',
+    closePlayer: 'Lejátszó bezárása',
     closeNowPlaying: 'Most szóló bezárása',
     queue: 'Sor',
     upNext: 'Következik',

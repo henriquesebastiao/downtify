@@ -2,7 +2,9 @@ import { computed, ref, shallowRef, watch } from 'vue'
 import { useResizeObserver } from '@vueuse/core'
 
 const defaultLayout = [0.3, 0.4, 0.3]
-const minimums = [156, 288, 300]
+// The utility section's floor holds its clock, three buttons, the volume
+// and the close button without clipping any of them (issue #552).
+const minimums = [156, 288, 340]
 const gutter = 16
 const utilityWidth = 72
 const fixedWidth =
@@ -164,6 +166,7 @@ export function useMiniPlayerLayout(bar, visible, preference) {
   )
 
   return {
+    width,
     wide,
     unlocked,
     grid,

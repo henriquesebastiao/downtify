@@ -1190,6 +1190,8 @@ export default {
     resizeTransportSection: 'Oynatma kontrolleri bölümünü yeniden boyutlandır',
     nowPlaying: 'Şimdi çalıyor',
     openNowPlaying: 'Şimdi çalanı aç',
+    moreControls: 'Diğer kontroller',
+    closePlayer: 'Oynatıcıyı kapat',
     closeNowPlaying: 'Şimdi çalanı kapat',
     queue: 'Kuyruk',
     upNext: 'Sıradaki',

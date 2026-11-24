@@ -1175,6 +1175,8 @@ export default {
     resizeTransportSection: 'Resize playback controls section',
     nowPlaying: 'Now playing',
     openNowPlaying: 'Open now playing',
+    moreControls: 'More controls',
+    closePlayer: 'Close player',
     closeNowPlaying: 'Close now playing',
     queue: 'Queue',
     upNext: 'Up next',

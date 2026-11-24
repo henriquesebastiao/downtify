@@ -1184,6 +1184,8 @@ export default {
       'Преоразмеряване на секцията с контроли за възпроизвеждане',
     nowPlaying: 'Сега звучи',
     openNowPlaying: 'Отвори „Сега звучи“',
+    moreControls: 'Още контроли',
+    closePlayer: 'Затвори плейъра',
     closeNowPlaying: 'Затвори „Сега звучи“',
     queue: 'Опашка',
     upNext: 'Следват',

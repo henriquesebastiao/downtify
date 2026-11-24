@@ -1095,6 +1095,8 @@ export default {
     resizeTransportSection: '调整播放控件区域大小',
     nowPlaying: '正在播放',
     openNowPlaying: '打开正在播放',
+    moreControls: '更多控制',
+    closePlayer: '关闭播放器',
     closeNowPlaying: '关闭正在播放',
     queue: '队列',
     upNext: '接下来播放',
