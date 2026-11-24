@@ -136,3 +136,40 @@ describe('useMusicVideo', () => {
     }
   })
 })
+
+describe('coverPicture', () => {
+  const pillarboxed = {
+    width: 480,
+    height: 360,
+    x: 80,
+    y: 0,
+    video_width: 640,
+    video_height: 360,
+  }
+
+  it('zooms burnt-in bars out of a wide view', async () => {
+    const { coverPicture } = await import('../lib/musicVideo')
+    const box = coverPicture(pillarboxed, 1600, 900)
+    // The picture (480 px wide) now spans the whole 1600 px view.
+    const scale = box.width / 640
+    expect(480 * scale).toBeGreaterThanOrEqual(1600 - 0.01)
+    expect(box.left + 80 * scale).toBeLessThanOrEqual(0.01)
+    expect(box.left + (80 + 480) * scale).toBeGreaterThanOrEqual(1600 - 0.01)
+    expect(box.top).toBeLessThanOrEqual(0)
+    expect(box.top + 360 * scale).toBeGreaterThanOrEqual(900)
+  })
+
+  it('covers a tall phone view too', async () => {
+    const { coverPicture } = await import('../lib/musicVideo')
+    const box = coverPicture(pillarboxed, 390, 844)
+    const scale = box.width / 640
+    expect(360 * scale).toBeGreaterThanOrEqual(844 - 0.01)
+    expect(box.left + 80 * scale).toBeLessThanOrEqual(0.01)
+  })
+
+  it('leaves a video without bars to object-fit: cover', async () => {
+    const { coverPicture } = await import('../lib/musicVideo')
+    expect(coverPicture(null, 1600, 900)).toBeNull()
+    expect(coverPicture(pillarboxed, 0, 0)).toBeNull()
+  })
+})

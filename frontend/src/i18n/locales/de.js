@@ -1225,7 +1225,6 @@ export default {
     closeNowPlaying: 'Wiedergabe schließen',
     queue: 'Warteschlange',
     upNext: 'Als Nächstes',
-    musicVideo: 'Musikvideo von {name}',
     hideUpNext: 'Als Nächstes ausblenden',
     showUpNext: 'Als Nächstes einblenden',
     lyrics: 'Songtexte',
@@ -1793,7 +1792,7 @@ export default {
       'Deaktiviere die Option, um das Songtextfeld, die Schaltfläche und den Tastaturkurzbefehl auszublenden. Songtexte bleiben in deinen Dateien und werden weiterhin heruntergeladen.',
     playVideos: 'Musikvideos abspielen',
     playVideosHint:
-      'Hat ein Song ein Musikvideo, zeigt „Wiedergabe“ es statt des Covers, ohne Ton – der Song läuft wie gewohnt weiter.',
+      'Hat ein Song ein Musikvideo, zeigt „Wiedergabe“ es abgedunkelt und ohne Ton im Hintergrund – Cover, Songtext und Song bleiben, wie sie sind.',
     musicVideosGroup: 'Musikvideos',
     musicVideos: 'Musikvideos herunterladen',
     musicVideosHint:

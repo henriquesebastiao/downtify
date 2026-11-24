@@ -23,10 +23,13 @@ removes its video too.
 from __future__ import annotations
 
 import re
+import subprocess
 import threading
+from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from pathlib import Path
+from statistics import median
 from typing import Any, Callable, Optional
 
 import yt_dlp
@@ -261,6 +264,154 @@ def saved_video(folder: Path, name: str) -> Optional[Path]:
     return None
 
 
+# ── Black bars burnt into the picture ───────────────────────────────────
+
+#: Where in the video the picture is sampled (fractions of its length).
+_CROP_SAMPLES = (0.15, 0.35, 0.5, 0.65, 0.85)
+_CROP_RE = re.compile(r'crop=(\d+):(\d+):(\d+):(\d+)')
+#: Bars thinner than this share of a side are not worth zooming for.
+_MIN_BAR = 0.02
+
+
+def typical_crop(
+    boxes: list[tuple[int, int, int, int]],
+) -> Optional[tuple[int, int, int, int]]:
+    """The picture box ``(w, h, x, y)`` most of *boxes* agree on: each
+    edge's median, so one odd scene (a dark one that seems smaller, a
+    bright transition that seems wider) doesn't decide alone."""
+
+    if not boxes:
+        return None
+    left = median(x for _w, _h, x, _y in boxes)
+    top = median(y for _w, _h, _x, y in boxes)
+    right = median(x + w for w, _h, x, _y in boxes)
+    bottom = median(y + h for _w, h, _x, y in boxes)
+    return (
+        int(right - left),
+        int(bottom - top),
+        int(left),
+        int(top),
+    )
+
+
+def _most_common(found: list[tuple[str, ...]]) -> tuple[int, int, int, int]:
+    """The box ``cropdetect`` settled on most often in one sample."""
+
+    w, h, x, y = Counter(found).most_common(1)[0][0]
+    return int(w), int(h), int(x), int(y)
+
+
+def picture_crop(
+    box: Optional[tuple[int, int, int, int]], width: int, height: int
+) -> Optional[tuple[int, int, int, int, int, int]]:
+    """``(w, h, x, y, W, H)`` when the picture *box* leaves real bars in a
+    *width* x *height* video, else ``None`` (it already fills it)."""
+
+    if box is None or width <= 0 or height <= 0:
+        return None
+    w, h, x, y = box
+    if w <= 0 or h <= 0:
+        return None
+    if w >= width * (1 - _MIN_BAR) and h >= height * (1 - _MIN_BAR):
+        return None
+    return w, h, x, y, width, height
+
+
+def format_crop(crop: Optional[tuple[int, ...]]) -> str:
+    return ':'.join(str(v) for v in crop) if crop else 'full'
+
+
+def parse_crop(text: str) -> Optional[dict[str, int]]:
+    """What ``GET /api/music-video`` answers for a stored crop."""
+
+    parts = str(text or '').split(':')
+    if len(parts) != 6 or not all(p.isdigit() for p in parts):
+        return None
+    w, h, x, y, width, height = (int(p) for p in parts)
+    return {
+        'width': w,
+        'height': h,
+        'x': x,
+        'y': y,
+        'video_width': width,
+        'video_height': height,
+    }
+
+
+def _probe(path: Path) -> tuple[float, int, int]:
+    out = subprocess.run(
+        [
+            'ffprobe',
+            '-v',
+            'error',
+            '-select_streams',
+            'v:0',
+            '-show_entries',
+            'stream=width,height:format=duration',
+            '-of',
+            'default=noprint_wrappers=1',
+            str(path),
+        ],
+        capture_output=True,
+        text=True,
+        timeout=30,
+        check=False,
+    ).stdout
+    values = dict(
+        line.split('=', 1) for line in out.splitlines() if '=' in line
+    )
+    try:
+        return (
+            float(values.get('duration') or 0),
+            int(values.get('width') or 0),
+            int(values.get('height') or 0),
+        )
+    except ValueError:
+        return 0.0, 0, 0
+
+
+def detect_crop(path: Path) -> Optional[tuple[int, int, int, int, int, int]]:
+    """Black bars burnt into the video at *path*: the picture's box and
+    the frame size, or ``None`` when there are none (or ffmpeg can't
+    tell). Samples a few seconds at several points with ``cropdetect``."""
+
+    try:
+        duration, width, height = _probe(path)
+        boxes: list[tuple[int, int, int, int]] = []
+        for share in _CROP_SAMPLES:
+            start = f'{max(0.0, duration * share):.2f}'
+            log = subprocess.run(
+                [
+                    'ffmpeg',
+                    '-hide_banner',
+                    '-nostdin',
+                    '-ss',
+                    start,
+                    '-i',
+                    str(path),
+                    '-t',
+                    '3',
+                    '-vf',
+                    'cropdetect=limit=24:round=2:reset=0',
+                    '-an',
+                    '-f',
+                    'null',
+                    '-',
+                ],
+                capture_output=True,
+                text=True,
+                timeout=60,
+                check=False,
+            ).stderr
+            found = _CROP_RE.findall(log)
+            if found:
+                boxes.append(_most_common(found))
+    except (OSError, subprocess.SubprocessError):
+        logger.opt(exception=True).debug('Could not measure {}', path)
+        return None
+    return picture_crop(typical_crop(boxes), width, height)
+
+
 class MusicVideos:
     """``music_videos`` rows: which video belongs to which song."""
 
@@ -274,9 +425,21 @@ class MusicVideos:
                         file TEXT PRIMARY KEY,
                         video TEXT NOT NULL,
                         video_id TEXT NOT NULL DEFAULT '',
-                        added_at TEXT NOT NULL
+                        added_at TEXT NOT NULL,
+                        crop TEXT NOT NULL DEFAULT ''
                     )
                 """)
+                columns = {
+                    row[1]
+                    for row in conn.execute(
+                        'PRAGMA table_info(music_videos)'
+                    ).fetchall()
+                }
+                if 'crop' not in columns:
+                    conn.execute(
+                        'ALTER TABLE music_videos ADD COLUMN crop TEXT '
+                        "NOT NULL DEFAULT ''"
+                    )
 
     @staticmethod
     def _key(file: Any) -> str:
@@ -301,6 +464,24 @@ class MusicVideos:
                    video_id = excluded.video_id,
                    added_at = excluded.added_at""",
                 (self._key(file), self._key(video), video_id, _now()),
+            )
+
+    def crop(self, file: str) -> str:
+        """*file*'s video picture area as measured (:func:`detect_crop`):
+        ``''`` not measured yet, ``'full'``, or ``'w:h:x:y:W:H'``."""
+
+        with self.db.connect() as conn:
+            row = conn.execute(
+                'SELECT crop FROM music_videos WHERE file = ?',
+                (self._key(file),),
+            ).fetchone()
+        return str(row['crop'] or '') if row else ''
+
+    def set_crop(self, file: str, crop: str) -> None:
+        with self._lock, self.db.connect() as conn:
+            conn.execute(
+                'UPDATE music_videos SET crop = ? WHERE file = ?',
+                (crop, self._key(file)),
             )
 
     def forget(self, file: str) -> Optional[str]:
@@ -373,5 +554,6 @@ def fetch_for_track(
         return None
     video = stored_of(saved)
     store.set(stored, video, video_id)
+    store.set_crop(stored, format_crop(detect_crop(saved)))
     logger.info('Music video saved: {} ({})', video, video_id)
     return video

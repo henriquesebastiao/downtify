@@ -13,7 +13,8 @@ DDL: list[str] = [
         file TEXT PRIMARY KEY,
         video TEXT NOT NULL,
         video_id TEXT NOT NULL DEFAULT '',
-        added_at TEXT NOT NULL
+        added_at TEXT NOT NULL,
+        crop TEXT NOT NULL DEFAULT ''
     )
     """,
 ]

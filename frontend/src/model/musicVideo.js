@@ -16,13 +16,23 @@ export async function musicVideoURL(file, now = Date.now()) {
   const cached = known.get(file)
   if (cached && (cached.url || now - cached.at < MISS_TTL_MS)) return cached.url
   let url = ''
+  let crop = null
   try {
-    url = (await API.getMusicVideo(file)).data?.url || ''
+    const data = (await API.getMusicVideo(file)).data || {}
+    url = data.url || ''
+    crop = data.crop || null
   } catch {
     url = ''
   }
-  known.set(file, { url, at: now })
+  known.set(file, { url, crop, at: now })
   return url
+}
+
+/** The picture box of *file*'s video when black bars are burnt into it
+ * (`{width, height, x, y, video_width, video_height}`), else null. Only
+ * known once musicVideoURL found the video. */
+export function musicVideoCrop(file) {
+  return known.get(file)?.crop || null
 }
 
 /** Forget what was learnt (a video may have arrived since). */

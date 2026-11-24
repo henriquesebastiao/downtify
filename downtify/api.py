@@ -5212,18 +5212,26 @@ def get_music_video(
     request: Request, file: str = Query(...)
 ) -> dict[str, Any]:
     """The music video saved for the library song *file*: ``{video,
-    url}`` (``url`` streams it), ``404`` when it has none."""
+    url, crop}`` (``url`` streams it; ``crop`` is the picture's box when
+    black bars are burnt into it, else ``null``), ``404`` when it has
+    none. A video saved before its bars were measured is measured now."""
 
     store = state.music_videos
     ctx = library_context()
     if store is None or resolve_library_file(file, ctx) is None:
         raise HTTPException(status_code=404, detail='No music video')
     video = store.get(file)
-    if not video or resolve_library_video(video, ctx) is None:
+    full = resolve_library_video(video, ctx) if video else None
+    if full is None:
         raise HTTPException(status_code=404, detail='No music video')
+    crop = store.crop(file)
+    if not crop:
+        crop = music_video.format_crop(music_video.detect_crop(full))
+        store.set_crop(file, crop)
     return {
         'video': video,
         'url': '/api/music-video/file?' + urlencode({'file': file}),
+        'crop': music_video.parse_crop(crop),
     }
 
 

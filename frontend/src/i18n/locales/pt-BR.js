@@ -1198,7 +1198,6 @@ export default {
     closeNowPlaying: 'Fechar tocando agora',
     queue: 'Fila',
     upNext: 'A seguir',
-    musicVideo: 'Videoclipe de {name}',
     hideUpNext: 'Ocultar a seguir',
     showUpNext: 'Mostrar a seguir',
     lyrics: 'Letra',
@@ -1754,7 +1753,7 @@ export default {
       'Desative para esconder o painel de letras, o botão e o atalho. Seus arquivos mantêm as letras, e os downloads continuam buscando.',
     playVideos: 'Reproduzir videoclipes',
     playVideosHint:
-      'Quando uma música tem videoclipe, o Tocando agora mostra o vídeo no lugar da capa, sem som — a música continua tocando como sempre.',
+      'Quando uma música tem videoclipe, o Tocando agora o mostra como fundo, escurecido e sem som — a capa, a letra e a música continuam como estão.',
     musicVideosGroup: 'Videoclipes',
     musicVideos: 'Baixar videoclipes',
     musicVideosHint:

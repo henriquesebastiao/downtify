@@ -3,6 +3,8 @@ YouTube Music search and yt-dlp are replaced by fakes."""
 
 from __future__ import annotations
 
+import shutil
+import subprocess
 from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock
@@ -306,6 +308,9 @@ def test_the_player_finds_a_songs_video(library):
     found = api.get_music_video(_request(), file='a.mp3')
     assert found['video'] == 'a-video.mp4'
     assert found['url'] == '/api/music-video/file?file=a.mp3'
+    # Not a real video: no bars measured, and the answer is kept.
+    assert found['crop'] is None
+    assert store.crop('a.mp3') == 'full'
     response = api.stream_music_video(file='a.mp3')
     assert str(response.path).endswith('a-video.mp4')
     # Only a library song's own video, never any path.
@@ -353,3 +358,106 @@ def test_music_video_routes_are_for_clients():
 
 def test_the_listing_never_takes_a_video_for_a_song():
     assert not (AUDIO_EXTENSIONS & VIDEO_EXTENSIONS)
+
+
+# ── Black bars burnt into the picture ────────────────────────────────
+
+
+def test_typical_and_picture_crop():
+    # Two samples agree on a 4:3 picture; one bright transition reaches
+    # wider and one dark scene seems smaller: neither decides.
+    boxes = [
+        (464, 360, 88, 0),
+        (464, 360, 88, 0),
+        (610, 360, 14, 0),
+        (300, 200, 170, 80),
+        (462, 360, 90, 0),
+    ]
+    assert music_video.typical_crop(boxes) == (464, 360, 88, 0)
+    assert music_video.typical_crop([]) is None
+    # Bars worth zooming for: the picture box and the frame.
+    assert music_video.picture_crop((640, 272, 0, 44), 640, 360) == (
+        640,
+        272,
+        0,
+        44,
+        640,
+        360,
+    )
+    # A picture that (nearly) fills the frame has none.
+    assert music_video.picture_crop((640, 356, 0, 2), 640, 360) is None
+    assert music_video.picture_crop(None, 640, 360) is None
+
+
+def test_crop_round_trip():
+    crop = (480, 360, 80, 0, 640, 360)
+    assert music_video.format_crop(crop) == '480:360:80:0:640:360'
+    assert music_video.format_crop(None) == 'full'
+    assert music_video.parse_crop('480:360:80:0:640:360') == {
+        'width': 480,
+        'height': 360,
+        'x': 80,
+        'y': 0,
+        'video_width': 640,
+        'video_height': 360,
+    }
+    assert music_video.parse_crop('full') is None
+    assert music_video.parse_crop('') is None
+
+
+@pytest.mark.skipif(
+    not (shutil.which('ffmpeg') and shutil.which('ffprobe')),
+    reason='needs ffmpeg',
+)
+def test_detect_crop_finds_burnt_in_bars(tmp_path):
+    letterboxed = tmp_path / 'bars.mp4'
+    # A 640x360 frame with a 640x240 moving picture in the middle.
+    subprocess.run(
+        [
+            'ffmpeg',
+            '-loglevel',
+            'error',
+            '-f',
+            'lavfi',
+            '-i',
+            'testsrc2=size=640x240:rate=10:duration=6',
+            '-vf',
+            'pad=640:360:0:60:black',
+            '-pix_fmt',
+            'yuv420p',
+            str(letterboxed),
+        ],
+        check=True,
+    )
+    crop = music_video.detect_crop(letterboxed)
+    assert crop is not None
+    w, h, x, y, width, height = crop
+    assert (width, height) == (640, 360)
+    assert w >= 630
+    assert 230 <= h <= 244
+    assert 56 <= y <= 64
+    full = tmp_path / 'full.mp4'
+    subprocess.run(
+        [
+            'ffmpeg',
+            '-loglevel',
+            'error',
+            '-f',
+            'lavfi',
+            '-i',
+            'testsrc2=size=640x360:rate=10:duration=6',
+            '-pix_fmt',
+            'yuv420p',
+            str(full),
+        ],
+        check=True,
+    )
+    assert music_video.detect_crop(full) is None
+
+
+def test_store_keeps_the_crop(tmp_path):
+    store = MusicVideos(tmp_path / 'lib.db')
+    store.set('a.mp3', 'a-video.mp4')
+    assert not store.crop('a.mp3')
+    store.set_crop('a.mp3', 'full')
+    assert store.crop('a.mp3') == 'full'

@@ -29,3 +29,30 @@ export function videoSyncAction({
     pause: !playing && !videoPaused,
   }
 }
+
+/**
+ * Where to put a video whose picture has black bars burnt in, so the
+ * picture alone covers a `boxWidth` x `boxHeight` area (like
+ * `object-fit: cover`, but on the picture instead of the whole frame):
+ * `{left, top, width, height}` in px, or null to just cover the box
+ * (no bars, or nothing measured yet).
+ */
+export function coverPicture(crop, boxWidth, boxHeight) {
+  if (!crop || !(boxWidth > 0) || !(boxHeight > 0)) return null
+  const {
+    width,
+    height,
+    x,
+    y,
+    video_width: frameW,
+    video_height: frameH,
+  } = crop
+  if (!(width > 0 && height > 0 && frameW > 0 && frameH > 0)) return null
+  const scale = Math.max(boxWidth / width, boxHeight / height)
+  return {
+    left: boxWidth / 2 - (x + width / 2) * scale,
+    top: boxHeight / 2 - (y + height / 2) * scale,
+    width: frameW * scale,
+    height: frameH * scale,
+  }
+}

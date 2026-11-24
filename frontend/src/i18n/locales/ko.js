@@ -1189,7 +1189,6 @@ export default {
     closeNowPlaying: '현재 재생 화면 닫기',
     queue: '대기열',
     upNext: '다음 재생 곡',
-    musicVideo: '{name} 뮤직비디오',
     hideUpNext: '다음 재생 곡 숨기기',
     showUpNext: '다음 재생 곡 보기',
     lyrics: '가사',
@@ -1731,7 +1730,7 @@ export default {
       '비활성화하면 가사 패널, 버튼, 단축키가 숨겨집니다. 파일에 포함된 가사는 유지되며 새 다운로드 시에도 정상적으로 수집됩니다.',
     playVideos: '뮤직비디오 재생',
     playVideosHint:
-      '곡에 뮤직비디오가 있으면 현재 재생 중 화면에서 커버 대신 소리 없이 보여 줍니다. 곡은 평소처럼 계속 재생됩니다.',
+      '곡에 뮤직비디오가 있으면 현재 재생 중 화면의 배경으로 어둡게, 소리 없이 보여 줍니다. 커버, 가사, 곡은 그대로입니다.',
     musicVideosGroup: '뮤직비디오',
     musicVideos: '뮤직비디오 다운로드',
     musicVideosHint:

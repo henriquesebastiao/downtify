@@ -1098,7 +1098,6 @@ export default {
     closeNowPlaying: '关闭正在播放',
     queue: '队列',
     upNext: '接下来播放',
-    musicVideo: '{name} 的音乐视频',
     hideUpNext: '隐藏接下来播放',
     showUpNext: '显示接下来播放',
     lyrics: '歌词',
@@ -1619,7 +1618,7 @@ export default {
       '关闭后隐藏歌词面板、按钮和快捷键。文件中的歌词会保留，下载时仍会获取歌词。',
     playVideos: '播放音乐视频',
     playVideosHint:
-      '歌曲有音乐视频时，“正在播放”会以无声方式显示视频代替封面，歌曲照常播放。',
+      '歌曲有音乐视频时，“正在播放”会将其作为背景显示，调暗且无声；封面、歌词和歌曲保持不变。',
     musicVideosGroup: '音乐视频',
     musicVideos: '下载音乐视频',
     musicVideosHint:

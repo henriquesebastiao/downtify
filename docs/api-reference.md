@@ -2422,7 +2422,7 @@ Where to buy a song, an album or an artist's music, to support them — the **Su
 
 ### `GET /api/music-video`
 
-Client. The music video saved for a library song (see [Music Videos](features/music-videos.md)): `?file=` the song's library path. **Response:** `{ "video": "Artist/Album/03 - Song-video.mp4", "url": "/api/music-video/file?file=…" }`; `404` when the song has none (or isn't in the library, or is hidden from you).
+Client. The music video saved for a library song (see [Music Videos](features/music-videos.md)): `?file=` the song's library path. **Response:** `{ "video": "Artist/Album/03 - Song-video.mp4", "url": "/api/music-video/file?file=…", "crop": { "width": 464, "height": 360, "x": 88, "y": 0, "video_width": 640, "video_height": 360 } }` — `crop` is the picture's box when black bars are burnt into the video (measured with ffmpeg the first time it is asked for, if not when it was saved), `null` when there are none; `404` when the song has none (or isn't in the library, or is hidden from you).
 
 ---
 

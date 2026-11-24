@@ -1225,7 +1225,6 @@ export default {
     closeNowPlaying: 'Fermer la lecture en cours',
     queue: 'File',
     upNext: 'À suivre',
-    musicVideo: 'Clip de {name}',
     hideUpNext: 'Masquer « À suivre »',
     showUpNext: 'Afficher « À suivre »',
     lyrics: 'Paroles',
@@ -1788,7 +1787,7 @@ export default {
       'Désactivez pour masquer le panneau des paroles, son bouton et son raccourci. Vos fichiers conservent leurs paroles et les téléchargements continuent de les chercher.',
     playVideos: 'Lire les clips',
     playVideosHint:
-      'Quand un titre a un clip, Lecture en cours l’affiche à la place de la pochette, sans le son — le titre continue de jouer normalement.',
+      'Quand un titre a un clip, Lecture en cours l’affiche en arrière-plan, assombri et sans le son — la pochette, les paroles et le titre restent tels quels.',
     musicVideosGroup: 'Clips vidéo',
     musicVideos: 'Télécharger les clips',
     musicVideosHint:

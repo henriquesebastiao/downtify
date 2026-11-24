@@ -1207,7 +1207,6 @@ export default {
     closeNowPlaying: 'Cerrar reproducción actual',
     queue: 'Cola',
     upNext: 'A continuación',
-    musicVideo: 'Videoclip de {name}',
     hideUpNext: 'Ocultar a continuación',
     showUpNext: 'Mostrar a continuación',
     lyrics: 'Letra',
@@ -1769,7 +1768,7 @@ export default {
       'Desactívalo para ocultar el panel de letras, su botón y su atajo. Tus archivos conservan las letras y las descargas siguen buscándolas.',
     playVideos: 'Reproducir videoclips',
     playVideosHint:
-      'Cuando una canción tiene videoclip, Reproduciendo muestra el vídeo en lugar de la portada, sin sonido: la canción sigue sonando como siempre.',
+      'Cuando una canción tiene videoclip, Reproduciendo lo muestra de fondo, oscurecido y sin sonido: la portada, la letra y la canción siguen igual.',
     musicVideosGroup: 'Videoclips',
     musicVideos: 'Descargar videoclips',
     musicVideosHint:

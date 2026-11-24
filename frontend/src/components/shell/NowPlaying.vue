@@ -15,6 +15,10 @@
           :palette="palette"
           :karaoke="isKaraoke"
           :playing="player.isPlaying.value"
+          :video="videoURL"
+          :crop="videoCrop"
+          :player="player"
+          @video-failed="videoURL = ''"
         />
 
         <div
@@ -191,25 +195,7 @@
               :class="mobilePanel ? 'max-lg:hidden' : ''"
             >
               <div class="now-playing-cover mx-auto">
-                <!-- The song's music video, when it has one (issue #680):
-                     loaded behind the cover, shown once it can play. -->
-                <div
-                  v-if="videoURL"
-                  v-show="videoReady"
-                  class="aspect-video w-full overflow-hidden rounded-[20px] bg-black"
-                  :class="videoReady ? 'animate-reveal' : ''"
-                >
-                  <MusicVideo
-                    :key="videoURL"
-                    :src="videoURL"
-                    :player="player"
-                    :label="t('player.musicVideo', { name: track.title })"
-                    @ready="videoReady = true"
-                    @failed="videoFailed"
-                  />
-                </div>
                 <CoverArt
-                  v-if="!videoReady"
                   :src="track.hasCover ? track.cover : ''"
                   :name="track.album || track.title"
                   rounded="rounded-[20px]"
@@ -591,8 +577,7 @@ import NowPlayingTrackInfo from '../player/NowPlayingTrackInfo.vue'
 import EqualizerPanel from '../player/EqualizerPanel.vue'
 import KaraokeUpNext from '../player/KaraokeUpNext.vue'
 import NowPlayingBackdrop from '../player/NowPlayingBackdrop.vue'
-import MusicVideo from '../player/MusicVideo.vue'
-import { useMusicVideo } from '/src/model/musicVideo'
+import { musicVideoCrop, useMusicVideo } from '/src/model/musicVideo'
 import { usePlayer } from '/src/model/player'
 import { useKaraokeStage } from '/src/model/karaokeStage'
 import { useDownloadManager, useProgressTracker } from '/src/model/download'
@@ -654,15 +639,11 @@ function goSimilar() {
 }
 const palette = useCoverPalette(track)
 // The playing song's music video (Settings > General > Play music videos).
+// Shown as the view's background, behind a dark veil (NowPlayingBackdrop).
 const videoURL = useMusicVideo(track, () => playVideos.value !== false)
-const videoReady = ref(false)
-watch(videoURL, () => {
-  videoReady.value = false
-})
-function videoFailed() {
-  videoReady.value = false
-  videoURL.value = ''
-}
+const videoCrop = computed(() =>
+  videoURL.value ? musicVideoCrop(track.value?.file) : null
+)
 
 const PANEL_TABS = {
   lyrics: { icon: 'lyrics', label: 'player.lyrics' },

@@ -1178,7 +1178,6 @@ export default {
     closeNowPlaying: 'Close now playing',
     queue: 'Queue',
     upNext: 'Up next',
-    musicVideo: 'Music video of {name}',
     hideUpNext: 'Hide up next',
     showUpNext: 'Show up next',
     lyrics: 'Lyrics',
@@ -1715,7 +1714,7 @@ export default {
       'Turn off to hide the lyrics panel, its button and its shortcut. Your files keep their lyrics, and downloads still fetch them.',
     playVideos: 'Play music videos',
     playVideosHint:
-      'When a song has a music video, Now playing shows it in place of the cover, without sound — the song keeps playing as usual.',
+      'When a song has a music video, Now playing shows it as the background, darkened and without sound — the cover, the lyrics and the song stay as they are.',
     musicVideosGroup: 'Music videos',
     musicVideos: 'Download music videos',
     musicVideosHint:

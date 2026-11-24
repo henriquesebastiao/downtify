@@ -23,12 +23,16 @@ The Library doesn't list video files as songs. Deleting a song deletes its video
 
 ## Watching in the player
 
-When the song playing has a music video, **Now playing** shows the video in place of the cover, on wide screens and phones alike. The cover shows until the video can play, then the video takes its place.
+When the song playing has a music video, **Now playing** shows it as its **background**, on wide screens and phones alike: the cover, the title and the lyrics stay where they are, over a dark veil that keeps them readable. The video fades in once it can play.
+
+It always fills the whole screen, whatever the screen's shape: its edges are cropped like a cover image, and black bars burnt into the video itself (an old 4:3 clip inside a widescreen frame, a letterboxed "cinematic" one) are measured once and zoomed out of view.
 
 The video plays **without sound**: you keep hearing the song itself, so the [equalizer](player.md#equalizer), volume normalization and the lyrics' timing all work as usual. The picture follows the song — pausing, seeking, skipping and the playback speed — and a song longer than its video holds the video's last frame. A video with an intro or ending of its own may not line up exactly with the song.
 
-To always see the cover instead, turn off **Play music videos** in **Settings → General → Player**. It is yours: it follows your account to every browser you sign in to, and changes nothing for anyone else.
+A video saved while the song was already playing shows up within half a minute, without reloading the page.
+
+To keep the usual background, turn off **Play music videos** in **Settings → General → Player**. It is yours: it follows your account to every browser you sign in to, and changes nothing for anyone else.
 
 ## API
 
-[`GET /api/music-video`](../api-reference.md#get-apimusic-video) answers `{video, url}` for a library song that has a video, and `GET /api/music-video/file` streams it.
+[`GET /api/music-video`](../api-reference.md#get-apimusic-video) answers `{video, url, crop}` for a library song that has a video, and `GET /api/music-video/file` streams it.

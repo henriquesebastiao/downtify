@@ -4,12 +4,12 @@
   <video
     ref="video"
     :src="src"
-    class="size-full bg-black object-contain"
+    class="size-full"
     muted
     playsinline
     preload="auto"
     disablepictureinpicture
-    :aria-label="label"
+    :aria-label="label || undefined"
     @loadeddata="onReady"
     @error="emit('failed')"
   />

@@ -1125,7 +1125,6 @@ export default {
     closeNowPlaying: '關閉正在播放',
     queue: '佇列',
     upNext: '接下來播放',
-    musicVideo: '{name} 的音樂影片',
     hideUpNext: '隱藏接下來播放',
     showUpNext: '顯示接下來播放',
     lyrics: '歌詞',
@@ -1648,7 +1647,7 @@ export default {
       '關閉後會隱藏歌詞面板、按鈕和快速鍵。檔案中的歌詞不受影響，下載時仍會取得歌詞。',
     playVideos: '播放音樂影片',
     playVideosHint:
-      '歌曲有音樂影片時，「正在播放」會以無聲方式顯示影片取代封面，歌曲照常播放。',
+      '歌曲有音樂影片時，「正在播放」會將其作為背景顯示，調暗且無聲；封面、歌詞和歌曲保持不變。',
     musicVideosGroup: '音樂影片',
     musicVideos: '下載音樂影片',
     musicVideosHint:

@@ -1193,7 +1193,6 @@ export default {
     closeNowPlaying: 'Şimdi çalanı kapat',
     queue: 'Kuyruk',
     upNext: 'Sıradaki',
-    musicVideo: '{name} müzik videosu',
     hideUpNext: 'Sıradakileri gizle',
     showUpNext: 'Sıradakileri göster',
     lyrics: 'Şarkı sözleri',
@@ -1738,7 +1737,7 @@ export default {
       'Şarkı sözü panelini, düğmesini ve kısayolunu gizlemek için kapatın. Dosyalarınız sözlerini korur ve indirmeler onları getirmeye devam eder.',
     playVideos: 'Müzik videolarını oynat',
     playVideosHint:
-      'Bir şarkının müzik videosu varsa Şimdi çalıyor onu kapak yerine sessiz gösterir — şarkı her zamanki gibi çalmaya devam eder.',
+      'Bir şarkının müzik videosu varsa Şimdi çalıyor onu arka planda, karartılmış ve sessiz gösterir — kapak, sözler ve şarkı olduğu gibi kalır.',
     musicVideosGroup: 'Müzik videoları',
     musicVideos: 'Müzik videolarını indir',
     musicVideosHint:

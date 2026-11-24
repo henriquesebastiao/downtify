@@ -1199,7 +1199,6 @@ export default {
     closeNowPlaying: 'Most szóló bezárása',
     queue: 'Sor',
     upNext: 'Következik',
-    musicVideo: '{name} videoklipje',
     hideUpNext: '„Következik” elrejtése',
     showUpNext: '„Következik” megjelenítése',
     lyrics: 'Dalszöveg',
@@ -1752,7 +1751,7 @@ export default {
       'Kikapcsolva elrejti a dalszöveg panelt, a gombját és a billentyűparancsát. A fájlok megtartják a dalszövegeket, a letöltések pedig továbbra is lekérik őket.',
     playVideos: 'Videoklipek lejátszása',
     playVideosHint:
-      'Ha egy dalhoz van videoklip, a Most szól a borító helyett azt mutatja, hang nélkül – a dal ugyanúgy szól tovább.',
+      'Ha egy dalhoz van videoklip, a Most szól háttérként mutatja, elsötétítve és hang nélkül – a borító, a dalszöveg és a dal változatlan marad.',
     musicVideosGroup: 'Videoklipek',
     musicVideos: 'Videoklipek letöltése',
     musicVideosHint:
