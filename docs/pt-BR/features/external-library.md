@@ -49,6 +49,17 @@ Remover uma pasta da lista **desmapeia** a pasta: aquelas faixas saem da Bibliot
 
 Pastas que não existem ou não são legíveis são informadas após a sincronização; as demais continuam sendo varridas.
 
+## Mantenha os novos downloads separados da biblioteca
+
+Algumas pessoas querem que as músicas novas caiam primeiro numa pasta de *entrada*, para corrigir as tags, renomear ou organizar, e só depois movê-las para a coleção de verdade. Um [watch](playlist-monitor.md) ainda precisa saber o que essa coleção tem, senão baixaria tudo de novo. As pastas de música existentes resolvem isso:
+
+1. Adicione sua coleção aqui (montá-la `:ro` não tem problema) e clique em **Sincronizar pastas**. A pasta de downloads continua sendo onde as músicas novas chegam.
+2. Em **Configurações → Downloads e arquivos**, desligue [Baixar de novo se o arquivo existir](download-settings.md#overwrite-existing-files).
+3. Monitore playlists normalmente. Uma música que a coleção já tem é vinculada à playlist em vez de baixada, e conta como **Já na biblioteca** na página do watch. Só o que falta chega à pasta de downloads.
+4. Organize os arquivos novos e mova-os para a coleção quando quiser. A verificação de hora em hora percebe que saíram da pasta de downloads, e a próxima verificação do watch os encontra na coleção (mesmo ISRC, ou mesmos artista, título e duração) e os vincula de novo, em vez de baixá-los uma segunda vez. Renomear arquivos, mudar gêneros ou mover pastas não atrapalha; mantenha o artista e o título reconhecíveis.
+
+O M3U da playlist, a entrada dela na Biblioteca e a playlist no Navidrome listam as músicas dos dois lugares, então um watch continua gerando uma playlist completa. Uma música que sai da playlist nunca é apagada automaticamente: veja [O que acontece com músicas que saem de uma playlist](playlist-monitor.md#what-happens-to-songs-that-leave-a-playlist).
+
 ## Caminhos na biblioteca
 
 Os arquivos de pastas extras usam um caminho virtual `ext/<id>/…` (o id é um hash do caminho da pasta, então a lista pode ser reordenada). O player e `GET /media/…` usam esse caminho, como `slskd/…` para arquivos do Soulseek deixados no lugar.

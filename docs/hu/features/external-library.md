@@ -49,6 +49,17 @@ Egy mappa törlése a listáról **leválasztja**: ezek a számok eltűnnek a K�
 
 A nem létező vagy nem olvasható mappákat a szinkronizálás után jelzi; a többit ettől még szkenneli.
 
+## Az új letöltések elkülönítése a könyvtártól
+
+Van, aki azt szeretné, hogy az új dalok először egy *beérkező* mappába kerüljenek, ahol javítja a címkéiket, átnevezi vagy rendezi őket, és csak utána helyezi át őket a valódi gyűjteményébe. Egy [figyelésnek](playlist-monitor.md) ettől még tudnia kell, mi van a gyűjteményben, különben mindent újra letöltene. A meglévő zenei mappák ezt megoldják:
+
+1. Add hozzá itt a gyűjteményedet (`:ro`-ként csatolva is jó), és nyomd meg a **Mappák szinkronizálása** gombot. A letöltési mappa marad az, ahová az új dalok érkeznek.
+2. A **Beállítások → Letöltések és fájlok** részben kapcsold ki: [Újratöltés, ha a fájl létezik](download-settings.md#overwrite-existing-files).
+3. Figyeld a listákat a szokott módon. Egy dalt, amely már megvan a gyűjteményedben, a figyelés letöltés helyett a listához kapcsol, és a figyelés oldalán **Már a könyvtárban** néven számol. Csak ami hiányzik, az kerül a letöltési mappába.
+4. Rendezd az új fájlokat, és helyezd át őket a gyűjteményedbe, amikor csak akarod. Az óránkénti ellenőrzés észreveszi, hogy elhagyták a letöltési mappát, a figyelés következő ellenőrzése pedig megtalálja őket a gyűjteményben (azonos ISRC, vagy azonos előadó, cím és hossz), és újra hozzákapcsolja őket, ahelyett hogy másodszor is letöltené. A fájlok átnevezése, a műfajok módosítása vagy a mappák áthelyezése nem gond; az előadó és a cím maradjon felismerhető.
+
+A lista M3U-ja, a könyvtári bejegyzése és a Navidrome-listája mindkét helyről tartalmazza a dalait, így a figyelés továbbra is teljes listát ad. A listáról lekerülő dalt sosem törli helyetted: lásd [Mi történik a listát elhagyó dalokkal](playlist-monitor.md#what-happens-to-songs-that-leave-a-playlist).
+
 ## Könyvtári útvonalak
 
 A további mappák fájljai `ext/<id>/…` virtuális útvonalat használnak (az azonosító a mappa útvonalának hash-e, így a lista átrendezhető). A lejátszó és a `GET /media/…` ezt az útvonalat használja, akárcsak a `slskd/…` a helyükön hagyott Soulseek-fájloknál.

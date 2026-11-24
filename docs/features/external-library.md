@@ -49,6 +49,17 @@ Removing a folder from the list **unmaps** it: those tracks leave the Library an
 
 Folders that don't exist or aren't readable are reported after Sync; the others are still scanned.
 
+## Keep new downloads apart from your library
+
+Some people want new songs to land in an *ingest* folder first, to fix their tags, rename or sort them, and only then move them into their real music collection. A [watch](playlist-monitor.md) still has to know what that collection holds, or it would download it all again. Existing music folders do that:
+
+1. Add your music collection here (mounting it `:ro` is fine) and press **Sync folders**. The downloads folder stays where new songs land.
+2. In **Settings → Downloads & files**, turn [Download again if the file exists](download-settings.md#overwrite-existing-files) off.
+3. Watch playlists as usual. A song your collection already has is linked into the playlist instead of downloaded, and counts as **Already in library** on the watch's page. Only what's missing lands in the downloads folder.
+4. Tidy the new files and move them into your collection whenever you like. The hourly check notices they left the downloads folder, and the next check of the watch finds them in the collection (same ISRC, or the same artist, title and length) and links them again, instead of downloading them a second time. Renaming files, changing genres or moving folders is fine; keep the artist and title recognisable.
+
+The playlist's M3U, its Library entry and its Navidrome playlist list its songs from both places, so a watch still makes a complete playlist. A song that leaves the playlist is never deleted automatically: see [What happens to songs that leave a playlist](playlist-monitor.md#what-happens-to-songs-that-leave-a-playlist).
+
 ## Library paths
 
 Extra-folder files use a virtual path `ext/<id>/…` (the id is a hash of the folder path, so the list can be reordered). The player and `GET /media/…` use that path, like `slskd/…` for Soulseek files left in place.

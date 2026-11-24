@@ -49,6 +49,17 @@ Quitar una carpeta de la lista la **desasigna**: esas canciones salen de la Bibl
 
 Las carpetas que no existen o no se pueden leer se informan tras la sincronización; las demás se siguen escaneando.
 
+## Mantén las descargas nuevas aparte de tu biblioteca
+
+Hay quien quiere que las canciones nuevas lleguen primero a una carpeta de *entrada*, para corregir sus etiquetas, renombrarlas u ordenarlas, y solo después moverlas a su colección de verdad. Una [vigilancia](playlist-monitor.md) aún tiene que saber qué tiene esa colección, o lo descargaría todo de nuevo. Las carpetas de música existentes lo resuelven:
+
+1. Añade aquí tu colección (montarla `:ro` está bien) y pulsa **Sincronizar carpetas**. La carpeta de descargas sigue siendo donde llegan las canciones nuevas.
+2. En **Ajustes → Descargas y archivos**, desactiva [Descargar de nuevo si el archivo existe](download-settings.md#overwrite-existing-files).
+3. Vigila playlists como siempre. Una canción que tu colección ya tiene se vincula a la playlist en vez de descargarse, y cuenta como **Ya en la biblioteca** en la página de la vigilancia. Solo lo que falta llega a la carpeta de descargas.
+4. Ordena los archivos nuevos y muévelos a tu colección cuando quieras. La comprobación horaria nota que salieron de la carpeta de descargas, y la siguiente comprobación de la vigilancia los encuentra en la colección (mismo ISRC, o mismo artista, título y duración) y los vuelve a vincular, en vez de descargarlos otra vez. Renombrar archivos, cambiar géneros o mover carpetas no importa; mantén reconocibles el artista y el título.
+
+El M3U de la playlist, su entrada en la Biblioteca y su playlist de Navidrome listan sus canciones de ambos lugares, así que una vigilancia sigue dando una playlist completa. Una canción que sale de la playlist nunca se borra automáticamente: consulta [Qué pasa con las canciones que salen de una playlist](playlist-monitor.md#what-happens-to-songs-that-leave-a-playlist).
+
 ## Rutas de la biblioteca
 
 Los archivos de carpetas adicionales usan una ruta virtual `ext/<id>/…` (el id es un hash de la ruta de la carpeta, así que la lista se puede reordenar). El reproductor y `GET /media/…` usan esa ruta, como `slskd/…` para los archivos de Soulseek dejados en su sitio.

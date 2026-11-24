@@ -1186,7 +1186,12 @@ async def check_playlist(
                 # downloads and a slow/hung track further down the list
                 # never holds up what's already on disk.
                 await asyncio.to_thread(
-                    _regenerate_m3u, playlist, tracks, downloader, resolved
+                    _regenerate_m3u,
+                    playlist,
+                    tracks,
+                    downloader,
+                    resolved,
+                    settings=settings,
                 )
             if delay_seconds > 0 and index != len(new_tracks) - 1:
                 await asyncio.sleep(delay_seconds)
@@ -1223,6 +1228,7 @@ async def check_playlist(
                 downloader,
                 None,
                 known_tracks,
+                settings=settings,
             )
         await asyncio.to_thread(
             _sync_library_playlist,
@@ -1605,11 +1611,15 @@ def _sync_library_playlist(
 
     download_dir = Path(downloader.download_dir)
     slskd_dir = slskd_dir_from_downloader(downloader)
+    # A song linked from an Existing music folder (``ext/…``) belongs to
+    # the playlist too: the library may live there while new downloads
+    # land in the downloads folder (issue #560).
+    extras = extra_dirs_from_settings(settings or {}, download_dir, slskd_dir)
     rows: list[tuple[dict[str, Any], str, Path]] = []
     for song in tracks:
         filename = known_tracks.get(song.get('song_id') or '')
         full = (
-            locate_library_file(filename, download_dir, slskd_dir)
+            locate_library_file(filename, download_dir, slskd_dir, extras)
             if filename
             else None
         )
@@ -1637,7 +1647,10 @@ def _sync_library_playlist(
         return
     songs = [
         enrich_song_from_library_file(
-            {**song, 'filename': filename}, download_dir, slskd_dir
+            {**song, 'filename': filename},
+            download_dir,
+            slskd_dir,
+            extra_dirs=extras,
         )
         for song, filename, _full in rows
     ]
@@ -2573,6 +2586,8 @@ def _regenerate_m3u(
     downloader: Downloader,
     resolved: Optional[dict[str, str]] = None,
     known_tracks: Optional[dict[str, Optional[str]]] = None,
+    *,
+    settings: Optional[dict[str, Any]] = None,
 ) -> Optional[Path]:
     """Rewrite the playlist's M3U, in playlist order. Returns its path,
     or ``None`` when nothing was written.
@@ -2590,11 +2605,16 @@ def _regenerate_m3u(
     (``known_tracks``) when that file exists — it may be a track linked
     from elsewhere in the library, e.g. an slskd download — else the
     track's expected path in the playlist folder.
+
+    Songs linked from the Existing music folders in *settings* are kept
+    (issue #560); without *settings* only the downloads and slskd
+    folders count.
     """
 
     pl_subdir = m3u.sanitize_playlist_name(playlist.name)
     download_dir = Path(downloader.download_dir)
     slskd_dir = slskd_dir_from_downloader(downloader)
+    extras = extra_dirs_from_settings(settings or {}, download_dir, slskd_dir)
     entries: list[dict[str, Any]] = []
     for song in tracks:
         if resolved is not None:
@@ -2603,7 +2623,9 @@ def _regenerate_m3u(
             filename = (known_tracks or {}).get(song.get('song_id') or '')
             if not (
                 filename
-                and locate_library_file(filename, download_dir, slskd_dir)
+                and locate_library_file(
+                    filename, download_dir, slskd_dir, extras
+                )
             ):
                 filename = downloader.existing_filename_for(
                     song, subdir=pl_subdir
@@ -2632,6 +2654,7 @@ def _regenerate_m3u(
         entries,
         playlist_subdir=None if organize else pl_subdir,
         slskd_dir=slskd_dir,
+        extra_dirs=extras,
     )
     return path
 
