@@ -49,6 +49,17 @@ Bir klasörü listeden kaldırmak onun **eşlemesini kaldırır**: o parçalar K
 
 Var olmayan veya okunamayan klasörler eşitlemeden sonra bildirilir; diğerleri yine de taranır.
 
+## Yeni indirmeleri kitaplığınızdan ayrı tutun
+
+Bazıları yeni şarkıların önce bir *gelen* klasörüne düşmesini, etiketlerini düzeltip yeniden adlandırdıktan ya da sıraladıktan sonra asıl müzik koleksiyonlarına taşınmasını ister. Bir [izleme](playlist-monitor.md) yine de bu koleksiyonda ne olduğunu bilmelidir; yoksa her şeyi yeniden indirir. Mevcut müzik klasörleri bunu sağlar:
+
+1. Koleksiyonunuzu buraya ekleyin (`:ro` olarak bağlamak sorun değil) ve **Klasörleri eşitle** düğmesine basın. Yeni şarkılar yine indirme klasörüne gelir.
+2. **Ayarlar → İndirmeler ve dosyalar** bölümünde [Dosya varsa yeniden indir](download-settings.md#overwrite-existing-files) seçeneğini kapatın.
+3. Çalma listelerini her zamanki gibi izleyin. Koleksiyonunuzda zaten olan bir şarkı indirilmek yerine listeye bağlanır ve izlemenin sayfasında **Zaten kitaplıkta** olarak sayılır. Yalnızca eksik olanlar indirme klasörüne gelir.
+4. Yeni dosyaları düzenleyin ve istediğiniz zaman koleksiyonunuza taşıyın. Saatlik kontrol indirme klasöründen ayrıldıklarını fark eder; izlemenin bir sonraki kontrolü onları koleksiyonda bulur (aynı ISRC ya da aynı sanatçı, başlık ve süre) ve ikinci kez indirmek yerine yeniden bağlar. Dosyaları yeniden adlandırmak, türleri değiştirmek ya da klasörleri taşımak sorun değil; sanatçıyı ve başlığı tanınır tutun.
+
+Çalma listesinin M3U dosyası, Kitaplıktaki kaydı ve Navidrome listesi şarkılarını her iki yerden de listeler; böylece izleme yine eksiksiz bir liste oluşturur. Listeden ayrılan bir şarkı asla sizin yerinize silinmez: bkz. [Bir çalma listesinden ayrılan şarkılara ne olur](playlist-monitor.md#what-happens-to-songs-that-leave-a-playlist).
+
 ## Kitaplık yolları
 
 Ek klasör dosyaları `ext/<id>/…` biçiminde sanal bir yol kullanır (id klasör yolunun özetidir, böylece liste yeniden sıralanabilir). Oynatıcı ve `GET /media/…` bu yolu kullanır; yerinde bırakılan Soulseek dosyaları için `slskd/…` gibi.

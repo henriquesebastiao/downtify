@@ -49,6 +49,17 @@ Das Entfernen eines Ordners aus der Liste **hebt seine Zuordnung auf**: Diese Ti
 
 Ordner, die nicht existieren oder nicht lesbar sind, werden nach der Synchronisierung gemeldet; die anderen werden trotzdem gescannt.
 
+## Neue Downloads getrennt von der Bibliothek halten
+
+Manche möchten, dass neue Songs zuerst in einem *Eingangsordner* landen, um ihre Tags zu korrigieren, sie umzubenennen oder zu sortieren, und sie erst dann in ihre eigentliche Sammlung verschieben. Eine [Überwachung](playlist-monitor.md) muss trotzdem wissen, was diese Sammlung enthält, sonst würde sie alles erneut herunterladen. Vorhandene Musikordner erledigen das:
+
+1. Füge deine Sammlung hier hinzu (`:ro` einzuhängen ist in Ordnung) und tippe auf **Ordner synchronisieren**. Der Download-Ordner bleibt der Ort, an dem neue Songs landen.
+2. Schalte unter **Einstellungen → Downloads und Dateien** [Bei vorhandener Datei erneut herunterladen](download-settings.md#overwrite-existing-files) aus.
+3. Überwache Playlists wie gewohnt. Ein Song, den deine Sammlung schon hat, wird mit der Playlist verknüpft statt heruntergeladen und zählt auf der Seite der Überwachung als **Schon in der Bibliothek**. Nur was fehlt, landet im Download-Ordner.
+4. Räume die neuen Dateien auf und verschiebe sie in deine Sammlung, wann du willst. Die stündliche Prüfung bemerkt, dass sie den Download-Ordner verlassen haben, und die nächste Prüfung der Überwachung findet sie in der Sammlung (gleicher ISRC oder gleicher Künstler, Titel und Länge) und verknüpft sie wieder, statt sie ein zweites Mal herunterzuladen. Dateien umbenennen, Genres ändern oder Ordner verschieben ist kein Problem; halte Künstler und Titel erkennbar.
+
+Die M3U der Playlist, ihr Eintrag in der Bibliothek und ihre Navidrome-Playlist führen ihre Songs aus beiden Orten, eine Überwachung ergibt also weiterhin eine vollständige Playlist. Ein Song, der die Playlist verlässt, wird nie für dich gelöscht: siehe [Was mit Songs passiert, die eine Playlist verlassen](playlist-monitor.md#what-happens-to-songs-that-leave-a-playlist).
+
 ## Bibliothekspfade
 
 Dateien aus zusätzlichen Ordnern verwenden einen virtuellen Pfad `ext/<id>/…` (die ID ist ein Hash des Ordnerpfads, die Liste lässt sich also umsortieren). Der Player und `GET /media/…` nutzen diesen Pfad, wie `slskd/…` für an Ort und Stelle belassene Soulseek-Dateien.

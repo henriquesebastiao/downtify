@@ -8,6 +8,7 @@ import secrets
 import threading
 import time
 import unicodedata
+from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Optional
@@ -1046,14 +1047,18 @@ def enrich_song_from_library_file(
     song: dict[str, Any],
     download_dir: Path,
     slskd_dir: Optional[Path],
+    *,
+    extra_dirs: Optional[Sequence[Path]] = None,
 ) -> dict[str, Any]:
-    """Attach on-disk path metadata (mutagen tags) for Navidrome matching."""
+    """Attach on-disk path metadata (mutagen tags) for Navidrome matching.
+
+    *extra_dirs* are the Existing music folders, for ``ext/…`` paths."""
 
     row = snapshot_spotify_metadata(song)
     filename = str(row.get('filename') or '').strip()
     if not filename:
         return row
-    path = locate_library_file(filename, download_dir, slskd_dir)
+    path = locate_library_file(filename, download_dir, slskd_dir, extra_dirs)
     if path is None:
         return row
     meta = read_audio_metadata(path)

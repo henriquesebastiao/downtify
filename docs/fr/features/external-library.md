@@ -49,6 +49,17 @@ Retirer un dossier de la liste le **dissocie** : ces titres quittent la Biblioth
 
 Les dossiers qui n’existent pas ou ne sont pas lisibles sont signalés après la synchronisation ; les autres sont analysés quand même.
 
+## Garder les nouveaux téléchargements à part de votre bibliothèque
+
+Certains veulent que les nouveaux morceaux arrivent d’abord dans un dossier d’*entrée*, pour corriger leurs tags, les renommer ou les trier, avant de les déplacer dans leur vraie collection. Une [surveillance](playlist-monitor.md) doit quand même savoir ce que contient cette collection, sinon elle téléchargerait tout à nouveau. Les dossiers de musique existants s’en chargent :
+
+1. Ajoutez ici votre collection (la monter en `:ro` convient) et appuyez sur **Synchroniser les dossiers**. Le dossier de téléchargements reste celui où arrivent les nouveaux morceaux.
+2. Dans **Paramètres → Téléchargements et fichiers**, désactivez [Retélécharger si le fichier existe](download-settings.md#overwrite-existing-files).
+3. Surveillez vos playlists comme d’habitude. Un morceau que votre collection possède déjà est lié à la playlist au lieu d’être téléchargé, et compte comme **Déjà dans la bibliothèque** sur la page de la surveillance. Seul ce qui manque arrive dans le dossier de téléchargements.
+4. Rangez les nouveaux fichiers et déplacez-les dans votre collection quand vous voulez. La vérification horaire remarque qu’ils ont quitté le dossier de téléchargements, et la vérification suivante de la surveillance les retrouve dans la collection (même ISRC, ou mêmes artiste, titre et durée) et les lie de nouveau, au lieu de les télécharger une deuxième fois. Renommer des fichiers, changer des genres ou déplacer des dossiers ne pose pas de problème ; gardez l’artiste et le titre reconnaissables.
+
+Le M3U de la playlist, son entrée dans la Bibliothèque et sa playlist Navidrome listent ses morceaux des deux emplacements : une surveillance donne donc toujours une playlist complète. Un morceau qui quitte la playlist n’est jamais supprimé à votre place : voir [Ce qui arrive aux morceaux qui quittent une playlist](playlist-monitor.md#what-happens-to-songs-that-leave-a-playlist).
+
 ## Chemins de la bibliothèque
 
 Les fichiers des dossiers supplémentaires utilisent un chemin virtuel `ext/<id>/…` (l’id est un hash du chemin du dossier, ce qui permet de réordonner la liste). Le lecteur et `GET /media/…` utilisent ce chemin, comme `slskd/…` pour les fichiers Soulseek laissés en place.
