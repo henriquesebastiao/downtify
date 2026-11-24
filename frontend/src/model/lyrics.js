@@ -23,3 +23,19 @@ export function loadLyrics(file) {
   }
   return cache.get(file)
 }
+
+/**
+ * Save a timing fix: the song's synced lyrics move `offsetMs` later
+ * (sooner when negative). Resolves the new `{ lines, plain }`, which
+ * also replace the cached ones; rejects with the request's error.
+ */
+export async function shiftLyrics(file, offsetMs) {
+  const res = await API.shiftLyrics(file, Math.round(offsetMs))
+  const previous = await (cache.get(file) || Promise.resolve(null))
+  const result = {
+    lines: parseLrc(res.data?.synced),
+    plain: previous?.plain || '',
+  }
+  cache.set(file, Promise.resolve(result))
+  return result
+}

@@ -1266,6 +1266,16 @@ export default {
       'Aktiviere unter „Einstellungen“ die Option „Songtexte herunterladen“, um sie mit neuen Downloads zu speichern.',
     lyricsNotSynced:
       'Diese Songtexte sind nicht mit der Wiedergabe synchronisiert.',
+    lyricsTiming: 'Liedtext-Timing anpassen',
+    lyricsSooner: 'Liedtext früher zeigen',
+    lyricsLater: 'Liedtext später zeigen',
+    lyricsOffsetValue: '{value} s',
+    lyricsOffsetHint:
+      'Verschiebe den Liedtext, bis er zum Gesang passt, und speichere. Andere Player sehen die Änderung auch.',
+    lyricsOffsetSave: 'Speichern',
+    lyricsOffsetReset: 'Zurücksetzen',
+    lyricsOffsetSaved: 'Liedtext-Timing gespeichert',
+    lyricsOffsetFailed: 'Liedtext-Timing konnte nicht gespeichert werden',
     cannotPlay: 'Diese Datei kann nicht abgespielt werden.',
     sleepTimer: 'Sleeptimer',
     sleepMinutes: { one: 'In {count} Minute', other: 'In {count} Minuten' },
@@ -2707,6 +2717,7 @@ export default {
       delete: 'Gelöschte Dateien',
       audio_replaced: 'Audio ersetzt',
       album_compilation: 'Markierte Compilations',
+      lyrics_offset: 'Liedtext-Timing angepasst',
       library_hidden: 'Vor Nutzern verborgene Einträge',
       library_shown: 'Nutzern gezeigte Einträge',
       device_paired: 'Apps gekoppelt',
@@ -2729,6 +2740,7 @@ export default {
       audio_replaced: 'hat das Audio von {what} ersetzt',
       album_compilation:
         'hat geändert, ob {what} eine Various-Artists-Compilation ist',
+      lyrics_offset: 'hat das Liedtext-Timing von {what} angepasst',
       library_hidden: 'hat {what} vor Nutzern verborgen',
       library_shown: 'hat {what} Nutzern gezeigt',
       device_paired: 'hat {what} gekoppelt',

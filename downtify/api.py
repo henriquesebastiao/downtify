@@ -221,6 +221,11 @@ downloads are shared, and files are never stored twice.
   or unmark an album as a various-artists compilation - rewrites its
   album-artist tag and compilation flag in place and remembers it for
   later downloads; see ``downtify/compilation.py``)
+* ``POST /api/library/lyrics/offset`` (body ``{file, offset_ms}``: move a
+  song's time-synced lyrics ``offset_ms`` later, or earlier when
+  negative, at most 60 s either way - rewrites the ``.lrc`` sidecar and
+  synced lyrics in the tags -> ``{file, offset_ms, changed, synced}``,
+  ``synced`` being the new LRC text; 404 without synced lyrics)
 * ``GET  /api/library/upgrade`` and ``GET /api/library/upgrade/jobs``
   (an upgrade run's state, queue counts and per-track rows)
 * ``POST /api/library/upgrade/scan`` (look for tracks with low-resolution
@@ -7414,6 +7419,74 @@ def album_override_for(song: dict[str, Any]) -> dict[str, Any]:
 
     marks = state.compilation_marks
     return marks.override_for(song) if marks is not None else {}
+
+
+@router.post('/api/library/lyrics/offset')
+async def shift_lyrics_endpoint(request: Request) -> dict[str, Any]:
+    """Move a song's time-synced lyrics: ``{file, offset_ms}`` ->
+    ``{file, offset_ms, changed, synced}`` (issue #663).
+
+    ``offset_ms`` > 0 shows each line later, < 0 sooner. The ``.lrc``
+    sidecar and synced lyrics in the file's tags are rewritten, so other
+    players see the fix too. Any signed-in user may, as with editing tags
+    (``PATCH /api/v1/tracks/metadata/batch``); songs hidden from them
+    can't be found.
+    """
+
+    if not request_user_id(request):
+        raise HTTPException(status_code=401, detail='Sign in required')
+    payload = await _json_object(request)
+    file = str(payload.get('file') or '').strip().replace('\\', '/')
+    offset = payload.get('offset_ms')
+    if (
+        isinstance(offset, bool)
+        or not isinstance(offset, int)
+        or not offset
+        or abs(offset) > lyrics.MAX_LYRICS_SHIFT_MS
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                'offset_ms must be a non-zero whole number of '
+                f'milliseconds, at most {lyrics.MAX_LYRICS_SHIFT_MS}'
+            ),
+        )
+    full = resolve_library_file(file, library_context()) if file else None
+    visible = await asyncio.to_thread(
+        filter_paths_for_request, [file], request
+    )
+    if full is None or not visible:
+        raise HTTPException(status_code=404, detail='File not found')
+    old_key = content_key_for(full) or ''
+    try:
+        changed = await asyncio.to_thread(
+            lyrics.shift_track_lyrics, full, offset
+        )
+    except OSError as exc:
+        logger.opt(exception=True).warning(
+            'Could not shift lyrics of {}', file
+        )
+        raise HTTPException(
+            status_code=409, detail='Could not rewrite the lyrics'
+        ) from exc
+    if not changed:
+        raise HTTPException(
+            status_code=404, detail='This song has no time-synced lyrics'
+        )
+    # Tags rewritten: the content key may change, and what is keyed by
+    # it (owners, hidden rules) follows the file.
+    new_key = content_key_for(full) or ''
+    if old_key and new_key and new_key != old_key:
+        rekey_file_owners(old_key, new_key, file)
+    await asyncio.to_thread(_after_replacement, file, full)
+    await log_activity(request, 'lyrics_offset', file, {'offset_ms': offset})
+    synced = await asyncio.to_thread(lyrics.read_track_lyrics, full)
+    return {
+        'file': file,
+        'offset_ms': offset,
+        'changed': changed,
+        'synced': synced['synced'],
+    }
 
 
 @router.post('/api/library/compilation')

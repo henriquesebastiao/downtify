@@ -1228,6 +1228,16 @@ export default {
     noLyricsHint:
       'Включи „Изтегляне на текстове“ в Настройки, за да се запазват с новите изтегляния.',
     lyricsNotSynced: 'Този текст не е синхронизиран.',
+    lyricsTiming: 'Настройка на синхронизацията на текста',
+    lyricsSooner: 'Показвай текста по-рано',
+    lyricsLater: 'Показвай текста по-късно',
+    lyricsOffsetValue: '{value} s',
+    lyricsOffsetHint:
+      'Премествайте текста, докато съвпадне с пеенето, и запазете. Другите плейъри също ще видят промяната.',
+    lyricsOffsetSave: 'Запази',
+    lyricsOffsetReset: 'Нулиране',
+    lyricsOffsetSaved: 'Синхронизацията на текста е запазена',
+    lyricsOffsetFailed: 'Синхронизацията на текста не можа да бъде запазена',
     cannotPlay: 'Този файл не може да бъде пуснат.',
     sleepTimer: 'Таймер за сън',
     sleepMinutes: { one: 'След {count} минута', other: 'След {count} минути' },
@@ -2628,6 +2638,7 @@ export default {
       delete: 'Изтрити файлове',
       audio_replaced: 'Заменени аудиа',
       album_compilation: 'Отбелязани сборни албуми',
+      lyrics_offset: 'Коригирана синхронизация на текстове',
       library_hidden: 'Елементи, скрити от потребителите',
       library_shown: 'Елементи, показани на потребителите',
       device_paired: 'Сдвоени приложения',
@@ -2650,6 +2661,7 @@ export default {
       audio_replaced: 'замени аудиото на {what}',
       album_compilation:
         'промени дали {what} е сборен албум с Различни изпълнители',
+      lyrics_offset: 'коригира синхронизацията на текста на {what}',
       library_hidden: 'скри {what} от потребителите',
       library_shown: 'показа {what} на потребителите',
       device_paired: 'сдвои {what}',

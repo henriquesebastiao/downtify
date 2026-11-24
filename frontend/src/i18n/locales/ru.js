@@ -1369,6 +1369,16 @@ export default {
     noLyricsHint:
       'Включите «Скачать тексты» в настройках, чтобы сохранять их с новыми загрузками.',
     lyricsNotSynced: 'Этот текст не синхронизирован по времени.',
+    lyricsTiming: 'Настроить синхронизацию текста',
+    lyricsSooner: 'Показывать текст раньше',
+    lyricsLater: 'Показывать текст позже',
+    lyricsOffsetValue: '{value} с',
+    lyricsOffsetHint:
+      'Сдвигайте текст, пока он не совпадёт с пением, затем сохраните. Другие плееры тоже увидят изменение.',
+    lyricsOffsetSave: 'Сохранить',
+    lyricsOffsetReset: 'Сбросить',
+    lyricsOffsetSaved: 'Синхронизация текста сохранена',
+    lyricsOffsetFailed: 'Не удалось сохранить синхронизацию текста',
     cannotPlay: 'Этот файл нельзя воспроизвести.',
     sleepTimer: 'Таймер сна',
     sleepMinutes: {
@@ -2940,6 +2950,7 @@ export default {
       delete: 'Удалённые файлы',
       audio_replaced: 'Аудио заменено',
       album_compilation: 'Отмечены сборники',
+      lyrics_offset: 'Настроена синхронизация текстов',
       library_hidden: 'Скрыто от пользователей',
       library_shown: 'Показано пользователям',
       device_paired: 'Приложения сопряжены',
@@ -2961,6 +2972,7 @@ export default {
       delete: 'удалил {what}',
       audio_replaced: 'заменил аудио у {what}',
       album_compilation: 'изменил статус сборника разных артистов у {what}',
+      lyrics_offset: 'настроил синхронизацию текста {what}',
       library_hidden: 'скрыл {what} от пользователей',
       library_shown: 'показал {what} пользователям',
       device_paired: 'сопряг {what}',

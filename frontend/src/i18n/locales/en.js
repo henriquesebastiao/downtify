@@ -1218,6 +1218,16 @@ export default {
     noLyricsHint:
       'Turn on “Download lyrics” in Settings to save them with new downloads.',
     lyricsNotSynced: 'These lyrics aren’t time-synced.',
+    lyricsTiming: 'Adjust lyrics timing',
+    lyricsSooner: 'Show lyrics sooner',
+    lyricsLater: 'Show lyrics later',
+    lyricsOffsetValue: '{value} s',
+    lyricsOffsetHint:
+      'Nudge the lyrics until they match the singing, then save. Other players see the change too.',
+    lyricsOffsetSave: 'Save',
+    lyricsOffsetReset: 'Reset',
+    lyricsOffsetSaved: 'Lyrics timing saved',
+    lyricsOffsetFailed: 'Couldn’t save the lyrics timing',
     cannotPlay: "This file can't be played.",
     sleepTimer: 'Sleep timer',
     sleepMinutes: { one: 'In {count} minute', other: 'In {count} minutes' },
@@ -2595,6 +2605,7 @@ export default {
       delete: 'Deleted files',
       audio_replaced: 'Audio replaced',
       album_compilation: 'Compilations marked',
+      lyrics_offset: 'Lyrics timing adjusted',
       library_hidden: 'Items hidden from users',
       library_shown: 'Items shown to users',
       device_paired: 'Apps paired',
@@ -2617,6 +2628,7 @@ export default {
       audio_replaced: 'replaced the audio of {what}',
       album_compilation:
         'changed whether {what} is a Various Artists compilation',
+      lyrics_offset: 'adjusted the lyrics timing of {what}',
       library_hidden: 'hid {what} from users',
       library_shown: 'showed {what} to users',
       device_paired: 'paired {what}',

@@ -61,6 +61,17 @@ Quando há letras sincronizadas, o Downtify também salva um arquivo `.lrc`. Por
 
 Excluir a faixa pela página da Biblioteca remove o `.lrc` (ao lado do arquivo e na pasta dedicada) junto com o áudio, então as letras nunca ficam como um arquivo órfão.
 
+## Ajustando a sincronia
+
+Letras encontradas na internet às vezes ficam um pouco adiantadas ou atrasadas em relação ao áudio baixado: outra edição da música, uma introdução mais longa. Para corrigir uma música, toque-a, abra **Tocando agora → Letra** e aperte o botão de cronômetro no canto superior direito da letra, **Ajustar sincronia da letra**:
+
+- **−** mostra a letra antes e **+** depois, um décimo de segundo por toque, até um minuto para cada lado. A letra segue o novo tempo na hora, então dá para testar com a música tocando.
+- **Salvar** grava o ajuste nos arquivos da música; **Redefinir** volta ao tempo salvo.
+
+Salvar reescreve os próprios tempos, no `.lrc` ao lado e, quando as tags do arquivo têm letra sincronizada, nelas também (inclusive quadros `SYLT` de MP3). Assim a correção aparece também em outros players que leem o `.lrc` ou as tags, e nos apps. Um arquivo somente leitura mantém as tags; só o `.lrc` muda. Uma linha `[offset:N]` num `.lrc` é incorporada aos tempos ao salvar, e o player do Downtify já a respeita antes disso.
+
+O botão só aparece em músicas da biblioteca com letra sincronizada. Qualquer usuário conectado pode ajustá-la; a mudança aparece no [registro de atividade](users.md#activity) como **Sincronia de letras ajustada**. O endpoint é [`POST /api/library/lyrics/offset`](../api-reference.md#post-apilibrarylyricsoffset).
+
 ## Quando nada é encontrado
 
 Se nenhum provedor tem a música, o download continua normalmente — o arquivo de áudio é salvo sem letras, e nenhum erro é gerado.

@@ -1,15 +1,21 @@
 // LRC (time-synced lyrics) parsing for the Now playing lyrics panel.
 
 const TIME_TAG = /\[(\d{1,3}):(\d{1,2})(?:[.:](\d{1,3}))?\]/g
+// `[offset:+500]`: every line shows that many milliseconds sooner.
+const OFFSET_TAG = /^\s*\[offset:\s*([+-]?\d+)\s*\]\s*$/i
 
 /**
  * Parse LRC text into `[{ time, text }]` sorted by time (seconds).
  * A line with several time tags (`[00:10][00:40]Chorus`) yields one
- * entry per tag; metadata tags (`[ar:...]`) and blank lines are skipped.
+ * entry per tag; metadata tags (`[ar:...]`) and blank lines are skipped,
+ * but an `[offset:N]` header moves every line N ms sooner.
  */
 export function parseLrc(source) {
   const lines = []
+  let offset = 0
   for (const raw of String(source || '').split(/\r?\n/)) {
+    const header = raw.match(OFFSET_TAG)
+    if (header) offset += Number(header[1]) / 1000
     const tags = [...raw.matchAll(TIME_TAG)]
     if (!tags.length) continue
     const text = raw.replace(TIME_TAG, '').trim()
@@ -17,6 +23,9 @@ export function parseLrc(source) {
       const fraction = Number(frac) / 10 ** frac.length
       lines.push({ time: Number(min) * 60 + Number(sec) + fraction, text })
     }
+  }
+  if (offset) {
+    for (const line of lines) line.time = Math.max(0, line.time - offset)
   }
   return lines.sort((a, b) => a.time - b.time)
 }

@@ -921,6 +921,12 @@ def write_to_file(
     if not can_mutate_audio(path):
         logger.debug('Skipping lyrics embed in read-only file {}', path)
         return
+    _embed_lyrics_text(path, text)
+
+
+def _embed_lyrics_text(path: Path, text: str) -> None:
+    """Write *text* as the file's lyrics tag (USLT, ``©lyr`` or the
+    Vorbis ``lyrics`` comment, by container)."""
 
     suffix = path.suffix.lower().lstrip('.')
     if suffix == 'mp3':
@@ -957,3 +963,124 @@ def write_to_file(
         audio = OggOpus(str(path))
         audio['lyrics'] = text
         audio.save()
+
+
+# ── Timing adjustment ────────────────────────────────────────────────
+# Lyrics found online are sometimes a little early or late for the audio
+# actually downloaded (another edit, a longer intro). Shifting rewrites
+# the saved timestamps themselves, so every player that reads the
+# ``.lrc`` or the tags agrees, not only Downtify's (issue #663).
+
+#: Largest shift accepted in one go, in milliseconds.
+MAX_LYRICS_SHIFT_MS = 60_000
+
+#: The time tags opening an LRC line (``[01:02.34][01:40.00]Words``).
+_LRC_LEADING_TAGS = re.compile(
+    r'^\s*((?:\[\d{1,3}:\d{1,2}(?:[.:]\d{1,3})?\])+)'
+)
+_LRC_TIME = re.compile(r'\[(\d{1,3}):(\d{1,2})(?:[.:](\d{1,3}))?\]')
+#: Digits of a fraction in milliseconds (``.345``), not centiseconds.
+_MILLIS_DIGITS = 3
+#: ``SYLT`` time-stamp format: absolute milliseconds (ID3v2.4, 4.9).
+_SYLT_MILLISECONDS = 2
+#: ``[offset:+500]``: show the lyrics that many milliseconds sooner.
+_LRC_OFFSET = re.compile(r'^\s*\[offset:\s*([+-]?\d+)\s*\]\s*$', re.I)
+
+
+def _lrc_time(ms: int, millis: bool) -> str:
+    minutes, rest = divmod(max(0, ms), 60_000)
+    seconds, fraction = divmod(rest, 1000)
+    if millis:
+        return f'[{minutes:02d}:{seconds:02d}.{fraction:03d}]'
+    return f'[{minutes:02d}:{seconds:02d}.{fraction // 10:02d}]'
+
+
+def _shift_time_tag(match: re.Match[str], shift_ms: int) -> str:
+    minutes, seconds, fraction = match.groups()
+    fraction = fraction or ''
+    ms = (int(minutes) * 60 + int(seconds)) * 1000
+    if fraction:
+        ms += int(fraction.ljust(_MILLIS_DIGITS, '0'))
+    return _lrc_time(ms + shift_ms, len(fraction) == _MILLIS_DIGITS)
+
+
+def shift_lrc(text: str, offset_ms: int) -> str:
+    """*text* (LRC) with every line's time moved *offset_ms* later
+    (earlier when negative), stopping at ``00:00.00``.
+
+    An ``[offset:N]`` header is folded into the times and dropped: many
+    players ignore it, so lyrics that rely on it are out of sync there.
+    """
+
+    header = 0
+    kept: list[str] = []
+    for line in text.splitlines():
+        found = _LRC_OFFSET.match(line)
+        if found:
+            header += int(found.group(1))
+        else:
+            kept.append(line)
+    shift = offset_ms - header
+
+    def move(line: str) -> str:
+        found = _LRC_LEADING_TAGS.match(line)
+        if not found or not shift:
+            return line
+        tags = _LRC_TIME.sub(
+            lambda tag: _shift_time_tag(tag, shift), found.group(1)
+        )
+        return line[: found.start(1)] + tags + line[found.end(1) :]
+
+    return '\n'.join(move(line) for line in kept)
+
+
+def _shift_sylt(path: Path, offset_ms: int) -> bool:
+    """Move the times of an MP3's millisecond ``SYLT`` frames."""
+
+    try:
+        tags = ID3(str(path))
+    except Exception:
+        return False
+    frames = [
+        frame
+        for frame in tags.getall('SYLT')
+        if frame.format == _SYLT_MILLISECONDS
+    ]
+    if not frames:
+        return False
+    for frame in frames:
+        frame.text = [
+            (text, max(0, int(time) + offset_ms)) for text, time in frame.text
+        ]
+    tags.save(str(path), v2_version=4)
+    return True
+
+
+def shift_track_lyrics(path: Path, offset_ms: int) -> list[str]:
+    """Move the time-synced lyrics saved with *path* by *offset_ms*.
+
+    Rewrites the ``.lrc`` sidecar the player reads and, when the file's
+    tags hold time-synced lyrics too (LRC text or an ID3 ``SYLT`` frame),
+    those - unless the audio is read-only. Returns what changed
+    (``sidecar``, ``tags``); empty when the track has no time-synced
+    lyrics. A sidecar that can't be written raises ``OSError``.
+    """
+
+    changed: list[str] = []
+    for sidecar in lrc_candidates(path):
+        text = _read_lrc_text(sidecar)
+        if not text:
+            continue
+        sidecar.write_text(shift_lrc(text, offset_ms), encoding='utf-8')
+        changed.append('sidecar')
+        break
+
+    if not can_mutate_audio(path):
+        return changed
+    embedded = _embedded_lyrics(path)
+    if looks_like_lrc(embedded):
+        _embed_lyrics_text(path, shift_lrc(embedded, offset_ms))
+        changed.append('tags')
+    elif path.suffix.lower() == '.mp3' and _shift_sylt(path, offset_ms):
+        changed.append('tags')
+    return changed

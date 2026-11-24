@@ -61,6 +61,17 @@ Ha időzített dalszöveg áll rendelkezésre, a Downtify `.lrc` fájlt is mente
 
 A szám törlése a Könyvtár oldalról a `.lrc` fájlt (a fájl mellettit és a dedikált mappában lévőt) is eltávolítja a hanggal együtt, így a dalszöveg soha nem marad árva fájlként.
 
+## Az időzítés igazítása
+
+Az interneten talált dalszöveg néha kicsit siet vagy késik a letöltött hanghoz képest: a dal másik változata, hosszabb intró. Egy dal javításához játszd le, nyisd meg a **Most szól → Dalszöveg** nézetet, és nyomd meg a dalszöveg jobb felső sarkában a stopper gombot, **Dalszöveg időzítésének igazítása**:
+
+- A **−** korábban, a **+** később mutatja a dalszöveget, nyomásonként egy tized másodpercet, mindkét irányban legfeljebb egy percig. A dalszöveg azonnal követi az új időzítést, így lejátszás közben kipróbálhatod.
+- A **Mentés** beírja a dal fájljaiba; a **Visszaállítás** visszaáll a mentett időzítésre.
+
+A mentés magukat az időbélyegeket írja át, a `.lrc` fájlban és – ha a fájl címkéi időzített dalszöveget tartalmaznak – azokban is (az MP3-ak `SYLT` kereteit is beleértve). Így a javítás más lejátszókban is látszik, amelyek a `.lrc`-t vagy a címkéket olvassák, és az appokban is. Egy csak olvasható fájl megtartja a címkéit; csak a `.lrc` változik. Egy `[offset:N]` sor a `.lrc`-ben mentéskor beépül az időkbe, a Downtify lejátszója pedig addig is figyelembe veszi.
+
+A gomb csak a könyvtár időzített dalszöveggel rendelkező dalainál jelenik meg. Bármely bejelentkezett felhasználó igazíthatja; a változás a [tevékenységnaplóban](users.md#activity) **Dalszöveg-időzítések igazítva** néven látszik. Az endpoint: [`POST /api/library/lyrics/offset`](../api-reference.md#post-apilibrarylyricsoffset).
+
 ## Ha semmit sem talál
 
 Ha egyik szolgáltatónál sincs meg a dal, a letöltés normálisan folytatódik — a hangfájl dalszöveg nélkül mentődik, és nem keletkezik hiba.

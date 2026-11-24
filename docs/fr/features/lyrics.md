@@ -61,6 +61,17 @@ Quand des paroles synchronisées sont disponibles, Downtify enregistre aussi un 
 
 Supprimer le titre depuis la page de la Bibliothèque supprime le `.lrc` (à côté du fichier et dans le dossier dédié) en même temps que l’audio, de sorte que les paroles ne restent jamais sous forme de fichier orphelin.
 
+## Ajuster la synchronisation
+
+Les paroles trouvées en ligne sont parfois un peu en avance ou en retard sur l’audio téléchargé : une autre version du morceau, une intro plus longue. Pour corriger un morceau, lancez-le, ouvrez **Lecture en cours → Paroles** et appuyez sur le bouton chronomètre en haut à droite des paroles, **Ajuster la synchronisation des paroles** :
+
+- **−** affiche les paroles plus tôt et **+** plus tard, un dixième de seconde par appui, jusqu’à une minute dans chaque sens. Les paroles suivent le nouveau timing tout de suite : vous pouvez essayer pendant la lecture.
+- **Enregistrer** l’écrit dans les fichiers du morceau ; **Réinitialiser** revient au timing enregistré.
+
+L’enregistrement réécrit les horodatages eux-mêmes, dans le fichier `.lrc` et, quand les tags du fichier contiennent des paroles synchronisées, dans ceux-ci aussi (trames `SYLT` des MP3 comprises). La correction se voit donc aussi dans les autres lecteurs qui lisent le `.lrc` ou les tags, et dans les applis. Un fichier en lecture seule garde ses tags ; seul le `.lrc` change. Une ligne `[offset:N]` dans un `.lrc` est intégrée aux horodatages à l’enregistrement, et le lecteur de Downtify la respecte en attendant.
+
+Le bouton n’apparaît que pour les morceaux de la bibliothèque avec des paroles synchronisées. Tout utilisateur connecté peut les ajuster ; la modification apparaît dans le [journal d’activité](users.md#activity) comme **Synchronisation des paroles ajustée**. L’endpoint est [`POST /api/library/lyrics/offset`](../api-reference.md#post-apilibrarylyricsoffset).
+
 ## Quand rien n’est trouvé
 
 Si aucun fournisseur n’a le morceau, le téléchargement se poursuit normalement — le fichier audio est enregistré sans paroles, et aucune erreur n’est levée.
