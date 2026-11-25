@@ -16,7 +16,7 @@ dependencies = [
     "requests[socks]>=2.34.2",
     "uvicorn>=0.54.0",
     "websockets>=17.4",
-    "yt-dlp>=2026.10.26",
+    "yt-dlp>=2026.11.23",
     "ytmusicapi>=1.12.4",
     "zeroconf>=0.154.0",
 ]
