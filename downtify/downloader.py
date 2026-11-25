@@ -248,6 +248,14 @@ class _ExtractAudioPP(FFmpegExtractAudioPP):
             self._bitrate_bps = float(bitrate_kbps) * 1000
         except (TypeError, ValueError):
             self._bitrate_bps = None
+        # The file this step leaves behind, once it has run.
+        self.written: Optional[Path] = None
+
+    def run(self, information: dict[str, Any]) -> tuple[list, dict]:
+        files, information = super().run(information)
+        if information.get('filepath'):
+            self.written = Path(information['filepath'])
+        return files, information
 
     def get_audio_codec(self, path: str) -> Optional[str]:
         codec = super().get_audio_codec(path)
@@ -275,6 +283,30 @@ class _ExtractAudioPP(FFmpegExtractAudioPP):
             self._codec,
         )
         return f'{codec}-reencode'
+
+
+def _downloaded_audio(
+    target_dir: Path, basename: str, fmt: str, written: Optional[Path]
+) -> Path:
+    """The audio file a download left: the one the extraction step
+    reports, else ``<basename>.<fmt>``, else the audio file named
+    *basename* - with "original" the extension is the source codec's, and
+    yt-dlp sometimes keeps the upstream one for opus/m4a.
+
+    The name is taken literally (``Song [Live]`` is no glob pattern), and
+    only audio counts: the ``.lrc`` an earlier attempt left beside it is
+    not the download (henriquesebastiao/downtify#698).
+    """
+    if written is not None and written.is_file():
+        return written
+    expected = target_dir / f'{basename}.{fmt}'
+    if expected.is_file():
+        return expected
+    for ext in sorted(_AUDIO_EXTENSIONS):
+        candidate = target_dir / f'{basename}.{ext}'
+        if candidate.is_file():
+            return candidate
+    return expected
 
 
 def _sanitize(text: str) -> str:
@@ -1785,10 +1817,10 @@ class Downloader:
             ):
                 # Registered directly: `ydl_opts['postprocessors']` only
                 # accepts yt-dlp's built-in postprocessors by name.
-                ydl.add_post_processor(
-                    _ExtractAudioPP(ydl, extract_format, extract_bitrate),
-                    when='post_process',
+                extraction = _ExtractAudioPP(
+                    ydl, extract_format, extract_bitrate
                 )
+                ydl.add_post_processor(extraction, when='post_process')
                 ydl.download([url])
         except Exception as exc:
             if soundcloud is not None and _is_missing_format_error(exc):
@@ -1801,14 +1833,7 @@ class Downloader:
                 exc, song, has_cookies=has_cookies
             ) from exc
 
-        final_path = target_dir / f'{basename}.{fmt}'
-        if not final_path.exists():
-            # yt-dlp sometimes uses the upstream extension for opus/m4a
-            for candidate in target_dir.glob(f'{basename}.*'):
-                if candidate.is_file():
-                    final_path = candidate
-                    break
-        return final_path
+        return _downloaded_audio(target_dir, basename, fmt, extraction.written)
 
     def _fetch_and_tag(
         self,
