@@ -1191,6 +1191,104 @@ def test_original_format_remuxes_webm_opus_without_encoding(
     assert Path(info['filepath']).read_bytes() == b'opus'
 
 
+class _WritingYoutubeDL(yt_dlp.YoutubeDL):
+    """yt-dlp that downloads by writing the files :attr:`writes` names into
+    the template's folder and, when :attr:`run_post_processors` is set,
+    runs the registered post-processors on the first one."""
+
+    writes: tuple = ()
+    run_post_processors = True
+
+    def __init__(self, opts):
+        super().__init__({**opts, 'quiet': True})
+        self.registered = []
+
+    def add_post_processor(self, pp, when='post_process'):
+        self.registered.append(pp)
+
+    def download(self, url_list):
+        template = Path(self.params['outtmpl']['default'])
+        for name in self.writes:
+            (template.parent / name).write_bytes(b'audio')
+        info = {
+            'filepath': str(template.parent / self.writes[0]),
+            'ext': Path(self.writes[0]).suffix.lstrip('.'),
+        }
+        if self.run_post_processors:
+            for pp in self.registered:
+                pp.run(info)
+
+
+def _remux_without_ffmpeg(monkeypatch):
+    monkeypatch.setattr(
+        _ExtractAudioPP, 'get_audio_codec', lambda self, path: 'opus'
+    )
+    monkeypatch.setattr(
+        _ExtractAudioPP,
+        'run_ffmpeg',
+        lambda self, path, target, codec, options: Path(target).write_bytes(
+            b'opus'
+        ),
+    )
+
+
+def test_original_format_returns_the_file_the_extraction_wrote(
+    tmp_path, monkeypatch
+):
+    # With "Original" the extension is the source codec's, so the file
+    # can't be named in advance; a title in brackets is no glob pattern
+    # and the lyrics of an earlier attempt are not the audio
+    # (henriquesebastiao/downtify#698).
+    _WritingYoutubeDL.writes = ('Song [Live].webm',)
+    _WritingYoutubeDL.run_post_processors = True
+    _remux_without_ffmpeg(monkeypatch)
+    monkeypatch.setattr(downloader_mod.yt_dlp, 'YoutubeDL', _WritingYoutubeDL)
+    (tmp_path / 'Song [Live].lrc').write_text('[00:01.00]la')
+    d = _make(tmp_path, audio_format='original')
+
+    found = d.fetch_audio('video-id', tmp_path, 'Song [Live]', song=_SONG)
+
+    assert found == tmp_path / 'Song [Live].opus'
+
+
+def test_original_format_finds_a_bracketed_title_by_its_name(
+    tmp_path, monkeypatch
+):
+    _WritingYoutubeDL.writes = ('Intro (In Ecclesia [Live]).opus',)
+    _WritingYoutubeDL.run_post_processors = False
+    monkeypatch.setattr(downloader_mod.yt_dlp, 'YoutubeDL', _WritingYoutubeDL)
+    d = _make(tmp_path, audio_format='original')
+
+    found = d.fetch_audio(
+        'video-id', tmp_path, 'Intro (In Ecclesia [Live])', song=_SONG
+    )
+
+    assert found == tmp_path / 'Intro (In Ecclesia [Live]).opus'
+
+
+def test_original_format_never_takes_a_sidecar_for_the_audio(
+    tmp_path, monkeypatch
+):
+    _WritingYoutubeDL.writes = ('Song.opus',)
+    _WritingYoutubeDL.run_post_processors = False
+    monkeypatch.setattr(downloader_mod.yt_dlp, 'YoutubeDL', _WritingYoutubeDL)
+    (tmp_path / 'Song.lrc').write_text('[00:01.00]la')
+    (tmp_path / 'Song.temp.opus').write_bytes(b'partial')
+    # A folder lists its files in the file system's order: ext4 puts the
+    # .lrc first, as here.
+    listed = Path.glob
+    monkeypatch.setattr(
+        Path,
+        'glob',
+        lambda self, pattern: iter(sorted(listed(self, pattern))),
+    )
+    d = _make(tmp_path, audio_format='original')
+
+    found = d.fetch_audio('video-id', tmp_path, 'Song', song=_SONG)
+
+    assert found == tmp_path / 'Song.opus'
+
+
 def test_extract_audio_pp_maps_ogg_to_vorbis():
     # Regression: yt-dlp has no "ogg" codec; OGG downloads crashed with
     # KeyError: 'ogg' inside the conversion.
