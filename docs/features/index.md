@@ -36,6 +36,7 @@ Everything Downtify does, grouped by area as in the sidebar. Every feature has i
 | [Upgrade library](library-upgrade.md) | Scan music you already downloaded and repair small covers, missing lyrics and incomplete tags |
 | [Identify Songs by Sound](acoustid.md) | Recognise older files by their audio with AcoustID (opt-in) and add their ISRC when the match is certain |
 | [Replace Audio](replace-audio.md) | Wrong song or version? Pick the right one on YouTube Music or YouTube; the file keeps its name, tags and playlists |
+| [Low-bitrate Report](low-bitrate-report.md) | List files under 256 kbps and replace each, after your approval, with a better copy from Soulseek; the old file goes to the music trash |
 | [Artist photo, banner & bio](artist-images.md) | Pick a real photo and banner for an artist from YouTube Music, Deezer, Spotify or your own upload, and fetch their bio, origin and links from Apple Music and Deezer, automatically or on demand |
 | [Storage & Usage](storage-usage.md) | See how big the library is and how fast it grows, which source each part came from, how downloads ended, and what duplicates, slskd copies and leftovers take up |
 | [Music Trash](music-trash.md) | Optional: removed songs wait 30 days in a trash, ready to be restored with their likes and playlists |

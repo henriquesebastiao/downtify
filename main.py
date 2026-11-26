@@ -42,6 +42,7 @@ from downtify import (
     doctor_ai_routes,
     doctor_routes,
     download_policy_routes,
+    low_bitrate_routes,
     mobile_routes,
     navidrome_ratings_routes,
     notification_routes,
@@ -960,6 +961,7 @@ def build_app() -> FastAPI:
     app.include_router(doctor_routes.router)
     app.include_router(doctor_ai_routes.router)
     app.include_router(doctor_ai_routes.mcp_router)
+    app.include_router(low_bitrate_routes.router)
     app.include_router(navidrome_ratings_routes.router)
     app.include_router(acoustid_routes.router)
     app.include_router(download_policy_routes.router)
