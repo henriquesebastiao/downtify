@@ -51,6 +51,21 @@ class ArtistReleaseStore:
                 )
             }
 
+    def files(self, playlist_id: int) -> dict[str, dict[int, str]]:
+        """``{album_id: {position: filename}}`` the watch recorded."""
+
+        found: dict[str, dict[int, str]] = {}
+        with self._connect() as conn:
+            for r in conn.execute(
+                'SELECT album_id, position, filename FROM '
+                'artist_release_tracks WHERE playlist_id=?',
+                (playlist_id,),
+            ):
+                found.setdefault(r['album_id'], {})[r['position']] = r[
+                    'filename'
+                ]
+        return found
+
     def counts(self, playlist_id: int) -> dict[str, int]:
         """``{album_id: tracks recorded}`` for an artist watch."""
 

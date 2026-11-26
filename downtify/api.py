@@ -12095,6 +12095,7 @@ def _artist_releases(
         db.catalogue.tracks(watch.id),
         songs,
         db.releases.counts(watch.id),
+        db.releases.files(watch.id),
     )
     releases = artist_catalogue.catalogue_view(
         db.catalogue.rows(watch.id),

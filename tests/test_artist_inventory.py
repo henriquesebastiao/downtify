@@ -229,6 +229,87 @@ def test_the_tracks_of_a_release_say_which_the_library_has():
     ]
 
 
+def _recorded(db, watch):
+    """``{album_id: {position: filename}}`` the watch recorded."""
+
+    return {
+        album_id: {
+            position: filename
+            for (position, _track), filename in db.releases.tracks(
+                watch.id, album_id
+            ).items()
+        }
+        for album_id in db.catalogue.tracks(watch.id)
+    }
+
+
+def test_a_file_the_watch_downloaded_counts_as_had(monkeypatch, tmp_path):
+    """Wanted counts what "Download missing" counts: a track the watch
+    downloaded is had while its file is in the library, even when the
+    library's tags don't match the catalogue's by artist, title and
+    length (no length listed, a YouTube rip some seconds longer)."""
+
+    _catalogues(monkeypatch)
+    db, watch = _watch(tmp_path)
+    db.update_playlist(watch.id, release_types='album')
+    _sweep(db, watch, _FakeDownloader(tmp_path), ON)
+    monkeypatch.setattr(api.state, 'settings', dict(ON))
+    recorded = _recorded(db, watch)
+    kept = db.catalogue.tracks(watch.id)
+    rows = [
+        {
+            'file': filename,
+            'artist': 'Drake',
+            'title': next(
+                t['name'] for t in kept[album_id] if t['position'] == position
+            ),
+            # Eight seconds off the catalogue's length: not "the same
+            # song" by length alone.
+            'duration': 8
+            + next(
+                float(t['duration'] or 0)
+                for t in kept[album_id]
+                if t['position'] == position
+            ),
+        }
+        for album_id, files in recorded.items()
+        for position, filename in files.items()
+    ]
+    assert rows, 'the sweep recorded no files'
+
+    view = api._artist_releases(db, watch, songs=LibrarySongs(rows))
+
+    downloaded = [
+        r
+        for r in view['releases']
+        if any(recorded.get(a) for a in r['album_ids'])
+    ]
+    assert downloaded
+    for release in downloaded:
+        assert (release['state'], release['have']) == (
+            'complete',
+            release['total'],
+        ), release['name']
+
+    # A recorded file that left the library is missing again.
+    gone = rows[0]['file']
+    view = api._artist_releases(
+        db, watch, songs=LibrarySongs([r for r in rows if r['file'] != gone])
+    )
+    states = {
+        r['name']: (r['state'], r['have'], r['total'])
+        for r in view['releases']
+        if any(
+            gone in (recorded.get(a) or {}).values() for a in r['album_ids']
+        )
+    }
+    assert states
+    assert all(
+        state == 'partly' or have < total
+        for state, have, total in states.values()
+    )
+
+
 # ── Over the API ────────────────────────────────────────────────────────
 
 

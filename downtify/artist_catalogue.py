@@ -461,17 +461,36 @@ def library_have(
     tracks: dict[str, list[dict[str, Any]]],
     songs: Any,
     recorded: dict[str, int],
+    files: Optional[dict[str, dict[int, str]]] = None,
 ) -> dict[str, int]:
     """How many tracks of each release the library holds: of its kept
     tracklist, those *songs* (a :class:`~downtify.library_songs.
-    LibrarySongs`) finds; for a release with none kept, the tracks the
-    watch recorded (*recorded*)."""
+    LibrarySongs`) finds, or whose file the watch recorded at that
+    position (*files*, ``{album_id: {position: filename}}``) while the
+    library still lists it; for a release with none kept, the tracks the
+    watch recorded (*recorded*).
+
+    The recorded file counts even when the library's tags don't match the
+    catalogue's by artist, title and length (no length listed, a rip some
+    seconds longer): the watch accepted it for that track, and "Download
+    missing" leaves it alone, so counting it as missing would list it on
+    Wanted for good."""
 
     have = dict(recorded)
     if songs is None:
         return have
+    files = files or {}
     for album_id, rows in tracks.items():
-        have[album_id] = sum(1 for row in rows if songs.find(row))
+        kept = files.get(album_id) or {}
+        have[album_id] = sum(
+            1
+            for row in rows
+            if songs.find(row)
+            or (
+                kept.get(row.get('position')) is not None
+                and songs.holds(kept[row['position']])
+            )
+        )
     return have
 
 
