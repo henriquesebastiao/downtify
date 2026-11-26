@@ -123,6 +123,7 @@ class LibrarySongs:
     def __init__(self, rows: Iterable[dict[str, Any]] = ()) -> None:
         self._songs: dict[str, list[tuple[str, float]]] = defaultdict(list)
         self._isrcs: dict[str, list[tuple[str, float]]] = defaultdict(list)
+        self._files: set[str] = set()
         for row in rows:
             self._put(
                 str(row.get('file') or ''),
@@ -133,11 +134,18 @@ class LibrarySongs:
 
     def _put(self, name: str, key: str, length: float, isrc: Any = '') -> None:
         name = name.strip().replace('\\', '/')
+        if name:
+            self._files.add(name)
         if name and key and length > 0:
             self._songs[key].append((name, length))
         code = normalize_isrc(isrc)
         if name and code:
             self._isrcs[code].append((name, length))
+
+    def holds(self, filename: str) -> bool:
+        """Whether the library lists *filename* (a library path)."""
+
+        return filename.strip().replace('\\', '/') in self._files
 
     def add(self, filename: str, song: dict[str, Any]) -> None:
         """Remember *filename* as holding *song*."""
