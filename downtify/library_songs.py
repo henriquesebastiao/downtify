@@ -78,6 +78,13 @@ def _key(artists: Any, title: Any) -> str:
     return '' if key.startswith('|') or key.endswith('|') else key
 
 
+def song_identity(song: dict[str, Any]) -> str:
+    """*song*'s key here (first artist and title), ``''`` when either is
+    missing."""
+
+    return _key(song.get('artists'), song.get('name'))
+
+
 def same_recording(path: Path, song: dict[str, Any]) -> bool:
     """Whether the file at *path* holds *song*: the same ISRC (a length
     within :data:`ISRC_SECONDS`), else the same song key and a length

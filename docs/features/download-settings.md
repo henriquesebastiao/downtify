@@ -86,7 +86,7 @@ Controls how many songs are downloaded simultaneously. Pick a preset (1, 2, 3, 5
 | **8** | Faster for large playlists |
 | **up to 30** | Best for very fast connections; uses more CPU and bandwidth, and increases the chance of YouTube rate-limiting you. |
 
-The limit applies to every batch download — playlist/album downloads, the batch queue endpoint, and CSV [library imports](library-import.md) — and to **[Existing music folders](external-library.md)** Sync lookups (lyrics, covers, genre). It applies to [Playlist Monitor](playlist-monitor.md) checks too: a watch's downloads wait for a free slot like any other, showing as waiting in the queue, so adding many watches at once, **Check now** or **Download all missing** never runs more downloads than this. Changing this value in Settings takes effect immediately without a restart; the server clamps any value outside `1–30`.
+The limit applies to every batch download — playlist/album downloads, the batch queue endpoint, and CSV [library imports](library-import.md) — and to **[Existing music folders](external-library.md)** Sync lookups (lyrics, covers, genre). It applies to [Playlist Monitor](playlist-monitor.md) checks too: a watch's downloads wait for a free slot like any other, showing as waiting in the queue, so adding many watches at once, **Check now** or **Download all missing** never runs more downloads than this. Each watch also uses every free slot: an artist or playlist watch downloads as many of its songs at once as this allows, rather than one after another. Changing this value in Settings takes effect immediately without a restart; the server clamps any value outside `1–30`.
 
 ## Delay between downloads
 
