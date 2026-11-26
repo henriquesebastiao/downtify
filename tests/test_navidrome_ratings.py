@@ -217,6 +217,14 @@ class FakeDeezer:
 SEARCH = 'https://api.deezer.com/search'
 ARTIST_SEARCH = 'https://api.deezer.com/search/artist'
 ALBUM_SEARCH = 'https://api.deezer.com/search/album'
+#: The known-good request that tells "Deezer is down" from "this one
+#: song can't be looked up".
+PROBE = (navidrome_ratings.DEEZER_PROBE_URL, None)
+
+
+def deezer_down(routes):
+    """*routes*, with Deezer's known-good request failing too."""
+    return {**routes, PROBE: ValueError('down')}
 
 
 def hit(rank):
@@ -235,7 +243,7 @@ def make_run(monkeypatch, client, routes, **kwargs):
 
 
 def queries(fake):
-    return [params['q'] for _url, params in fake.calls]
+    return [params['q'] for _url, params in fake.calls if 'q' in params]
 
 
 def test_rates_every_song_with_absolute_stars(monkeypatch):
@@ -517,10 +525,10 @@ def test_album_under_two_artists_is_rated_once(monkeypatch):
 def test_deezer_failing_after_every_retry_stops_the_run(monkeypatch):
     client = FakeClient(one_album(song('s1', 'A'), song('s2', 'B')))
     fail = ValueError('down')
-    routes = {
+    routes = deezer_down({
         (SEARCH, 'Drake A'): hit(900_000),
         (SEARCH, 'Drake B'): [fail, fail],
-    }
+    })
     run, _fake, sleeps = make_run(monkeypatch, client, routes)
     with pytest.raises(navidrome_ratings.DeezerUnavailable):
         run.run()
@@ -631,18 +639,23 @@ def test_song_search_refused_counts_as_not_found(monkeypatch):
 @pytest.mark.parametrize('code', [4, 700])
 def test_quota_or_busy_every_time_is_unavailable(monkeypatch, code):
     client = FakeClient(one_album(song('s1', 'A')))
-    routes = {(SEARCH, 'Drake A'): [refused(code)]}
+    routes = deezer_down({(SEARCH, 'Drake A'): [refused(code)]})
     run, fake, sleeps = make_run(monkeypatch, client, routes)
     with pytest.raises(navidrome_ratings.DeezerUnavailable):
         run.run()
-    assert len(fake.calls) == len(navidrome_ratings.RETRY_PAUSES) + 1
+    searches = [call for call in fake.calls if call[0] == SEARCH]
+    assert len(searches) == len(navidrome_ratings.RETRY_PAUSES) + 1
     assert sum(sleeps) == sum(navidrome_ratings.RETRY_PAUSES)
 
 
 def test_a_few_failures_in_a_row_are_waited_out(monkeypatch):
     client = FakeClient(one_album(song('s1', 'A')))
     down = ValueError('down')
-    routes = {(SEARCH, 'Drake A'): [down, refused(4), down, hit(900_000)]}
+    routes = {
+        (SEARCH, 'Drake A'): [down, refused(4), down, hit(900_000)],
+        # Deezer as a whole is down too while the song keeps failing.
+        PROBE: [down, down, {'id': 0}],
+    }
     run, _fake, sleeps = make_run(monkeypatch, client, routes)
     summary = run.run()
     assert summary['state'] == 'done'
@@ -708,7 +721,7 @@ def test_albums_a_previous_run_finished_are_skipped(monkeypatch):
 
 def test_an_album_cut_short_is_not_counted_as_finished(monkeypatch):
     client = FakeClient(one_album(song('s1', 'A'), song('s2', 'B')))
-    routes = {(SEARCH, 'Drake B'): [ValueError('down')]}
+    routes = deezer_down({(SEARCH, 'Drake B'): [ValueError('down')]})
     finished = []
     run, _fake, _ = make_run(
         monkeypatch, client, routes, album_done=finished.append
@@ -778,3 +791,66 @@ def test_song_removed_during_the_run_counts_as_skipped(monkeypatch):
     assert summary['rated'] == 1
     assert [c['title'] for c in summary['changes']] == ['B']
     assert client.set_calls == [('s2', 5)]
+
+
+# --- one song Deezer can't look up, while Deezer itself answers ------------
+
+
+def test_one_song_that_always_fails_is_skipped_while_deezer_answers(
+    monkeypatch,
+):
+    # A song whose lookup keeps failing used to end the whole run as
+    # "Deezer is not answering"; the run retried 6 hours later from the
+    # same album and failed on the same song again, every time.
+    client = FakeClient(one_album(song('s1', 'A'), song('s2', 'B')))
+    routes = {
+        (SEARCH, 'Drake A'): [ValueError('bad request')],
+        (SEARCH, 'Drake B'): hit(900_000),
+    }
+    run, fake, sleeps = make_run(monkeypatch, client, routes)
+    summary = run.run()
+    assert summary['state'] == 'done'
+    assert summary['not_found'] == 1
+    assert client.set_calls == [('s2', 5)]
+    # Tried, retried once after the first pause, then Deezer was checked
+    # once: no four-minute wait for a song Deezer will never answer.
+    assert queries(fake).count('Drake A') == 2
+    assert fake.calls.count((navidrome_ratings.DEEZER_PROBE_URL, {})) == 1
+    assert sum(s for s in sleeps if s != navidrome_ratings.DEEZER_PAUSE) == 5.0
+
+
+def test_a_reference_that_always_fails_is_absolute_while_deezer_answers(
+    monkeypatch,
+):
+    client = FakeClient(one_album(song('s1', 'A')))
+    routes = {
+        (ARTIST_SEARCH, 'Drake'): [ValueError('bad request')],
+        (SEARCH, 'Drake A'): hit(900_000),
+    }
+    run, _fake, _ = make_run(
+        monkeypatch, client, routes, options={'grading': 'artist'}
+    )
+    summary = run.run()
+    assert summary['state'] == 'done'
+    assert client.set_calls == [('s1', 5)]
+
+
+def test_a_title_with_a_broken_character_is_still_looked_up(monkeypatch):
+    # A lone surrogate (a broken emoji in a tag) can't be put in a URL:
+    # httpx raised UnicodeEncodeError, which read as Deezer not answering.
+    client = FakeClient(one_album(song('s1', 'A\ud83d')))
+    routes = {(SEARCH, 'Drake A'): hit(900_000)}
+    run, fake, _ = make_run(monkeypatch, client, routes)
+    summary = run.run()
+    assert summary['state'] == 'done'
+    assert client.set_calls == [('s1', 5)]
+    for _url, params in fake.calls:
+        for value in params.values():
+            if isinstance(value, str):
+                value.encode('utf-8')  # never raises
+
+
+def test_get_json_with_a_broken_character_does_not_crash_the_request():
+    """The real request builder: a lone surrogate must not reach httpx."""
+    assert navidrome_ratings.sendable('Drake A\ud83d') == 'Drake A'
+    assert navidrome_ratings.sendable('Beyoncé 🔥') == 'Beyoncé 🔥'
