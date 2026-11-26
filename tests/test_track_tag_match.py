@@ -13,6 +13,7 @@ from downtify.track_tag_match import (
     remote_text_unacceptable,
     remote_title_unacceptable,
     snapshot_spotify_metadata,
+    song_duration_seconds,
     spotify_aligns_with_file_tags,
     strip_mix_suffix,
     verify_downloaded_file_matches_spotify,
@@ -87,6 +88,22 @@ def test_media_duration_rejects_hour_long_audiobook():
     song = {'duration': 210}
     assert media_duration_matches_song(song, 211) is True
     assert media_duration_matches_song(song, 3517) is False
+
+
+def test_media_duration_takes_long_songs_in_seconds():
+    # Lengths over 1000 used to be read as milliseconds, so a song over
+    # 16:40 (1082 s, an 18-minute epic) never matched its own download.
+    song = {'duration': 1082}
+    assert media_duration_matches_song(song, 1082) is True
+    assert media_duration_matches_song(song, 1075) is True
+    assert media_duration_matches_song(song, 240) is False
+    assert song_duration_seconds({'duration': 1215}) == 1215
+    assert song_duration_seconds({'duration': 3 * 3600}) == 3 * 3600
+
+
+def test_media_duration_still_reads_milliseconds():
+    assert song_duration_seconds({'duration': 1_082_000}) == 1082
+    assert media_duration_matches_song({'duration': 1_082_000}, 1082) is True
 
 
 def test_media_duration_accepts_youtube_rip_drift():

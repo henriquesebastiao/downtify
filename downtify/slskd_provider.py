@@ -25,6 +25,7 @@ from .track_tag_match import (
     media_duration_matches_song,
     remote_text_unacceptable,
     snapshot_spotify_metadata,
+    song_duration_seconds,
     spotify_file_tag_mismatch_label,
     strip_mix_suffix,
     verify_downloaded_file_matches_spotify,
@@ -1122,10 +1123,7 @@ def _busy_responses(responses: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 
 def _song_duration_seconds(song: dict[str, Any]) -> int:
-    target_duration = int(song.get('duration') or 0)
-    if target_duration > 1000:
-        return target_duration // 1000
-    return target_duration
+    return song_duration_seconds(song)
 
 
 def _title_is_ambiguous(title_alnum: str) -> bool:

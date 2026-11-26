@@ -53,6 +53,16 @@ def test_far_off_lengths_and_other_tags_still_do_not_match(tmp_path):
     assert not matches_release(path, {**_song(), 'track_number': 5})
 
 
+def test_a_song_over_16_minutes_matches_its_release(tmp_path):
+    # Read as milliseconds, an 18-minute track's length was 1 second, so
+    # the file never matched the release it was downloaded for and was
+    # downloaded again at every check.
+    path = tmp_path / 'epic.mp3'
+    _write_track(path, _song(duration=1082))
+
+    assert matches_release(path, _song(duration=1082))
+
+
 def test_the_users_slskd_tolerance_is_used(tmp_path):
     path = tmp_path / 'one.mp3'
     _write_track(path, _song(duration=300))

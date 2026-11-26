@@ -233,6 +233,39 @@ def test_search_song_id_matches_title_and_artist():
     assert sid == 'song-1'
 
 
+def test_search_song_id_finds_a_song_over_1000_seconds():
+    # Lengths over 1000 were taken for milliseconds, so an 18-minute song
+    # never matched its Navidrome row and was left out of synced playlists.
+    client = NavidromeClient({
+        'url': 'https://navidrome.test',
+        'username': 'u',
+        'password': 'p',
+    })
+
+    def fake_request(endpoint, extra=None, **kwargs):
+        return {
+            'searchResult3': {
+                'song': [
+                    {
+                        'id': 'epic',
+                        'title': 'Empire of the Clouds',
+                        'artist': 'Iron Maiden',
+                        'duration': 1082,
+                        'path': 'Iron Maiden/11 - Empire of the Clouds.opus',
+                    }
+                ]
+            }
+        }
+
+    client._request = fake_request  # type: ignore[method-assign]
+    sid = client.search_song_id({
+        'name': 'Empire of the Clouds',
+        'artists': ['Iron Maiden'],
+        'duration': 1082,
+    })
+    assert sid == 'epic'
+
+
 @pytest.mark.parametrize(
     ('title', 'candidate_title', 'artist', 'filename'),
     [
