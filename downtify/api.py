@@ -4395,7 +4395,8 @@ def _merge_client_track_hints(
     """Copy tagging fields from the client-resolved Spotify row.
 
     ``POST /api/download/url`` re-fetches metadata from the URL only, which loses
-    ``track_number`` for rows that came from an album/playlist browse.
+    ``track_number`` and the album for rows that came from an album/playlist
+    browse or an artist watch's release.
     """
 
     if not isinstance(hints, dict) or not hints:
@@ -4440,6 +4441,17 @@ def _merge_client_track_hints(
         base['album_artist'] = album_artist.strip()
         if hints.get('compilation') is True:
             base['compilation'] = True
+    # The album the row was listed in (an album browse, an artist watch's
+    # release), unless re-resolving the URL found one: a video alone names
+    # none, so a failed watch song retried from the queue was filed under
+    # "unknown" with no album tag.
+    album_name = hints.get('album_name')
+    if (
+        isinstance(album_name, str)
+        and album_name.strip()
+        and not str(base.get('album_name') or '').strip()
+    ):
+        base['album_name'] = album_name.strip()
     # A video id or SoundCloud track the user pasted to retry a failed
     # track: download exactly that audio instead of matching again. One
     # replaces the other, so a stale one can't win the provider order.

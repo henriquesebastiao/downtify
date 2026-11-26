@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from downtify import api, providers
 from downtify.api import _merge_client_track_hints
 
 
@@ -62,6 +63,50 @@ def test_merge_keeps_the_album_artist_the_url_resolved():
     )
     assert base['album_artist'] == 'AliasSolo'
     assert 'compilation' not in base
+
+
+def test_merge_applies_the_album_of_the_listed_release():
+    base: dict = {'song_id': 'v', 'album_name': ''}
+    _merge_client_track_hints(base, {'album_name': ' The Lay of Thrym '})
+    assert base['album_name'] == 'The Lay of Thrym'
+
+
+def test_merge_keeps_the_album_the_url_resolved():
+    base: dict = {'song_id': 'v', 'album_name': 'Resolved'}
+    _merge_client_track_hints(base, {'album_name': 'Listed'})
+    assert base['album_name'] == 'Resolved'
+
+
+def test_a_retried_watch_song_keeps_its_album(monkeypatch):
+    """Retry on a failed artist-watch song in the queue sends the song as
+    the body; the video alone names no album, so without the body's the
+    file went to ``<artist>/unknown/`` untagged."""
+
+    monkeypatch.setattr(
+        providers,
+        'song_from_video_id',
+        lambda video_id: {
+            'song_id': video_id,
+            'name': 'Flames Of The Free',
+            'artists': ['Tyr'],
+            'album_name': '',
+            'url': f'https://music.youtube.com/watch?v={video_id}',
+        },
+    )
+    watch_row = {
+        'song_id': '6Lef-CitRnI',
+        'name': 'Flames of the Free',
+        'artists': ['Tyr'],
+        'album_name': 'The Lay of Thrym',
+        'track_number': 1,
+        'url': 'https://music.youtube.com/watch?v=6Lef-CitRnI',
+        '_monitor_release': 'MPREb_R7OrKkU35LS',
+    }
+
+    song = api._song_from_download_request(watch_row['url'], watch_row)
+
+    assert song['album_name'] == 'The Lay of Thrym'
+    assert song['track_number'] == 1
 
 
 def test_merge_never_takes_a_compilation_flag_on_its_own():
