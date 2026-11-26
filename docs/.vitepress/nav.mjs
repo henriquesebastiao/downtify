@@ -132,6 +132,10 @@ export const NAV = [
       { title: 'slskd & Navidrome', page: 'features/slskd-navidrome.md' },
       { title: 'Ratings from Deezer', page: 'features/navidrome-ratings.md' },
       { title: 'Aurral', page: 'features/aurral.md' },
+      {
+        title: 'Spotify companion',
+        page: 'features/spotify-companion.md',
+      },
     ],
   },
   {

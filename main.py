@@ -45,6 +45,7 @@ from downtify import (
     mobile_routes,
     navidrome_ratings_routes,
     notification_routes,
+    spotify_companion_routes,
     storage_quota_routes,
     trash_routes,
     wanted_routes,
@@ -699,6 +700,11 @@ def build_app() -> FastAPI:
             ),
             name='playlist-spotify-cache',
         )
+        # The Spotify companion's store, before the monitor starts: with
+        # it on, personal Spotify mixes are read by the companion, never
+        # signed out (downtify/spotify_companion.py).
+        spotify_companion_routes.store()
+        api.spawn_task(spotify_companion_routes.run(), name='companion-loop')
         # Watch downloads share the "Parallel downloads" limit.
         share_download_slots(lambda: api.state.download_semaphore)
         api.spawn_task(
@@ -966,6 +972,7 @@ def build_app() -> FastAPI:
     app.include_router(wanted_routes.router)
     app.include_router(backup_routes.router)
     app.include_router(notification_routes.router)
+    app.include_router(spotify_companion_routes.router)
     app.include_router(aurral_routes.router)
 
     @app.get('/list')

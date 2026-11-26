@@ -18,6 +18,7 @@ from urllib.parse import urlsplit
 import httpx
 from loguru import logger
 
+from . import spotify_companion
 from .album_artist import album_artist_fields
 from .file_naming import file_name_key
 from .telemetry import json_log_blob, redact_sensitive_mapping
@@ -1102,7 +1103,31 @@ def _graphql_all_tracks(
     return playlist_name, songs
 
 
+def tracks_from_graphql_items(items: Any) -> list[dict[str, Any]]:
+    """Songs from ``fetchPlaylist`` items, as read by the Spotify
+    companion (downtify/spotify_companion.py); anything else is skipped."""
+
+    if not isinstance(items, list):
+        return []
+    songs = []
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        try:
+            song = _track_dict_from_graphql_item(item)
+        except (AttributeError, KeyError, TypeError, ValueError):
+            song = None
+        if song:
+            songs.append(song)
+    return songs
+
+
 def playlist_tracks_from_id(playlist_id: str) -> list[dict[str, Any]]:
+    # A personal mix, with the Spotify companion on: your version, from
+    # the companion, never the signed-out one (issue #489).
+    personal = spotify_companion.personal_playlist(playlist_id)
+    if personal is not None:
+        return personal[1]
     payload = _fetch_embed_json('playlist', playlist_id)
     entity = _entity_from(payload)
     token = _token_from_embed_payload(payload)
@@ -1122,6 +1147,9 @@ def playlist_info_and_tracks(
     playlist_id: str,
 ) -> tuple[str, list[dict[str, Any]]]:
     """Return ``(playlist_name, tracks)`` fetching all tracks via partner GraphQL."""
+    personal = spotify_companion.personal_playlist(playlist_id)
+    if personal is not None:
+        return personal[0] or playlist_id, personal[1]
     payload = _fetch_embed_json('playlist', playlist_id)
     entity = _entity_from(payload)
     embed_name = entity.get('name') or entity.get('title') or playlist_id
@@ -1138,6 +1166,16 @@ def playlist_info_and_tracks(
                 playlist_id,
             )
     return embed_name, _parse_playlist_tracks(entity)
+
+
+def playlist_name_from_id(playlist_id: str) -> str:
+    """A playlist's name from its public embed page. A personal mix's
+    name is the same for everyone (only its songs differ), so this is
+    safe to read signed out even while the Spotify companion supplies
+    the songs."""
+
+    entity = _entity_from(_fetch_embed_json('playlist', playlist_id))
+    return entity.get('name') or entity.get('title') or playlist_id
 
 
 def playlist_cover_url_from_id(playlist_id: str) -> str:

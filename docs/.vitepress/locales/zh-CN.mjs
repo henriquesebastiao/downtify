@@ -103,6 +103,7 @@ export default {
       'features/slskd-navidrome.md': 'slskd 与 Navidrome',
       'features/navidrome-ratings.md': '来自 Deezer 的评分',
       'features/aurral.md': 'Aurral',
+      'features/spotify-companion.md': 'Spotify 伴侣扩展',
       'features/deemix.md': 'Deemix',
       'features/soundcloud.md': 'SoundCloud',
       'features/library-catalog.md': '媒体库目录',

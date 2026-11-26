@@ -64,6 +64,8 @@ Downtify 通过 id 识别这些歌单，并且：
 
 要保留你自己的版本，请在 Spotify 上把歌曲复制到你自己的歌单（全选，**添加到歌单**），然后监控那个歌单：你自己创建的歌单对所有人都一样。Today's Top Hits 或 “This Is …” 这类编辑歌单对所有人也一样，不会被标记。
 
+或者让 [Spotify 伴侣扩展](spotify-companion.md) 读取你自己的版本：这是一个可选的浏览器扩展，在你已登录 Spotify 的浏览器里运行，因此你的 Spotify 登录信息永远不会到达 Downtify。
+
 如果之前已经在监控某个混音歌单，它的 **活动与歌曲** 页面（见[下文](#activity-and-storage-per-watch)）会列出它带来的歌曲，方便你找出并删除不该有的歌曲。
 
 ## YouTube Music 播放列表

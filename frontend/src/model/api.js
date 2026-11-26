@@ -1151,6 +1151,24 @@ function aurralKey() {
   return API.post('/api/aurral/key')
 }
 
+// The Spotify companion (downtify/spotify_companion_routes.py).
+function companionStatus() {
+  return API.get('/api/companion')
+}
+
+function companionSave(payload) {
+  return API.put('/api/companion', payload)
+}
+
+function companionUseAccount() {
+  return API.post('/api/companion/account')
+}
+
+// The extension as a ZIP, with a new key and this server's address in it.
+function companionExtension() {
+  return API.post('/api/companion/extension', null, { responseType: 'blob' })
+}
+
 // The Doctor's AI helper (downtify/doctor_ai_routes.py).
 function doctorAiStatus() {
   return API.get('/api/doctor/ai')
@@ -1483,6 +1501,10 @@ export default {
   doctorDuplicatesKeepReset,
   doctorNavidromeRepair,
   aurralKey,
+  companionStatus,
+  companionSave,
+  companionUseAccount,
+  companionExtension,
   doctorAiStatus,
   doctorAiStart,
   doctorAiStop,

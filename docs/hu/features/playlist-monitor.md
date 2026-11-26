@@ -64,6 +64,8 @@ A Downtify az azonosítójuk alapján ismeri fel ezeket a listákat, és:
 
 Ha a saját változatodat szeretnéd, másold a dalokat egy saját lejátszási listába a Spotifyon (jelöld ki mindet, **Hozzáadás lejátszási listához**), és azt figyeld: a saját készítésű lista mindenkinek ugyanaz. A szerkesztői listák, például a Today's Top Hits vagy a „This Is …”, szintén mindenkinek ugyanazok, ezeket nem jelöli.
 
+Vagy hagyd, hogy a [Spotify-kísérő](spotify-companion.md) a saját változatodat olvassa: egy választható böngészőbővítmény, amely ott fut, ahol be vagy jelentkezve a Spotifyba, így a Spotify-bejelentkezésed sosem jut el a Downtifyhoz.
+
 Ha egy mixet már figyeltél, az **Aktivitás és számok** oldala (lásd [lent](#activity-and-storage-per-watch)) felsorolja, milyen dalokat hozott, így megtalálhatod és törölheted azokat, amelyek nem oda valók.
 
 ## YouTube Music-lejátszási listák

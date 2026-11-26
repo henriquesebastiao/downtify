@@ -105,6 +105,7 @@ export default {
       'features/slskd-navidrome.md': 'slskd και Navidrome',
       'features/navidrome-ratings.md': 'Βαθμολογίες από το Deezer',
       'features/aurral.md': 'Aurral',
+      'features/spotify-companion.md': 'Συνοδευτικό Spotify',
       'features/deemix.md': 'Deemix',
       'features/soundcloud.md': 'SoundCloud',
       'features/library-catalog.md': 'Κατάλογος βιβλιοθήκης',
