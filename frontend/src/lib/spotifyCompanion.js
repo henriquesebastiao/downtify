@@ -61,11 +61,12 @@ let loadedAt = 0
 let loading = null
 
 /**
- * The companion's view of the watches, fetched at most once a minute and
- * shared by every badge on the page.
+ * The companion's view of the watches, shared by every badge on the page.
+ * Each call fetches it again unless it was fetched in the last 15
+ * seconds, so a page that opens shows how things stand now.
  */
 export function useCompanionWatches() {
-  if (!loading && Date.now() - loadedAt > 60000) {
+  if (!loading && Date.now() - loadedAt > 15000) {
     loadedAt = Date.now()
     loading = API.get('/api/companion/watches')
       .then((res) => {

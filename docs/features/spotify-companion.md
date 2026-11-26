@@ -85,7 +85,7 @@ With the companion on, a personal mix is **never** read signed out. When the com
 | **Not heard from** | The extension hasn't checked in for a few minutes: its browser is closed or can't reach Downtify. | Start the browser, or check the address on the extension's settings page. |
 | **No Spotify tab** | No Spotify web player is open to read with. | Turn on **Keep a Spotify tab open** in the extension, or open one. |
 
-The companion never reloads a Spotify tab that's playing. On your own computer you can keep listening in that tab.
+The companion keeps one pinned Spotify tab of its own and never opens a tab per mix: reads go straight to Spotify's API, not through a page. After a browser restart it reuses its pinned tab, and it closes extra pinned Spotify tabs so they never pile up. It only reloads its own tab, never one of yours, and never while it's playing, so on your own computer you can keep listening in it.
 
 With [notifications](notifications.md) set up, the **Spotify companion** event tells you when it was signed out, switched account, or hasn't been heard from for **Tell me after it has been quiet for** hours (6 by default). It tells you again when everything is back. The event is on by default for channels you set up from now on. For an existing channel, tick it under **What to send**.
 

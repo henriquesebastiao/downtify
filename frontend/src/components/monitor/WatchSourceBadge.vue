@@ -35,7 +35,7 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import UiBadge from '../ui/UiBadge.vue'
 import { isPersonalMix } from '/src/lib/spotifyMix'
 import { useCompanionWatches } from '/src/lib/spotifyCompanion'
@@ -48,10 +48,12 @@ const props = defineProps({
 })
 const { t } = useI18n()
 const personalMix = computed(() => isPersonalMix(props.url))
-// Only asked for when a personal mix is on the page.
-const companion = computed(() =>
-  personalMix.value
-    ? useCompanionWatches().value
-    : { enabled: false, status: 'off' }
+// Asked for (again) whenever a badge for a personal mix appears.
+const shared = ref(null)
+onMounted(() => {
+  if (personalMix.value) shared.value = useCompanionWatches()
+})
+const companion = computed(
+  () => shared.value?.value || { enabled: false, status: 'off' }
 )
 </script>

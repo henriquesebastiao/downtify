@@ -123,10 +123,45 @@ async function playerTabs() {
   return chrome.tabs.query({ url: 'https://open.spotify.com/*' })
 }
 
-async function ensurePlayerTab(settings) {
+// The companion keeps exactly one Spotify tab of its own: a pinned one.
+// It never opens a tab per mix (reads go straight to Spotify's API, not
+// through a page), it reuses its tab after a browser restart (pinned tabs
+// come back), and it only ever reloads that tab - never one of yours.
+let tabJob = null
+
+function ownTab(settings) {
+  if (settings.keep_tab === false) return Promise.resolve(null)
+  // One at a time, so a check-in and a Save can't both open a tab.
+  if (!tabJob) {
+    tabJob = findOrOpenTab().finally(() => {
+      tabJob = null
+    })
+  }
+  return tabJob
+}
+
+async function findOrOpenTab() {
+  const { ownTabId } = await chrome.storage.local.get('ownTabId')
   const tabs = await playerTabs()
-  if (tabs.length || settings.keep_tab === false) return tabs[0] || null
-  return chrome.tabs.create({ url: PLAYER_URL, pinned: true, active: false })
+  const pinned = tabs.filter((t) => t.pinned)
+  const mine =
+    tabs.find((t) => t.id === ownTabId) || pinned.find((t) => !t.audible)
+  if (mine) {
+    // Extra pinned Spotify tabs (left over from before) are closed, so
+    // tabs never pile up; one that is playing is left alone.
+    const extra = pinned.filter((t) => t.id !== mine.id && !t.audible)
+    if (extra.length) await chrome.tabs.remove(extra.map((t) => t.id))
+    if (mine.id !== ownTabId)
+      await chrome.storage.local.set({ ownTabId: mine.id })
+    return mine
+  }
+  const made = await chrome.tabs.create({
+    url: PLAYER_URL,
+    pinned: true,
+    active: false,
+  })
+  await chrome.storage.local.set({ ownTabId: made.id })
+  return made
 }
 
 /** The web player's token, refreshed (by reloading its tab) if old. */
@@ -134,7 +169,7 @@ async function session(settings, { renew = false } = {}) {
   let { session: found } = await chrome.storage.session.get('session')
   const fresh = found && Date.now() - found.at < TOKEN_MAX_AGE
   if (fresh && !renew) return found
-  const tab = await ensurePlayerTab(settings)
+  const tab = await ownTab(settings)
   // Never reload a player that is playing: you'd hear it stop. (While it
   // plays it renews its own token anyway.)
   if (!tab || tab.audible) return fresh ? found : null
@@ -206,7 +241,20 @@ async function downtify(settings, path, body) {
 
 // ── One tick ───────────────────────────────────────────────────────
 
+let ticking = false
+
 async function tick({ force = false } = {}) {
+  // One check-in at a time (an alarm and "Check in now" can meet).
+  if (ticking) return
+  ticking = true
+  try {
+    await tickOnce({ force })
+  } finally {
+    ticking = false
+  }
+}
+
+async function tickOnce({ force }) {
   const settings = await config()
   if (!cleanAddress(settings.downtify_url) || !settings.key) {
     await note({ problem: 'Set the Downtify address and key', at: Date.now() })
@@ -217,7 +265,7 @@ async function tick({ force = false } = {}) {
   if (busy && Date.now() - busy < BUSY_MAX_AGE) return
   await chrome.storage.session.set({ busy: Date.now() })
   try {
-    await ensurePlayerTab(settings)
+    await ownTab(settings)
     const state = await health(settings, { force })
     const answer = await downtify(settings, '/api/companion/poll', {
       status: state.status,
