@@ -428,6 +428,7 @@ def fetch_candidate(
     if not slskd.verify_downloaded_file_matches_spotify(
         found, slskd.snapshot_spotify_metadata(song)
     ):
+        discard_transfer(found, settings)
         raise UpgradeError('tag_mismatch', found.name)
     return found
 
@@ -600,3 +601,30 @@ def discard_new_copy(path: Path) -> None:
         if sidecar.is_file() and sidecar.stem == path.stem:
             sidecar.unlink(missing_ok=True)
     path.unlink(missing_ok=True)
+
+
+def discard_transfer(path: Path, settings: dict[str, Any]) -> bool:
+    """Delete a downloaded copy that was refused (a different song, not
+    better, unreadable), so it doesn't turn up in the library from
+    slskd's folder. Only a file inside slskd's ``source_dir`` is touched.
+    Whether it was deleted."""
+
+    try:
+        root = Path(str(settings.get('source_dir') or '')).resolve(strict=True)
+        source = path.resolve(strict=True)
+    except OSError:
+        return False
+    if (
+        not str(settings.get('source_dir') or '').strip()
+        or path.is_symlink()
+        or not source.is_file()
+        or not source.is_relative_to(root)
+    ):
+        return False
+    try:
+        source.unlink()
+    except OSError:
+        logger.warning('Low bitrate: refused copy {} kept', source.name)
+        return False
+    logger.info('Low bitrate: refused copy {} deleted', source.name)
+    return True

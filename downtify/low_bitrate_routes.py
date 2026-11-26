@@ -429,7 +429,12 @@ async def _run(
             search_song, _settings(), row, progress_cb=progress
         )
         progress(96.0, 'Checking the new copy')
-        new, figures = lb.place_upgrade(old, downloaded)
+        try:
+            new, figures = lb.place_upgrade(old, downloaded)
+        except lb.UpgradeError:
+            # A refused copy must not join the library from slskd's folder.
+            lb.discard_transfer(downloaded, _settings())
+            raise
         return downloaded, new, figures
 
     sem = api.state.download_semaphore

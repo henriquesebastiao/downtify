@@ -483,3 +483,19 @@ def test_publishing_merges_the_old_file_into_the_new_one_then_trashes_it(
     assert result['trashed'] is True
     assert result['playlists'] == ['Mix']
     assert new.exists()
+
+
+def test_a_refused_copy_is_deleted_from_slskds_folder_only(tmp_path):
+    slskd = tmp_path / 'slskd'
+    inside = slskd / 'Album' / 'Halo.mp3'
+    inside.parent.mkdir(parents=True)
+    inside.write_bytes(b'x')
+    outside = tmp_path / 'music' / 'Halo.mp3'
+    outside.parent.mkdir()
+    outside.write_bytes(b'x')
+    settings = {'source_dir': str(slskd)}
+    assert lb.discard_transfer(outside, settings) is False
+    assert outside.exists()
+    assert lb.discard_transfer(inside, {'source_dir': ''}) is False
+    assert lb.discard_transfer(inside, settings) is True
+    assert not inside.exists()
