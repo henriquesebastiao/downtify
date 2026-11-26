@@ -522,6 +522,18 @@ class PlaylistCatalog:
         ]
 
 
+def filenames_outside_playlist(
+    catalog: PlaylistCatalog, name: str
+) -> set[str]:
+    with catalog.db.connect() as conn:
+        rows = conn.execute(
+            """SELECT DISTINCT filename FROM playlist_tracks
+               WHERE playlist_name <> ? AND filename IS NOT NULL""",
+            (name,),
+        )
+        return {_norm_path(row['filename']) for row in rows}
+
+
 class ManualPlaylistOwners:
     """Who created each Library playlist (M3U files carry no owner).
 

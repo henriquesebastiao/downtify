@@ -473,6 +473,33 @@ def test_split_tracks_by_library_uses_playlist_catalog(
         api.state.playlist_catalog = None
 
 
+def _shared_playlist_files(
+    download_dir: Path, pl_name: str, catalog: PlaylistCatalog
+) -> tuple[Path, Path]:
+    folder = download_dir / pl_name
+    folder.mkdir()
+    shared = folder / 'Shared.mp3'
+    extra = folder / 'Folder only.mp3'
+    for file in (shared, extra):
+        file.write_bytes(b'shared audio')
+    shared_name = shared.relative_to(download_dir).as_posix()
+    catalog.upsert_track(
+        pl_name, {'song_id': '4uLU6hMCjMI75M1A2tKUQ2'}, shared_name, shared
+    )
+    catalog.replace_playlist_tracks(
+        'Keep List',
+        [
+            ({'song_id': '4uLU6hMCjMI75M1A2tKUQ2'}, shared_name, shared),
+            (
+                {'song_id': '4uLU6hMCjMI75M1A2tKUQ3'},
+                extra.relative_to(download_dir).as_posix(),
+                extra,
+            ),
+        ],
+    )
+    return shared, extra
+
+
 def test_delete_playlist_batch_endpoint(tmp_path: Path) -> None:
     db = tmp_path / 'lib.db'
     download_dir = tmp_path / 'downloads'
@@ -488,6 +515,7 @@ def test_delete_playlist_batch_endpoint(tmp_path: Path) -> None:
         [({'song_id': '4uLU6hMCjMI75M1A2tKUQC'}, str(path.name), path)],
         spotify_id=sid,
     )
+    shared_files = _shared_playlist_files(download_dir, pl_name, catalog)
     store = PlaylistBatchStore(db)
     batch_id = store.start_batch(
         sid,
@@ -525,11 +553,15 @@ def test_delete_playlist_batch_endpoint(tmp_path: Path) -> None:
 
         result = asyncio.run(_run())
         assert result['ok'] is True
+        assert all(
+            file.read_bytes() == b'shared audio' for file in shared_files
+        )
+        assert len(catalog.list_tracks('Keep List')) == 2
         assert result['deleted_count'] == 1
         assert not path.exists()
         assert store.list_latest_batches() == []
         assert cache.get(sid) is None
-        assert catalog.list_playlist_names() == []
+        assert catalog.list_playlist_names() == ['Keep List']
     finally:
         api.state.playlist_batch_store = None
         api.state.playlist_catalog = None
@@ -537,6 +569,34 @@ def test_delete_playlist_batch_endpoint(tmp_path: Path) -> None:
         api.state.track_index = None
         api.state.downloader = None
         api.state.download_jobs.clear()
+
+
+def test_owned_playlist_delete_keeps_audio_used_by_another_list(
+    tmp_path: Path, monkeypatch
+) -> None:
+    catalog = PlaylistCatalog(tmp_path / 'catalog.db')
+    shared, _ = _shared_playlist_files(tmp_path, 'Gone', catalog)
+    name = shared.relative_to(tmp_path).as_posix()
+    monkeypatch.setattr(api.state, 'playlist_catalog', catalog)
+    monkeypatch.setattr(
+        api.state, 'downloader', MagicMock(download_dir=tmp_path)
+    )
+    monkeypatch.setattr(
+        api, 'ownership_action', lambda *_: ('delete', 'owned')
+    )
+    request = Request({
+        'type': 'http',
+        'headers': [],
+        'state': {
+            'principal': Principal('device', 'client', '', 2, 'member', 'user')
+        },
+    })
+    result = asyncio.run(
+        api._delete_owned_playlist(request, {'name': 'Gone', 'files': [name]})
+    )
+    assert result['deleted_count'] == 0
+    assert shared.read_bytes() == b'shared audio'
+    assert catalog.list_playlist_names() == ['Keep List']
 
 
 def test_rebuild_playlist_catalog_from_library_links_all_on_disk(

@@ -104,7 +104,7 @@ Everything else leaves their Library, search's "in library" marks and what a pai
 
 ### Deleting songs
 
-Deleting a song takes it off the disk for everyone, so it follows who downloaded it. An admin can delete anything. A user can delete a song they downloaded themselves; when someone else downloaded the same song too, deleting only gives up their own claim and the song stays in the shared library. A song nobody downloaded through an account (a playlist-monitor sweep, a pre-accounts download, an [extra folder](external-library.md)) can only be deleted by an admin. Deleting a playlist of yours never takes anyone else's files with it.
+Deleting a song takes it off the disk for everyone, so it follows who downloaded it. An admin can delete anything. A user can delete a song they downloaded themselves; when someone else downloaded the same song too, deleting only gives up their own claim and the song stays in the shared library. A song nobody downloaded through an account (a playlist-monitor sweep, a pre-accounts download, an [extra folder](external-library.md)) can only be deleted by an admin. Deleting an imported playlist keeps audio still listed in another playlist or recorded by an artist watch, even when the audio sits inside the deleted playlist’s folder. The playlist’s own, unshared downloads can still be removed when the music trash is off.
 
 ### Per-account usage
 

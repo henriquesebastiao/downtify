@@ -21,11 +21,18 @@ from .library_catalog import (
 from .library_cleanup import prune_empty_parent_dirs, remove_track_leftovers
 from .library_paths import library_file_root, library_stored_path
 from .library_paths_cache import invalidate_library_paths_cache
-from .m3u import find_m3u_for_name, is_manual_m3u, sanitize_playlist_name
+from .m3u import (
+    find_m3u_for_name,
+    is_manual_m3u,
+    iter_m3u_files,
+    read_m3u_tracks,
+    sanitize_playlist_name,
+)
 from .manual_playlists import (
     drop_manual_playlist,
     prune_files_from_manual_playlists,
 )
+from .playlist_catalog import filenames_outside_playlist
 from .track_tag_match import (
     spotify_aligns_with_file_tags,
     spotify_file_tag_mismatch_label,
@@ -557,11 +564,36 @@ def _log_playlist_delete_summary(
     )
 
 
+def files_used_outside_playlist(
+    name: str, ctx: LibraryContext, state: Any, *, organized: bool
+) -> set[str]:
+    """Stored paths still in use after removing this playlist's shell."""
+    catalog = state.playlist_catalog
+    kept = filenames_outside_playlist(catalog, name) if catalog else set()
+    monitor = getattr(state, 'monitor_db', None)
+    if monitor is not None:
+        kept.update(monitor.releases.artist_watch_filenames())
+    shell = _m3u_paths_for_playlist(
+        ctx.download_dir,
+        name,
+        organize_by_artist=organized,
+    )
+    for path in iter_m3u_files(ctx.download_dir):
+        if path not in shell:
+            kept.update(
+                read_m3u_tracks(
+                    path, ctx.download_dir, ctx.slskd_dir, ctx.extra_dirs
+                )
+            )
+    return kept
+
+
 def _delete_playlist_catalog_tracks(
     playlist_name: str,
     ctx: LibraryContext,
     state: Any,
     catalog: Any,
+    protected: set[str],
 ) -> tuple[list[str], list[str], list[dict[str, str]], set[str], set[str]]:
     filenames = catalog.delete_playlist(playlist_name)
     seen = set(filenames)
@@ -577,7 +609,9 @@ def _delete_playlist_catalog_tracks(
             playlist_name,
         )
 
-    batch = delete_library_files(list(seen), ctx, state, log_failures=False)
+    batch = delete_library_files(
+        sorted(seen - protected), ctx, state, log_failures=False
+    )
     downloaded_from_catalog = list(batch['deleted'])
     failed = list(batch['failed'])
     if filenames:
@@ -745,8 +779,13 @@ def _delete_imported_playlist(
     if catalog is None:
         return {'ok': False, 'error': 'Playlist catalog not available'}
 
+    protected = files_used_outside_playlist(
+        pl_name, ctx, state, organized=organize
+    )
     filenames, downloaded_from_catalog, failed, seen, affected = (
-        _delete_playlist_catalog_tracks(pl_name, ctx, state, catalog)
+        _delete_playlist_catalog_tracks(
+            pl_name, ctx, state, catalog, protected
+        )
     )
     deleted = list(downloaded_from_catalog)
     extra_deleted: list[str] = []
@@ -758,7 +797,7 @@ def _delete_imported_playlist(
                 download_dir / safe,
                 ctx,
                 state,
-                skip_paths=seen,
+                skip_paths=seen | protected,
                 already_deleted=downloaded_from_catalog,
             )
         )

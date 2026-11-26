@@ -578,6 +578,7 @@ from .library_catalog import (
 from .library_delete import (
     delete_library_files,
     delete_playlist_from_library,
+    files_used_outside_playlist,
     remove_playlist_shell,
 )
 from .library_match import (
@@ -9127,9 +9128,19 @@ async def _delete_owned_playlist(
             for item in (match.get('files') or [])
             if str(item or '').strip()
         ]
+        organize = bool(
+            state.settings.get('organize_by_artist', False)
+            or state.settings.get('organize_by_album', False)
+        )
+        ctx = library_context()
+        protected = files_used_outside_playlist(
+            name, ctx, state, organized=organize
+        )
         to_delete: list[str] = []
         released = 0
         for stored in files:
+            if stored in protected:
+                continue
             action, key = ownership_action(stored, request)
             if action == 'delete' and key:
                 to_delete.append(stored)
@@ -9137,18 +9148,12 @@ async def _delete_owned_playlist(
                 release_file_ownership(stored, key, user_id)
                 released += 1
         keys = {stored: stored_content_key(stored) for stored in to_delete}
-        batch = delete_library_files(
-            to_delete, library_context(), state, log_failures=False
-        )
+        batch = delete_library_files(to_delete, ctx, state, log_failures=False)
         for gone in batch.get('deleted') or []:
             if keys.get(gone):
                 drop_file_owners(keys[gone])
         if state.playlist_catalog is not None:
             state.playlist_catalog.delete_playlist(name)
-        organize = bool(
-            state.settings.get('organize_by_artist', False)
-            or state.settings.get('organize_by_album', False)
-        )
         shell = remove_playlist_shell(
             name, download_dir, organize_by_artist=organize
         )

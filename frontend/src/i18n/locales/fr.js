@@ -2921,7 +2921,7 @@ export default {
       'Les fichiers sont supprimés du disque. Les playlists qui les contiennent sont mises à jour.',
     deletePlaylistTitle: 'Supprimer la playlist « {name} » ?',
     deletePlaylistBody:
-      'Ses titres sont supprimés du disque — y compris ceux utilisés par d’autres playlists — ainsi que son fichier M3U.',
+      'Le fichier M3U et les fichiers audio non partagés sont supprimés du disque. Les titres utilisés par une autre playlist ou par le suivi d’un artiste sont conservés.',
     deleteManualPlaylistBody:
       'La playlist est retirée. Les morceaux restent dans votre bibliothèque.',
     clearQueueTitle: 'Vider la file ?',

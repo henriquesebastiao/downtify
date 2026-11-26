@@ -2895,7 +2895,7 @@ export default {
       'Los archivos se borran del disco. Las playlists que los incluyen se actualizan.',
     deletePlaylistTitle: '¿Eliminar la playlist «{name}»?',
     deletePlaylistBody:
-      'Sus canciones se borran del disco — incluidas las que usan otras playlists — junto con su archivo M3U.',
+      'Se borran del disco el archivo M3U y los archivos de audio no compartidos. Se conservan las canciones usadas en otras playlists o en el seguimiento de artistas.',
     deleteManualPlaylistBody:
       'Se elimina la playlist. Las canciones se quedan en tu biblioteca.',
     clearQueueTitle: '¿Vaciar la cola?',

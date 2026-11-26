@@ -2881,7 +2881,7 @@ export default {
       'A fájlok törlődnek a lemezről. Az őket tartalmazó listák frissülnek.',
     deletePlaylistTitle: 'Törlöd a(z) „{name}” listát?',
     deletePlaylistBody:
-      'A számai törlődnek a lemezről — a más listák által használtak is — az M3U fájllal együtt.',
+      'Az M3U-fájl és a nem megosztott hangfájlok törlődnek a lemezről. A más lejátszási listákban vagy előadófigyelésben szereplő számok megmaradnak.',
     deleteManualPlaylistBody:
       'A lista törlődik. A számok a könyvtáradban maradnak.',
     clearQueueTitle: 'Üríted a sort?',

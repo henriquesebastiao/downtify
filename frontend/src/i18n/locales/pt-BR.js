@@ -2873,7 +2873,7 @@ export default {
       'Os arquivos são removidos do disco. Playlists que os incluem são atualizadas.',
     deletePlaylistTitle: 'Excluir a playlist “{name}”?',
     deletePlaylistBody:
-      'As faixas dela são removidas do disco — inclusive as usadas por outras playlists — junto com o arquivo M3U.',
+      'O arquivo M3U e os arquivos de áudio não compartilhados são excluídos do disco. As faixas usadas por outra playlist ou pelo monitoramento de um artista são mantidas.',
     deleteManualPlaylistBody:
       'A playlist é removida. As músicas ficam na biblioteca.',
     clearQueueTitle: 'Limpar a fila?',
