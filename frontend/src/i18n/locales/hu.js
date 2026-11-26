@@ -2577,6 +2577,8 @@ export default {
     event_watch_done: 'Figyelések letöltései',
     event_spotify_companion:
       'Spotify-kísérő: kijelentkezett, másik fiók, csend vagy újra itt',
+    event_youtube_cookies:
+      'YouTube sütik: kijelentkezett vagy újra bejelentkezett',
     test: 'Próba',
     testHint:
       'Most küld egy üzenetet azzal, ami fent ki van töltve, mentve vagy sem.',

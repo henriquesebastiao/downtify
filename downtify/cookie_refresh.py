@@ -45,6 +45,7 @@ from typing import Any, Optional
 import requests
 from loguru import logger
 
+from . import notifications
 from .cookies import (
     UNKNOWN_HEALTH,
     CookiesStore,
@@ -121,18 +122,37 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+#: Where the notification sends the user for new cookies.
+_UPLOAD_HINT = (
+    'Upload a fresh cookies.txt in Settings > Audio sources > YouTube cookies.'
+)
+
+
 def _set_health(store: CookiesStore, **changes: Any) -> None:
+    """Update the health; log and notify when the session is signed
+    out, and when it is signed in again without a new upload (an upload
+    resets the state to unknown)."""
+
     previous = store.health.get('state')
     store.health = {**store.health, **changes}
     state = store.health.get('state')
     if state == 'signed_out' and previous != 'signed_out':
+        reason = store.health.get('message') or 'session refused'
         logger.warning(
             'YouTube cookies are signed out: {}. Upload a fresh '
             'cookies.txt in Settings > YouTube cookies.',
-            store.health.get('message') or 'session refused',
+            reason,
+        )
+        notifications.emit(
+            'youtube_cookies', 'Signed out', f'{reason}. {_UPLOAD_HINT}'
         )
     elif state == 'valid' and previous == 'signed_out':
         logger.info('YouTube cookies are signed in again')
+        notifications.emit(
+            'youtube_cookies',
+            'Signed in again',
+            'YouTube accepts the stored cookies again.',
+        )
 
 
 def note_ytdlp_message(message: str) -> None:

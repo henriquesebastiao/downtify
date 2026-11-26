@@ -2438,6 +2438,7 @@ export default {
     event_watch_done: '追蹤項目下載',
     event_spotify_companion:
       'Spotify 夥伴擴充功能：登出、其他帳號、長時間無消息或已恢復',
+    event_youtube_cookies: 'YouTube Cookie：已登出或已重新登入',
     test: '測試',
     testHint: '立即用上方填寫的內容傳送一則訊息，不論是否已儲存。',
     sendTest: '傳送測試',

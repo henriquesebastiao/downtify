@@ -2574,6 +2574,8 @@ export default {
     event_watch_done: 'Downloads dos monitoramentos',
     event_spotify_companion:
       'Companheiro do Spotify: desconectado, outra conta, em silêncio ou de volta',
+    event_youtube_cookies:
+      'Cookies do YouTube: desconectados ou conectados de novo',
     test: 'Teste',
     testHint:
       'Envia uma mensagem agora com o que está preenchido acima, salvo ou não.',

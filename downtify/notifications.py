@@ -56,6 +56,7 @@ EVENTS = (
     'new_releases',
     'watch_done',
     'spotify_companion',
+    'youtube_cookies',
 )
 CHANNELS = ('discord', 'ntfy', 'gotify', 'webhook')
 
@@ -78,7 +79,12 @@ POLL_SECONDS = 3.0
 #: Seconds between two messages to one channel (Discord allows ~5/2s).
 CHANNEL_GAP = 1.0
 
-_DEFAULT_EVENTS = ['download_failed', 'new_releases', 'spotify_companion']
+_DEFAULT_EVENTS = [
+    'download_failed',
+    'new_releases',
+    'spotify_companion',
+    'youtube_cookies',
+]
 _DEFAULT_PHASES = ['start', 'finish', 'fail']
 
 
@@ -348,6 +354,13 @@ _EVENT_TEXT = {
     'spotify_companion': (
         'Spotify companion',
         'Spotify companion: {n} changes',
+        'warning',
+    ),
+    # The YouTube cookies.txt was signed out, or is signed in again
+    # without a new upload (downtify/cookie_refresh.py).
+    'youtube_cookies': (
+        'YouTube cookies',
+        'YouTube cookies: {n} changes',
         'warning',
     ),
 }

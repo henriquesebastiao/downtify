@@ -2556,6 +2556,8 @@ export default {
     event_watch_done: 'Takiplerin indirmeleri',
     event_spotify_companion:
       'Spotify yardımcısı: çıkış, başka hesap, sessiz ya da geri döndü',
+    event_youtube_cookies:
+      'YouTube çerezleri: çıkış yapıldı ya da yeniden giriş yapıldı',
     test: 'Test',
     testHint:
       'Yukarıda doldurulanla, kaydedilmiş olsun ya da olmasın, şimdi bir mesaj gönderir.',

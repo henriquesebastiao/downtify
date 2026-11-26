@@ -2404,6 +2404,7 @@ export default {
     event_watch_done: '关注项下载',
     event_spotify_companion:
       'Spotify 伴侣扩展：退出登录、其他账号、长时间无消息或已恢复',
+    event_youtube_cookies: 'YouTube Cookie：已退出登录或已重新登录',
     test: '测试',
     testHint: '立即用上面填写的内容发送一条消息，无论是否已保存。',
     sendTest: '发送测试',

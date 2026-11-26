@@ -145,6 +145,17 @@ def test_batch_message_groups_and_caps():
     assert '… and 3 more' in many.text
 
 
+def test_youtube_cookies_event_is_on_by_default():
+    assert 'youtube_cookies' in notifications.EVENTS
+    ntfy = notifications.effective({})['channels']['ntfy']
+    assert 'youtube_cookies' in ntfy['events']
+    msg = notifications.batch_message(
+        'youtube_cookies', [('Signed out', 'Upload a fresh cookies.txt')]
+    )
+    assert msg.title == 'YouTube cookies: Signed out'
+    assert msg.level == 'warning'
+
+
 # ── the dispatcher ──────────────────────────────────────────────────────
 
 
