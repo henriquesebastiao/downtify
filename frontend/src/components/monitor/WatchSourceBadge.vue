@@ -5,6 +5,9 @@
   <UiBadge v-else-if="source === 'deezer'" tone="neutral" icon="deezer"
     >Deezer</UiBadge
   >
+  <UiBadge v-else-if="source === 'musicbrainz'" tone="neutral"
+    >MusicBrainz</UiBadge
+  >
   <span v-else class="inline-flex flex-wrap items-center gap-1.5">
     <UiBadge tone="spotify" icon="spotify">Spotify</UiBadge>
     <!-- A mix made for one listener: the watch follows the signed-out

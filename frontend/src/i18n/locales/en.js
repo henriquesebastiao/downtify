@@ -19,7 +19,7 @@ export default {
     chooseHelp:
       'More than one YouTube Music artist could be {name}. Compare the photos or open their profiles, then follow the right one.',
     notFound:
-      'No YouTube Music artist named {name} was found. Paste the artist’s link instead.',
+      'No YouTube Music artist named {name} was found. Paste the artist’s link instead, or their MusicBrainz link (musicbrainz.org/artist/…) for an artist YouTube Music doesn’t have.',
     lookupFailed: 'Artist lookup is unavailable. You can still paste a link.',
     followProfile: 'Follow this artist',
     inspect: 'Open on YouTube Music',

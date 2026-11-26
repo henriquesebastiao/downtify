@@ -645,6 +645,7 @@ from .monitor import (
     check_watch,
     download_playlist_cover,
     fetch_playlist,
+    musicbrainz_artist_key,
     normalize_release_types,
     parse_playlist_url,
     playlist_watch_key,
@@ -11404,14 +11405,18 @@ def _youtube_artist_for_name(name: str) -> tuple[str, str]:
     Only an artist named exactly *name* (by :func:`artist_key`) is
     followed: the first one, YouTube Music's best match when namesakes
     share the name. The top result alone could be someone else entirely,
-    so without an exact name ``409`` asks for the YouTube Music link.
+    so without an exact name ``409`` asks for the artist's YouTube Music
+    or MusicBrainz link.
     """
 
     results = providers.search_artists(name, limit=10)
     if not results:
         raise HTTPException(
             status_code=404,
-            detail=f'No YouTube Music artist found for {name!r}',
+            detail=(
+                f'No YouTube Music artist found for {name!r}: '
+                f'{_ARTIST_LINK_HINT}'
+            ),
         )
     wanted = artist_key(name)
     best = next(
@@ -11427,11 +11432,63 @@ def _youtube_artist_for_name(name: str) -> tuple[str, str]:
             status_code=409,
             detail=(
                 f'No YouTube Music artist is named exactly {name!r}: '
-                "paste the artist's YouTube Music link instead"
+                f'{_ARTIST_LINK_HINT}'
             ),
         )
     channel_id = str(best['artist_id'])
     return channel_id, str(best.get('name') or name)
+
+
+#: What to paste when an artist can't be found by name.
+_ARTIST_LINK_HINT = (
+    "paste the artist's YouTube Music link instead, or their MusicBrainz "
+    'link (musicbrainz.org/artist/…) for an artist YouTube Music '
+    "doesn't have"
+)
+
+
+async def _musicbrainz_artist_target(artist_id: str) -> tuple[str, str, str]:
+    """``(kind, watch_key, name)`` of an artist watched through
+    MusicBrainz alone (see :func:`downtify.monitor.musicbrainz_artist_key`)."""
+
+    try:
+        name = await asyncio.to_thread(musicbrainz.artist_name, artist_id)
+    except musicbrainz.NotFound as exc:
+        raise HTTPException(
+            status_code=404, detail='MusicBrainz has no such artist'
+        ) from exc
+    except Exception as exc:
+        logger.exception('Failed to resolve MusicBrainz artist {}', artist_id)
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    return KIND_ARTIST, musicbrainz_artist_key(artist_id), name
+
+
+async def _spotify_artist_via_musicbrainz(
+    spotify_artist_id: str, spotify_name: str
+) -> Optional[tuple[str, str, str]]:
+    """The MusicBrainz-only watch of a Spotify artist YouTube Music
+    doesn't have, when MusicBrainz links one artist to the Spotify page;
+    ``None`` otherwise (or when MusicBrainz can't be asked)."""
+
+    try:
+        artist_id = await asyncio.to_thread(
+            musicbrainz.artist_id_for_spotify, spotify_artist_id
+        )
+    except Exception:
+        logger.opt(exception=True).info(
+            'Could not look up Spotify artist {} on MusicBrainz',
+            spotify_artist_id,
+        )
+        return None
+    if not artist_id:
+        return None
+    logger.info(
+        'Spotify artist "{}" is not on YouTube Music; following MusicBrainz '
+        'artist {} instead',
+        spotify_name,
+        artist_id,
+    )
+    return KIND_ARTIST, musicbrainz_artist_key(artist_id), spotify_name
 
 
 #: A Spotify user (listener) link: an account, never an artist's music.
@@ -11446,9 +11503,15 @@ async def _resolve_watch_target(url: str) -> tuple[str, str, str]:
     """Resolve a pasted URL into ``(kind, watch_key, display_name)``.
 
     Accepts a Spotify, public Deezer or YouTube Music playlist URL
-    (watched by its tracks), and a Spotify artist URL or a YouTube Music
-    artist URL (``/channel/UC...`` or ``/@handle``, watched by their
-    discography).
+    (watched by its tracks), and a Spotify artist URL, a YouTube Music
+    artist URL (``/channel/UC...`` or ``/@handle``) or a MusicBrainz
+    artist URL (watched by their discography).
+
+    A Spotify artist is followed through YouTube Music; when YouTube
+    Music has no artist of that name, through the MusicBrainz artist
+    MusicBrainz links to the Spotify page, if any. A MusicBrainz link
+    follows the artist through MusicBrainz alone - for artists YouTube
+    Music doesn't have.
     """
 
     playlist_target = parse_playlist_url(url)
@@ -11483,10 +11546,24 @@ async def _resolve_watch_target(url: str) -> tuple[str, str, str]:
         except Exception as exc:
             logger.exception('Failed to resolve artist {}', artist_id)
             raise HTTPException(status_code=502, detail=str(exc)) from exc
-        channel_id, name = await asyncio.to_thread(
-            _youtube_artist_for_name, spotify_name
-        )
+        try:
+            channel_id, name = await asyncio.to_thread(
+                _youtube_artist_for_name, spotify_name
+            )
+        except HTTPException as exc:
+            if exc.status_code not in {404, 409}:
+                raise
+            target = await _spotify_artist_via_musicbrainz(
+                artist_id, spotify_name
+            )
+            if target is None:
+                raise
+            return target
         return KIND_ARTIST, channel_id, name
+
+    musicbrainz_artist = musicbrainz.parse_artist_url(url)
+    if musicbrainz_artist:
+        return await _musicbrainz_artist_target(musicbrainz_artist)
 
     youtube_parsed = providers.parse_youtube_url(url)
     if youtube_parsed is not None and youtube_parsed[0] == 'artist':
@@ -11510,8 +11587,8 @@ async def _resolve_watch_target(url: str) -> tuple[str, str, str]:
     raise HTTPException(
         status_code=400,
         detail=(
-            'A Spotify, Deezer or YouTube Music playlist URL, or a Spotify or '
-            'YouTube Music artist URL, is required'
+            'A Spotify, Deezer or YouTube Music playlist URL, or a Spotify, '
+            'YouTube Music or MusicBrainz artist URL, is required'
         ),
     )
 
