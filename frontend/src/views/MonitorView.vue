@@ -669,6 +669,7 @@ import monitorAPI from '/src/model/monitor'
 import { useUi } from '/src/model/ui'
 import { artistPhotoSource } from '/src/lib/artistPhotoProxy'
 import { confirmWatchMix } from '/src/lib/spotifyMix'
+import { checkToastKey } from '/src/lib/spotifyCompanion'
 import { formatBytes, timeAgo } from '/src/lib/format'
 import {
   STAT_PERIODS,
@@ -1375,8 +1376,8 @@ function onSaved(updated) {
 async function check(item) {
   checking.value = new Set([...checking.value, item.id])
   try {
-    await monitorAPI.checkMonitoredPlaylist(item.id)
-    ui.toast(t('monitor.checking', { name: item.name }))
+    const res = await monitorAPI.checkMonitoredPlaylist(item.id)
+    ui.toast(t(checkToastKey(res), { name: item.name }))
     setTimeout(load, 4000)
   } catch {
     ui.toast(t('toast.actionFailed'), { kind: 'error' })

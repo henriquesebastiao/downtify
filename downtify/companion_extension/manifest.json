@@ -1,0 +1,17 @@
+{
+  "manifest_version": 3,
+  "name": "Downtify Spotify companion",
+  "version": "1.0.2",
+  "description": "Lets your Downtify server follow your own version of Spotify's personal mixes. Your Spotify sign-in stays in this browser.",
+  "minimum_chrome_version": "120",
+  "background": { "service_worker": "background.js", "type": "module" },
+  "permissions": ["alarms", "storage", "tabs", "webRequest"],
+  "host_permissions": [
+    "https://open.spotify.com/*",
+    "https://api-partner.spotify.com/*",
+    "https://*.spotify.com/*"
+  ],
+  "optional_host_permissions": ["http://*/*", "https://*/*"],
+  "action": { "default_title": "Downtify Spotify companion" },
+  "options_ui": { "page": "options.html", "open_in_tab": true }
+}

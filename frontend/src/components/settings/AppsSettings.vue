@@ -80,6 +80,12 @@
     <!-- Aurral: Downtify as one of its download sources -->
     <AurralSettings v-if="auth.isAdmin.value" @key-made="loadDevices" />
 
+    <!-- The Spotify companion: your own version of personal mixes -->
+    <SpotifyCompanionSettings
+      v-if="auth.isAdmin.value"
+      @key-made="loadDevices"
+    />
+
     <!-- Paired apps -->
     <SettingGroup
       :title="t('apps.devicesGroup')"
@@ -218,6 +224,7 @@ import UiSkeletonRows from '../ui/UiSkeletonRows.vue'
 import SettingGroup from './SettingGroup.vue'
 import SettingRow from './SettingRow.vue'
 import AurralSettings from './AurralSettings.vue'
+import SpotifyCompanionSettings from './SpotifyCompanionSettings.vue'
 import API from '/src/model/api'
 import { useAuth } from '/src/model/auth'
 import { useUi } from '/src/model/ui'

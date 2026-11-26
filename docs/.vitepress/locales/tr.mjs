@@ -104,6 +104,7 @@ export default {
       'features/slskd-navidrome.md': 'slskd ve Navidrome',
       'features/navidrome-ratings.md': "Deezer'dan puanlar",
       'features/aurral.md': 'Aurral',
+      'features/spotify-companion.md': 'Spotify yardımcısı',
       'features/deemix.md': 'Deemix',
       'features/soundcloud.md': 'SoundCloud',
       'features/library-catalog.md': 'Kitaplık kataloğu',

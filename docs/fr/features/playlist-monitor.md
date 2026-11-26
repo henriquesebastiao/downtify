@@ -64,6 +64,8 @@ Downtify reconnaît ces playlists à leur identifiant et :
 
 Pour garder votre version, copiez ses titres dans une playlist à vous sur Spotify (tout sélectionner, **Ajouter à la playlist**) et surveillez celle-ci : une playlist que vous avez créée est la même pour tout le monde. Les playlists éditoriales comme Today's Top Hits ou « This Is … » sont aussi les mêmes pour tous et ne sont pas signalées.
 
+Ou laissez le [Compagnon Spotify](spotify-companion.md) lire votre propre version : une extension de navigateur facultative qui tourne là où vous êtes connecté à Spotify, si bien que votre connexion Spotify n'arrive jamais jusqu'à Downtify.
+
 Si un mix était déjà surveillé, sa page **Activité et titres** (voir [plus bas](#activity-and-storage-per-watch)) liste les titres qu'il a ajoutés, pour retrouver et supprimer ceux qui n'ont rien à y faire.
 
 ## Playlists YouTube Music

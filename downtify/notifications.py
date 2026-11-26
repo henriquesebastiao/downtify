@@ -50,7 +50,13 @@ TASKS = ('doctor', 'upgrade', 'ratings', 'wanted', 'backup')
 #: What a channel hears about a task.
 PHASES = ('start', 'progress', 'finish', 'fail')
 #: One-off events.
-EVENTS = ('download_failed', 'download_done', 'new_releases', 'watch_done')
+EVENTS = (
+    'download_failed',
+    'download_done',
+    'new_releases',
+    'watch_done',
+    'spotify_companion',
+)
 CHANNELS = ('discord', 'ntfy', 'gotify', 'webhook')
 
 #: Settings that are secrets: never sent back to the page.
@@ -72,7 +78,7 @@ POLL_SECONDS = 3.0
 #: Seconds between two messages to one channel (Discord allows ~5/2s).
 CHANNEL_GAP = 1.0
 
-_DEFAULT_EVENTS = ['download_failed', 'new_releases']
+_DEFAULT_EVENTS = ['download_failed', 'new_releases', 'spotify_companion']
 _DEFAULT_PHASES = ['start', 'finish', 'fail']
 
 
@@ -337,6 +343,13 @@ _EVENT_TEXT = {
     'download_done': ('Downloaded', '{n} songs downloaded', 'success'),
     'new_releases': ('New releases', 'New releases from {n} watches', 'info'),
     'watch_done': ('Watch downloads', '{n} watches downloaded songs', 'info'),
+    # The Spotify companion was signed out, switched account, went
+    # quiet, or is back (downtify/spotify_companion.py).
+    'spotify_companion': (
+        'Spotify companion',
+        'Spotify companion: {n} changes',
+        'warning',
+    ),
 }
 
 

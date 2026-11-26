@@ -333,6 +333,7 @@ import API from '/src/model/api'
 import monitorAPI from '/src/model/monitor'
 import { artistPhotoSource } from '/src/lib/artistPhotoProxy'
 import { watchCoverUrl } from '/src/lib/watches'
+import { checkToastKey } from '/src/lib/spotifyCompanion'
 import { useLibrary } from '/src/model/library'
 import { usePlaylistActions } from '/src/model/playlistActions'
 import { useTrackActions } from '/src/model/trackActions'
@@ -611,8 +612,8 @@ async function loadStats() {
 async function check() {
   checking.value = true
   try {
-    await monitorAPI.checkMonitoredPlaylist(watchId.value)
-    ui.toast(t('monitor.checking', { name: watch.value.name }))
+    const res = await monitorAPI.checkMonitoredPlaylist(watchId.value)
+    ui.toast(t(checkToastKey(res), { name: watch.value.name }))
     setTimeout(() => {
       loadTracks()
       loadStats()

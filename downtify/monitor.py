@@ -18,7 +18,15 @@ from typing import Any, Callable, Optional
 
 from loguru import logger
 
-from . import deezer, m3u, musicbrainz, notifications, providers, spotify
+from . import (
+    deezer,
+    m3u,
+    musicbrainz,
+    notifications,
+    providers,
+    spotify,
+    spotify_companion,
+)
 from .artist_catalogue import (
     ArtistCatalogue,
     release_day,
@@ -1094,6 +1102,18 @@ async def check_playlist(
         tracks = await asyncio.to_thread(
             fetch_playlist_tracks, playlist.source, playlist.spotify_id
         )
+    except spotify_companion.CompanionWaiting:
+        # A personal mix the Spotify companion hasn't read yet (a new
+        # watch): ask it to read this one next. Not marked as checked, so
+        # nothing counts it as done.
+        logger.info(
+            'Watch "{}" waits for the Spotify companion to read it',
+            playlist.name,
+        )
+        store = spotify_companion.current()
+        if store is not None:
+            await asyncio.to_thread(store.request, playlist.id)
+        return 0
     except Exception:
         logger.exception('Failed to fetch playlist {}', playlist.spotify_id)
         await asyncio.to_thread(
@@ -3169,6 +3189,18 @@ async def _check_watch_online(
         _checks_running.discard(playlist.id)
 
 
+def companion_reads(playlist: MonitoredPlaylist) -> bool:
+    """Whether the Spotify companion, not this loop, decides when
+    *playlist* is checked (a personal Spotify mix with the companion on;
+    see downtify/spotify_companion.py)."""
+
+    return (
+        playlist.kind == KIND_PLAYLIST
+        and playlist.source == SOURCE_SPOTIFY
+        and spotify_companion.manages(playlist.spotify_id)
+    )
+
+
 async def monitor_loop(
     db: PlaylistMonitorDB,
     get_downloader: Callable[[], Optional[Downloader]],
@@ -3186,6 +3218,10 @@ async def monitor_loop(
             for pl in playlists:
                 await queue_pause.wait()
                 if not pl.enabled:
+                    continue
+                if companion_reads(pl):
+                    # The Spotify companion reads this mix in its own
+                    # time slots and starts the check itself.
                     continue
                 if not _is_due(pl.last_checked, pl.interval_minutes) and not (
                     pl.kind == KIND_ARTIST

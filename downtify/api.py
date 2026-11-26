@@ -486,6 +486,7 @@ from . import (
     notifications,
     providers,
     spotify,
+    spotify_companion,
     stream,
 )
 from .activity import ActivityLog, NowPlaying, describe_user_agent
@@ -643,6 +644,7 @@ from .monitor import (
     PlaylistMonitorDB,
     check_running,
     check_watch,
+    companion_reads,
     download_playlist_cover,
     fetch_playlist,
     musicbrainz_artist_key,
@@ -11521,6 +11523,17 @@ async def _resolve_watch_target(url: str) -> tuple[str, str, str]:
             name, _tracks = await asyncio.to_thread(
                 fetch_playlist, *playlist_target
             )
+        except spotify_companion.CompanionWaiting:
+            # A personal mix the Spotify companion hasn't read yet: its
+            # name is public, its songs come once the companion reads it
+            # (the first check asks for that read).
+            try:
+                name = await asyncio.to_thread(
+                    spotify.playlist_name_from_id, playlist_id
+                )
+            except Exception as exc:
+                logger.exception('Failed to resolve playlist {}', playlist_id)
+                raise HTTPException(status_code=502, detail=str(exc)) from exc
         except Exception as exc:
             logger.exception('Failed to resolve playlist {}', playlist_id)
             raise HTTPException(status_code=502, detail=str(exc)) from exc
@@ -12301,6 +12314,13 @@ async def manual_check_playlist(
         )
     if state.downloader is None:
         raise HTTPException(status_code=500, detail='Downloader not ready')
+    if companion_reads(playlist):
+        # A personal Spotify mix: the companion reads it next (one read
+        # at a time, after the usual gap) and the check follows.
+        store = spotify_companion.current()
+        if store is not None:
+            await asyncio.to_thread(store.request, playlist.id)
+        return {'status': 'companion_queued', 'id': playlist_id}
 
     loop = state.loop or asyncio.get_running_loop()
 

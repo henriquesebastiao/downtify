@@ -64,6 +64,8 @@ Downtify bu çalma listelerini kimliklerinden tanır ve:
 
 Kendi sürümünü korumak için şarkıları Spotify'da kendi çalma listene kopyala (hepsini seç, **Çalma listesine ekle**) ve onu izle: senin oluşturduğun bir çalma listesi herkes için aynıdır. Today's Top Hits veya "This Is …" gibi editoryal listeler de herkes için aynıdır ve işaretlenmez.
 
+Ya da kendi sürümünü [Spotify yardımcısı](spotify-companion.md) okusun: Spotify'a giriş yaptığın tarayıcıda çalışan isteğe bağlı bir tarayıcı uzantısıdır, böylece Spotify girişin hiçbir zaman Downtify'a ulaşmaz.
+
 Bir mix daha önce izlendiyse, **Etkinlik ve şarkılar** sayfası ([aşağıya](#activity-and-storage-per-watch) bak) getirdiği şarkıları listeler; yerinde olmayanları bulup silebilirsin.
 
 ## YouTube Music çalma listeleri

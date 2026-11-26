@@ -68,6 +68,8 @@ Downtify recognises these playlists by their id and:
 
 To keep your own version, copy its songs into a playlist you own on Spotify (select all, **Add to playlist**) and watch that playlist instead: a playlist you made is the same for everyone. Editorial playlists such as Today's Top Hits or "This Is …" are the same for everyone too and aren't flagged.
 
+Or let the [Spotify companion](spotify-companion.md) read your own version: an optional browser extension that runs where you're signed in to Spotify, so your Spotify sign-in never reaches Downtify.
+
 If a mix was watched before, its **Activity and songs** page (see [below](#activity-and-storage-per-watch)) lists the songs it brought in, so you can find and delete the ones that don't belong.
 
 ## YouTube Music playlists

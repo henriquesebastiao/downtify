@@ -1129,6 +1129,20 @@ RULES: list[tuple[frozenset[str], re.Pattern[str], str]] = [
         (_READ, r'^/api/aurral(/.*)?$', CLIENT),
         (_m('POST'), r'^/api/aurral/jobs$', CLIENT),
         (_m('DELETE'), r'^/api/aurral/jobs/[^/]+$', CLIENT),
+        # The Spotify companion (downtify/spotify_companion_routes.py):
+        # the extension asks what to read and sends the songs back with a
+        # paired-app key; the Monitor page reads the badges. Its settings
+        # and the extension download are an admin's.
+        (_m('POST'), r'^/api/companion/(poll|result)$', CLIENT),
+        (_READ, r'^/api/companion/watches$', CLIENT),
+        # The setup link for an AI agent: its long, day-long ticket is the
+        # key (downtify/spotify_companion_agent.py).
+        (
+            _READ,
+            r'^/api/companion/agent/[A-Za-z0-9_-]{20,}/(extension\.zip|status)$',
+            PUBLIC,
+        ),
+        (_ALL, r'^/api/companion(/.*)?$', ADMIN),
         # Admin (after the client rules, which carve out exceptions):
         # changes to the library, the queue, watches and profiles.
         (_m('POST', 'PUT', 'DELETE'), r'^/api/artists/(art|profile)', ADMIN),

@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Downtify Spotify companion</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #f6f7f8;
+        --card: #ffffff;
+        --text: #17191c;
+        --faint: #626a73;
+        --line: #d9dde1;
+        --accent: #1db954;
+        --warn: #b26b00;
+        --bad: #c8382e;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #111315;
+          --card: #1a1d20;
+          --text: #eef0f2;
+          --faint: #9aa3ab;
+          --line: #2c3136;
+          --warn: #f0b232;
+          --bad: #ff7b72;
+        }
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font:
+          15px/1.5 system-ui,
+          sans-serif;
+      }
+      main {
+        max-width: 640px;
+        margin: 32px auto;
+        padding: 0 16px;
+      }
+      h1 {
+        font-size: 22px;
+        margin: 0 0 4px;
+      }
+      p {
+        color: var(--faint);
+        margin: 0 0 16px;
+      }
+      section {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 16px;
+        margin-bottom: 16px;
+      }
+      label {
+        display: block;
+        font-weight: 600;
+        margin: 12px 0 4px;
+      }
+      input[type='text'],
+      input[type='password'] {
+        box-sizing: border-box;
+        width: 100%;
+        padding: 8px 10px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--bg);
+        color: var(--text);
+        font: inherit;
+      }
+      .check {
+        display: flex;
+        gap: 8px;
+        align-items: flex-start;
+        font-weight: 400;
+      }
+      button {
+        margin-top: 16px;
+        margin-right: 8px;
+        padding: 8px 16px;
+        border: 0;
+        border-radius: 999px;
+        background: var(--accent);
+        color: #06210f;
+        font: inherit;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      button.plain {
+        background: transparent;
+        color: var(--text);
+        border: 1px solid var(--line);
+      }
+      dl {
+        display: grid;
+        grid-template-columns: max-content 1fr;
+        gap: 6px 16px;
+        margin: 0;
+      }
+      dt {
+        color: var(--faint);
+      }
+      dd {
+        margin: 0;
+        overflow-wrap: anywhere;
+      }
+      .warn {
+        color: var(--warn);
+      }
+      .bad {
+        color: var(--bad);
+      }
+      #saved {
+        margin-left: 8px;
+        color: var(--faint);
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Downtify Spotify companion</h1>
+      <p>
+        Lets your Downtify server follow your own version of Spotify's personal
+        mixes. Sign in to Spotify in this browser (the companion keeps a Spotify
+        tab open for that). Your Spotify sign-in never leaves this browser:
+        Downtify only gets song lists, plus your account's name so it can tell
+        if someone else signs in. Downtify decides what is read and when.
+      </p>
+
+      <section>
+        <label for="url">Downtify address</label>
+        <input id="url" type="text" placeholder="http://192.168.1.20:8000" />
+        <label for="key">Key</label>
+        <input
+          id="key"
+          type="password"
+          autocomplete="off"
+          placeholder="Made in Downtify: Settings > Apps > Spotify companion"
+        />
+        <label class="check">
+          <input id="tab" type="checkbox" checked />
+          <span
+            >Keep one Spotify tab open (pinned). The companion reads with that
+            tab's sign-in and only ever uses that one tab: it never opens a tab
+            per mix, and reloads it only when its sign-in has gone stale, never
+            while it is playing.</span
+          >
+        </label>
+        <button id="save" type="button">Save</button>
+        <button id="now" class="plain" type="button">Check in now</button>
+        <span id="saved" role="status"></span>
+      </section>
+
+      <section>
+        <dl>
+          <dt>Last check-in</dt>
+          <dd id="at">Never</dd>
+          <dt>Spotify</dt>
+          <dd id="spotify">Unknown</dd>
+          <dt>Downtify</dt>
+          <dd id="downtify">Unknown</dd>
+          <dt>Last read</dt>
+          <dd id="read">None yet</dd>
+        </dl>
+        <p id="problem" class="bad" style="margin: 12px 0 0"></p>
+      </section>
+    </main>
+    <script type="module" src="options.js"></script>
+  </body>
+</html>
