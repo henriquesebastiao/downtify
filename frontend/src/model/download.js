@@ -426,11 +426,32 @@ export function useDownloadManager() {
     }
   }
 
+  // A job that replaced a low-bitrate file (song.low_bitrate) is retried
+  // with the same Soulseek copy - never by downloading a new track.
+  async function replaceLowBitrateAgain(song) {
+    const item = findItem(song)
+    if (item) item.resetForRetry()
+    try {
+      const { data } = await API.lowBitrateReplace([song.low_bitrate])
+      const refused = data?.refused?.[0]
+      if (refused && item) {
+        item.message = refused.code
+        item.setError()
+      }
+    } catch (err) {
+      if (item) {
+        item.message = err?.response?.data?.detail?.code || item.message
+        item.setError()
+      }
+    }
+  }
+
   // `audio` is a YouTube video id, or a SoundCloud track URL when `source`
   // is 'soundcloud'. Setting one clears the other, so a link pasted on an
   // earlier retry can't win over this one.
   function retryWithAudio(song, audio, source = 'youtube') {
     if (song.replace) return replaceAgain(song, audio)
+    if (song.low_bitrate) return replaceLowBitrateAgain(song)
     const audioOverride =
       source === 'soundcloud'
         ? { soundcloud_url: audio, youtube_id: undefined }
@@ -461,6 +482,7 @@ export function useDownloadManager() {
 
   async function retry(song) {
     if (song.replace) return replaceAgain(song, song.replace.video_id)
+    if (song.low_bitrate) return replaceLowBitrateAgain(song)
     const item = findItem(song)
     if (song.url?.trim()) {
       if (item) item.resetForRetry()

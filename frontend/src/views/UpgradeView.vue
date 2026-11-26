@@ -119,6 +119,15 @@
         </UiButton>
       </div>
     </UiPanel>
+    <UiPanel
+      v-if="auth.isAdmin.value"
+      :title="t('lowBitrate.panelTitle')"
+      :description="t('lowBitrate.panelHint')"
+    >
+      <UiButton variant="secondary" icon="gauge" :to="{ name: 'LowBitrate' }">
+        {{ t('lowBitrate.open') }}
+      </UiButton>
+    </UiPanel>
     <p v-if="status.finalizationError" role="alert" class="text-sm text-danger">
       {{ status.finalizationError }}
     </p>
@@ -445,10 +454,12 @@ import { formatBytes } from '/src/lib/format'
 import { ARTWORK_SIZES } from '/src/lib/upgrade'
 import { acoustidBlocker, normalizeAcoustid } from '/src/lib/acoustid'
 import API from '/src/model/api'
+import { useAuth } from '/src/model/auth'
 import { useUpgrade } from '/src/model/upgrade'
 import { useI18n } from '/src/i18n'
 
 const { t } = useI18n()
+const auth = useAuth()
 const {
   status,
   state,

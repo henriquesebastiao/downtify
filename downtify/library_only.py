@@ -59,6 +59,9 @@ REMOTE_ACTIONS = {
     '/api/library/upgrade/start',
     '/api/library/upgrade/resume',
     '/api/library/replace',
+    # Searching Soulseek for a better copy, and fetching it.
+    '/api/library/low-bitrate/search',
+    '/api/library/low-bitrate/replace',
     '/api/deemix/test',
     '/api/slskd/test',
     '/api/navidrome/ratings/run',

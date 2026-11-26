@@ -858,6 +858,27 @@ function renameServer(name) {
   return API.patch('/api/server', { name })
 }
 
+// ── Low-bitrate report (downtify/low_bitrate_routes.py) ───────────
+function lowBitrateReport(threshold) {
+  return API.get('/api/library/low-bitrate', { params: { threshold } })
+}
+
+function lowBitrateSearch(files, includeLossless = false) {
+  return API.post('/api/library/low-bitrate/search', {
+    files,
+    include_lossless: includeLossless,
+  })
+}
+
+// `items` is [{ file, candidate }]: a candidate id a search returned.
+function lowBitrateReplace(items) {
+  return API.post('/api/library/low-bitrate/replace', { items })
+}
+
+function lowBitrateForget(files) {
+  return API.post('/api/library/low-bitrate/forget', { files })
+}
+
 // ── Replacing a track's audio ─────────────────────────────────────
 function getReplaceCandidates(file, query = '') {
   return API.get('/api/library/replace/candidates', {
@@ -1427,6 +1448,10 @@ export default {
   backupDownloadURL,
   restoreBackup,
   restoreBackupFile,
+  lowBitrateReport,
+  lowBitrateSearch,
+  lowBitrateReplace,
+  lowBitrateForget,
   getReplaceCandidates,
   replaceAudio,
   replaceAudioFromFile,

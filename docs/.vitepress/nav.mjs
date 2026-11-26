@@ -62,6 +62,7 @@ export const NAV = [
         page: 'features/acoustid.md',
       },
       { title: 'Replace Audio', page: 'features/replace-audio.md' },
+      { title: 'Low-bitrate Report', page: 'features/low-bitrate-report.md' },
       {
         title: 'Artist Photo, Banner & Bio',
         page: 'features/artist-images.md',

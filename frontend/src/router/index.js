@@ -43,6 +43,13 @@ const routes = [
     component: () => import('/src/views/UpgradeView.vue'),
   },
   {
+    // Library files under a bitrate (admins), and better copies from
+    // Soulseek to replace them with, one approval at a time.
+    path: '/library/low-bitrate',
+    name: 'LowBitrate',
+    component: () => import('/src/views/LowBitrateView.vue'),
+  },
+  {
     // Library storage and usage (admins): size, growth, downloads and
     // what could be cleaned up.
     path: '/library/storage',
