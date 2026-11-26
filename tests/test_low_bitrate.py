@@ -126,6 +126,14 @@ def test_lossless_only_when_asked_for():
     assert [r['filename'][-4:] for r in picked] == ['.mp3', 'flac']
 
 
+def test_formats_to_avoid_are_never_offered():
+    ranked = [_row('song.flac', 900), _row('song.ogg', 320, user='b')]
+    picked = lb.pick_candidates(
+        ranked, 128, include_lossless=True, avoid={'flac', 'ogg'}
+    )
+    assert picked == []
+
+
 def test_vbr_v0_counts_as_best():
     v0 = _row('v0.mp3', 245, isVariableBitRate=True)
     picked = lb.pick_candidates([v0, _row('cbr.mp3', 256, user='x')], 128)

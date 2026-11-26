@@ -27,7 +27,7 @@ Copies are offered in this order:
 3. **Other lossy formats** (`.m4a`, `.ogg`, `.opus`) at 256 kbps or more.
 4. Files that **don't list a bitrate** — Downtify checks the real bitrate after downloading and refuses the copy if it isn't better.
 
-A copy is only offered when it's better than the file you have. Lossless copies (FLAC) are left out unless you turn on **Also offer lossless (FLAC)** before searching.
+A copy is only offered when it's better than the file you have. Lossless copies (FLAC) are left out unless you turn on **Also offer lossless (FLAC)** before searching, and a format in **Formats to avoid** ([Download settings](download-settings.md)) is never offered.
 
 Each copy shows its quality, size, how far its length is from your file's, and which peer shares it (and how long their queue is, when they're busy). The best one is picked for you; pick another if you prefer.
 

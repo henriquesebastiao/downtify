@@ -47,6 +47,7 @@ from loguru import logger
 from . import isrc as isrc_mod
 from . import lyrics as lyrics_mod
 from . import slskd_provider as slskd
+from .audio_formats import extensions_of
 from .audio_replace import copy_tags
 from .cover_art import extract_embedded_cover
 from .downloader import embed_metadata
@@ -202,9 +203,14 @@ def _tier(row: dict[str, Any]) -> int:
 
 
 def _acceptable(
-    row: dict[str, Any], old_kbps: int, include_lossless: bool
+    row: dict[str, Any],
+    old_kbps: int,
+    include_lossless: bool,
+    avoid: frozenset[str] = frozenset(),
 ) -> bool:
     ext = _extension(row.get('filename'))
+    if ext in avoid:
+        return False
     if ext in LOSSLESS_EXTENSIONS:
         return include_lossless
     if ext not in LOSSY_EXTENSIONS:
@@ -223,19 +229,22 @@ def pick_candidates(
     include_lossless: bool = False,
     min_score: int = 0,
     limit: int = CANDIDATE_LIMIT,
+    avoid: Iterable[str] = (),
 ) -> list[dict[str, Any]]:
     """The copies worth offering for a file at *old_kbps*, best first:
     MP3 320, then 256 and up, then files that list no bitrate; each a
     good enough match (*min_score*, slskd's own gate). One per peer and
-    name, so a peer sharing the album twice is listed once."""
+    name, so a peer sharing the album twice is listed once. Formats in
+    *avoid* (the Formats to avoid setting) are never offered."""
 
     picked: list[dict[str, Any]] = []
     seen: set[tuple[str, str]] = set()
+    avoided = frozenset(avoid)
     rows = [
         row
         for row in ranked
         if int(row.get('match_score') or 0) >= min_score
-        and _acceptable(row, old_kbps, include_lossless)
+        and _acceptable(row, old_kbps, include_lossless, avoided)
     ]
     rows.sort(
         key=lambda row: (
@@ -367,6 +376,7 @@ def search_candidates(
                 old_kbps,
                 include_lossless=include_lossless,
                 min_score=min_score,
+                avoid=extensions_of(settings.get('avoid_formats') or ()),
             )
             if picked:
                 return picked
