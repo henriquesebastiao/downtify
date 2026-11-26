@@ -2668,7 +2668,7 @@ export default {
     deleteTracksBody: '将从磁盘删除文件，并更新包含这些歌曲的播放列表。',
     deletePlaylistTitle: '删除播放列表“{name}”？',
     deletePlaylistBody:
-      '将从磁盘删除其歌曲，包括其他播放列表也在使用的歌曲，同时删除 M3U 文件。',
+      'M3U 文件和未共用的音频文件会从磁盘删除。其他播放列表或艺人追踪仍在使用的歌曲会保留。',
     deleteManualPlaylistBody: '将移除播放列表，歌曲保留在音乐库中。',
     clearQueueTitle: '清空队列？',
     clearQueueBody: '从列表移除等待中和已完成的项目，已下载文件会保留。',

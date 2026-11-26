@@ -2937,7 +2937,7 @@ export default {
       'Die Dateien werden vom Datenträger gelöscht. Playlists mit diesen Titeln werden aktualisiert.',
     deletePlaylistTitle: 'Playlist „{name}“ löschen?',
     deletePlaylistBody:
-      'Die Titel werden vom Datenträger gelöscht - auch wenn andere Playlists sie verwenden. Die M3U-Datei wird ebenfalls entfernt.',
+      'Die M3U-Datei und nicht geteilte Audiodateien werden vom Datenträger gelöscht. Titel, die andere Playlists oder eine Künstlerbeobachtung verwenden, bleiben erhalten.',
     deleteManualPlaylistBody:
       'Die Playlist wird entfernt. Die Titel bleiben in deiner Bibliothek.',
     clearQueueTitle: 'Warteschlange leeren?',

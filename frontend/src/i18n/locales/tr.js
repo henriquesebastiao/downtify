@@ -2858,7 +2858,7 @@ export default {
       'Dosyalar diskten kaldırılır. Bunları içeren çalma listeleri güncellenir.',
     deletePlaylistTitle: '“{name}” çalma listesi silinsin mi?',
     deletePlaylistBody:
-      'Parçaları — başka listelerin kullandıkları dahil — M3U dosyasıyla birlikte diskten kaldırılır.',
+      'M3U dosyası ve paylaşılmayan ses dosyaları diskten silinir. Başka bir çalma listesinde veya sanatçı takibinde kullanılan parçalar korunur.',
     deleteManualPlaylistBody:
       'Çalma listesi kaldırılır. Parçalar kitaplığında kalır.',
     clearQueueTitle: 'Kuyruk temizlensin mi?',

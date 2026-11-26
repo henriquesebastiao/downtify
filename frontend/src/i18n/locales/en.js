@@ -2821,7 +2821,7 @@ export default {
       'The files are removed from disk. Playlists that include them are updated.',
     deletePlaylistTitle: 'Delete the playlist “{name}”?',
     deletePlaylistBody:
-      'Its tracks are removed from disk — including ones other playlists also use — along with its M3U file.',
+      'The M3U file and unshared audio files are removed from disk. Tracks used by another playlist or an artist watch are kept.',
     deleteManualPlaylistBody:
       'The playlist is removed. The songs stay in your library.',
     clearQueueTitle: 'Clear the queue?',

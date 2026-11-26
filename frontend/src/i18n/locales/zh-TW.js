@@ -2721,7 +2721,7 @@ export default {
     deleteTracksBody: '檔案會從磁碟中移除，包含這些歌曲的播放清單也會更新。',
     deletePlaylistTitle: '要刪除播放清單「{name}」嗎？',
     deletePlaylistBody:
-      '其中的歌曲會從磁碟中移除（包括其他播放清單也在使用的歌曲），M3U 檔案也會一併移除。',
+      'M3U 檔案和未共用的音訊檔案會從磁碟刪除。其他播放清單或藝人追蹤仍在使用的歌曲會保留。',
     deleteManualPlaylistBody: '只會移除播放清單，歌曲仍會留在媒體庫。',
     clearQueueTitle: '要清空佇列嗎？',
     clearQueueBody: '等待中和已完成的項目會從清單中移除，已下載的檔案會保留。',

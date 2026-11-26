@@ -12,6 +12,7 @@ from downtify.library_delete import (
     delete_library_file,
     delete_playlist_from_library,
 )
+from downtify.monitor import PlaylistMonitorDB
 from downtify.track_index import TrackIndex
 
 
@@ -160,6 +161,40 @@ def test_delete_playlist_from_library(tmp_path: Path) -> None:
     # Folder is gone too: tracks, the M3U and the cover art were its
     # only contents.
     assert not pl_dir.exists()
+
+
+def test_folder_sweep_keeps_artist_watch_and_m3u_references(
+    tmp_path: Path,
+) -> None:
+    db = tmp_path / 'library.db'
+    state = _DeleteState(PlaylistCatalog(db), TrackIndex(db))
+    state.monitor_db = PlaylistMonitorDB(db)
+    watch = state.monitor_db.add_playlist(
+        'artist', 'Artist', 'offline:artist', kind='artist'
+    )
+    directory = tmp_path / 'Gone'
+    directory.mkdir()
+    paths = ['Gone/Track.mp3', 'Gone/Release.mp3', 'Gone/Mix.mp3']
+    for name in paths:
+        (tmp_path / name).write_bytes(b'kept')
+    state.monitor_db.mark_track_downloaded(watch.id, 'track', paths[0])
+    state.monitor_db.releases.record(
+        watch.id, 'album', 1, 'release-track', paths[1]
+    )
+    mix = tmp_path / 'Manual.m3u'
+    mix.write_text('#EXTM3U\n' + paths[2] + '\n', encoding='utf-8')
+    # The deleted playlist's own M3U must not protect its exclusive file.
+    (directory / 'Solo.mp3').write_bytes(b'solo')
+    (directory / 'Gone.m3u').write_text(
+        '#EXTM3U\nSolo.mp3\n', encoding='utf-8'
+    )
+
+    result = delete_playlist_from_library('Gone', tmp_path, {}, state)
+    assert result['files'] == ['Gone/Solo.mp3']
+    assert not (directory / 'Gone.m3u').exists()
+    assert mix.is_file()
+    for name in paths:
+        assert (tmp_path / name).read_bytes() == b'kept'
 
 
 def test_delete_playlist_removes_cover_from_playlists_dir_when_organized(

@@ -51,6 +51,17 @@ class ArtistReleaseStore:
                 )
             }
 
+    def artist_watch_filenames(self) -> set[str]:
+        """Files recorded by an artist watch, including release inventory."""
+        with self._connect() as conn:
+            rows = conn.execute(
+                """SELECT d.filename FROM downloaded_tracks d
+                   JOIN monitored_playlists p ON p.id = d.playlist_id
+                   WHERE p.kind = 'artist' AND d.filename IS NOT NULL
+                   UNION SELECT filename FROM artist_release_tracks""",
+            )
+            return {row['filename'].replace('\\', '/') for row in rows}
+
     def counts(self, playlist_id: int) -> dict[str, int]:
         """``{album_id: tracks recorded}`` for an artist watch."""
 
