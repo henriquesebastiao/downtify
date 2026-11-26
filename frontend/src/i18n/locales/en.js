@@ -2300,6 +2300,17 @@ export default {
     badgeHeld: 'On hold',
     badgeHeldHint:
       "A Spotify mix made for one listener. The Spotify companion can't read it right now, so it waits: see Settings > Apps > Spotify companion.",
+    agent: 'Set up with an AI agent',
+    agentHint:
+      "Instructions for an AI agent on your server (Hermes, OpenClaw, Claude Code…) to install the companion in a browser there, a browser container or a headless Chromium, and check that it works. They hold a private link that works for a day: the agent downloads the extension with it and sees how it's doing. You still sign in to Spotify yourself; the agent is told never to ask for your password.",
+    agentAddress: 'Address the browser will use',
+    agentAddressHint:
+      "Optional. Leave empty for this page's address. From a container, use the server's network address, not localhost.",
+    agentMake: 'Make instructions',
+    agentReady:
+      'Paste this into your AI agent. Its link works until {time}; keep it private.',
+    agentCopy: 'Copy',
+    agentCopied: 'Copied',
   },
   aurral: {
     title: 'Aurral',

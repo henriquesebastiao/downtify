@@ -6,6 +6,7 @@ import asyncio
 import io
 import json
 import random
+import re
 import zipfile
 from datetime import datetime, timedelta, timezone
 
@@ -723,3 +724,118 @@ def test_check_now_queues_a_companion_read(tmp_path, monkeypatch):
     answer = asyncio.run(api.manual_check_playlist(4, None))
     assert answer == {'status': 'companion_queued', 'id': 4}
     assert store.state['requests'] == [4]
+
+
+# ── Setting up with an AI agent ─────────────────────────────────────
+
+
+def _fake_accounts(monkeypatch):
+    made = []
+
+    async def new_device(info, user, ip, extra):
+        made.append(info['device_name'])
+        return {'token': f'dtfy_9_secret{len(made)}', 'device': {'id': 9}}
+
+    class Users:
+        @staticmethod
+        def get(user_id):
+            return {'id': user_id}
+
+    class Auth:
+        users = Users()
+
+    routes_auth = spotify_companion_routes.auth_routes
+    monkeypatch.setattr(routes_auth, '_store', Auth)
+    monkeypatch.setattr(
+        routes_auth, '_me', lambda request: type('Me', (), {'user_id': 1})()
+    )
+    monkeypatch.setattr(routes_auth, '_new_device', new_device)
+    monkeypatch.setattr(routes_auth, '_ip', lambda r: '')
+    return made
+
+
+def test_agent_setup_link_route_rules():
+    token = 'A' * 32
+    assert classify('POST', '/api/companion/agent') == ADMIN
+    assert classify('GET', f'/api/companion/agent/{token}/extension.zip') == (
+        'public'
+    )
+    assert classify('GET', f'/api/companion/agent/{token}/status') == 'public'
+    # Anything else under it stays an admin's.
+    assert classify('GET', '/api/companion/agent/short/status') == ADMIN
+    assert classify('DELETE', f'/api/companion/agent/{token}/status') == ADMIN
+
+
+def test_an_agent_can_fetch_set_up_and_check(routes, monkeypatch):
+    made = _fake_accounts(monkeypatch)
+    answer = routes.post('/api/companion/agent', json={}).json()
+    text = answer['instructions']
+    assert 'Never type, ask for, store or copy my Spotify password' in text
+    links = re.findall(
+        r'http://testserver/api/companion/agent/[^"?\s`]+', text
+    )
+    zip_url = next(u for u in links if u.endswith('extension.zip'))
+    status_url = next(u for u in links if u.endswith('/status'))
+
+    first = zipfile.ZipFile(io.BytesIO(routes.get(zip_url).content))
+    config = json.loads(first.read('config.json'))
+    assert config['downtify_url'] == 'http://testserver'
+    manifest = json.loads(first.read('manifest.json'))
+    # Allowed to reach Downtify with nobody clicking Save.
+    assert 'http://testserver/*' in manifest['host_permissions']
+
+    # Another address (from inside a container); the same key.
+    second = zipfile.ZipFile(
+        io.BytesIO(
+            routes.get(
+                zip_url, params={'address': 'http://192.168.1.20:8000/x'}
+            ).content
+        )
+    )
+    again = json.loads(second.read('config.json'))
+    assert again == {
+        'downtify_url': 'http://192.168.1.20:8000',
+        'key': config['key'],
+    }
+    assert (
+        'http://192.168.1.20:8000/*'
+        in json.loads(second.read('manifest.json'))['host_permissions']
+    )
+    assert made == ['Spotify companion (AI setup)']
+
+    status = routes.get(status_url).json()
+    assert status['status'] == 'never_connected'
+    assert set(status) == {
+        'status',
+        'message',
+        'last_check_in',
+        'extension_version',
+        'personal_mixes',
+        'read_today',
+    }
+    routes.post('/api/companion/poll', json={'status': READY, 'account': MINE})
+    status = routes.get(status_url).json()
+    assert status['status'] == READY
+    assert 'Shivpatel' not in json.dumps(status)
+
+
+def test_an_old_setup_link_stops_working(routes, monkeypatch):
+    _fake_accounts(monkeypatch)
+    text = routes.post('/api/companion/agent', json={}).json()['instructions']
+    status_url = re.search(
+        r'http://testserver/api/companion/agent/\S+/status', text
+    ).group(0)
+    later = datetime.now(UTC) + timedelta(hours=25)
+    monkeypatch.setattr(spotify_companion_routes, '_now', lambda: later)
+    response = routes.get(status_url)
+    assert response.status_code == 404
+    assert 'expired' in response.json()['detail']
+
+
+def test_the_download_for_people_also_needs_no_save(routes, monkeypatch):
+    _fake_accounts(monkeypatch)
+    archive = zipfile.ZipFile(
+        io.BytesIO(routes.post('/api/companion/extension').content)
+    )
+    manifest = json.loads(archive.read('manifest.json'))
+    assert 'http://testserver/*' in manifest['host_permissions']

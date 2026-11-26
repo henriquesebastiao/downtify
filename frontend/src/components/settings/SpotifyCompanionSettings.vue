@@ -227,6 +227,48 @@
         </UiButton>
       </div>
     </SettingRow>
+
+    <SettingRow
+      :label="t('companion.agent')"
+      :description="t('companion.agentHint')"
+      stacked
+    >
+      <div class="flex w-full flex-col gap-3">
+        <div class="flex w-full flex-col gap-2 sm:flex-row sm:items-end">
+          <UiInput
+            v-model="agentAddress"
+            class="min-w-0 flex-1"
+            :label="t('companion.agentAddress')"
+            :hint="t('companion.agentAddressHint')"
+            placeholder="http://192.168.1.20:8000"
+          />
+          <UiButton icon="sparkle" :loading="agentBusy" @click="makeAgentSetup">
+            {{ t('companion.agentMake') }}
+          </UiButton>
+        </div>
+        <template v-if="agentText">
+          <p class="text-[13px] text-pretty text-warn" role="status">
+            {{ t('companion.agentReady', { time: agentUntil }) }}
+          </p>
+          <textarea
+            :value="agentText"
+            readonly
+            rows="10"
+            class="w-full rounded-lg border border-line-3 bg-bg p-3 font-mono text-[12px] text-fg"
+            :aria-label="t('companion.agent')"
+          ></textarea>
+          <div>
+            <UiButton icon="copy" @click="copyAgent">
+              {{
+                agentCopied
+                  ? t('companion.agentCopied')
+                  : t('companion.agentCopy')
+              }}
+            </UiButton>
+          </div>
+        </template>
+      </div>
+    </SettingRow>
   </SettingGroup>
 </template>
 
@@ -276,6 +318,40 @@ const switching = ref(false)
 const downloading = ref(false)
 const savedNote = ref('')
 let timer = null
+
+// "Set up with an AI agent" (downtify/spotify_companion_agent.py).
+const agentAddress = ref('')
+const agentText = ref('')
+const agentUntil = ref('')
+const agentBusy = ref(false)
+const agentCopied = ref(false)
+
+async function makeAgentSetup() {
+  agentBusy.value = true
+  agentCopied.value = false
+  try {
+    const res = await API.companionAgent(agentAddress.value.trim())
+    agentText.value = res.data.instructions
+    agentUntil.value = new Date(res.data.expires_at).toLocaleString(
+      locale.value
+    )
+  } catch (err) {
+    ui.toast(err?.response?.data?.detail || t('toast.actionFailed'), {
+      kind: 'error',
+    })
+  } finally {
+    agentBusy.value = false
+  }
+}
+
+async function copyAgent() {
+  try {
+    await navigator.clipboard.writeText(agentText.value)
+    agentCopied.value = true
+  } catch {
+    // The text stays selectable in the box.
+  }
+}
 
 const days = computed(() => dayNames(locale.value))
 const health = computed(() => view.value?.health || { status: 'off' })

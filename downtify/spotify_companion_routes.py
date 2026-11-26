@@ -31,7 +31,14 @@ from fastapi import APIRouter, Body, HTTPException, Request
 from fastapi.responses import Response
 from loguru import logger
 
-from . import api, auth_routes, notifications, spotify, spotify_companion
+from . import (
+    api,
+    auth_routes,
+    notifications,
+    spotify,
+    spotify_companion,
+    spotify_companion_agent,
+)
 from .monitor import (
     KIND_PLAYLIST,
     SOURCE_SPOTIFY,
@@ -168,15 +175,41 @@ async def accept_account() -> dict[str, Any]:
 def _extension_zip(config: dict[str, str]) -> bytes:
     """The extension's files at the top of the ZIP: unzipping it (Windows'
     "Extract All" makes a folder named after it) gives the very folder to
-    choose in "Load unpacked"."""
+    choose in "Load unpacked". Its manifest lets it reach the Downtify
+    address in ``config.json`` from the start, so it works without anyone
+    clicking Save (a headless browser has nobody to click)."""
 
     buffer = io.BytesIO()
+    origin = spotify_companion_agent.origin_of(config.get('downtify_url', ''))
     with zipfile.ZipFile(buffer, 'w', zipfile.ZIP_DEFLATED) as archive:
         for path in sorted(EXTENSION_DIR.rglob('*')):
-            if path.is_file() and path.name != 'config.json':
-                archive.write(path, path.relative_to(EXTENSION_DIR).as_posix())
+            if not path.is_file() or path.name == 'config.json':
+                continue
+            name = path.relative_to(EXTENSION_DIR).as_posix()
+            if name == 'manifest.json' and origin:
+                manifest = json.loads(path.read_text(encoding='utf-8'))
+                manifest['host_permissions'] = [
+                    *manifest.get('host_permissions', []),
+                    f'{origin}/*',
+                ]
+                archive.writestr(name, json.dumps(manifest, indent=2))
+            else:
+                archive.write(path, name)
         archive.writestr('config.json', json.dumps(config, indent=2))
     return buffer.getvalue()
+
+
+def _zip_response(data: bytes) -> Response:
+    return Response(
+        content=data,
+        media_type='application/zip',
+        headers={
+            'Content-Disposition': (
+                'attachment; filename="downtify-companion.zip"'
+            ),
+            'Cache-Control': 'no-store',
+        },
+    )
 
 
 @router.post('/extension')
@@ -200,16 +233,98 @@ async def extension(request: Request) -> Response:
     data = await asyncio.to_thread(
         _extension_zip, {'downtify_url': address, 'key': made['token']}
     )
-    return Response(
-        content=data,
-        media_type='application/zip',
-        headers={
-            'Content-Disposition': (
-                'attachment; filename="downtify-companion.zip"'
-            ),
-            'Cache-Control': 'no-store',
-        },
+    return _zip_response(data)
+
+
+# ── Setting up with an AI agent ─────────────────────────────────────
+
+agent_tickets = spotify_companion_agent.Tickets()
+
+
+@router.post('/agent')
+async def agent_setup(request: Request) -> dict[str, Any]:
+    """A setup link (a day) and instructions for an AI agent on the server
+    (see downtify/spotify_companion_agent.py)."""
+
+    me = auth_routes._me(request)
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    base = str(request.base_url).rstrip('/')
+    address = (
+        spotify_companion_agent.origin_of(
+            (body or {}).get('address') if isinstance(body, dict) else ''
+        )
+        or base
     )
+    now = _now()
+    token, ticket = agent_tickets.make(me.user_id, address, now)
+    return {
+        'instructions': spotify_companion_agent.instructions(
+            base, address, token, ticket.expires
+        ),
+        'expires_at': ticket.expires.isoformat(),
+    }
+
+
+def _ticket(token: str) -> spotify_companion_agent.Ticket:
+    found = agent_tickets.get(token, _now())
+    if found is None:
+        raise HTTPException(
+            status_code=404,
+            detail='This setup link has expired: make a new one in Downtify',
+        )
+    return found
+
+
+@router.get('/agent/{token}/extension.zip')
+async def agent_extension(
+    token: str, request: Request, address: str = ''
+) -> Response:
+    ticket = _ticket(token)
+    target = spotify_companion_agent.origin_of(address) or ticket.address
+    if not ticket.key:
+        auth = auth_routes._store()
+        user = await asyncio.to_thread(auth.users.get, ticket.user_id)
+        if user is None:
+            raise HTTPException(status_code=404, detail='No such account')
+        made = await auth_routes._new_device(
+            {
+                'device_name': 'Spotify companion (AI setup)',
+                'platform': 'spotify-companion',
+            },
+            user,
+            auth_routes._ip(request),
+            None,
+        )
+        ticket.key = made['token']
+    ticket.downloads += 1
+    data = await asyncio.to_thread(
+        _extension_zip, {'downtify_url': target, 'key': ticket.key}
+    )
+    return _zip_response(data)
+
+
+@router.get('/agent/{token}/status')
+async def agent_status(token: str) -> dict[str, Any]:
+    """How the companion is doing, for the agent: no names, no keys."""
+
+    _ticket(token)
+    found = store()
+    pairs = await asyncio.to_thread(_watches)
+    summary = await asyncio.to_thread(
+        found.summary, _now(), [w for _p, w in pairs]
+    )
+    health = summary['health']
+    return {
+        'status': health['status'],
+        'message': health['message'],
+        'last_check_in': health['seen_at'],
+        'extension_version': health['version'],
+        'personal_mixes': summary['mixes'],
+        'read_today': summary['reads_today'],
+    }
 
 
 # ── The Monitor page ────────────────────────────────────────────────

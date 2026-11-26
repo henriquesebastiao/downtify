@@ -1164,6 +1164,11 @@ function companionUseAccount() {
   return API.post('/api/companion/account')
 }
 
+// Instructions and a day-long setup link for an AI agent on the server.
+function companionAgent(address) {
+  return API.post('/api/companion/agent', address ? { address } : {})
+}
+
 // The extension as a ZIP, with a new key and this server's address in it.
 function companionExtension() {
   return API.post('/api/companion/extension', null, { responseType: 'blob' })
@@ -1505,6 +1510,7 @@ export default {
   companionSave,
   companionUseAccount,
   companionExtension,
+  companionAgent,
   doctorAiStatus,
   doctorAiStart,
   doctorAiStop,

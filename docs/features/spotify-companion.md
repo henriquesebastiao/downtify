@@ -57,6 +57,22 @@ Open `https://<server>:3011`, sign in to Spotify in that browser, open the exten
 A browser that n8n or an AI agent already drives can work too, if it's Chromium (Google Chrome 137 and later ignore `--load-extension`), keeps its profile across restarts, and you can sign in to Spotify in it. A fully headless browser has no screen to sign in on, and an agent driving it might navigate the Spotify tab away. A container of its own is simpler.
 :::
 
+### With an AI agent on your server
+
+If an AI agent runs on your server (Hermes, OpenClaw, Claude Code, n8n's AI agent…), it can do the setup. Under **Settings → Apps → Spotify companion**, **Set up with an AI agent** makes instructions to paste into it. Fill in **Address the browser will use** first if the browser will run in a container or on another machine (the server's network address, such as `http://192.168.1.20:8000`, not `localhost`).
+
+The instructions hold a private link that works for 24 hours. With it, the agent can:
+
+- **download the extension**, with the address and a key already in it, and download it again for a different address (the key stays the same; it's listed as **Spotify companion (AI setup)** under **Paired apps**);
+- **run it in a browser on the server**, either the browser container above or a headless Chromium it already has (Chromium, Brave or Edge, with its own kept profile; Google Chrome 137 and later can't load it);
+- **check how it's doing**, with a status that has no names or keys in it, until it says `ready`.
+
+The ZIP lets the extension reach Downtify from the start, so nobody has to click **Save** in a browser with no screen.
+
+You still sign in to Spotify yourself. The instructions tell the agent never to type, ask for or copy your Spotify password, cookies or tokens. For a headless browser, they explain two ways to sign in yourself: inspect its Spotify tab from your own Chrome (`chrome://inspect` over an SSH tunnel), or open the same profile once with a screen.
+
+The link ends after a day or when Downtify restarts. Make new instructions to get another one.
+
 ## When it reads
 
 Downtify decides what is read and when, so the browser never looks like a script hammering Spotify:

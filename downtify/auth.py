@@ -1135,6 +1135,13 @@ RULES: list[tuple[frozenset[str], re.Pattern[str], str]] = [
         # and the extension download are an admin's.
         (_m('POST'), r'^/api/companion/(poll|result)$', CLIENT),
         (_READ, r'^/api/companion/watches$', CLIENT),
+        # The setup link for an AI agent: its long, day-long ticket is the
+        # key (downtify/spotify_companion_agent.py).
+        (
+            _READ,
+            r'^/api/companion/agent/[A-Za-z0-9_-]{20,}/(extension\.zip|status)$',
+            PUBLIC,
+        ),
         (_ALL, r'^/api/companion(/.*)?$', ADMIN),
         # Admin (after the client rules, which carve out exceptions):
         # changes to the library, the queue, watches and profiles.
