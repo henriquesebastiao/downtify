@@ -466,6 +466,9 @@ class Channel:
     async def edit(self, client: Client, handle: str, msg: Message) -> None:
         raise NotImplementedError
 
+    async def delete(self, client: Client, handle: str) -> None:
+        raise NotImplementedError
+
 
 class DiscordWebhook(Channel):
     name = 'discord'
@@ -489,6 +492,14 @@ class DiscordWebhook(Channel):
             'PATCH',
             f'{self.cfg["webhook_url"]}/messages/{handle}',
             json={'embeds': [discord_embed(msg)]},
+        )
+
+    async def delete(self, client: Client, handle: str) -> None:
+        await _request(
+            client,
+            'Discord',
+            'DELETE',
+            f'{self.cfg["webhook_url"]}/messages/{handle}',
         )
 
 
@@ -519,6 +530,16 @@ class DiscordBotChannel(Channel):
             f'/messages/{handle}',
             headers=self._headers(),
             json={'embeds': [discord_embed(msg)]},
+        )
+
+    async def delete(self, client: Client, handle: str) -> None:
+        await _request(
+            client,
+            'Discord',
+            'DELETE',
+            f'{DISCORD_API}/channels/{self.cfg["channel_id"]}'
+            f'/messages/{handle}',
+            headers=self._headers(),
         )
 
 
@@ -847,14 +868,39 @@ class Dispatcher:
                     client, name, ch, task_message(task, 'start')
                 )
                 continue
-            # finish / fail: settle the live message, then announce.
+            # finish / fail. The result replaces the live message, so a
+            # task leaves one message and the result still notifies (an
+            # edit doesn't). Without an end message, the live one is
+            # edited to show the result; so is one that can't be removed.
+            msg = task_message(task, phase)
+            announce = wants_task(ch, task.kind, phase)
             if live.handle and editable:
-                await self._send(
-                    client, name, ch, task_message(task, phase), live.handle
-                )
-            if wants_task(ch, task.kind, phase):
-                await self._send(client, name, ch, task_message(task, phase))
+                if not (
+                    announce
+                    and await self._remove(client, name, ch, live.handle)
+                ):
+                    await self._send(client, name, ch, msg, live.handle)
+            if announce:
+                await self._send(client, name, ch, msg)
             self._live.pop((name, task.key), None)
+
+    async def _remove(
+        self, client: Client, name: str, ch: dict[str, Any], handle: str
+    ) -> bool:
+        """Delete a live message; whether it went. A failure is only
+        logged: the message is then edited instead."""
+
+        gap = CHANNEL_GAP - (time.monotonic() - self._last_send.get(name, 0))
+        if gap > 0:
+            await asyncio.sleep(gap)
+        try:
+            await make_channel(name, ch).delete(client, handle)
+        except SendError as exc:
+            logger.info('notifications: {} delete failed: {}', name, exc)
+            return False
+        finally:
+            self._last_send[name] = time.monotonic()
+        return True
 
     async def tick(self, client: Client, *, flush: bool = False) -> None:
         """One round: read the tasks, send what changed and what is

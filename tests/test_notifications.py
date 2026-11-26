@@ -174,17 +174,89 @@ def test_task_lifecycle_edits_one_message():
 
     _run(go())
     methods = [r.method for r in rec.requests]
-    assert methods == ['POST', 'PATCH', 'PATCH', 'POST']
+    # The running message is replaced by the result: one message per
+    # task in the channel, and the result still notifies (an edit
+    # wouldn't), instead of the edited message plus a second one.
+    assert methods == ['POST', 'PATCH', 'DELETE', 'POST']
     assert rec.requests[1].url.path.endswith('/messages/101')
-    embeds = [b['embeds'][0] for b in rec.bodies()]
+    assert rec.requests[2].url.path.endswith('/messages/101')
+    embeds = [b['embeds'][0] for b in rec.bodies() if b]
     assert embeds[0]['title'] == 'Doctor health check: started'
     assert '50%' in embeds[1]['description']
-    assert embeds[3]['title'] == 'Doctor health check: finished'
-    assert embeds[3]['fields'][0] == {
+    assert embeds[2]['title'] == 'Doctor health check: finished'
+    assert embeds[2]['fields'][0] == {
         'name': 'Problems',
         'value': '3',
         'inline': True,
     }
+
+
+def _start_then_fail(cfg, rec):
+    tasks = [Task('r:1', 'ratings', 'Star ratings', 'running')]
+    d = _dispatcher(cfg, tasks)
+
+    async def go():
+        async with rec.client() as client:
+            await d.tick(client)  # started
+            tasks[0] = Task(
+                'r:1',
+                'ratings',
+                'Star ratings',
+                'failed',
+                error='Deezer is not answering',
+            )
+            await d.tick(client)  # failed
+
+    _run(go())
+    return d
+
+
+def test_a_failed_task_leaves_one_message():
+    rec = Recorder()
+    _start_then_fail(_cfg(), rec)
+    assert [r.method for r in rec.requests] == ['POST', 'DELETE', 'POST']
+    assert rec.bodies()[2]['embeds'][0]['title'] == 'Star ratings: failed'
+
+
+def test_without_the_end_message_the_running_one_is_settled():
+    # "Failed" is not wanted: the running message is edited to show the
+    # result, and nothing new is sent.
+    rec = Recorder()
+    _start_then_fail(_cfg(phases=['start']), rec)
+    assert [r.method for r in rec.requests] == ['POST', 'PATCH']
+    assert rec.bodies()[1]['embeds'][0]['title'] == 'Star ratings: failed'
+
+
+def test_when_the_running_message_cant_be_removed_it_is_settled():
+    # Someone deleted it by hand, or the bot may not delete: show the
+    # result in it if possible, and announce it anyway.
+    class NoDelete(Recorder):
+        def __call__(self, request):
+            if request.method == 'DELETE':
+                self.requests.append(request)
+                return httpx.Response(403, json={})
+            return super().__call__(request)
+
+    rec = NoDelete()
+    d = _start_then_fail(_cfg(), rec)
+    assert [r.method for r in rec.requests] == [
+        'POST',
+        'DELETE',
+        'PATCH',
+        'POST',
+    ]
+    assert d.errors() == {}
+
+
+def test_bot_channel_deletes_through_the_channel_messages_route():
+    rec = Recorder()
+    _start_then_fail(
+        _cfg(mode='bot', bot_token='bot-secret', channel_id='42'), rec
+    )
+    delete = rec.requests[1]
+    assert delete.method == 'DELETE'
+    assert delete.url.path == '/api/v10/channels/42/messages/101'
+    assert delete.headers['Authorization'] == 'Bot bot-secret'
 
 
 def test_progress_is_rate_limited():
