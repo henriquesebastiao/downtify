@@ -2594,6 +2594,8 @@ export default {
     event_watch_done: 'Descargas de seguimientos',
     event_spotify_companion:
       'Compañero de Spotify: sesión cerrada, otra cuenta, sin noticias o de vuelta',
+    event_youtube_cookies:
+      'Cookies de YouTube: sesión cerrada o iniciada de nuevo',
     test: 'Prueba',
     testHint:
       'Envía un mensaje ahora con lo que está rellenado arriba, guardado o no.',

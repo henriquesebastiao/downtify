@@ -2525,6 +2525,7 @@ export default {
     event_watch_done: 'Watch downloads',
     event_spotify_companion:
       'Spotify companion: signed out, other account, quiet or back',
+    event_youtube_cookies: 'YouTube cookies: signed out or signed in again',
     test: 'Test',
     testHint:
       'Sends one message now with what is filled in above, saved or not.',

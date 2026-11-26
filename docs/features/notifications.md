@@ -26,6 +26,9 @@ For each task you pick the moments you want to hear about: **Started**, **Progre
 | Songs downloaded | A song finished downloading (off by default: a big playlist sends a lot). |
 | New releases found | An artist watch found releases it did not have, with their names. |
 | Watch downloads | A watch's automatic check downloaded new songs. |
+| YouTube cookies: signed out or signed in again | The [YouTube cookies](youtube-cookies.md#keeping-them-working) were signed out, found by the keep-alive check or by a download, so you can upload new ones before downloads fail. A second message says when they are signed in again without a new upload. |
+
+Downtify turns new events on for new channels only: a channel saved before an event existed keeps the choices it was saved with, so tick the new event there yourself.
 
 A burst of the same event is grouped: Downtify waits 30 seconds and sends one message such as "12 downloads failed" with the first ten songs listed, not twelve messages.
 

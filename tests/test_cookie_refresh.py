@@ -234,6 +234,76 @@ def test_ytdlp_warnings_feed_the_health(store):
         cookie_refresh.bind_store(None)
 
 
+# ── notification ────────────────────────────────────────────────────────
+
+
+@pytest.fixture
+def sent(monkeypatch) -> list[tuple[str, str, str]]:
+    """The notifications the keep-alive emits, as ``(event, title, text)``."""
+
+    calls: list[tuple[str, str, str]] = []
+    monkeypatch.setattr(
+        cookie_refresh.notifications,
+        'emit',
+        lambda event, title, text='': calls.append((event, title, text)),
+    )
+    return calls
+
+
+def test_signing_out_is_notified_once(store, monkeypatch, sent):
+    _use(monkeypatch, _FakeSession(logged_in='false'))
+    cookie_refresh.refresh_cookies(store)
+    cookie_refresh.refresh_cookies(store)
+    assert len(sent) == 1
+    event, title, text = sent[0]
+    assert event == 'youtube_cookies'
+    assert title == 'Signed out'
+    assert 'YouTube signed this session out' in text
+    assert 'Upload a fresh cookies.txt' in text
+
+
+def test_signed_in_cookies_notify_nothing(store, monkeypatch, sent):
+    _use(monkeypatch, _FakeSession())
+    cookie_refresh.refresh_cookies(store)
+    _use(monkeypatch, _FakeSession(fail=True))
+    cookie_refresh.refresh_cookies(store)
+    assert sent == []
+
+
+def test_a_session_that_comes_back_is_notified(store, monkeypatch, sent):
+    _use(monkeypatch, _FakeSession(logged_in='false'))
+    cookie_refresh.refresh_cookies(store)
+    _use(monkeypatch, _FakeSession())
+    cookie_refresh.refresh_cookies(store)
+    cookie_refresh.refresh_cookies(store)
+    assert [(e, t) for e, t, _x in sent] == [
+        ('youtube_cookies', 'Signed out'),
+        ('youtube_cookies', 'Signed in again'),
+    ]
+
+
+def test_a_dead_session_seen_by_ytdlp_is_notified(store, sent):
+    cookie_refresh.bind_store(store)
+    try:
+        for _ in range(2):
+            cookie_refresh.note_ytdlp_message(
+                'The provided YouTube account cookies are no longer valid.'
+            )
+    finally:
+        cookie_refresh.bind_store(None)
+    assert len(sent) == 1
+    assert 'yt-dlp: YouTube no longer accepts these cookies' in sent[0][2]
+
+
+def test_a_new_upload_is_not_a_comeback(store, monkeypatch, sent):
+    _use(monkeypatch, _FakeSession(logged_in='false'))
+    cookie_refresh.refresh_cookies(store)
+    store.save(store.path.read_bytes())
+    _use(monkeypatch, _FakeSession())
+    cookie_refresh.refresh_cookies(store)
+    assert [t for _e, t, _x in sent] == ['Signed out']
+
+
 def test_a_new_upload_resets_the_health(store):
     store.health = {**store.health, 'state': 'signed_out'}
     store.save(store.path.read_bytes())

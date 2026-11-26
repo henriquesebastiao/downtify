@@ -2606,6 +2606,7 @@ export default {
     event_watch_done: 'Λήψεις παρακολουθήσεων',
     event_spotify_companion:
       'Συνοδευτικό Spotify: αποσύνδεση, άλλος λογαριασμός, σιωπή ή επιστροφή',
+    event_youtube_cookies: 'Cookies YouTube: αποσύνδεση ή νέα σύνδεση',
     test: 'Δοκιμή',
     testHint:
       'Στέλνει τώρα ένα μήνυμα με ό,τι είναι συμπληρωμένο παραπάνω, αποθηκευμένο ή όχι.',

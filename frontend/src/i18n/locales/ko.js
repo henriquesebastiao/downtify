@@ -2549,6 +2549,7 @@ export default {
     event_watch_done: '감시 항목 다운로드',
     event_spotify_companion:
       'Spotify 동반 확장: 로그아웃, 다른 계정, 연락 없음 또는 복귀',
+    event_youtube_cookies: 'YouTube 쿠키: 로그아웃 또는 다시 로그인',
     test: '테스트',
     testHint:
       '위에 입력된 내용으로 지금 메시지 하나를 보냅니다. 저장 여부와 상관없습니다.',

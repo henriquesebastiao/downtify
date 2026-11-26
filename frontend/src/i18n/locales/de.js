@@ -2634,6 +2634,7 @@ export default {
     event_watch_done: 'Downloads von Beobachtungen',
     event_spotify_companion:
       'Spotify-Begleiter: abgemeldet, anderes Konto, still oder zurück',
+    event_youtube_cookies: 'YouTube-Cookies: abgemeldet oder wieder angemeldet',
     test: 'Test',
     testHint:
       'Sendet jetzt eine Nachricht mit dem, was oben eingetragen ist, gespeichert oder nicht.',

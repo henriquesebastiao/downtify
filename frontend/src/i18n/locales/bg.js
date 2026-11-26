@@ -2555,6 +2555,7 @@ export default {
     event_watch_done: 'Изтегляния от следенията',
     event_spotify_companion:
       'Spotify спътник: излязъл, друг акаунт, без връзка или обратно',
+    event_youtube_cookies: 'Бисквитки за YouTube: излезли или отново влезли',
     test: 'Проба',
     testHint:
       'Изпраща едно съобщение сега с попълненото по-горе, записано или не.',
