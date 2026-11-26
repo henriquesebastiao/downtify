@@ -178,6 +178,29 @@ SOURCE_SPOTIFY = 'spotify'
 SOURCE_YOUTUBE_MUSIC = 'youtube_music'
 SOURCE_DEEZER = 'deezer'
 DEEZER_PLAYLIST_PREFIX = 'deezer:playlist:'
+SOURCE_MUSICBRAINZ = 'musicbrainz'
+#: The key (``spotify_id`` column) of an artist watch followed through
+#: MusicBrainz alone - an artist YouTube Music doesn't have - before the
+#: artist's MusicBrainz id. Every other artist watch is keyed by its
+#: YouTube Music channel id (``UC...``).
+MUSICBRAINZ_ARTIST_PREFIX = 'musicbrainz:artist:'
+
+
+def musicbrainz_artist_key(artist_id: str) -> str:
+    """The watch key of an artist followed through MusicBrainz alone."""
+
+    return MUSICBRAINZ_ARTIST_PREFIX + artist_id
+
+
+def musicbrainz_artist_of(watch_key: str) -> str:
+    """The MusicBrainz artist id of a MusicBrainz-only artist watch's
+    key, else ``''`` (the key is a YouTube Music channel id)."""
+
+    key = str(watch_key or '')
+    if key.startswith(MUSICBRAINZ_ARTIST_PREFIX):
+        return key[len(MUSICBRAINZ_ARTIST_PREFIX) :]
+    return ''
+
 
 #: The kinds of release an artist watch can download (YouTube Music's own
 #: 'Album' / 'Single' / 'EP' split). A watch stores the ones it wants as a
@@ -226,6 +249,8 @@ def watch_source(url: str) -> str:
         return SOURCE_YOUTUBE_MUSIC
     if deezer.parse_deezer_url(url or '') is not None:
         return SOURCE_DEEZER
+    if musicbrainz.parse_artist_url(url or ''):
+        return SOURCE_MUSICBRAINZ
     return SOURCE_SPOTIFY
 
 
@@ -1773,21 +1798,27 @@ def _artist_discography(
     processed twice, but its songs are downloaded once: the sweep links
     a song the library (or this sweep) already has. Raises only when no
     source answered.
+
+    An artist YouTube Music doesn't have is watched through MusicBrainz
+    (its watch key is :func:`musicbrainz_artist_key`): YouTube Music is
+    skipped and MusicBrainz is read whatever the setting says, since it
+    is the watch's own catalogue.
     """
 
     found: list[dict[str, Any]] = []
     asked = failed = 0
-    sources = [
-        (
+    musicbrainz_only = bool(musicbrainz_artist_of(playlist.spotify_id))
+    sources = []
+    if not musicbrainz_only:
+        sources.append((
             'YouTube Music',
             lambda: providers.artist_albums_from_channel_id(
                 playlist.spotify_id
             ),
-        )
-    ]
+        ))
     if settings.get('artist_watch_deezer'):
         sources.append(('Deezer', lambda: _deezer_releases(playlist, db)))
-    if settings.get('artist_watch_musicbrainz'):
+    if musicbrainz_only or settings.get('artist_watch_musicbrainz'):
         sources.append((
             'MusicBrainz',
             lambda: _musicbrainz_releases(playlist, db, settings, found),
@@ -1900,8 +1931,14 @@ def _musicbrainz_releases(
     the artist, every group is recorded as already there, as for Deezer.
     """
 
-    artist_id = playlist.musicbrainz_id
+    artist_id = playlist.musicbrainz_id or musicbrainz_artist_of(
+        playlist.spotify_id
+    )
     linked = False
+    if artist_id and not playlist.musicbrainz_id:
+        # A MusicBrainz-only watch: its key names the artist.
+        db.update_playlist(playlist.id, musicbrainz_id=artist_id)
+        playlist.musicbrainz_id = artist_id
     if not artist_id:
         artist_id = musicbrainz.artist_id_for(
             playlist.name,
@@ -2227,7 +2264,9 @@ async def check_artist(  # noqa: PLR0914  # one sweep: discography, releases, tr
     Releases out before a "new releases only" watch stay skipped unless
     switched on.
 
-    ``playlist.spotify_id`` is the artist's YouTube Music channel id. The
+    ``playlist.spotify_id`` is the artist's YouTube Music channel id (or,
+    for an artist YouTube Music doesn't have, :func:`musicbrainz_artist_key`
+    - then MusicBrainz is the catalogue). The
     discography is listed once per sweep - YouTube Music's, plus Deezer's
     with ``artist_watch_deezer`` on (see :func:`_artist_discography`);
     only releases missing from ``seen_albums`` have their tracklists

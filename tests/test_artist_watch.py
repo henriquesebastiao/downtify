@@ -376,6 +376,10 @@ def test_resolve_spotify_artist_url_maps_to_youtube_channel(monkeypatch):
 
 
 def test_resolve_spotify_artist_does_not_guess_first_result(monkeypatch):
+    # Nor does MusicBrainz link the Spotify page to anyone.
+    monkeypatch.setattr(
+        api.musicbrainz, 'artist_id_for_spotify', lambda _id: ''
+    )
     monkeypatch.setattr(
         api.spotify, 'artist_name_from_id', lambda artist_id: 'Test Artist'
     )
@@ -427,6 +431,10 @@ def test_resolve_spotify_artist_ignores_case_and_slashes(monkeypatch):
 
 
 def test_resolve_spotify_artist_with_no_match_is_404(monkeypatch):
+    # Nor does MusicBrainz link the Spotify page to anyone.
+    monkeypatch.setattr(
+        api.musicbrainz, 'artist_id_for_spotify', lambda _id: ''
+    )
     monkeypatch.setattr(
         api.spotify, 'artist_name_from_id', lambda artist_id: 'Nobody'
     )

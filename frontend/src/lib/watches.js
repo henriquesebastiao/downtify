@@ -33,11 +33,17 @@ export function watchKind(item) {
  */
 export function watchKindOfUrl(raw) {
   if (spotifyUserOf(raw)) return null
+  if (MUSICBRAINZ_ARTIST.test(String(raw || '').trim())) return 'artist'
   const result = classifyInput(raw)
   if (result.kind === 'playlist') return 'playlist'
   if (result.kind === 'artist') return 'artist'
   return null
 }
+
+// musicbrainz.org/artist/<id>: an artist YouTube Music doesn't have,
+// watched through MusicBrainz alone.
+const MUSICBRAINZ_ARTIST =
+  /^(?:https?:\/\/)?(?:[a-z]+\.)?musicbrainz\.org\/artist\/[0-9a-f-]{36}(?:[/?#]|$)/i
 
 // open.spotify.com/user/<id> (any locale prefix) or spotify:user:<id>.
 const SPOTIFY_USER =

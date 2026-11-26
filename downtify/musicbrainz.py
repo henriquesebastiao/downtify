@@ -173,6 +173,45 @@ def _artist_by_name(name: str) -> str:
     return exact[0] if len(exact) == 1 and exact[0] else ''
 
 
+#: A MusicBrainz artist page (``musicbrainz.org/artist/<id>``, also on
+#: ``beta.`` and with a trailing tab like ``/releases``).
+_ARTIST_PAGE = re.compile(
+    r'^\s*(?:https?://)?(?:[a-z]+\.)?musicbrainz\.org/artist/'
+    r'([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})'
+    r'(?:[/?#].*)?\s*$',
+    re.IGNORECASE,
+)
+
+
+def parse_artist_url(url: str) -> str:
+    """The artist id of a MusicBrainz artist link, else ``''``."""
+
+    match = _ARTIST_PAGE.match(url or '')
+    return match.group(1).lower() if match else ''
+
+
+def artist_name(artist_id: str) -> str:
+    """The name of MusicBrainz artist *artist_id*. Raises :class:`NotFound`
+    for an id MusicBrainz doesn't have."""
+
+    data = _get(f'artist/{artist_id}')
+    name = str(data.get('name') or '').strip()
+    if not name:
+        raise NotFound(f'MusicBrainz has no artist {artist_id}')
+    return name
+
+
+def artist_id_for_spotify(spotify_artist_id: str) -> str:
+    """The one MusicBrainz artist linked to a Spotify artist page, else
+    ``''`` (MusicBrainz keeps streaming links on most artists)."""
+
+    if not spotify_artist_id:
+        return ''
+    return _artist_by_url(
+        f'https://open.spotify.com/artist/{spotify_artist_id}'
+    )
+
+
 def artist_id_for(
     name: str, *, deezer_id: str = '', channel_id: str = ''
 ) -> str:
