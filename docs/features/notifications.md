@@ -31,7 +31,7 @@ A burst of the same event is grouped: Downtify waits 30 seconds and sends one me
 
 ### Progress without the spam
 
-On Discord each running task gets **one message that is edited in place**: the progress bar moves, the step changes, and when the task ends the same message shows the result. A separate short message then says it finished or failed, because Discord does not notify anyone about an edit. **Progress updates** sets how often that message may change (30 seconds to 15 minutes, default 1 minute).
+On Discord each running task gets **one message that is edited in place**: the progress bar moves and the step changes. When the task ends, that message is replaced by the result, sent as a new message because Discord does not notify anyone about an edit, so each task leaves one message in the channel. With **Finished** or **Failed** turned off, the running message is edited to show the result instead. **Progress updates** sets how often the running message may change (30 seconds to 15 minutes, default 1 minute).
 
 ntfy, Gotify and webhooks cannot edit what they sent, so they get a progress line only at each quarter (25%, 50%, 75%) instead.
 
