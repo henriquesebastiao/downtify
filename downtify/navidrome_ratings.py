@@ -38,6 +38,8 @@ from collections.abc import Callable
 from datetime import datetime, timedelta, timezone
 from typing import Any, Optional
 
+from loguru import logger
+
 from . import deezer
 from .navidrome import SubsonicError
 
@@ -173,6 +175,19 @@ def next_run_at(
 
 
 _DEEZER_API = 'https://api.deezer.com'
+
+#: A tiny request Deezer always answers. When one lookup keeps failing,
+#: this tells "Deezer is down" (stop the run) from "Deezer can't answer
+#: this one" (skip it and go on).
+DEEZER_PROBE_URL = f'{_DEEZER_API}/genre/0'
+
+
+def sendable(text: str) -> str:
+    """*text* without what can't go in a URL (a lone surrogate, as left
+    by a broken emoji in a tag), which would fail before Deezer is even
+    asked."""
+
+    return text.encode('utf-8', 'ignore').decode('utf-8')
 
 
 class DeezerUnavailable(RuntimeError):
@@ -356,13 +371,22 @@ class RatingRun:
         each of :data:`RETRY_PAUSES`, then :class:`DeezerUnavailable`.
         Any other refusal (such as 800, no data) is final for that item
         and reads as an empty answer.
+
+        From the second failure on, Deezer is asked something it always
+        answers: if it does, only this item fails, so it reads as an
+        empty answer too and the run goes on. Without that check, one
+        song Deezer never answers ended every run on the same song.
         """
         self._calls += 1
         if self._calls > 1 and (self._calls - 1) % BATCH_SIZE == 0:
             self._wait(BATCH_PAUSE)
+        params = {
+            key: sendable(value) if isinstance(value, str) else value
+            for key, value in params.items()
+        }
         data: dict[str, Any] = {}
         failure: Optional[ValueError] = None
-        for pause in (*RETRY_PAUSES, None):
+        for attempt, pause in enumerate((*RETRY_PAUSES, None)):
             try:
                 data = deezer._get_json(url, **params)
                 failure = None
@@ -375,6 +399,14 @@ class RatingRun:
                 failure = exc
             except ValueError as exc:
                 failure = exc
+            if attempt >= 1 and self._deezer_answers():
+                logger.warning(
+                    'ratings: Deezer answers, but not for {} {}; skipped ({})',
+                    url,
+                    params,
+                    failure.__cause__ or failure,
+                )
+                return {}
             if pause is None or self._cancelled():
                 break
             self._wait(pause)
@@ -383,9 +415,23 @@ class RatingRun:
                 # Stopped during the retries: no failure, just a stop.
                 self._stopped = True
                 return {}
+            logger.warning(
+                'ratings: Deezer is not answering ({})',
+                failure.__cause__ or failure,
+            )
             raise DeezerUnavailable('Deezer is not answering') from failure
         self._sleep(DEEZER_PAUSE)
         return data
+
+    @staticmethod
+    def _deezer_answers() -> bool:
+        """Whether Deezer answers a request it always can."""
+
+        try:
+            deezer._get_json(DEEZER_PROBE_URL)
+        except ValueError:
+            return False
+        return True
 
     @staticmethod
     def _rows(data: dict[str, Any]) -> list[dict[str, Any]]:
