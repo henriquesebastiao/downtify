@@ -166,17 +166,16 @@ async def accept_account() -> dict[str, Any]:
 
 
 def _extension_zip(config: dict[str, str]) -> bytes:
+    """The extension's files at the top of the ZIP: unzipping it (Windows'
+    "Extract All" makes a folder named after it) gives the very folder to
+    choose in "Load unpacked"."""
+
     buffer = io.BytesIO()
     with zipfile.ZipFile(buffer, 'w', zipfile.ZIP_DEFLATED) as archive:
         for path in sorted(EXTENSION_DIR.rglob('*')):
             if path.is_file() and path.name != 'config.json':
-                archive.write(
-                    path,
-                    f'downtify-companion/{path.relative_to(EXTENSION_DIR).as_posix()}',
-                )
-        archive.writestr(
-            'downtify-companion/config.json', json.dumps(config, indent=2)
-        )
+                archive.write(path, path.relative_to(EXTENSION_DIR).as_posix())
+        archive.writestr('config.json', json.dumps(config, indent=2))
     return buffer.getvalue()
 
 

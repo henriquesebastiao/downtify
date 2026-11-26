@@ -20,7 +20,7 @@ It's off until an admin turns it on under **Settings → Apps → Spotify compan
 
 1. In Downtify, open **Settings → Apps → Spotify companion** and turn on **Read personal mixes with the companion**.
 2. Click **Download the companion**. The ZIP contains the extension with this server's address and a new key already filled in. Keep it private: the key lets anyone with it use Downtify as an app. Each download makes a new key.
-3. Unzip it, and load the `downtify-companion` folder into a Chromium browser (Chrome, Brave, Edge, Chromium): open the extensions page, turn on **Developer mode**, and choose **Load unpacked**.
+3. Unzip it (on Windows: right-click, **Extract All**), and load the folder it makes, the one with `manifest.json` in it, into a Chromium browser (Chrome, Brave, Edge, Chromium): open the extensions page, turn on **Developer mode**, and choose **Load unpacked**.
 4. Its settings page opens. Check the Downtify address (it's the one your browser used; another device may need the server's network address, such as `http://192.168.1.20:8000`), then click **Save** and allow access to that address.
 5. Sign in to Spotify in that browser. The companion keeps a pinned Spotify tab open for this.
 

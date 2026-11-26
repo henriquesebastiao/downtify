@@ -693,8 +693,8 @@ def test_the_extension_download_carries_the_key(routes, monkeypatch):
     assert response.status_code == 200
     archive = zipfile.ZipFile(io.BytesIO(response.content))
     names = archive.namelist()
-    assert 'downtify-companion/manifest.json' in names
-    config = json.loads(archive.read('downtify-companion/config.json'))
+    assert 'manifest.json' in names
+    config = json.loads(archive.read('config.json'))
     assert config == {
         'downtify_url': 'http://testserver',
         'key': 'dtfy_1_secret',
