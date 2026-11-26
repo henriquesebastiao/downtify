@@ -37,6 +37,7 @@ from mutagen.mp4 import MP4, MP4Cover, MP4FreeForm
 from mutagen.oggopus import OggOpus
 from mutagen.oggvorbis import OggVorbis
 from yt_dlp.postprocessor.ffmpeg import FFmpegExtractAudioPP
+from yt_dlp.utils import PostProcessingError
 
 from . import cover_sources
 from . import deezer as deezer_mod
@@ -220,6 +221,53 @@ def _audio_bit_rate(metadata: dict[str, Any]) -> Optional[float]:
     return None
 
 
+#: What yt-dlp's audio extraction says when ffprobe finds no audio stream
+#: in the downloaded file: YouTube served bytes no audio tool can read.
+_UNREADABLE_AUDIO = 'unable to obtain file audio codec'
+#: How many unreadable formats one download skips before it gives up.
+_UNREADABLE_RETRIES = 3
+
+
+class _UnreadableFormat(Exception):
+    """The downloaded format turned out unreadable (see
+    :data:`_UNREADABLE_AUDIO`); *path* is the file it left, *cause* what
+    yt-dlp raised."""
+
+    def __init__(
+        self, format_id: str, path: Optional[Path], cause: BaseException
+    ) -> None:
+        super().__init__(str(cause))
+        self.format_id = format_id
+        self.path = path
+        self.cause = cause
+
+
+def _without_format(spec: str, format_id: str) -> str:
+    """yt-dlp format *spec* with *format_id* left out of each choice.
+
+    The id is quoted: unquoted, yt-dlp reads ``774`` as a number, and the
+    filter then leaves the format in."""
+
+    format_id = format_id.replace("'", '')
+    return '/'.join(
+        f"{choice}[format_id!='{format_id}']" for choice in spec.split('/')
+    )
+
+
+def _discard_unreadable(path: Optional[Path], target_dir: Path) -> None:
+    """Remove an unreadable download from *target_dir*, so the library
+    doesn't list a file that can't be played."""
+
+    if path is None or path.parent.resolve() != target_dir.resolve():
+        return
+    try:
+        path.unlink(missing_ok=True)
+    except OSError:
+        logger.opt(exception=True).warning(
+            'Could not remove unreadable download {}', path
+        )
+
+
 class _ExtractAudioPP(FFmpegExtractAudioPP):
     """yt-dlp's audio extraction, honoring the chosen bitrate.
 
@@ -250,9 +298,28 @@ class _ExtractAudioPP(FFmpegExtractAudioPP):
             self._bitrate_bps = None
         # The file this step leaves behind, once it has run.
         self.written: Optional[Path] = None
+        # ``(format_id, file)`` when ffprobe found no audio in the
+        # download (see :data:`_UNREADABLE_AUDIO`).
+        self.unreadable: Optional[tuple[str, Optional[Path]]] = None
 
     def run(self, information: dict[str, Any]) -> tuple[list, dict]:
-        files, information = super().run(information)
+        try:
+            files, information = super().run(information)
+            # yt-dlp keeps a file already in a common audio format (M4A,
+            # Opus...) with "Original" without asking ffprobe: ask here.
+            path = information.get('filepath')
+            if not files and path and self.get_audio_codec(path) is None:
+                raise PostProcessingError(
+                    f'WARNING: {_UNREADABLE_AUDIO} with ffprobe'
+                )
+        except PostProcessingError as exc:
+            if _UNREADABLE_AUDIO in str(exc):
+                source = information.get('filepath')
+                self.unreadable = (
+                    str(information.get('format_id') or ''),
+                    Path(source) if source else None,
+                )
+            raise
         if information.get('filepath'):
             self.written = Path(information['filepath'])
         return files, information
@@ -1811,17 +1878,18 @@ class Downloader:
         else:
             url = f'https://music.youtube.com/watch?v={video_id}'
         try:
-            with (
-                self._private_cookiefile(ydl_opts),
-                yt_dlp.YoutubeDL(ydl_opts) as ydl,
-            ):
-                # Registered directly: `ydl_opts['postprocessors']` only
-                # accepts yt-dlp's built-in postprocessors by name.
-                extraction = _ExtractAudioPP(
-                    ydl, extract_format, extract_bitrate
-                )
-                ydl.add_post_processor(extraction, when='post_process')
-                ydl.download([url])
+            extraction = self._run_readable(
+                url,
+                ydl_opts,
+                lambda: self._ydl_options(out_template, hook)[0],
+                (extract_format, extract_bitrate),
+                target_dir,
+            )
+        except _UnreadableFormat as bad:
+            _discard_unreadable(bad.path, target_dir)
+            raise _translate_download_error(
+                bad.cause, song, has_cookies=has_cookies
+            ) from bad.cause
         except Exception as exc:
             if soundcloud is not None and _is_missing_format_error(exc):
                 raise RuntimeError(
@@ -1834,6 +1902,74 @@ class Downloader:
             ) from exc
 
         return _downloaded_audio(target_dir, basename, fmt, extraction.written)
+
+    def _run_readable(
+        self,
+        url: str,
+        ydl_opts: dict[str, Any],
+        fresh_opts: Callable[[], dict[str, Any]],
+        extraction: tuple[str, str],
+        target_dir: Path,
+    ) -> _ExtractAudioPP:
+        """:meth:`_run_ytdlp` with *extraction* (format, bitrate), skipping
+        formats YouTube served as bytes no audio tool can read (up to
+        :data:`_UNREADABLE_RETRIES`): each one is removed from *target_dir*
+        and left out of the next try, made with *fresh_opts*. Raises
+        :class:`_UnreadableFormat` when every try was unreadable."""
+
+        base_format = ydl_opts['format']
+        skipped: list[str] = []
+        while True:
+            try:
+                return self._run_ytdlp(url, ydl_opts, *extraction)
+            except _UnreadableFormat as bad:
+                if (
+                    not bad.format_id
+                    or bad.format_id in skipped
+                    or len(skipped) >= _UNREADABLE_RETRIES
+                ):
+                    raise
+                _discard_unreadable(bad.path, target_dir)
+                skipped.append(bad.format_id)
+                logger.warning(
+                    'Format {} of {} is not readable audio; downloading '
+                    'the next best format',
+                    bad.format_id,
+                    url,
+                )
+                ydl_opts = fresh_opts()
+                spec = base_format
+                for format_id in skipped:
+                    spec = _without_format(spec, format_id)
+                ydl_opts['format'] = spec
+
+    def _run_ytdlp(
+        self,
+        url: str,
+        ydl_opts: dict[str, Any],
+        extract_format: str,
+        extract_bitrate: str,
+    ) -> _ExtractAudioPP:
+        """One yt-dlp download of *url* with the audio extraction; raises
+        :class:`_UnreadableFormat` when ffprobe found no audio in it."""
+
+        with (
+            self._private_cookiefile(ydl_opts),
+            yt_dlp.YoutubeDL(ydl_opts) as ydl,
+        ):
+            # Registered directly: `ydl_opts['postprocessors']` only
+            # accepts yt-dlp's built-in postprocessors by name.
+            extraction = _ExtractAudioPP(ydl, extract_format, extract_bitrate)
+            ydl.add_post_processor(extraction, when='post_process')
+            try:
+                ydl.download([url])
+            except Exception as exc:
+                if extraction.unreadable is not None:
+                    raise _UnreadableFormat(
+                        *extraction.unreadable, exc
+                    ) from exc
+                raise
+        return extraction
 
     def _fetch_and_tag(
         self,

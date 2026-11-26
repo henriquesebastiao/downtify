@@ -1479,3 +1479,145 @@ def test_expected_stem_for_matches_existing_filename_for(tmp_path):
 
     assert found == 'Mix/Artist - Song.mp3'
     assert found.rpartition('.')[0] == stem
+
+
+# ── A stream ffprobe can't read ─────────────────────────────────────────
+
+
+class _PremiumUnreadableYoutubeDL(yt_dlp.YoutubeDL):
+    """yt-dlp for a video whose first picks arrive as bytes no audio tool
+    can read (as YouTube served its Premium Opus stream, 774, for one
+    video). The formats in :attr:`readable` come readable; 141 is an M4A,
+    which yt-dlp keeps with "Original" without asking ffprobe."""
+
+    formats: list = []
+    readable = ('251',)
+
+    def __init__(self, opts):
+        super().__init__({**opts, 'quiet': True})
+        self.registered = []
+
+    def add_post_processor(self, pp, when='post_process'):
+        self.registered.append(pp)
+
+    def download(self, url_list):
+        wanted = self.params['format']
+        _PremiumUnreadableYoutubeDL.formats.append(wanted)
+        format_id = next(
+            f
+            for f in ('774', '141', '251', '140', '250')
+            if f"format_id!='{f}'" not in wanted
+        )
+        good = format_id in self.readable
+        template = Path(self.params['outtmpl']['default'])
+        ext = 'm4a' if format_id in {'140', '141'} else 'webm'
+        source = template.parent / f'{template.stem.split(".")[0]}.{ext}'
+        source.write_bytes(b'audio' if good else b'garbage')
+        info = {'filepath': str(source), 'ext': ext, 'format_id': format_id}
+        for pp in self.registered:
+            # Like yt-dlp, remove what the step says it replaced.
+            replaced, info = pp.run(info)
+            for name in replaced:
+                Path(name).unlink(missing_ok=True)
+
+
+def _probe_reads_only_audio(monkeypatch):
+    monkeypatch.setattr(
+        _ExtractAudioPP,
+        'get_audio_codec',
+        lambda self, path: (
+            'opus' if Path(path).read_bytes() != b'garbage' else None
+        ),
+    )
+    monkeypatch.setattr(
+        _ExtractAudioPP,
+        'run_ffmpeg',
+        lambda self, path, target, codec, options: Path(target).write_bytes(
+            b'opus'
+        ),
+    )
+
+
+def test_unreadable_formats_are_skipped_for_the_next_best(
+    tmp_path, monkeypatch
+):
+    _PremiumUnreadableYoutubeDL.formats = []
+    _PremiumUnreadableYoutubeDL.readable = ('251',)
+    _probe_reads_only_audio(monkeypatch)
+    monkeypatch.setattr(
+        downloader_mod.yt_dlp, 'YoutubeDL', _PremiumUnreadableYoutubeDL
+    )
+    d = _make(tmp_path, audio_format='original')
+
+    found = d.fetch_audio('video-id', tmp_path, 'Song', song=_SONG)
+
+    assert found == tmp_path / 'Song.opus'
+    assert found.read_bytes() == b'opus'
+    assert _PremiumUnreadableYoutubeDL.formats == [
+        'bestaudio/best',
+        "bestaudio[format_id!='774']/best[format_id!='774']",
+        "bestaudio[format_id!='774'][format_id!='141']"
+        "/best[format_id!='774'][format_id!='141']",
+    ]
+    # The unreadable downloads are not left behind for the library.
+    assert sorted(p.name for p in tmp_path.glob('Song.*')) == ['Song.opus']
+
+
+def test_only_unreadable_formats_fail_and_leave_nothing(tmp_path, monkeypatch):
+    _PremiumUnreadableYoutubeDL.formats = []
+    _PremiumUnreadableYoutubeDL.readable = ()
+    _probe_reads_only_audio(monkeypatch)
+    monkeypatch.setattr(
+        downloader_mod.yt_dlp, 'YoutubeDL', _PremiumUnreadableYoutubeDL
+    )
+    d = _make(tmp_path, audio_format='original')
+
+    with pytest.raises(Exception, match='audio codec'):
+        d.fetch_audio('video-id', tmp_path, 'Song', song=_SONG)
+
+    # The first pick and three more (774, 141, 251, 140), then it gives up.
+    assert len(_PremiumUnreadableYoutubeDL.formats) == 4
+    assert list(tmp_path.glob('Song.*')) == []
+
+
+def test_formats_without_one_id():
+    assert downloader_mod._without_format('bestaudio/best', '774') == (
+        "bestaudio[format_id!='774']/best[format_id!='774']"
+    )
+    assert downloader_mod._without_format(
+        'bestaudio[format_id!*=preview]/best[format_id!*=preview]', 'hls-1'
+    ) == (
+        "bestaudio[format_id!*=preview][format_id!='hls-1']"
+        "/best[format_id!*=preview][format_id!='hls-1']"
+    )
+
+
+def test_the_exclusion_leaves_a_numeric_id_out():
+    # Unquoted, yt-dlp compares 774 as a number and keeps the format.
+    formats = [
+        {
+            'format_id': fid,
+            'ext': ext,
+            'acodec': codec,
+            'vcodec': 'none',
+            'abr': abr,
+            'tbr': abr,
+            'url': 'https://example.invalid/',
+            'protocol': 'https',
+        }
+        for fid, ext, codec, abr in (
+            ('251', 'webm', 'opus', 139),
+            ('141', 'm4a', 'mp4a.40.2', 257),
+            ('774', 'webm', 'opus', 265),
+        )
+    ]
+    ydl = yt_dlp.YoutubeDL({'quiet': True})
+    spec = downloader_mod._without_format('bestaudio/best', '774')
+    picked = list(
+        ydl.build_format_selector(spec)({
+            'formats': formats,
+            'has_merged_format': False,
+            'incomplete_formats': False,
+        })
+    )
+    assert [f['format_id'] for f in picked] == ['141']
