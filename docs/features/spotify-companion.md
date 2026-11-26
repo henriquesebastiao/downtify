@@ -70,7 +70,7 @@ Downtify decides what is read and when, so the browser never looks like a script
 
 To change how often many mixes are checked, use **Select** on the Monitor page and set their interval together.
 
-A read costs Spotify one request per 100 songs. The extension also checks which account it's signed in to at most every half hour, and right before each read. About 100 mixes read once a day is a few hundred requests spread over the day, fewer than an evening of using the web player.
+A read costs Spotify one request per 100 songs. The extension also checks which account it's signed in to (the web player's own account query) at most every half hour, and right before each read. About 100 mixes read once a day is a few hundred requests spread over the day, fewer than an evening of using the web player.
 
 If Spotify answers "too many requests", the companion stops reading for an hour.
 

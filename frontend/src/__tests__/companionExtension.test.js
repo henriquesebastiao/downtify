@@ -159,17 +159,65 @@ describe('companion: reading a playlist', () => {
 })
 
 describe('companion: who is signed in', () => {
-  it('knows signed in from signed out', async () => {
-    expect(
-      await whoAmI(async () => ({
+  const profile = (me) => async () => ({ status: 200, json: { data: { me } } })
+
+  it('asks the web player’s own account query', async () => {
+    const asked = []
+    const result = await whoAmI(async (url) => {
+      asked.push(new URL(url).searchParams.get('operationName'))
+      return {
         status: 200,
-        json: { id: 'me1', display_name: 'Shiv' },
-      }))
-    ).toEqual({ status: 'ready', account: { id: 'me1', name: 'Shiv' } })
+        json: {
+          data: {
+            me: {
+              profile: {
+                uri: 'spotify:user:me1',
+                username: 'me1',
+                name: 'Shiv',
+              },
+            },
+          },
+        },
+      }
+    })
+    expect(result).toEqual({
+      status: 'ready',
+      account: { id: 'me1', name: 'Shiv' },
+    })
+    expect(asked).toEqual(['profileAttributes'])
+  })
+
+  it('knows signed out and trouble apart', async () => {
+    expect(await whoAmI(profile({ profile: null }))).toEqual({
+      status: 'signed_out',
+    })
+    expect(await whoAmI(profile(null))).toEqual({ status: 'signed_out' })
     expect(await whoAmI(async () => ({ status: 401 }))).toEqual({
       status: 'signed_out',
     })
-    expect((await whoAmI(async () => ({ status: 403 }))).status).toBe('error')
+    expect((await whoAmI(async () => ({ status: 429 }))).status).toBe('error')
+  })
+
+  it('tries the next query when Spotify forgot one', async () => {
+    const used = []
+    const result = await whoAmI(
+      async (url) => {
+        const ext = JSON.parse(new URL(url).searchParams.get('extensions'))
+        used.push(ext.persistedQuery.sha256Hash)
+        return used.length === 1
+          ? {
+              status: 200,
+              json: { errors: [{ message: 'PersistedQueryNotFound' }] },
+            }
+          : {
+              status: 200,
+              json: { data: { me: { profile: { username: 'u', name: 'U' } } } },
+            }
+      },
+      [HASH, OTHER]
+    )
+    expect(result.status).toBe('ready')
+    expect(used).toEqual([HASH, OTHER])
   })
 })
 

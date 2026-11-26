@@ -16,6 +16,7 @@ import {
   captureFromRequest,
   cleanAddress,
   jitterMs,
+  PROFILE_HASH,
   queryFromRequest,
   readPlaylist,
   ReadError,
@@ -31,6 +32,7 @@ const TOKEN_MAX_AGE = 50 * 60 * 1000
 // How long a successful account check is trusted for.
 const HEALTH_MAX_AGE = 30 * 60 * 1000
 const BUSY_MAX_AGE = 10 * 60 * 1000
+const RETRY_AFTER = 2 * 60 * 1000
 
 // ── What the web player sends ──────────────────────────────────────
 
@@ -48,8 +50,10 @@ chrome.webRequest.onBeforeSendHeaders.addListener(
 chrome.webRequest.onBeforeRequest.addListener(
   (details) => {
     const found = queryFromRequest(details)
-    if (found && found.operation === 'fetchPlaylist') {
+    if (found?.operation === 'fetchPlaylist') {
       chrome.storage.session.set({ playerHash: found.hash })
+    } else if (found?.operation === 'profileAttributes') {
+      chrome.storage.session.set({ profileHash: found.hash })
     }
   },
   { urls: ['https://api-partner.spotify.com/pathfinder/*'] },
@@ -147,7 +151,10 @@ async function session(settings, { renew = false } = {}) {
 /** `{status, account?, message?}` - from a fresh check when `force`. */
 async function health(settings, { force = false } = {}) {
   const { health: cached } = await chrome.storage.session.get('health')
-  if (!force && cached && Date.now() - cached.at < HEALTH_MAX_AGE) {
+  // A good check is trusted for half an hour; anything else is tried
+  // again after a couple of minutes.
+  const maxAge = cached?.status === 'ready' ? HEALTH_MAX_AGE : RETRY_AFTER
+  if (!force && cached && Date.now() - cached.at < maxAge) {
     return cached
   }
   let result
@@ -158,7 +165,12 @@ async function health(settings, { force = false } = {}) {
       message: 'No Spotify web player tab to read with',
     }
   } else {
-    const ask = (s) => whoAmI((url) => getJson(url, spotifyHeaders(s)))
+    const { profileHash } = await chrome.storage.session.get('profileHash')
+    const ask = (s) =>
+      whoAmI(
+        (url) => getJson(url, spotifyHeaders(s)),
+        [profileHash, PROFILE_HASH]
+      )
     result = await ask(current)
     if (result.status === 'signed_out') {
       // An expired token looks the same: try once with a new one.

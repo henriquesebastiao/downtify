@@ -9,7 +9,6 @@
 // token from a signed-in player gets *your* version of a personal mix.
 
 export const PATHFINDER = 'https://api-partner.spotify.com/pathfinder/v1/query'
-export const ME = 'https://api.spotify.com/v1/me'
 
 /** A header's value from a webRequest header list (case-insensitive). */
 export function headerValue(headers, name) {
@@ -181,22 +180,62 @@ async function readWith(get, playlistId, hash, pageSize, pause) {
   return { name, items }
 }
 
+// The web player's own "who is signed in" query (its answer is
+// data.me.profile: uri, username, name; null when signed out). Spotify's
+// public Web API (api.spotify.com/v1/me) answers the player's token with
+// 429, so it isn't used.
+export const PROFILE_HASH =
+  '08ffb4730af3746e04a8301396f20875dbbce10c75243803091a9274eacc8ac0'
+
+/** The address of the web player's account query. */
+export function profileUrl(hash) {
+  const params = new URLSearchParams({
+    operationName: 'profileAttributes',
+    variables: '{}',
+    extensions: JSON.stringify({
+      persistedQuery: { version: 1, sha256Hash: hash },
+    }),
+  })
+  return `${PATHFINDER}?${params}`
+}
+
 /**
- * Who the web player is signed in as: `{status: 'ready', account}` or
- * `{status: 'signed_out'}`; `get(url)` returns `{status, json}`.
+ * Who the web player is signed in as: `{status: 'ready', account}`,
+ * `{status: 'signed_out'}` or `{status: 'error', message}`. `get(url)`
+ * returns `{status, json}`; `hashes` are tried in turn while Spotify
+ * doesn't know one.
  */
-export async function whoAmI(get) {
-  const { status, json } = await get(ME)
-  if (status === 200 && json?.id) {
-    return {
-      status: 'ready',
-      account: { id: String(json.id), name: json.display_name || json.id },
+export async function whoAmI(get, hashes = [PROFILE_HASH]) {
+  const tries = [...new Set((hashes || []).filter(Boolean))]
+  let last = { status: 'error', message: 'No account query to ask with' }
+  for (const hash of tries) {
+    const { status, json } = await get(profileUrl(hash))
+    if (status === 401) return { status: 'signed_out' }
+    if (status === 429)
+      return { status: 'error', message: 'Spotify asked to slow down' }
+    if (status !== 200)
+      return {
+        status: 'error',
+        message: `Account check answered HTTP ${status}`,
+      }
+    const errors = json?.errors
+    if (Array.isArray(errors) && errors.length) {
+      const text = errors.map((e) => e?.message || '').join('; ')
+      last = { status: 'error', message: text.slice(0, 200) }
+      if (/PersistedQueryNotFound/i.test(text)) continue
+      return last
     }
+    const profile = json?.data?.me?.profile
+    if (!profile) return { status: 'signed_out' }
+    const id =
+      profile.username ||
+      String(profile.uri || '')
+        .split(':')
+        .pop()
+    if (!id) return { status: 'signed_out' }
+    return { status: 'ready', account: { id, name: profile.name || id } }
   }
-  if (status === 401) return { status: 'signed_out' }
-  if (status === 429)
-    return { status: 'error', message: 'Spotify asked to slow down' }
-  return { status: 'error', message: `Account check answered HTTP ${status}` }
+  return last
 }
 
 /** A whole number of milliseconds between `low` and `high` seconds. */
