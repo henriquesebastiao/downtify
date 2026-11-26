@@ -423,9 +423,19 @@ def _artist_lists_align(expected: list[str], actual: list[str]) -> bool:
     return False
 
 
+#: No recording runs longer than this in seconds: a ``duration`` above it
+#: can only be milliseconds.
+_MAX_SONG_SECONDS = 6 * 3600
+
+
 def song_duration_seconds(song: dict[str, Any]) -> int:
+    """*song*'s length in seconds. Song dicts carry seconds (the Spotify,
+    MusicBrainz and Deezer readers convert their milliseconds); a value
+    too long for any recording is still read as milliseconds. The old
+    cut-off of 1000 took every song over 16:40 for milliseconds."""
+
     target_duration = int(song.get('duration') or 0)
-    if target_duration > 1000:
+    if target_duration > _MAX_SONG_SECONDS:
         return target_duration // 1000
     return target_duration
 

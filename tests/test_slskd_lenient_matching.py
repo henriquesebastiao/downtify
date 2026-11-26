@@ -434,3 +434,9 @@ def test_downloaded_artists_are_compared_like_names(
     spotify: list[str], tags: list[str], same: bool
 ) -> None:
     assert track_tag_match._artist_lists_align(spotify, tags) is same
+
+
+def test_a_song_over_1000_seconds_keeps_its_length():
+    # An 18-minute song is 1082 seconds, not 1.
+    assert sp._song_duration_seconds({'duration': 1082}) == 1082
+    assert sp._song_duration_seconds({'duration': 245_000}) == 245

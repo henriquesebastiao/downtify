@@ -28,6 +28,7 @@ from .playlist_identity import made_by_downtify, playlist_key
 from .track_index import normalize_spotify_track_id
 from .track_tag_match import (
     snapshot_spotify_metadata,
+    song_duration_seconds,
     spotify_aligns_with_file_tags,
     spotify_file_tag_mismatch_label,
 )
@@ -591,9 +592,7 @@ class NavidromeClient:
         if not primary and not fallback:
             return None
 
-        target_duration = int(song.get('duration') or 0)
-        if target_duration > 1000:
-            target_duration //= 1000
+        target_duration = song_duration_seconds(song)
 
         for query in primary:
             batch = self._search3_songs(
