@@ -26,6 +26,7 @@ For each task you pick the moments you want to hear about: **Started**, **Progre
 | Songs downloaded | A song finished downloading (off by default: a big playlist sends a lot). |
 | New releases found | An artist watch found releases it did not have, with their names. |
 | Watch downloads | A watch's automatic check downloaded new songs. |
+| slskd off Soulseek | The queue was [paused because slskd could not search](slskd-navidrome.md#when-slskd-is-off-the-soulseek-network), and again when slskd is back and the queue resumed. On by default, also for channels saved before it existed. |
 
 A burst of the same event is grouped: Downtify waits 30 seconds and sends one message such as "12 downloads failed" with the first ten songs listed, not twelve messages.
 

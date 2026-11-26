@@ -162,6 +162,10 @@ class _Searches:
     def can_connect() -> bool:
         return True
 
+    @staticmethod
+    def server_state() -> None:
+        return None
+
     def start_search(self, query: str) -> str:
         self.asked.append(query)
         self._last = query
