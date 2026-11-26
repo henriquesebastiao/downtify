@@ -2323,6 +2323,17 @@ export default {
     badgeHeld: '대기 중',
     badgeHeldHint:
       '한 사람을 위해 만든 Spotify 믹스입니다. 지금은 Spotify 동반 확장이 읽을 수 없어 기다립니다. 설정 > 앱 > Spotify 동반 확장을 확인하세요.',
+    agent: 'AI 에이전트로 설정',
+    agentHint:
+      '서버에 있는 AI 에이전트(Hermes, OpenClaw, Claude Code…)가 그곳의 브라우저, 브라우저 컨테이너 또는 헤드리스 Chromium에 동반 확장을 설치하고 작동하는지 확인하도록 하는 안내입니다. 하루 동안 유효한 비공개 링크가 들어 있어, 에이전트가 이 링크로 확장을 내려받고 상태를 확인합니다. Spotify 로그인은 여전히 직접 하며, 에이전트는 비밀번호를 절대 묻지 않도록 안내받습니다.',
+    agentAddress: '브라우저가 사용할 주소',
+    agentAddressHint:
+      '선택 사항입니다. 비워 두면 이 페이지의 주소를 사용합니다. 컨테이너에서는 localhost가 아니라 서버의 네트워크 주소를 사용하세요.',
+    agentMake: '안내 만들기',
+    agentReady:
+      '이 내용을 AI 에이전트에 붙여넣으세요. 링크는 {time}까지 유효하며, 비공개로 유지하세요.',
+    agentCopy: '복사',
+    agentCopied: '복사됨',
   },
   aurral: {
     title: 'Aurral',
@@ -3309,5 +3320,120 @@ export default {
       '다운로드한 곡 기록을 잊어 사용량이 0부터 다시 시작합니다. 파일은 삭제되지 않지만, 더 이상 다운로드한 사람으로서 그 곡들을 삭제할 수 없습니다.',
     resetDone: '사용량을 초기화했습니다',
     invalid: '0보다 큰 GB 크기를 입력하세요',
+  },
+  lowBitrate: {
+    title: '낮은 비트레이트 보고서',
+    subtitle:
+      '특정 비트레이트 미만인 파일과, 이를 대체할 Soulseek의 더 나은 사본.',
+    backToUpgrade: '라이브러리 업그레이드',
+    adminOnly: '관리자만 볼 수 있습니다',
+    howItWorks:
+      '사본을 승인하기 전에는 아무것도 바뀌지 않습니다. 찾기는 Soulseek(slskd)에서 검색만 하고 아무것도 쓰지 않습니다. 교체는 고른 사본을 내려받아 이전 파일의 태그, 커버, 가사를 입히고, 모든 플레이리스트·좋아요·평점을 옮긴 뒤, 이전 파일을 음악 휴지통에 넣습니다. 휴지통에서 복원할 수 있습니다.',
+    slskdOff:
+      'Soulseek(slskd)이 설정되지 않아 더 나은 사본을 찾을 수 없습니다. 설정 → 소스에서 켜세요.',
+    trashOff:
+      '이 서버에서 음악 휴지통이 꺼져 있습니다. 모든 교체를 되돌릴 수 있도록 교체에는 휴지통이 필요합니다.',
+    threshold: '파일 표시',
+    under: '{kbps} kbps 미만',
+    includeLossless: '무손실(FLAC)도 제안',
+    includeLosslessHint:
+      '끔: 손실 사본만(MP3 320 우선, 256 kbps 이상). 다음 검색부터 적용됩니다.',
+    selectShown: '표시된 항목 모두 선택',
+    findSelected: {
+      one: '더 나은 사본 찾기({count})',
+      other: '더 나은 사본 찾기({count})',
+    },
+    replaceSelected: {
+      one: '파일 {count}개 교체',
+      other: '파일 {count}개 교체',
+    },
+    summary: {
+      one: '{kbps} kbps 미만 파일 {count}개 · {size}',
+      other: '{kbps} kbps 미만 파일 {count}개 · {size}',
+    },
+    empty: '{kbps} kbps 미만인 파일이 없습니다',
+    emptyHint: '라이브러리의 모든 손실 파일이 이 비트레이트 이상입니다.',
+    select: '“{title}” 선택',
+    kbps: '{kbps} kbps',
+    sources: {
+      youtube: 'YouTube에서',
+      'youtube-music': 'YouTube Music에서',
+      soundcloud: 'SoundCloud에서',
+      slskd: 'Soulseek에서',
+      deemix: 'Deemix에서',
+      folder: '음악 폴더에서',
+    },
+    states: {
+      queued: '대기 중',
+      downloading: '다운로드 중',
+      replacing: '교체 중',
+      done: '교체됨',
+      error: '실패',
+    },
+    searching: '검색 중…',
+    searchAgain: '다시 검색',
+    find: '찾기',
+    replace: '교체',
+    noneFound: '지금은 Soulseek에 더 나은 사본이 없습니다.',
+    candidatesFor: '“{title}”의 사본',
+    quality: '{kbps} kbps {format}',
+    qualityVbr: 'VBR ~{kbps} kbps {format}',
+    noBitrate: '{format}, 비트레이트 정보 없음',
+    best: '최적',
+    peer: '{name} 제공',
+    queued: {
+      one: '대기열에 {count}개',
+      other: '대기열에 {count}개',
+    },
+    showMore: {
+      one: '{count}개 더 보기',
+      other: '{count}개 더 보기',
+    },
+    finishedTitle: '완료됨',
+    finishedHint:
+      '이전 파일은 음악 휴지통에 있습니다. 교체를 되돌리려면 그곳에서 복원하세요.',
+    replacedWith: '{before} → {after} kbps · 현재 {file}',
+    openTrash: '휴지통 열기',
+    clearFinished: '목록 지우기',
+    confirmTitle: {
+      one: '파일 {count}개를 교체할까요?',
+      other: '파일 {count}개를 교체할까요?',
+    },
+    confirmBody:
+      '각 파일이 선택한 사본으로 교체됩니다. 이전 파일은 음악 휴지통으로 이동하므로 복원할 수 있습니다.',
+    refused: {
+      one: '파일 {count}개를 시작하지 못했습니다: {reason}',
+      other: '파일 {count}개를 시작하지 못했습니다: {reason}',
+    },
+    panelTitle: '낮은 비트레이트 보고서',
+    panelHint:
+      '256 kbps 미만 파일을 나열하고, 하나씩 승인하며 Soulseek의 더 나은 사본으로 교체합니다.',
+    open: '보고서 열기',
+    errors: {
+      slskd_off: 'Soulseek(slskd)이 꺼져 있거나 설정되지 않았습니다.',
+      slskd_unreachable: 'Soulseek(slskd)이 응답하지 않았습니다.',
+      no_tags: '파일에 검색할 제목이나 아티스트가 없습니다.',
+      search_failed: '검색에 실패했습니다.',
+      search_again: '다시 검색하세요. 해당 결과를 더 이상 알 수 없습니다.',
+      missing: '파일이 더 이상 라이브러리에 없습니다.',
+      already_running: '이 파일은 이미 교체 중입니다.',
+      trash_off: '음악 휴지통이 꺼져 있습니다.',
+      trash_refused:
+        '음악 휴지통이 이 파일을 받을 수 없습니다(제목, 아티스트, 앨범 또는 ID가 필요합니다).',
+      enqueue_failed: '상대방이 다운로드를 거부했습니다.',
+      transfer_failed: '다운로드가 완전히 도착하지 않았습니다.',
+      tag_mismatch: '내려받은 파일이 다른 곡입니다.',
+      unreadable: '내려받은 파일을 오디오로 읽을 수 없습니다.',
+      length_mismatch: '내려받은 파일의 길이가 다릅니다.',
+      not_better: '내려받은 파일이 기존 파일보다 낫지 않습니다.',
+      target_exists: '새 이름의 파일이 이미 있습니다.',
+      write_failed: '새 사본을 쓸 수 없습니다.',
+      cancelled: '대기열에서 제거됨.',
+      dedupe_replacement_pending:
+        '이 파일의 다른 교체가 아직 끝나지 않았습니다.',
+      dedupe_missing: '교체할 파일 하나가 없습니다.',
+      dedupe_invalid: '교체가 유효하지 않습니다.',
+      failed: '문제가 발생했습니다.',
+    },
   },
 }

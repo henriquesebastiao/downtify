@@ -2347,6 +2347,17 @@ export default {
     badgeHeld: 'Em espera',
     badgeHeldHint:
       'Um mix do Spotify feito para um ouvinte. O companheiro do Spotify não consegue lê-lo agora, então ele espera: veja Configurações > Apps > Companheiro do Spotify.',
+    agent: 'Configurar com um agente de IA',
+    agentHint:
+      'Instruções para um agente de IA no seu servidor (Hermes, OpenClaw, Claude Code…) instalar o companheiro em um navegador de lá, em um contêiner de navegador ou em um Chromium headless, e conferir se funciona. Elas trazem um link privado que vale por um dia: o agente baixa a extensão com ele e acompanha como ela está. Você ainda entra no Spotify por conta própria; o agente é instruído a nunca pedir sua senha.',
+    agentAddress: 'Endereço que o navegador vai usar',
+    agentAddressHint:
+      'Opcional. Deixe vazio para usar o endereço desta página. De um contêiner, use o endereço de rede do servidor, não localhost.',
+    agentMake: 'Gerar instruções',
+    agentReady:
+      'Cole isto no seu agente de IA. O link vale até {time}; mantenha-o privado.',
+    agentCopy: 'Copiar',
+    agentCopied: 'Copiado',
   },
   aurral: {
     title: 'Aurral',
@@ -3346,5 +3357,121 @@ export default {
       'Esquece quais músicas a pessoa baixou, e o uso volta a zero. Nenhum arquivo é apagado, mas ela deixa de poder apagar essas músicas como quem as baixou.',
     resetDone: 'Uso zerado',
     invalid: 'Informe um tamanho em GB maior que 0',
+  },
+  lowBitrate: {
+    title: 'Relatório de bitrate baixo',
+    subtitle:
+      'Arquivos abaixo de um bitrate e cópias melhores do Soulseek para substituí-los.',
+    backToUpgrade: 'Melhorar biblioteca',
+    adminOnly: 'Só administradores podem ver isto',
+    howItWorks:
+      'Nada muda até você aprovar uma cópia. Buscar procura no Soulseek (slskd) e não grava nada. Substituir baixa a cópia escolhida, dá a ela as tags, a capa e a letra do arquivo antigo, passa para ela todas as playlists, curtidas e notas, e coloca o arquivo antigo na lixeira de músicas, de onde dá para restaurá-lo.',
+    slskdOff:
+      'O Soulseek (slskd) não está configurado, então nenhuma cópia melhor pode ser encontrada. Ative-o em Configurações → Fontes.',
+    trashOff:
+      'A lixeira de músicas está desligada neste servidor. Substituir precisa dela, para que toda substituição possa ser desfeita.',
+    threshold: 'Listar arquivos',
+    under: 'Abaixo de {kbps} kbps',
+    includeLossless: 'Oferecer também sem perdas (FLAC)',
+    includeLosslessHint:
+      'Desligado: só cópias com perdas (MP3 320 primeiro, 256 kbps ou mais). Vale para a próxima busca.',
+    selectShown: 'Selecionar todos os exibidos',
+    findSelected: {
+      one: 'Buscar cópias melhores ({count})',
+      other: 'Buscar cópias melhores ({count})',
+    },
+    replaceSelected: {
+      one: 'Substituir {count} arquivo',
+      other: 'Substituir {count} arquivos',
+    },
+    summary: {
+      one: '{count} arquivo abaixo de {kbps} kbps · {size}',
+      other: '{count} arquivos abaixo de {kbps} kbps · {size}',
+    },
+    empty: 'Nenhum arquivo abaixo de {kbps} kbps',
+    emptyHint:
+      'Todos os arquivos com perdas da biblioteca estão neste bitrate ou acima.',
+    select: 'Selecionar “{title}”',
+    kbps: '{kbps} kbps',
+    sources: {
+      youtube: 'Do YouTube',
+      'youtube-music': 'Do YouTube Music',
+      soundcloud: 'Do SoundCloud',
+      slskd: 'Do Soulseek',
+      deemix: 'Do Deemix',
+      folder: 'De uma pasta de músicas',
+    },
+    states: {
+      queued: 'Aguardando',
+      downloading: 'Baixando',
+      replacing: 'Substituindo',
+      done: 'Substituído',
+      error: 'Falhou',
+    },
+    searching: 'Buscando…',
+    searchAgain: 'Buscar de novo',
+    find: 'Buscar',
+    replace: 'Substituir',
+    noneFound: 'Nenhuma cópia melhor no Soulseek agora.',
+    candidatesFor: 'Cópias de “{title}”',
+    quality: '{kbps} kbps {format}',
+    qualityVbr: 'VBR ~{kbps} kbps {format}',
+    noBitrate: '{format}, bitrate não informado',
+    best: 'Melhor',
+    peer: 'de {name}',
+    queued: {
+      one: '{count} na fila dele',
+      other: '{count} na fila dele',
+    },
+    showMore: {
+      one: 'Mostrar mais {count}',
+      other: 'Mostrar mais {count}',
+    },
+    finishedTitle: 'Concluídos',
+    finishedHint:
+      'Os arquivos antigos estão na lixeira de músicas. Restaure um lá para desfazer a substituição.',
+    replacedWith: '{before} → {after} kbps · agora {file}',
+    openTrash: 'Abrir a lixeira',
+    clearFinished: 'Limpar esta lista',
+    confirmTitle: {
+      one: 'Substituir {count} arquivo?',
+      other: 'Substituir {count} arquivos?',
+    },
+    confirmBody:
+      'Cada arquivo é substituído pela cópia que você escolheu. O arquivo antigo vai para a lixeira de músicas, então dá para restaurá-lo.',
+    refused: {
+      one: '{count} arquivo não foi iniciado: {reason}',
+      other: '{count} arquivos não foram iniciados: {reason}',
+    },
+    panelTitle: 'Relatório de bitrate baixo',
+    panelHint:
+      'Liste arquivos abaixo de 256 kbps e substitua-os por cópias melhores do Soulseek, uma aprovação por vez.',
+    open: 'Abrir o relatório',
+    errors: {
+      slskd_off: 'O Soulseek (slskd) está desligado ou não configurado.',
+      slskd_unreachable: 'O Soulseek (slskd) não respondeu.',
+      no_tags: 'O arquivo não tem título nem artista para buscar.',
+      search_failed: 'A busca falhou.',
+      search_again: 'Busque de novo: esse resultado não é mais conhecido.',
+      missing: 'O arquivo não está mais na biblioteca.',
+      already_running: 'Este arquivo já está sendo substituído.',
+      trash_off: 'A lixeira de músicas está desligada.',
+      trash_refused:
+        'A lixeira de músicas não aceita este arquivo (ele precisa de título, artista e álbum, ou de um ID).',
+      enqueue_failed: 'O par recusou o download.',
+      transfer_failed: 'O download não chegou completo.',
+      tag_mismatch: 'O arquivo baixado é outra música.',
+      unreadable: 'O arquivo baixado não é um áudio legível.',
+      length_mismatch: 'O arquivo baixado tem outra duração.',
+      not_better: 'O arquivo baixado não é melhor que o que você tem.',
+      target_exists: 'Já existe um arquivo com o novo nome.',
+      write_failed: 'Não foi possível gravar a nova cópia.',
+      cancelled: 'Tirado da fila.',
+      dedupe_replacement_pending:
+        'Outra substituição deste arquivo ainda não terminou.',
+      dedupe_missing: 'Falta um arquivo da substituição.',
+      dedupe_invalid: 'A substituição não é válida.',
+      failed: 'Algo deu errado.',
+    },
   },
 }

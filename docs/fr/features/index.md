@@ -36,6 +36,7 @@ Tout ce que fait Downtify, regroupé par domaine comme dans la barre latérale. 
 | [Améliorer la bibliothèque](library-upgrade.md) | Analysez la musique déjà téléchargée et réparez les petites pochettes, les paroles manquantes et les tags incomplets |
 | [Identifier les titres par le son](acoustid.md) | Reconnaissez les anciens fichiers à leur son avec AcoustID (facultatif) et ajoutez leur ISRC quand la correspondance est certaine |
 | [Remplacer l’audio](replace-audio.md) | Mauvais morceau ou mauvaise version ? Choisissez la bonne sur YouTube Music ou YouTube ; le fichier garde son nom, ses tags et ses playlists |
+| [Rapport de faible débit](low-bitrate-report.md) | Listez les fichiers sous 256 kbps et remplacez chacun, après votre approbation, par une meilleure copie sur Soulseek ; l’ancien fichier va dans la corbeille musicale |
 | [Photo, bannière et bio de l’artiste](artist-images.md) | Choisissez une vraie photo et une vraie bannière pour un artiste depuis YouTube Music, Deezer, Spotify ou votre propre envoi, et récupérez sa bio, son origine et ses liens depuis Apple Music et Deezer, automatiquement ou à la demande |
 | [Stockage et utilisation](storage-usage.md) | Voyez la taille de la bibliothèque et sa croissance, la source de chaque partie, comment se sont terminés les téléchargements et la place prise par les doublons, les copies slskd et les restes |
 | [Corbeille musicale](music-trash.md) | En option : les morceaux supprimés attendent 30 jours dans une corbeille, prêts à revenir avec leurs likes et leurs playlists |

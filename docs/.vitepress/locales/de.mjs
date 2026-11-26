@@ -117,6 +117,7 @@ export default {
       'features/backups.md': 'Sicherungen',
       'features/notifications.md': 'Benachrichtigungen',
       'features/replace-audio.md': 'Audio ersetzen',
+      'features/low-bitrate-report.md': 'Bericht zu niedriger Bitrate',
       'features/external-playlists.md': 'Vorhandene Playlists importieren',
       'features/m3u-export.md': 'M3U-Export',
       'features/playlist-cover-art.md': 'Playlist-Cover',

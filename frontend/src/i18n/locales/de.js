@@ -2400,6 +2400,17 @@ export default {
     badgeHeld: 'Wartet',
     badgeHeldHint:
       'Ein Spotify-Mix für eine Person. Der Spotify-Begleiter kann ihn gerade nicht lesen, daher wartet er: siehe Einstellungen > Apps > Spotify-Begleiter.',
+    agent: 'Mit einem KI-Agenten einrichten',
+    agentHint:
+      'Anweisungen für einen KI-Agenten auf deinem Server (Hermes, OpenClaw, Claude Code…), damit er den Begleiter dort in einem Browser, einem Browser-Container oder einem Headless-Chromium installiert und prüft, ob er läuft. Sie enthalten einen privaten Link, der einen Tag gilt: Damit lädt der Agent die Erweiterung herunter und sieht ihren Zustand. Bei Spotify meldest du dich weiterhin selbst an; der Agent ist angewiesen, nie nach deinem Passwort zu fragen.',
+    agentAddress: 'Adresse, die der Browser verwendet',
+    agentAddressHint:
+      'Optional. Leer lassen für die Adresse dieser Seite. Aus einem Container die Netzwerkadresse des Servers verwenden, nicht localhost.',
+    agentMake: 'Anweisungen erstellen',
+    agentReady:
+      'Füge das in deinen KI-Agenten ein. Der Link gilt bis {time}; halte ihn privat.',
+    agentCopy: 'Kopieren',
+    agentCopied: 'Kopiert',
   },
   aurral: {
     title: 'Aurral',
@@ -3408,5 +3419,121 @@ export default {
       'Vergisst, welche Songs der Benutzer heruntergeladen hat, sodass der Verbrauch bei null beginnt. Keine Datei wird gelöscht, aber er kann diese Songs nicht mehr als derjenige löschen, der sie heruntergeladen hat.',
     resetDone: 'Verbrauch zurückgesetzt',
     invalid: 'Gib eine Größe in GB über 0 ein',
+  },
+  lowBitrate: {
+    title: 'Bericht zu niedriger Bitrate',
+    subtitle:
+      'Dateien unter einer Bitrate und bessere Kopien aus Soulseek, um sie zu ersetzen.',
+    backToUpgrade: 'Bibliothek verbessern',
+    adminOnly: 'Nur Admins können das sehen',
+    howItWorks:
+      'Nichts ändert sich, bis du eine Kopie freigibst. Suchen schaut in Soulseek (slskd) nach und schreibt nichts. Ersetzen lädt die gewählte Kopie herunter, gibt ihr Tags, Cover und Songtext der alten Datei, überträgt jede Playlist, jedes Like und jede Bewertung darauf und legt die alte Datei in den Musik-Papierkorb, wo du sie wiederherstellen kannst.',
+    slskdOff:
+      'Soulseek (slskd) ist nicht eingerichtet, daher lassen sich keine besseren Kopien finden. Schalte es unter Einstellungen → Quellen ein.',
+    trashOff:
+      'Der Musik-Papierkorb ist auf diesem Server aus. Ersetzen braucht ihn, damit jede Ersetzung rückgängig gemacht werden kann.',
+    threshold: 'Dateien auflisten',
+    under: 'Unter {kbps} kbps',
+    includeLossless: 'Auch verlustfrei anbieten (FLAC)',
+    includeLosslessHint:
+      'Aus: nur verlustbehaftete Kopien (zuerst MP3 320, ab 256 kbps). Gilt für die nächste Suche.',
+    selectShown: 'Alle angezeigten auswählen',
+    findSelected: {
+      one: 'Bessere Kopien suchen ({count})',
+      other: 'Bessere Kopien suchen ({count})',
+    },
+    replaceSelected: {
+      one: '{count} Datei ersetzen',
+      other: '{count} Dateien ersetzen',
+    },
+    summary: {
+      one: '{count} Datei unter {kbps} kbps · {size}',
+      other: '{count} Dateien unter {kbps} kbps · {size}',
+    },
+    empty: 'Keine Dateien unter {kbps} kbps',
+    emptyHint:
+      'Jede verlustbehaftete Datei der Bibliothek liegt bei dieser Bitrate oder darüber.',
+    select: '„{title}“ auswählen',
+    kbps: '{kbps} kbps',
+    sources: {
+      youtube: 'Von YouTube',
+      'youtube-music': 'Von YouTube Music',
+      soundcloud: 'Von SoundCloud',
+      slskd: 'Von Soulseek',
+      deemix: 'Von Deemix',
+      folder: 'Aus einem Musikordner',
+    },
+    states: {
+      queued: 'Wartet',
+      downloading: 'Lädt herunter',
+      replacing: 'Wird ersetzt',
+      done: 'Ersetzt',
+      error: 'Fehlgeschlagen',
+    },
+    searching: 'Suche läuft…',
+    searchAgain: 'Erneut suchen',
+    find: 'Suchen',
+    replace: 'Ersetzen',
+    noneFound: 'Gerade keine bessere Kopie auf Soulseek.',
+    candidatesFor: 'Kopien von „{title}“',
+    quality: '{kbps} kbps {format}',
+    qualityVbr: 'VBR ~{kbps} kbps {format}',
+    noBitrate: '{format}, Bitrate nicht angegeben',
+    best: 'Beste',
+    peer: 'von {name}',
+    queued: {
+      one: '{count} in der Warteschlange',
+      other: '{count} in der Warteschlange',
+    },
+    showMore: {
+      one: '{count} weitere zeigen',
+      other: '{count} weitere zeigen',
+    },
+    finishedTitle: 'Fertig',
+    finishedHint:
+      'Die alten Dateien liegen im Musik-Papierkorb. Stelle dort eine wieder her, um ihre Ersetzung rückgängig zu machen.',
+    replacedWith: '{before} → {after} kbps · jetzt {file}',
+    openTrash: 'Papierkorb öffnen',
+    clearFinished: 'Liste leeren',
+    confirmTitle: {
+      one: '{count} Datei ersetzen?',
+      other: '{count} Dateien ersetzen?',
+    },
+    confirmBody:
+      'Jede Datei wird durch die gewählte Kopie ersetzt. Die alte Datei kommt in den Musik-Papierkorb, du kannst sie also wiederherstellen.',
+    refused: {
+      one: '{count} Datei wurde nicht gestartet: {reason}',
+      other: '{count} Dateien wurden nicht gestartet: {reason}',
+    },
+    panelTitle: 'Bericht zu niedriger Bitrate',
+    panelHint:
+      'Dateien unter 256 kbps auflisten und durch bessere Kopien aus Soulseek ersetzen, jeweils nach deiner Freigabe.',
+    open: 'Bericht öffnen',
+    errors: {
+      slskd_off: 'Soulseek (slskd) ist aus oder nicht eingerichtet.',
+      slskd_unreachable: 'Soulseek (slskd) hat nicht geantwortet.',
+      no_tags: 'Die Datei hat keinen Titel oder Künstler zum Suchen.',
+      search_failed: 'Die Suche ist fehlgeschlagen.',
+      search_again: 'Erneut suchen: Dieses Ergebnis ist nicht mehr bekannt.',
+      missing: 'Die Datei ist nicht mehr in der Bibliothek.',
+      already_running: 'Diese Datei wird bereits ersetzt.',
+      trash_off: 'Der Musik-Papierkorb ist aus.',
+      trash_refused:
+        'Der Musik-Papierkorb kann diese Datei nicht aufnehmen (sie braucht Titel, Künstler und Album oder eine ID).',
+      enqueue_failed: 'Der Peer hat den Download abgelehnt.',
+      transfer_failed: 'Der Download kam nicht vollständig an.',
+      tag_mismatch: 'Die heruntergeladene Datei ist ein anderer Song.',
+      unreadable: 'Die heruntergeladene Datei ist kein lesbares Audio.',
+      length_mismatch: 'Die heruntergeladene Datei hat eine andere Länge.',
+      not_better: 'Die heruntergeladene Datei ist nicht besser als deine.',
+      target_exists: 'Eine Datei mit dem neuen Namen existiert bereits.',
+      write_failed: 'Die neue Kopie konnte nicht geschrieben werden.',
+      cancelled: 'Aus der Warteschlange genommen.',
+      dedupe_replacement_pending:
+        'Eine andere Ersetzung dieser Datei ist noch nicht fertig.',
+      dedupe_missing: 'Eine Datei der Ersetzung fehlt.',
+      dedupe_invalid: 'Die Ersetzung ist ungültig.',
+      failed: 'Etwas ist schiefgelaufen.',
+    },
   },
 }

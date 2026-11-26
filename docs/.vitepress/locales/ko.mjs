@@ -116,6 +116,7 @@ export default {
       'features/backups.md': '백업',
       'features/notifications.md': '알림',
       'features/replace-audio.md': '오디오 교체',
+      'features/low-bitrate-report.md': '낮은 비트레이트 보고서',
       'features/external-playlists.md': '기존 재생목록 가져오기',
       'features/m3u-export.md': 'M3U 내보내기',
       'features/playlist-cover-art.md': '재생목록 커버 아트',

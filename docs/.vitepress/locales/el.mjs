@@ -118,6 +118,7 @@ export default {
       'features/backups.md': 'Αντίγραφα ασφαλείας',
       'features/notifications.md': 'Ειδοποιήσεις',
       'features/replace-audio.md': 'Αντικατάσταση ήχου',
+      'features/low-bitrate-report.md': 'Αναφορά χαμηλού bitrate',
       'features/external-playlists.md': 'Εισαγωγή υπαρχουσών λιστών',
       'features/m3u-export.md': 'Εξαγωγή M3U',
       'features/playlist-cover-art.md': 'Εξώφυλλα λιστών',

@@ -117,6 +117,7 @@ export default {
       'features/backups.md': 'Yedekler',
       'features/notifications.md': 'Bildirimler',
       'features/replace-audio.md': 'Sesi değiştir',
+      'features/low-bitrate-report.md': 'Düşük bit hızı raporu',
       'features/external-playlists.md': 'Mevcut çalma listelerini içe aktar',
       'features/m3u-export.md': 'M3U dışa aktarma',
       'features/playlist-cover-art.md': 'Çalma listesi kapakları',

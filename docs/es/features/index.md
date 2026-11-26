@@ -36,6 +36,7 @@ Todo lo que hace Downtify, agrupado por áreas como en la barra lateral. Cada fu
 | [Mejorar la biblioteca](library-upgrade.md) | Escanea la música ya descargada y repara portadas pequeñas, letras que faltan y etiquetas incompletas |
 | [Identificar canciones por su sonido](acoustid.md) | Reconoce archivos antiguos por su sonido con AcoustID (opcional) y añade su ISRC cuando la coincidencia es segura |
 | [Reemplazar audio](replace-audio.md) | ¿Canción o versión equivocada? Elige la correcta en YouTube Music o YouTube; el archivo conserva su nombre, etiquetas y playlists |
+| [Informe de bitrate bajo](low-bitrate-report.md) | Lista los archivos por debajo de 256 kbps y reemplaza cada uno, tras tu aprobación, por una copia mejor de Soulseek; el archivo antiguo va a la papelera de música |
 | [Foto, banner y bio del artista](artist-images.md) | Elige una foto y un banner reales para un artista de YouTube Music, Deezer, Spotify o una subida propia, y obtén su bio, origen y enlaces de Apple Music y Deezer, automáticamente o a demanda |
 | [Almacenamiento y uso](storage-usage.md) | Mira cuánto ocupa la biblioteca y cuánto crece, de qué fuente vino cada parte, cómo terminaron las descargas y cuánto ocupan duplicados, copias de slskd y restos |
 | [Papelera de música](music-trash.md) | Opcional: las canciones eliminadas esperan 30 días en una papelera, listas para volver con sus «me gusta» y sus playlists |

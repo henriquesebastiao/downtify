@@ -36,6 +36,7 @@ Downtify’ın yaptığı her şey, kenar çubuğundaki gibi alanlara göre grup
 | [Kitaplığı iyileştir](library-upgrade.md) | Zaten indirdiğiniz müziği tarayın ve küçük kapakları, eksik sözleri ve eksik etiketleri onarın |
 | [Şarkıları sesinden tanı](acoustid.md) | Eski dosyaları AcoustID ile seslerinden tanıyın (isteğe bağlı) ve eşleşme kesinse ISRC’lerini ekleyin |
 | [Sesi değiştir](replace-audio.md) | Yanlış şarkı ya da sürüm mü? Doğrusunu YouTube Music veya YouTube’da seçin; dosya adını, etiketlerini ve çalma listelerini korur |
+| [Düşük bit hızı raporu](low-bitrate-report.md) | 256 kbps altındaki dosyaları listele ve her birini, onayından sonra, Soulseek’ten daha iyi bir kopyayla değiştir; eski dosya müzik çöp kutusuna gider |
 | [Sanatçı fotoğrafı, afişi ve biyografisi](artist-images.md) | Bir sanatçı için YouTube Music, Deezer, Spotify veya kendi yüklemenizden gerçek bir fotoğraf ve afiş seçin; biyografisini, kökenini ve bağlantılarını Apple Music ve Deezer’dan otomatik ya da isteğe bağlı olarak alın |
 | [Depolama ve kullanım](storage-usage.md) | Kitaplığın ne kadar büyük olduğunu ve ne hızla büyüdüğünü, her parçanın hangi kaynaktan geldiğini, indirmelerin nasıl sonuçlandığını ve yinelenenlerin, slskd kopyalarının ve artıkların ne kadar yer kapladığını görün |
 | [Müzik çöp kutusu](music-trash.md) | İsteğe bağlı: kaldırılan şarkılar 30 gün boyunca bir çöp kutusunda bekler, beğenileri ve çalma listeleriyle geri getirilmeye hazır |

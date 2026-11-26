@@ -36,6 +36,7 @@ Downtify 的全部功能，按侧边栏中的领域分组。每个功能都有�
 | [升级媒体库](library-upgrade.md) | 扫描已下载的音乐，修复低分辨率封面、缺失歌词和不完整标签 |
 | [按声音识别歌曲](acoustid.md) | 用 AcoustID 按声音识别旧文件（可选），匹配确定时添加 ISRC |
 | [替换音频](replace-audio.md) | 歌曲或版本不正确时，在 YouTube Music 或 YouTube 上选择正确音频；文件名、标签和播放列表保持不变 |
+| [低码率报告](low-bitrate-report.md) | 列出低于 256 kbps 的文件，经你批准后逐个用 Soulseek 上的更佳副本替换；旧文件会进入音乐回收站 |
 | [艺人照片、横幅与简介](artist-images.md) | 从 YouTube Music、Deezer、Spotify 或自定义上传中选择艺人照片和横幅，并按需或自动从 Apple Music 和 Deezer 获取简介、来源地和链接 |
 | [存储空间与用量](storage-usage.md) | 查看媒体库大小和增长速度、各部分来源、下载结果，以及重复文件、slskd 副本和残留文件的占用 |
 | [音乐回收站](music-trash.md) | 可选：删除的歌曲会在回收站中保留 30 天，可连同点赞和播放列表一起恢复 |

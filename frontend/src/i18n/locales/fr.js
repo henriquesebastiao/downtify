@@ -2388,6 +2388,17 @@ export default {
     badgeHeld: 'En attente',
     badgeHeldHint:
       'Un mix Spotify fait pour un seul auditeur. Le compagnon Spotify ne peut pas le lire pour le moment, il attend donc : voir Réglages > Apps > Compagnon Spotify.',
+    agent: 'Configurer avec un agent IA',
+    agentHint:
+      'Des instructions pour qu’un agent IA sur votre serveur (Hermes, OpenClaw, Claude Code…) installe le compagnon dans un navigateur sur place, un conteneur de navigateur ou un Chromium headless, et vérifie qu’il fonctionne. Elles contiennent un lien privé valable un jour : l’agent télécharge l’extension avec et suit son état. Vous vous connectez toujours à Spotify vous-même ; l’agent a pour consigne de ne jamais demander votre mot de passe.',
+    agentAddress: 'Adresse qu’utilisera le navigateur',
+    agentAddressHint:
+      'Facultatif. Laissez vide pour l’adresse de cette page. Depuis un conteneur, utilisez l’adresse réseau du serveur, pas localhost.',
+    agentMake: 'Créer les instructions',
+    agentReady:
+      'Collez ceci dans votre agent IA. Son lien fonctionne jusqu’à {time} ; gardez-le privé.',
+    agentCopy: 'Copier',
+    agentCopied: 'Copié',
   },
   aurral: {
     title: 'Aurral',
@@ -3394,5 +3405,121 @@ export default {
       'Oublie les titres qu’il a téléchargés : son usage repart de zéro. Aucun fichier n’est supprimé, mais il ne peut plus supprimer ces titres en tant que celui qui les a téléchargés.',
     resetDone: 'Usage réinitialisé',
     invalid: 'Saisissez une taille en Go supérieure à 0',
+  },
+  lowBitrate: {
+    title: 'Rapport de faible débit',
+    subtitle:
+      'Les fichiers sous un débit donné, et de meilleures copies sur Soulseek pour les remplacer.',
+    backToUpgrade: 'Améliorer la bibliothèque',
+    adminOnly: 'Seuls les administrateurs peuvent voir ceci',
+    howItWorks:
+      'Rien ne change tant que vous n’approuvez pas une copie. Rechercher interroge Soulseek (slskd) sans rien écrire. Remplacer télécharge la copie choisie, lui donne les tags, la pochette et les paroles de l’ancien fichier, y reporte chaque playlist, j’aime et note, et place l’ancien fichier dans la corbeille musicale, d’où vous pouvez le restaurer.',
+    slskdOff:
+      'Soulseek (slskd) n’est pas configuré, aucune meilleure copie ne peut donc être trouvée. Activez-le dans Paramètres → Sources.',
+    trashOff:
+      'La corbeille musicale est désactivée sur ce serveur. Le remplacement en a besoin, pour que chaque remplacement puisse être annulé.',
+    threshold: 'Lister les fichiers',
+    under: 'Sous {kbps} kbps',
+    includeLossless: 'Proposer aussi du sans perte (FLAC)',
+    includeLosslessHint:
+      'Désactivé : seulement des copies avec perte (MP3 320 d’abord, 256 kbps et plus). S’applique à la prochaine recherche.',
+    selectShown: 'Tout sélectionner (affichés)',
+    findSelected: {
+      one: 'Chercher de meilleures copies ({count})',
+      other: 'Chercher de meilleures copies ({count})',
+    },
+    replaceSelected: {
+      one: 'Remplacer {count} fichier',
+      other: 'Remplacer {count} fichiers',
+    },
+    summary: {
+      one: '{count} fichier sous {kbps} kbps · {size}',
+      other: '{count} fichiers sous {kbps} kbps · {size}',
+    },
+    empty: 'Aucun fichier sous {kbps} kbps',
+    emptyHint:
+      'Chaque fichier avec perte de la bibliothèque est à ce débit ou au-dessus.',
+    select: 'Sélectionner « {title} »',
+    kbps: '{kbps} kbps',
+    sources: {
+      youtube: 'Depuis YouTube',
+      'youtube-music': 'Depuis YouTube Music',
+      soundcloud: 'Depuis SoundCloud',
+      slskd: 'Depuis Soulseek',
+      deemix: 'Depuis Deemix',
+      folder: 'Depuis un dossier de musique',
+    },
+    states: {
+      queued: 'En attente',
+      downloading: 'Téléchargement',
+      replacing: 'Remplacement',
+      done: 'Remplacé',
+      error: 'Échec',
+    },
+    searching: 'Recherche…',
+    searchAgain: 'Rechercher à nouveau',
+    find: 'Rechercher',
+    replace: 'Remplacer',
+    noneFound: 'Aucune meilleure copie sur Soulseek pour le moment.',
+    candidatesFor: 'Copies de « {title} »',
+    quality: '{kbps} kbps {format}',
+    qualityVbr: 'VBR ~{kbps} kbps {format}',
+    noBitrate: '{format}, débit non indiqué',
+    best: 'Meilleure',
+    peer: 'de {name}',
+    queued: {
+      one: '{count} dans sa file',
+      other: '{count} dans sa file',
+    },
+    showMore: {
+      one: 'Afficher {count} de plus',
+      other: 'Afficher {count} de plus',
+    },
+    finishedTitle: 'Terminés',
+    finishedHint:
+      'Les anciens fichiers sont dans la corbeille musicale. Restaurez-en un pour annuler son remplacement.',
+    replacedWith: '{before} → {after} kbps · désormais {file}',
+    openTrash: 'Ouvrir la corbeille',
+    clearFinished: 'Vider cette liste',
+    confirmTitle: {
+      one: 'Remplacer {count} fichier ?',
+      other: 'Remplacer {count} fichiers ?',
+    },
+    confirmBody:
+      'Chaque fichier est remplacé par la copie choisie. L’ancien fichier va dans la corbeille musicale, vous pouvez donc le restaurer.',
+    refused: {
+      one: '{count} fichier n’a pas été lancé : {reason}',
+      other: '{count} fichiers n’ont pas été lancés : {reason}',
+    },
+    panelTitle: 'Rapport de faible débit',
+    panelHint:
+      'Listez les fichiers sous 256 kbps et remplacez-les par de meilleures copies sur Soulseek, une approbation à la fois.',
+    open: 'Ouvrir le rapport',
+    errors: {
+      slskd_off: 'Soulseek (slskd) est désactivé ou non configuré.',
+      slskd_unreachable: 'Soulseek (slskd) n’a pas répondu.',
+      no_tags: 'Le fichier n’a ni titre ni artiste à rechercher.',
+      search_failed: 'La recherche a échoué.',
+      search_again: 'Recherchez à nouveau : ce résultat n’est plus connu.',
+      missing: 'Le fichier n’est plus dans la bibliothèque.',
+      already_running: 'Ce fichier est déjà en cours de remplacement.',
+      trash_off: 'La corbeille musicale est désactivée.',
+      trash_refused:
+        'La corbeille musicale ne peut pas prendre ce fichier (il lui faut un titre, un artiste et un album, ou un ID).',
+      enqueue_failed: 'Le pair a refusé le téléchargement.',
+      transfer_failed: 'Le téléchargement n’est pas arrivé complet.',
+      tag_mismatch: 'Le fichier téléchargé est une autre chanson.',
+      unreadable: 'Le fichier téléchargé n’est pas un audio lisible.',
+      length_mismatch: 'Le fichier téléchargé n’a pas la même durée.',
+      not_better: 'Le fichier téléchargé n’est pas meilleur que le vôtre.',
+      target_exists: 'Un fichier portant le nouveau nom existe déjà.',
+      write_failed: 'La nouvelle copie n’a pas pu être écrite.',
+      cancelled: 'Retiré de la file.',
+      dedupe_replacement_pending:
+        'Un autre remplacement de ce fichier n’est pas terminé.',
+      dedupe_missing: 'Un fichier du remplacement est manquant.',
+      dedupe_invalid: 'Le remplacement n’est pas valide.',
+      failed: 'Une erreur s’est produite.',
+    },
   },
 }

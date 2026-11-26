@@ -36,6 +36,7 @@ Alles, was Downtify kann, nach Bereichen gruppiert wie in der Seitenleiste. Jede
 | [Bibliothek verbessern](library-upgrade.md) | Bereits heruntergeladene Musik scannen und kleine Cover, fehlende Songtexte und unvollständige Tags reparieren |
 | [Songs am Klang erkennen](acoustid.md) | Ältere Dateien mit AcoustID an ihrem Klang erkennen (optional) und bei sicherem Treffer ihre ISRC ergänzen |
 | [Audio ersetzen](replace-audio.md) | Falscher Song oder falsche Version? Wähle die richtige auf YouTube Music oder YouTube; die Datei behält Namen, Tags und Playlists |
+| [Bericht zu niedriger Bitrate](low-bitrate-report.md) | Dateien unter 256 kbps auflisten und jede nach deiner Freigabe durch eine bessere Kopie aus Soulseek ersetzen; die alte Datei kommt in den Musik-Papierkorb |
 | [Künstlerfoto, Banner und Bio](artist-images.md) | Ein echtes Foto und Banner für einen Künstler von YouTube Music, Deezer, Spotify oder aus eigenem Upload wählen und Bio, Herkunft und Links von Apple Music und Deezer holen, automatisch oder auf Abruf |
 | [Speicher und Nutzung](storage-usage.md) | Sieh, wie groß die Bibliothek ist und wie schnell sie wächst, aus welcher Quelle jeder Teil stammt, wie Downloads endeten und wie viel Platz Duplikate, slskd-Kopien und Reste belegen |
 | [Musik-Papierkorb](music-trash.md) | Optional: Entfernte Songs warten 30 Tage in einem Papierkorb und lassen sich mit ihren Likes und Playlists wiederherstellen |

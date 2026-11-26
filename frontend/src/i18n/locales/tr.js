@@ -2327,6 +2327,17 @@ export default {
     badgeHeld: 'Beklemede',
     badgeHeldHint:
       'Tek bir dinleyici için yapılmış bir Spotify mixi. Spotify yardımcısı şu an okuyamıyor, bu yüzden bekliyor: Ayarlar > Uygulamalar > Spotify yardımcısı.',
+    agent: 'Bir yapay zekâ ajanıyla kur',
+    agentHint:
+      'Sunucundaki bir yapay zekâ ajanı (Hermes, OpenClaw, Claude Code…) için talimatlar: yardımcıyı oradaki bir tarayıcıya, tarayıcı konteynerine veya headless Chromium’a kurar ve çalıştığını kontrol eder. Bir gün geçerli özel bir bağlantı içerir: ajan uzantıyı bununla indirir ve durumunu görür. Spotify’a yine sen giriş yaparsın; ajana şifreni asla istememesi söylenir.',
+    agentAddress: 'Tarayıcının kullanacağı adres',
+    agentAddressHint:
+      'İsteğe bağlı. Bu sayfanın adresi için boş bırak. Konteynerden localhost değil, sunucunun ağ adresini kullan.',
+    agentMake: 'Talimat oluştur',
+    agentReady:
+      'Bunu yapay zekâ ajanına yapıştır. Bağlantısı {time} saatine kadar geçerli; gizli tut.',
+    agentCopy: 'Kopyala',
+    agentCopied: 'Kopyalandı',
   },
   aurral: {
     title: 'Aurral',
@@ -3329,5 +3340,120 @@ export default {
       'Hangi şarkıları indirdiğini unutur, böylece kullanımı sıfırdan başlar. Hiçbir dosya silinmez, ancak bu şarkıları artık indiren kişi olarak silemez.',
     resetDone: 'Kullanım sıfırlandı',
     invalid: '0’dan büyük bir GB değeri gir',
+  },
+  lowBitrate: {
+    title: 'Düşük bit hızı raporu',
+    subtitle:
+      'Bir bit hızının altındaki dosyalar ve onların yerine geçecek daha iyi Soulseek kopyaları.',
+    backToUpgrade: 'Kitaplığı iyileştir',
+    adminOnly: 'Bunu yalnızca yöneticiler görebilir',
+    howItWorks:
+      'Bir kopyayı onaylayana kadar hiçbir şey değişmez. Bul, Soulseek’te (slskd) arar ve hiçbir şey yazmaz. Değiştir, seçtiğin kopyayı indirir, ona eski dosyanın etiketlerini, kapağını ve şarkı sözlerini verir, tüm çalma listelerini, beğenileri ve puanları ona taşır ve eski dosyayı geri yükleyebileceğin müzik çöp kutusuna koyar.',
+    slskdOff:
+      'Soulseek (slskd) kurulu değil, bu yüzden daha iyi kopya bulunamaz. Ayarlar → Kaynaklar’dan aç.',
+    trashOff:
+      'Bu sunucuda müzik çöp kutusu kapalı. Her değişikliğin geri alınabilmesi için değiştirme ona ihtiyaç duyar.',
+    threshold: 'Dosyaları listele',
+    under: '{kbps} kbps altında',
+    includeLossless: 'Kayıpsız (FLAC) da sun',
+    includeLosslessHint:
+      'Kapalı: yalnızca kayıplı kopyalar (önce MP3 320, 256 kbps ve üzeri). Bir sonraki aramada geçerli olur.',
+    selectShown: 'Gösterilenlerin tümünü seç',
+    findSelected: {
+      one: 'Daha iyi kopya bul ({count})',
+      other: 'Daha iyi kopya bul ({count})',
+    },
+    replaceSelected: {
+      one: '{count} dosyayı değiştir',
+      other: '{count} dosyayı değiştir',
+    },
+    summary: {
+      one: '{kbps} kbps altında {count} dosya · {size}',
+      other: '{kbps} kbps altında {count} dosya · {size}',
+    },
+    empty: '{kbps} kbps altında dosya yok',
+    emptyHint: 'Kitaplıktaki her kayıplı dosya bu bit hızında veya üzerinde.',
+    select: '“{title}” seç',
+    kbps: '{kbps} kbps',
+    sources: {
+      youtube: 'YouTube’dan',
+      'youtube-music': 'YouTube Music’ten',
+      soundcloud: 'SoundCloud’dan',
+      slskd: 'Soulseek’ten',
+      deemix: 'Deemix’ten',
+      folder: 'Bir müzik klasöründen',
+    },
+    states: {
+      queued: 'Bekliyor',
+      downloading: 'İndiriliyor',
+      replacing: 'Değiştiriliyor',
+      done: 'Değiştirildi',
+      error: 'Başarısız',
+    },
+    searching: 'Aranıyor…',
+    searchAgain: 'Yeniden ara',
+    find: 'Bul',
+    replace: 'Değiştir',
+    noneFound: 'Şu anda Soulseek’te daha iyi kopya yok.',
+    candidatesFor: '“{title}” için kopyalar',
+    quality: '{kbps} kbps {format}',
+    qualityVbr: 'VBR ~{kbps} kbps {format}',
+    noBitrate: '{format}, bit hızı belirtilmemiş',
+    best: 'En iyi',
+    peer: '{name} kullanıcısından',
+    queued: {
+      one: 'Kuyruğunda {count}',
+      other: 'Kuyruğunda {count}',
+    },
+    showMore: {
+      one: '{count} tane daha göster',
+      other: '{count} tane daha göster',
+    },
+    finishedTitle: 'Tamamlananlar',
+    finishedHint:
+      'Eski dosyalar müzik çöp kutusunda. Değişikliği geri almak için oradan birini geri yükle.',
+    replacedWith: '{before} → {after} kbps · artık {file}',
+    openTrash: 'Çöp kutusunu aç',
+    clearFinished: 'Bu listeyi temizle',
+    confirmTitle: {
+      one: '{count} dosya değiştirilsin mi?',
+      other: '{count} dosya değiştirilsin mi?',
+    },
+    confirmBody:
+      'Her dosya seçtiğin kopyayla değiştirilir. Eski dosya müzik çöp kutusuna gider, böylece geri yükleyebilirsin.',
+    refused: {
+      one: '{count} dosya başlatılmadı: {reason}',
+      other: '{count} dosya başlatılmadı: {reason}',
+    },
+    panelTitle: 'Düşük bit hızı raporu',
+    panelHint:
+      '256 kbps altındaki dosyaları listele ve onları Soulseek’ten daha iyi kopyalarla, her seferinde bir onayla değiştir.',
+    open: 'Raporu aç',
+    errors: {
+      slskd_off: 'Soulseek (slskd) kapalı veya kurulu değil.',
+      slskd_unreachable: 'Soulseek (slskd) yanıt vermedi.',
+      no_tags: 'Dosyada aranacak başlık veya sanatçı yok.',
+      search_failed: 'Arama başarısız oldu.',
+      search_again: 'Yeniden ara: bu sonuç artık bilinmiyor.',
+      missing: 'Dosya artık kitaplıkta değil.',
+      already_running: 'Bu dosya zaten değiştiriliyor.',
+      trash_off: 'Müzik çöp kutusu kapalı.',
+      trash_refused:
+        'Müzik çöp kutusu bu dosyayı alamıyor (başlık, sanatçı ve albüm ya da bir kimlik gerekir).',
+      enqueue_failed: 'Eş, indirmeyi reddetti.',
+      transfer_failed: 'İndirme eksiksiz gelmedi.',
+      tag_mismatch: 'İndirilen dosya başka bir şarkı.',
+      unreadable: 'İndirilen dosya okunabilir bir ses değil.',
+      length_mismatch: 'İndirilen dosyanın süresi farklı.',
+      not_better: 'İndirilen dosya sendekinden daha iyi değil.',
+      target_exists: 'Yeni adla bir dosya zaten var.',
+      write_failed: 'Yeni kopya yazılamadı.',
+      cancelled: 'Kuyruktan çıkarıldı.',
+      dedupe_replacement_pending:
+        'Bu dosyanın başka bir değiştirmesi henüz bitmedi.',
+      dedupe_missing: 'Değiştirmenin bir dosyası eksik.',
+      dedupe_invalid: 'Değiştirme geçerli değil.',
+      failed: 'Bir şeyler ters gitti.',
+    },
   },
 }

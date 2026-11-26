@@ -117,6 +117,7 @@ export default {
       'features/backups.md': 'Biztonsági mentések',
       'features/notifications.md': 'Értesítések',
       'features/replace-audio.md': 'Hang cseréje',
+      'features/low-bitrate-report.md': 'Alacsony bitráta jelentés',
       'features/external-playlists.md': 'Meglévő lejátszási listák importálása',
       'features/m3u-export.md': 'M3U-exportálás',
       'features/playlist-cover-art.md': 'Lejátszási lista borítók',

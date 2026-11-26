@@ -126,6 +126,7 @@ export default {
       'features/backups.md': 'Резервные копии',
       'features/notifications.md': 'Уведомления',
       'features/replace-audio.md': 'Замена аудио',
+      'features/low-bitrate-report.md': 'Отчёт о низком битрейте',
       'features/external-playlists.md': 'Импорт существующих плейлистов',
       'features/m3u-export.md': 'Экспорт M3U',
       'features/playlist-cover-art.md': 'Обложки плейлистов',

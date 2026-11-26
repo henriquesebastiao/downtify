@@ -116,6 +116,7 @@ export default {
       'features/backups.md': '备份',
       'features/notifications.md': '通知',
       'features/replace-audio.md': '替换音频',
+      'features/low-bitrate-report.md': '低码率报告',
       'features/external-playlists.md': '导入现有播放列表',
       'features/m3u-export.md': '导出 M3U',
       'features/playlist-cover-art.md': '播放列表封面',

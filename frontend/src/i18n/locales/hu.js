@@ -2345,6 +2345,17 @@ export default {
     badgeHeld: 'Várakozik',
     badgeHeldHint:
       'Egy hallgatónak készült Spotify-mix. A Spotify-kísérő most nem tudja olvasni, ezért vár: lásd Beállítások > Alkalmazások > Spotify-kísérő.',
+    agent: 'Beállítás MI-ügynökkel',
+    agentHint:
+      'Utasítások egy MI-ügynöknek a szervereden (Hermes, OpenClaw, Claude Code…), hogy telepítse a kísérőt egy ottani böngészőbe, böngészőkonténerbe vagy headless Chromiumba, és ellenőrizze, hogy működik. Egy napig érvényes privát linket tartalmaznak: ezzel tölti le az ügynök a bővítményt, és ezzel látja, hogyan áll. A Spotifyba továbbra is te jelentkezel be; az ügynök utasítást kap, hogy soha ne kérje a jelszavadat.',
+    agentAddress: 'A böngésző által használt cím',
+    agentAddressHint:
+      'Nem kötelező. Hagyd üresen ennek az oldalnak a címéhez. Konténerből a szerver hálózati címét használd, ne a localhostot.',
+    agentMake: 'Utasítások készítése',
+    agentReady:
+      'Másold be ezt az MI-ügynöködbe. A linkje eddig érvényes: {time}; tartsd titokban.',
+    agentCopy: 'Másolás',
+    agentCopied: 'Másolva',
   },
   aurral: {
     title: 'Aurral',
@@ -3351,5 +3362,121 @@ export default {
       'Elfelejti, mely dalokat töltötte le, így a használata nulláról indul. Egy fájl sem törlődik, de többé nem törölheti ezeket a dalokat letöltőként.',
     resetDone: 'Használat nullázva',
     invalid: 'Adj meg 0-nál nagyobb méretet GB-ban',
+  },
+  lowBitrate: {
+    title: 'Alacsony bitráta jelentés',
+    subtitle:
+      'Egy bitráta alatti fájlok, és jobb másolatok a Soulseekről a cseréjükhöz.',
+    backToUpgrade: 'Könyvtár feljavítása',
+    adminOnly: 'Ezt csak adminok láthatják',
+    howItWorks:
+      'Semmi sem változik, amíg jóvá nem hagysz egy másolatot. A Keresés a Soulseeken (slskd) néz körül, és semmit sem ír. A Csere letölti a választott másolatot, átadja neki a régi fájl címkéit, borítóját és dalszövegét, átviszi rá az összes lejátszási listát, kedvelést és értékelést, a régi fájlt pedig a zenei kukába teszi, ahonnan visszaállíthatod.',
+    slskdOff:
+      'A Soulseek (slskd) nincs beállítva, így nem található jobb másolat. Kapcsold be a Beállítások → Források alatt.',
+    trashOff:
+      'A zenei kuka ki van kapcsolva ezen a szerveren. A cseréhez szükség van rá, hogy minden csere visszavonható legyen.',
+    threshold: 'Fájlok listázása',
+    under: '{kbps} kbps alatt',
+    includeLossless: 'Veszteségmentes (FLAC) is',
+    includeLosslessHint:
+      'Ki: csak veszteséges másolatok (először MP3 320, 256 kbps-tól). A következő keresésre vonatkozik.',
+    selectShown: 'Az összes látható kijelölése',
+    findSelected: {
+      one: 'Jobb másolatok keresése ({count})',
+      other: 'Jobb másolatok keresése ({count})',
+    },
+    replaceSelected: {
+      one: '{count} fájl cseréje',
+      other: '{count} fájl cseréje',
+    },
+    summary: {
+      one: '{count} fájl {kbps} kbps alatt · {size}',
+      other: '{count} fájl {kbps} kbps alatt · {size}',
+    },
+    empty: 'Nincs fájl {kbps} kbps alatt',
+    emptyHint:
+      'A könyvtár minden veszteséges fájlja eléri ezt a bitrátát vagy magasabb.',
+    select: '„{title}” kijelölése',
+    kbps: '{kbps} kbps',
+    sources: {
+      youtube: 'YouTube-ról',
+      'youtube-music': 'YouTube Musicról',
+      soundcloud: 'SoundCloudról',
+      slskd: 'Soulseekről',
+      deemix: 'Deemixből',
+      folder: 'Zenei mappából',
+    },
+    states: {
+      queued: 'Várakozik',
+      downloading: 'Letöltés',
+      replacing: 'Csere',
+      done: 'Lecserélve',
+      error: 'Sikertelen',
+    },
+    searching: 'Keresés…',
+    searchAgain: 'Keresés újra',
+    find: 'Keresés',
+    replace: 'Csere',
+    noneFound: 'Most nincs jobb másolat a Soulseeken.',
+    candidatesFor: '„{title}” másolatai',
+    quality: '{kbps} kbps {format}',
+    qualityVbr: 'VBR ~{kbps} kbps {format}',
+    noBitrate: '{format}, bitráta nincs megadva',
+    best: 'Legjobb',
+    peer: 'tőle: {name}',
+    queued: {
+      one: '{count} a sorában',
+      other: '{count} a sorában',
+    },
+    showMore: {
+      one: 'Még {count} megjelenítése',
+      other: 'Még {count} megjelenítése',
+    },
+    finishedTitle: 'Kész',
+    finishedHint:
+      'A régi fájlok a zenei kukában vannak. Állíts vissza ott egyet a cseréje visszavonásához.',
+    replacedWith: '{before} → {after} kbps · most {file}',
+    openTrash: 'Kuka megnyitása',
+    clearFinished: 'Lista törlése',
+    confirmTitle: {
+      one: '{count} fájl cseréje?',
+      other: '{count} fájl cseréje?',
+    },
+    confirmBody:
+      'Minden fájlt a választott másolat vált fel. A régi fájl a zenei kukába kerül, így visszaállíthatod.',
+    refused: {
+      one: '{count} fájl nem indult el: {reason}',
+      other: '{count} fájl nem indult el: {reason}',
+    },
+    panelTitle: 'Alacsony bitráta jelentés',
+    panelHint:
+      'Listázd a 256 kbps alatti fájlokat, és cseréld le őket jobb Soulseek-másolatokra, egyenként jóváhagyva.',
+    open: 'Jelentés megnyitása',
+    errors: {
+      slskd_off: 'A Soulseek (slskd) ki van kapcsolva vagy nincs beállítva.',
+      slskd_unreachable: 'A Soulseek (slskd) nem válaszolt.',
+      no_tags: 'A fájlnak nincs címe vagy előadója, amire keresni lehetne.',
+      search_failed: 'A keresés sikertelen.',
+      search_again: 'Keress újra: ez a találat már nem ismert.',
+      missing: 'A fájl már nincs a könyvtárban.',
+      already_running: 'Ennek a fájlnak a cseréje már folyamatban van.',
+      trash_off: 'A zenei kuka ki van kapcsolva.',
+      trash_refused:
+        'A zenei kuka nem fogadhatja ezt a fájlt (cím, előadó és album, vagy azonosító kell hozzá).',
+      enqueue_failed: 'A partner elutasította a letöltést.',
+      transfer_failed: 'A letöltés nem érkezett meg teljesen.',
+      tag_mismatch: 'A letöltött fájl egy másik dal.',
+      unreadable: 'A letöltött fájl nem olvasható hang.',
+      length_mismatch: 'A letöltött fájl hossza eltér.',
+      not_better: 'A letöltött fájl nem jobb a meglévőnél.',
+      target_exists: 'Már van fájl az új névvel.',
+      write_failed: 'Az új másolatot nem sikerült kiírni.',
+      cancelled: 'Levéve a sorról.',
+      dedupe_replacement_pending:
+        'Ennek a fájlnak egy másik cseréje még nem fejeződött be.',
+      dedupe_missing: 'A csere egyik fájlja hiányzik.',
+      dedupe_invalid: 'A csere érvénytelen.',
+      failed: 'Hiba történt.',
+    },
   },
 }
