@@ -2465,6 +2465,9 @@ async def check_artist(  # noqa: PLR0914  # one sweep: discography, releases, tr
         (playlist.release_types or ALL_RELEASE_TYPES).split(',')
     )
     seen = await asyncio.to_thread(db.get_seen_album_ids, playlist.id)
+    # Going through a release processed before again - the oldest one
+    # each sweep, or all of them for "Download missing" - is no news.
+    known = set(seen)
     seen.discard(
         await asyncio.to_thread(db.releases.next_release, playlist.id)
     )
@@ -2484,17 +2487,24 @@ async def check_artist(  # noqa: PLR0914  # one sweep: discography, releases, tr
         # Announced, not out yet: downloaded on its release day.
         and not upcoming(a)
     ]
-    if new_albums:
+    fresh = [a for a in new_albums if a['album_id'] not in known]
+    if fresh:
         logger.info(
             'Found {} new release(s) for artist "{}"',
-            len(new_albums),
+            len(fresh),
             playlist.name,
         )
         notifications.emit(
             'new_releases',
             playlist.name,
-            ', '.join(str(a.get('name') or '') for a in new_albums[:5])
-            + (f' +{len(new_albums) - 5}' if len(new_albums) > 5 else ''),
+            ', '.join(str(a.get('name') or '') for a in fresh[:5])
+            + (f' +{len(fresh) - 5}' if len(fresh) > 5 else ''),
+        )
+    if len(new_albums) > len(fresh):
+        logger.info(
+            'Going through {} known release(s) of artist "{}" again',
+            len(new_albums) - len(fresh),
+            playlist.name,
         )
 
     delay_seconds = (settings or {}).get('download_delay_seconds', 0) or 0

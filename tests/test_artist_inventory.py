@@ -360,6 +360,70 @@ def test_download_missing_leaves_releases_out_before_the_watch(
     assert dl.calls == []
 
 
+def _new_release_notices(monkeypatch):
+    """The ``new_releases`` notifications a check sends, as (title, text)."""
+
+    sent = []
+
+    def emit(event, title, text=''):
+        if event == 'new_releases':
+            sent.append((title, text))
+
+    monkeypatch.setattr(monitor.notifications, 'emit', emit)
+    return sent
+
+
+def _fill_missing(db, watch, dl):
+    async def scenario():
+        async def broadcast(_message):
+            return None
+
+        return await monitor.check_artist(
+            db.get_playlist(watch.id),
+            db,
+            dl,
+            broadcast,
+            asyncio.get_running_loop(),
+            settings=ON,
+            library=monitor.LibraryStores(listing=lambda: []),
+            fill_missing=True,
+        )
+
+    return asyncio.run(scenario())
+
+
+def test_download_missing_announces_no_known_release_as_new(
+    monkeypatch, tmp_path
+):
+    _catalogues(monkeypatch)
+    db, watch = _watch(tmp_path)
+    db.update_playlist(watch.id, release_types='album')
+    dl = _FakeDownloader(tmp_path)
+    _sweep(db, watch, dl, ON)
+    sent = _new_release_notices(monkeypatch)
+
+    _fill_missing(db, watch, dl)
+
+    assert sent == []
+
+
+def test_a_sweep_announces_only_releases_it_had_not_seen(
+    monkeypatch, tmp_path
+):
+    _catalogues(monkeypatch)
+    db, watch = _watch(tmp_path)
+    dl = _FakeDownloader(tmp_path)
+    sent = _new_release_notices(monkeypatch)
+    _sweep(db, watch, dl, ON)
+    assert [title for title, _text in sent] == ['Drake']
+
+    # The next sweep goes through one release it processed before again
+    # (the oldest attempt): that is no news.
+    sent.clear()
+    _sweep(db, watch, dl, ON)
+    assert sent == []
+
+
 def test_what_download_missing_would_fetch():
     def release(state, have, total, wanted=True):
         return {'state': state, 'have': have, 'total': total, 'wanted': wanted}
