@@ -7,7 +7,7 @@ import psycopg
 import pytest
 import requests
 
-from downtify import cookie_refresh, slskd_provider
+from downtify import cookie_refresh, playlist_names, slskd_provider
 from downtify import downloader as downloader_mod
 from downtify.db.core import Database
 from downtify.db.migrations.runner import run_migrations
@@ -40,6 +40,17 @@ def _no_remembered_slskd_failures():
     slskd_provider.forget_failures()
     yield
     slskd_provider.forget_failures()
+
+
+@pytest.fixture(autouse=True)
+def _no_remembered_playlist_names():
+    """Playlist names are remembered process-wide as they are fetched
+    (``playlist_names.remember``): each test starts with none, so a name
+    one test fetched never renames another test's watch."""
+
+    playlist_names.forget_all()
+    yield
+    playlist_names.forget_all()
 
 
 @pytest.fixture(autouse=True)

@@ -46,13 +46,6 @@ class _Downloader:
         return None
 
 
-@pytest.fixture(autouse=True)
-def _fresh_names():
-    playlist_names.forget_all()
-    yield
-    playlist_names.forget_all()
-
-
 class _Source:
     """What Spotify answers: songs, and the playlist's current name."""
 
