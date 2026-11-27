@@ -75,6 +75,11 @@
                       label: t('settings.themeDark'),
                     },
                     {
+                      value: 'grey',
+                      icon: 'contrast',
+                      label: t('settings.themeGrey'),
+                    },
+                    {
                       value: 'light',
                       icon: 'sun',
                       label: t('settings.themeLight'),

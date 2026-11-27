@@ -1716,8 +1716,10 @@ export default {
     leaveBody: 'Your changes to the settings haven’t been saved.',
     appearance: 'Appearance',
     theme: 'Theme',
-    themeHint: 'System follows your device’s light or dark mode.',
+    themeHint:
+      'Grey is a softer dark theme, easier on the eyes over long sessions. System follows your device’s light or dark mode.',
     themeDark: 'Dark',
+    themeGrey: 'Grey',
     themeLight: 'Light',
     themeSystem: 'System',
     language: 'Language',

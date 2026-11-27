@@ -111,14 +111,14 @@
                 class="flex size-9 items-center justify-center rounded-[10px] bg-surface-2 text-fg-3"
               >
                 <AppIcon
-                  :name="theme.resolved.value === 'dark' ? 'sun' : 'moon'"
+                  :name="theme.isLight.value ? theme.toggleIcon.value : 'sun'"
                   :size="18"
                 />
               </span>
               {{
-                theme.resolved.value === 'dark'
-                  ? t('settings.themeLight')
-                  : t('settings.themeDark')
+                theme.isLight.value
+                  ? t(theme.toggleLabel.value)
+                  : t('settings.themeLight')
               }}
             </button>
             <button

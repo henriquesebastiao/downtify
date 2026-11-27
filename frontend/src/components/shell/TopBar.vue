@@ -37,11 +37,11 @@
           @click="openShortcuts"
         />
         <UiIconButton
-          :icon="theme.resolved.value === 'dark' ? 'sun' : 'moon'"
+          :icon="theme.isLight.value ? theme.toggleIcon.value : 'sun'"
           :label="
-            theme.resolved.value === 'dark'
-              ? t('settings.themeLight')
-              : t('settings.themeDark')
+            theme.isLight.value
+              ? t(theme.toggleLabel.value)
+              : t('settings.themeLight')
           "
           @click="theme.toggle()"
         />
