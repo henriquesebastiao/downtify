@@ -2474,7 +2474,21 @@ def library_stores() -> LibraryStores:
         track_owners=state.track_owners,
         playlist_hidden=state.playlist_hidden,
         listing=lambda: listing_for_request(library_context()),
+        playlist_shares=state.playlist_shares,
+        external_playlist_imports=state.external_playlist_imports,
+        manual_playlist_owners=state.manual_playlist_owners,
+        named_by_user=_named_by_user,
     )
+
+
+def _named_by_user(name: str) -> bool:
+    """Whether someone gave playlist *name* a name of their own (the
+    Library's Rename): a rename on its source then leaves it alone."""
+
+    if state.playlist_shares is None:
+        return False
+    identity = playlist_display_identity({'name': name})
+    return bool(state.playlist_shares.display_names().get(identity))
 
 
 def stored_content_key(stored_path: str) -> str:

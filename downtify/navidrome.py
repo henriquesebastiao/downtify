@@ -433,7 +433,7 @@ def _effective_navidrome_settings(settings: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-class NavidromeClient:
+class NavidromeClient:  # noqa: PLR0904
     """Minimal Subsonic client for Navidrome playlist and library operations."""
 
     def __init__(self, cfg: dict[str, Any]):
@@ -932,6 +932,13 @@ class NavidromeClient:
             name, song_ids, playlist_id=playlist_id
         )
 
+    def rename_playlist(self, playlist_id: str, name: str) -> None:
+        """Give a playlist a new name; its id and songs stay."""
+
+        self._request(
+            'updatePlaylist', {'playlistId': playlist_id, 'name': name}
+        )
+
     def update_playlist_meta(
         self,
         playlist_id: str,
@@ -1323,6 +1330,79 @@ def remove_own_playlist_copies(client: NavidromeClient, name: str) -> int:
                 exc,
             )
     return removed
+
+
+def follow_playlist_rename(
+    old_name: str,
+    new_name: str,
+    settings: dict[str, Any],
+    *,
+    old_m3u: str = '',
+) -> dict[str, int]:
+    """Carry a playlist renamed on its source over to Navidrome.
+
+    Downtify's own copy (made through the API) keeps its id and gets
+    the new name, so players that pinned it keep it. An import of the
+    old M3U (*old_m3u*, relative to the downloads folder) is deleted:
+    the M3U now has the new name, which Navidrome imports on its next
+    scan, and an import whose file is gone stays in Navidrome forever.
+    ``{renamed, removed}`` counts; zeros when Navidrome is off or away.
+    """
+
+    done = {'renamed': 0, 'removed': 0}
+    cfg = _effective_navidrome_settings(settings)
+    if not cfg.get('enabled'):
+        return done
+    client = NavidromeClient(cfg)
+    if not client.configured() or not client.ping():
+        return done
+    want = playlist_key(old_name)
+    try:
+        own = client.list_playlists()
+    except Exception as exc:
+        logger.info('navidrome: could not list playlists err={}', exc)
+        own = []
+    for playlist in own:
+        if (
+            playlist_key(str(playlist.get('name') or '')) != want
+            or not made_by_downtify(playlist)
+            or str(playlist.get('owner') or '') != client.username
+        ):
+            continue
+        try:
+            client.rename_playlist(str(playlist.get('id') or ''), new_name)
+            done['renamed'] += 1
+        except Exception as exc:
+            logger.info(
+                'navidrome: could not rename playlist id={} err={}',
+                playlist.get('id'),
+                exc,
+            )
+    tail = '/' + str(old_m3u or '').strip().replace('\\', '/').lstrip('/')
+    if tail == '/':
+        return done
+    imported = client.native_playlists()
+    for playlist in imported or []:
+        path = str(playlist.get('path') or '').replace('\\', '/')
+        if not path.endswith(tail) or (
+            playlist_key(str(playlist.get('name') or '')) != want
+        ):
+            continue
+        try:
+            client.delete_playlist(str(playlist.get('id') or ''), admin=True)
+            done['removed'] += 1
+        except Exception as exc:
+            logger.info(
+                'navidrome: could not remove import {} err={}', path, exc
+            )
+    logger.info(
+        'navidrome: {!r} is now {!r} ({} renamed, {} old import removed)',
+        old_name,
+        new_name,
+        done['renamed'],
+        done['removed'],
+    )
+    return done
 
 
 def remove_navidrome_playlist_by_name(
