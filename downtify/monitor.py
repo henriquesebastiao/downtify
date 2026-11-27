@@ -24,6 +24,7 @@ from . import (
     musicbrainz,
     notifications,
     providers,
+    retry_backoff,
     spotify,
     spotify_companion,
 )
@@ -1172,6 +1173,7 @@ async def check_playlist(
         initial=initial,
         settings=settings or {},
     )
+    new_tracks = await _without_waiting_failures(db, playlist, new_tracks)
 
     if new_tracks:
         logger.info(
@@ -1430,6 +1432,35 @@ async def _split_new_tracks(
             playlist.name,
         )
     return new_tracks, linked
+
+
+async def _without_waiting_failures(
+    db: PlaylistMonitorDB,
+    playlist: MonitoredPlaylist,
+    tracks: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """*tracks* without the failing songs that wait for their next try
+    (:mod:`downtify.retry_backoff`)."""
+
+    if not tracks:
+        return tracks
+    waiting = await asyncio.to_thread(
+        retry_backoff.waiting_for_watch,
+        getattr(db, 'history', None),
+        playlist.id,
+    )
+    if not waiting:
+        return tracks
+    kept = [t for t in tracks if str(t.get('song_id') or '') not in waiting]
+    if len(kept) < len(tracks):
+        logger.info(
+            'Watch "{}": {} failing song(s) wait for their next try '
+            '(the next at {})',
+            playlist.name,
+            len(tracks) - len(kept),
+            min(waiting.values()).isoformat(timespec='minutes'),
+        )
+    return kept
 
 
 async def _fetch_watch_track(
@@ -2518,9 +2549,22 @@ async def check_artist(  # noqa: PLR0914  # one sweep: discography, releases, tr
     # for each other, so the second is linked rather than downloaded.
     song_locks = _SongLocks()
 
+    # Failing songs waiting for their next try (downtify/retry_backoff.py).
+    waiting = (
+        await asyncio.to_thread(
+            retry_backoff.waiting_for_watch,
+            getattr(db, 'history', None),
+            playlist.id,
+        )
+        if new_albums
+        else {}
+    )
+    held = 0
+
     async def release_jobs() -> AsyncIterator[
         tuple[_ReleaseRun, int, dict[str, Any]]
     ]:
+        nonlocal held
         for album in new_albums:
             album_id = album['album_id']
             await asyncio.to_thread(db.releases.attempt, playlist.id, album_id)
@@ -2562,6 +2606,11 @@ async def check_artist(  # noqa: PLR0914  # one sweep: discography, releases, tr
             for position, song in enumerate(tracks, start=1):
                 if not song.get('song_id'):
                     run.complete = False
+                    continue
+                if str(song['song_id']) in waiting:
+                    # Tried on a later check; the release stays unfinished.
+                    run.complete = False
+                    held += 1
                     continue
                 jobs.append((run, position, song))
             run.pending = len(jobs)
@@ -2791,6 +2840,14 @@ async def check_artist(  # noqa: PLR0914  # one sweep: discography, releases, tr
     await _side_by_side(
         release_jobs(), release_track, _parallel_limit(settings)
     )
+    if held:
+        logger.info(
+            'Artist "{}": {} failing song(s) wait for their next try '
+            '(the next at {})',
+            playlist.name,
+            held,
+            min(waiting.values()).isoformat(timespec='minutes'),
+        )
 
     await asyncio.to_thread(
         db.update_playlist,

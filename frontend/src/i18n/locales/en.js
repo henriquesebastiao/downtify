@@ -1607,9 +1607,11 @@ export default {
     },
     failuresClear: 'Clear',
     failuresClearHint:
-      'Clear starts the list over after you changed a setting; songs that still fail come back on the next check.',
+      'A failing song is tried less often the longer it fails: after an hour at first, at most a week apart. Check now, an update or other audio sources try them all again. Clear starts the list over after you changed a setting; songs that still fail come back on the next check.',
     attempts: { one: '{count} try', other: '{count} tries' },
     lastTried: 'last tried {when}',
+    nextTry: 'next try {when}',
+    nextTryNextCheck: 'tried again on the next check',
     songsTitle: 'Songs from this watch',
     songsHint:
       'Newest first, including songs that have since left the playlist. Select some to play them, add them to a playlist or delete them.',

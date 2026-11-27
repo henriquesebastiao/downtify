@@ -6,7 +6,7 @@ from __future__ import annotations
 import asyncio
 from pathlib import Path
 
-from downtify import monitor
+from downtify import monitor, retry_backoff
 from downtify.db.core import Database
 from downtify.monitor import LibraryStores, PlaylistMonitorDB
 from downtify.track_index import TrackIndex
@@ -172,8 +172,11 @@ def test_failures_are_kept_until_the_track_succeeds_or_leaves(
     downloader.failing = {TRACK_A, TRACK_B}
     tracks = [_song(TRACK_A, 'Alpha'), _song(TRACK_B, 'Beta')]
 
-    _sweep(monkeypatch, db, downloader, tracks)
-    _sweep(monkeypatch, db, downloader, tracks)
+    # Back to back, as Check now does: no song waits for its next try
+    # (downtify/retry_backoff.py).
+    with retry_backoff.every_failure():
+        _sweep(monkeypatch, db, downloader, tracks)
+        _sweep(monkeypatch, db, downloader, tracks)
 
     failures = {f['track_id']: f for f in db.history.failures(watch.id)}
     assert set(failures) == {TRACK_A, TRACK_B}
@@ -185,12 +188,13 @@ def test_failures_are_kept_until_the_track_succeeds_or_leaves(
 
     # A works now; B left the playlist.
     downloader.failing = set()
-    _sweep(
-        monkeypatch,
-        db,
-        downloader,
-        [_song(TRACK_A, 'Alpha')],
-    )
+    with retry_backoff.every_failure():
+        _sweep(
+            monkeypatch,
+            db,
+            downloader,
+            [_song(TRACK_A, 'Alpha')],
+        )
     assert db.history.failures(watch.id) == []
     assert _events(db) == [(TRACK_A, OUTCOME_DOWNLOADED, False)]
 

@@ -369,6 +369,44 @@ class PendingDownloads:
             )
         return rows
 
+    def state_value(self, key: str) -> Optional[str]:
+        """A saved queue setting (``download_queue_state``), or ``None``."""
+
+        with self._connect() as conn:
+            row = conn.execute(
+                'SELECT value FROM download_queue_state WHERE key = ?',
+                (key,),
+            ).fetchone()
+        return None if row is None else str(tuple(row)[0])
+
+    def set_state_value(self, key: str, value: str) -> None:
+        with self._connect() as conn:
+            conn.execute(
+                'INSERT INTO download_queue_state (key, value) '
+                'VALUES (?, ?) '
+                'ON CONFLICT(key) DO UPDATE SET value = excluded.value',
+                (key, str(value)),
+            )
+
+    def requeue_failed(self) -> int:
+        """Put every saved failed job back in the queue (as if each was
+        retried), oldest failure first; how many."""
+
+        failed = self.failed_rows()
+        if not failed:
+            return 0
+        self.add([
+            PendingDownload(
+                song_id=row.song_id,
+                song=row.song,
+                options=row.options,
+                user_ids=row.user_ids,
+            )
+            for row in failed
+        ])
+        self.forget_failed([row.song_id for row in failed])
+        return len(failed)
+
     def paused(self) -> bool:
         with self._connect() as conn:
             row = conn.execute(

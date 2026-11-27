@@ -15,7 +15,7 @@ import pytest
 from fastapi import HTTPException
 from mutagen.id3 import ID3, TALB, TIT2, TPE1, TRCK
 
-from downtify import api, monitor
+from downtify import api, monitor, retry_backoff
 from downtify.db.core import Database
 from tests.db.helpers import execute
 
@@ -191,7 +191,15 @@ def test_release_is_retried_when_a_track_fails(monkeypatch, tmp_path):
     assert db.get_seen_album_ids(pl.id) == set()
 
     retry = _FakeDownloader(tmp_path)
-    assert _run_check(pl, db, retry) == 1
+    # Right away, the song that just failed waits for its next try
+    # (downtify/retry_backoff.py); the release stays unfinished.
+    assert _run_check(pl, db, retry) == 0
+    assert retry.calls == []
+    assert db.get_seen_album_ids(pl.id) == set()
+
+    # Check now tries it anyway.
+    with retry_backoff.every_failure():
+        assert _run_check(pl, db, retry) == 1
     # Only the track that failed is retried; the one that succeeded is
     # skipped via the per-track record.
     assert retry.calls == ['t2']

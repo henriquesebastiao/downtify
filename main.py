@@ -479,6 +479,9 @@ def _open_library_stores(monitor_db_path: Path | Database) -> None:
         queue_pause.pause()
     else:
         queue_pause.resume()
+    # Before any watch check: how long failing songs still wait, and
+    # whether an update starts those waits over (downtify/retry_backoff.py).
+    api.load_retry_waits()
     api.state.playlist_spotify_cache = PlaylistSpotifyCache(library_db)
     api.state.lyrics_cache = LyricsLookupCache(library_db)
     api.state.likes = LikedTracks(library_db)
