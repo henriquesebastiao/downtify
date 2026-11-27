@@ -10,7 +10,12 @@
       compact ? 'px-3 py-2' : 'p-3.5',
     ]"
   >
-    <div class="flex items-center gap-3.5">
+    <!-- A failed card's buttons take a line of their own on a phone,
+         so the song's name and its error keep the width. -->
+    <div
+      class="flex items-center gap-3.5"
+      :class="item.state === 'failed' ? 'max-sm:flex-wrap' : ''"
+    >
       <CoverArt
         :src="deezerImage(song.cover_url)"
         :name="song.album_name || song.name"
@@ -18,7 +23,12 @@
         :letter-size="compact ? 12 : 18"
         :class="compact ? 'size-10' : 'size-14'"
       />
-      <div class="min-w-0 flex-1">
+      <div
+        class="min-w-0 flex-1"
+        :class="
+          item.state === 'failed' ? 'max-sm:basis-[calc(100%-4.5rem)]' : ''
+        "
+      >
         <div class="flex min-w-0 items-center gap-2">
           <span
             class="truncate text-sm font-semibold"
@@ -75,16 +85,47 @@
             {{ item.message }}
           </p>
         </template>
-        <p
-          v-else-if="item.state === 'failed'"
-          class="mt-1 flex items-start gap-1.5 text-xs text-danger"
-        >
-          <AppIcon name="alert" :size="14" class="mt-px" />
-          <span class="line-clamp-2">{{ failure }}</span>
-        </p>
+        <template v-else-if="item.state === 'failed'">
+          <p class="mt-1 flex items-start gap-1.5 text-xs text-danger">
+            <AppIcon name="alert" :size="14" class="mt-px" />
+            <span class="line-clamp-2">{{ failure }}</span>
+          </p>
+          <ul
+            v-if="showSources"
+            class="mt-2 flex flex-col gap-1"
+            :aria-label="t('queue.sourcesTried')"
+          >
+            <li
+              v-for="(attempt, index) in attempts"
+              :key="index"
+              class="flex min-w-0 items-start gap-2 text-xs"
+            >
+              <SourceBadge
+                :source="attempt.provider"
+                compact
+                class="shrink-0"
+              />
+              <span class="min-w-0 text-muted">
+                <span class="text-fg-3">{{ attemptReason(attempt, t) }}</span>
+                <span
+                  v-if="attempt.detail"
+                  class="line-clamp-2 break-words text-faint"
+                  :title="attempt.detail"
+                  >{{ shortError(attempt.detail) }}</span
+                >
+              </span>
+            </li>
+            <li v-if="!attempts.length" class="text-xs text-faint">
+              {{ t('queue.sourceNotRecordedHint') }}
+            </li>
+          </ul>
+        </template>
       </div>
 
-      <div class="flex shrink-0 items-center gap-1">
+      <div
+        class="flex shrink-0 items-center gap-1"
+        :class="item.state === 'failed' ? 'max-sm:ml-auto' : ''"
+      >
         <span
           v-if="item.state === 'queued' && item.position != null"
           class="tabular rounded-full bg-surface-2 px-2 py-0.5 text-[11px] font-semibold text-muted max-sm:hidden"
@@ -195,6 +236,7 @@ import { deezerImage } from '/src/lib/deezerImage'
 import { normalizeTrack } from '/src/lib/library'
 import { saveName } from '/src/lib/paths'
 import { watchCover } from '/src/lib/queueWatches'
+import { attemptReason, attemptsOf, shortError } from '/src/lib/sourceAttempts'
 import { watchRouteFor } from '/src/lib/watchStats'
 import { classifyInput } from '/src/lib/input'
 import { useI18n } from '/src/i18n'
@@ -202,7 +244,10 @@ import { useI18n } from '/src/i18n'
 const props = defineProps({
   item: { type: Object, required: true },
   compact: { type: Boolean, default: false },
+  // A failed song lists what each audio source did (Failed tab switch).
+  showSources: { type: Boolean, default: false },
 })
+const attempts = computed(() => attemptsOf(props.item))
 
 const { t } = useI18n()
 // Codes the server sends for songs it won't download (download policy,
@@ -214,6 +259,11 @@ const FAILURE_CODES = {
 const failure = computed(() => {
   const message = props.item.message
   if (FAILURE_CODES[message]) return t(FAILURE_CODES[message])
+  // A watch failure's headline is generic; the error says what broke.
+  const detail = props.item.detail ? shortError(props.item.detail) : ''
+  if (message && detail && !message.includes(detail)) {
+    return `${message}: ${detail}`
+  }
   return message || t('queue.failedGeneric')
 })
 const auth = useAuth()

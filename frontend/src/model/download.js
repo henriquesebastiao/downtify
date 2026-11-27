@@ -69,6 +69,10 @@ class DownloadItem {
     this.position = null
     // The Monitor watch downloading this song (see lib/queueWatches.js).
     this.watch = null
+    // A failure's error text, and what each audio source did
+    // (see lib/sourceAttempts.js).
+    this.detail = ''
+    this.sources = []
     this.updatedAt = Date.now()
   }
   get key() {
@@ -108,6 +112,8 @@ class DownloadItem {
       web_download_url: null,
       filename: null,
       position: null,
+      detail: '',
+      sources: [],
       updatedAt: Date.now(),
     })
   }
@@ -147,6 +153,10 @@ class DownloadItem {
     if (message.provider) values.provider = message.provider
     if (message.reused) values.provider = ''
     if (message.watch) values.watch = message.watch
+    if (message.status === 'error') {
+      values.detail = message.detail || ''
+      values.sources = Array.isArray(message.sources) ? message.sources : []
+    }
     this.patch(values)
   }
 }
@@ -154,6 +164,11 @@ class DownloadItem {
 function applyServerJob(item, job) {
   item.patch({
     ...(job.provider ? { provider: job.provider } : {}),
+    // Only a changed list: the poll re-reads every failed job.
+    ...(job.status === 'error' &&
+    JSON.stringify(job.sources || []) !== JSON.stringify(item.sources)
+      ? { sources: Array.isArray(job.sources) ? job.sources : [] }
+      : {}),
     message: job.message || '',
     progress: job.status === 'done' ? 100 : job.progress || 0,
     position: job.position ?? null,

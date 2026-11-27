@@ -84,6 +84,18 @@
 
     <div class="grid items-start gap-8 xl:grid-cols-[minmax(0,1fr)_340px]">
       <div class="flex min-w-0 flex-col gap-3">
+        <div
+          v-if="tab === 'failed' && items.length"
+          ref="failedTools"
+          class="flex flex-col gap-3"
+        >
+          <UiSwitch
+            v-model="bySource"
+            :label="t('queue.bySourceSwitch')"
+            :description="t('queue.bySourceSwitchHint')"
+          />
+          <FailedBySource v-if="bySource" :items="items" />
+        </div>
         <!-- The server's queue isn't read yet: not "nothing queued". -->
         <UiSkeletonRows
           v-if="!queue.length && !queueSynced"
@@ -135,6 +147,7 @@
               :compact="
                 row.item.state === 'queued' || row.item.state === 'done'
               "
+              :show-sources="bySource && tab === 'failed'"
             />
           </div>
         </div>
@@ -255,7 +268,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useWindowVirtualizer } from '@tanstack/vue-virtual'
 import AppIcon from '/src/components/ui/AppIcon.vue'
@@ -272,6 +285,8 @@ import QueueItem from '/src/components/queue/QueueItem.vue'
 import DownloadExclusions from '/src/components/queue/DownloadExclusions.vue'
 import CsvImport from '/src/components/queue/CsvImport.vue'
 import SlskdMisses from '/src/components/queue/SlskdMisses.vue'
+import FailedBySource from '/src/components/queue/FailedBySource.vue'
+import UiSwitch from '/src/components/ui/UiSwitch.vue'
 import {
   queueSynced,
   useDownloadManager,
@@ -314,6 +329,24 @@ const counts = computed(() => {
   const result = { active: 0, queued: 0, done: 0, failed: 0 }
   for (const item of queue.value) result[item.state] += 1
   return result
+})
+
+// The Failed tab's "By source" switch, remembered in this browser.
+const BY_SOURCE_KEY = 'downtify.queue.failedBySource'
+function readBySource() {
+  try {
+    return localStorage.getItem(BY_SOURCE_KEY) === '1'
+  } catch {
+    return false
+  }
+}
+const bySource = ref(readBySource())
+watch(bySource, (on) => {
+  try {
+    localStorage.setItem(BY_SOURCE_KEY, on ? '1' : '0')
+  } catch {
+    // Private window or blocked storage: the switch still works.
+  }
 })
 
 const TABS = ['active', 'queued', 'done', 'failed', 'all']
@@ -382,9 +415,25 @@ function measureRow(el) {
 
 onMounted(measureOffset)
 watch(
-  () => [tab.value, items.value.length],
+  () => [tab.value, items.value.length, bySource.value],
   () => requestAnimationFrame(measureOffset)
 )
+
+// The "By source" summary sits above the list and grows as failures
+// arrive: the list's offset follows it.
+const failedTools = ref(null)
+let toolsObserver = null
+watch(failedTools, (el) => {
+  toolsObserver?.disconnect()
+  toolsObserver = null
+  if (el && typeof ResizeObserver !== 'undefined') {
+    toolsObserver = new ResizeObserver(() =>
+      requestAnimationFrame(measureOffset)
+    )
+    toolsObserver.observe(el)
+  }
+})
+onBeforeUnmount(() => toolsObserver?.disconnect())
 
 const totalSize = computed(() => virtualizer.value.getTotalSize())
 const rows = computed(() =>

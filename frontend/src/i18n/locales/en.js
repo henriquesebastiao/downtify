@@ -617,6 +617,22 @@ export default {
     retry: 'Retry',
     remove: 'Remove from queue',
     failedGeneric: 'The download failed.',
+    bySourceSwitch: 'Show each source',
+    bySourceSwitchHint:
+      'What every audio source said for these songs, in the order they were tried.',
+    bySourceTitle: 'Failed, by source',
+    bySourceHint:
+      'Each song counts once for every source it tried. A source failing for nearly every song points at that source, not the songs.',
+    bySourceSongs: { one: '{count} song', other: '{count} songs' },
+    sourcesTried: 'Sources tried',
+    sourceNothing: 'Found nothing',
+    sourceNothingBecause: 'Found nothing usable',
+    sourceSkipped: 'Found a file in a format to avoid',
+    sourceFailed: 'Download failed',
+    sourceRejected: "Downloaded, but it didn't match the release",
+    sourceNotRecorded: 'Not recorded',
+    sourceNotRecordedHint:
+      'Failed before this version kept per-source details, or before any source was tried.',
     overridePlaceholder:
       'Paste a YouTube or SoundCloud link to use as the audio',
     useLink: 'Use this link',
