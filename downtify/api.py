@@ -539,6 +539,7 @@ from .downloader import (
     NoAudioMatchError,
     TrackTooLongError,
     save_playlist_cover,
+    source_attempts,
 )
 from .external_library import (
     effective_external_library,
@@ -5074,22 +5075,27 @@ async def _run_download_locked(
         else:
             logger.exception('Download failed for {}', song_id)
             message = f'Error: {exc}'
+        # What each audio source did: the Failed tab's per-source view.
+        sources = source_attempts(exc)
         job['status'] = 'error'
         job['message'] = message
-        await _remember_failed(
-            job,
-            _pending_download(
-                song,
-                song_id,
-                user_id=user_id,
-                subdir=subdir,
-                delay_seconds=delay_seconds,
-                playlist_name=playlist_name,
-                spotify_playlist_id=spotify_playlist_id,
-                track_order=track_order,
-            ),
-            message,
+        job['sources'] = sources
+        if sources:
+            # The badge names the last source tried, not the last one
+            # that reported progress (slskd's "Trying next source").
+            job['provider'] = sources[-1]['provider']
+        saved = _pending_download(
+            song,
+            song_id,
+            user_id=user_id,
+            subdir=subdir,
+            delay_seconds=delay_seconds,
+            playlist_name=playlist_name,
+            spotify_playlist_id=spotify_playlist_id,
+            track_order=track_order,
         )
+        saved.options['sources'] = sources
+        await _remember_failed(job, saved, message)
         notifications.emit('download_failed', song_label(song), message)
         await state.connections.broadcast_job(
             _job_users(job),
@@ -5098,6 +5104,8 @@ async def _run_download_locked(
                 'progress': 0,
                 'message': message,
                 'status': 'error',
+                'sources': sources,
+                **({'provider': sources[-1]['provider']} if sources else {}),
             },
         )
         raise
@@ -9742,6 +9750,10 @@ async def _restore_failed_jobs(
         if job is None:
             continue
         job['message'] = row.message
+        sources = row.options.get('sources')
+        job['sources'] = sources if isinstance(sources, list) else []
+        if job['sources']:
+            job['provider'] = str(job['sources'][-1].get('provider') or '')
         job[_SAVED_FAILED] = True
         restored += 1
     if restored:

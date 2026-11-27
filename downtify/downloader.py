@@ -438,6 +438,41 @@ def _translate_download_error(
 #: when it falls through to the next source, reported with the outcome).
 _SLSKD_MISS = threading.local()
 
+#: What each audio source did for the download running on this thread:
+#: ``value`` is the list of attempts, ``chosen`` the source whose file or
+#: upload was taken (see :func:`source_attempts`).
+_ATTEMPTS = threading.local()
+
+#: ``result`` values of one source attempt.
+ATTEMPT_NOTHING = 'nothing'  # searched, found nothing usable
+ATTEMPT_SKIPPED = 'skipped'  # found a file, but one to avoid
+ATTEMPT_FAILED = 'failed'  # picked, then fetching or saving it failed
+ATTEMPT_REJECTED = 'rejected'  # saved, then refused by a later check
+
+
+def _note_attempt(
+    provider: str, result: str, reason: str = '', detail: str = ''
+) -> None:
+    attempts = getattr(_ATTEMPTS, 'value', None)
+    if attempts is None:
+        return
+    attempts.append({
+        'provider': provider,
+        'result': result,
+        'reason': reason,
+        'detail': str(detail or '')[:300],
+    })
+
+
+def source_attempts(exc: BaseException) -> list[dict[str, str]]:
+    """What each audio source did before *exc* ended a download, in the
+    order tried: ``[{provider, result, reason, detail}]`` (``result`` is
+    one of the ``ATTEMPT_*`` values). Empty when the download never got
+    as far as the sources (or *exc* came from elsewhere)."""
+
+    attempts = getattr(exc, 'source_attempts', None)
+    return [dict(a) for a in attempts] if isinstance(attempts, list) else []
+
 
 class Downloader:
     """Wraps ``yt-dlp`` plus ``mutagen`` tagging."""
@@ -660,6 +695,15 @@ class Downloader:
                 )
                 if local is not None and not self._avoided(local, 'deemix'):
                     return None, None, 'deemix', local
+                if local is not None:
+                    _note_attempt(
+                        'deemix',
+                        ATTEMPT_SKIPPED,
+                        'quality_filtered',
+                        f'{Path(str(local)).name} is in a format to avoid',
+                    )
+                else:
+                    _note_attempt('deemix', ATTEMPT_NOTHING)
                 _report(progress_cb, 0.0, 'Trying next source', 'deemix')
             elif provider == 'slskd':
                 if not self.slskd_settings.get('enabled'):
@@ -676,6 +720,12 @@ class Downloader:
                         'reason': 'quality_filtered',
                         'detail': f'{local.name} is in a format to avoid',
                     }
+                    _note_attempt(
+                        'slskd',
+                        ATTEMPT_SKIPPED,
+                        'quality_filtered',
+                        f'{local.name} is in a format to avoid',
+                    )
                     _report(progress_cb, 0.0, 'Trying next source', 'slskd')
                     continue
                 if local is not None:
@@ -685,6 +735,12 @@ class Downloader:
                     'reason': 'unknown',
                     'detail': '',
                 }
+                _note_attempt(
+                    'slskd',
+                    ATTEMPT_NOTHING,
+                    str(_SLSKD_MISS.value.get('reason') or 'unknown'),
+                    str(_SLSKD_MISS.value.get('detail') or ''),
+                )
                 logger.info(
                     'Audio provider slskd: no match for {!r}', song.get('name')
                 )
@@ -703,6 +759,7 @@ class Downloader:
                         'youtube-music' if match is not None else 'youtube',
                         None,
                     )
+                _note_attempt('youtube-music', ATTEMPT_NOTHING)
             elif provider == 'youtube' and not youtube_searched:
                 if known_video_id:
                     return known_video_id, None, provider, None
@@ -710,12 +767,14 @@ class Downloader:
                 youtube_searched = True
                 if video_id:
                     return video_id, None, 'youtube', None
+                _note_attempt('youtube', ATTEMPT_NOTHING)
             elif provider == 'soundcloud':
                 # Like a known video: the exact track, but only here, at
                 # SoundCloud's place in the order.
                 track_url = known_soundcloud_url or find_match_soundcloud(song)
                 if track_url:
                     return track_url, None, 'soundcloud', None
+                _note_attempt('soundcloud', ATTEMPT_NOTHING)
                 logger.info(
                     'Audio provider soundcloud: no match for {!r}',
                     song.get('name'),
@@ -1176,6 +1235,8 @@ class Downloader:
                 progress_cb(*args)
 
         _SLSKD_MISS.value = None
+        _ATTEMPTS.value = []
+        _ATTEMPTS.chosen = None
 
         try:
             if cancel_check:
@@ -1183,9 +1244,21 @@ class Downloader:
             return self._download(song, progress_cb, subdir)
         except DownloadPolicyBlocked:
             raise
-        except Exception:
+        except Exception as exc:
+            chosen = getattr(_ATTEMPTS, 'chosen', None)
+            if chosen:
+                # The source was picked; fetching or saving its audio
+                # is what failed.
+                _note_attempt(chosen, ATTEMPT_FAILED, detail=str(exc))
+            try:
+                exc.source_attempts = list(_ATTEMPTS.value or [])
+            except AttributeError:
+                pass
             self._report_outcome(song, OUTCOME_FAILED)
             raise
+        finally:
+            _ATTEMPTS.value = None
+            _ATTEMPTS.chosen = None
 
     def _download(
         self,
@@ -1259,6 +1332,8 @@ class Downloader:
             )
         if cancel_check:
             cancel_check()
+        if provider:
+            _ATTEMPTS.chosen = provider
         if (
             video_id
             and video_id == known_video_id

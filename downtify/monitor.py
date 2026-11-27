@@ -43,11 +43,13 @@ from .db.dialect import insert_returning_id
 from .download_policy import DownloadPolicy, DownloadPolicyBlocked
 from .download_queue import queue_pause
 from .downloader import (
+    ATTEMPT_REJECTED,
     DOWNLOAD_EXECUTOR,
     MAX_PARALLEL_DOWNLOADS,
     Downloader,
     ProgressCallback,
     save_playlist_cover,
+    source_attempts,
 )
 from .external_library import extra_dirs_from_settings
 from .file_naming import file_name_key
@@ -1260,6 +1262,11 @@ async def check_playlist(
                 await asyncio.to_thread(
                     _record_failure, db, playlist.id, song, exc
                 )
+                await broadcast(
+                    _failure_event(
+                        song, exc, playlist.name, 'Watch download failed'
+                    )
+                )
 
     await _side_by_side(
         enumerate(new_tracks), playlist_track, _parallel_limit(settings)
@@ -1491,6 +1498,46 @@ def _record_failure(
         logger.opt(exception=True).debug(
             'Could not record the failure of {}', song.get('song_id')
         )
+
+
+class ReleaseMismatchError(ValueError):
+    """A watched artist's song downloaded, but the file it gave doesn't
+    match the release it was fetched for (see ``matches_release``)."""
+
+
+def _failure_event(
+    song: dict[str, Any],
+    error: BaseException,
+    playlist_name: str,
+    message: str,
+    observed: Optional[dict[str, Any]] = None,
+) -> dict[str, Any]:
+    """The queue's ``error`` message for a watch song that failed: the
+    headline *message*, the error itself (``detail``) and what each audio
+    source did (``sources``, see :func:`downloader.source_attempts`)."""
+
+    sources = source_attempts(error)
+    provider = str((observed or {}).get('provider') or '')
+    if isinstance(error, ReleaseMismatchError) and provider:
+        # The download worked; the release check refused the file.
+        sources.append({
+            'provider': provider,
+            'result': ATTEMPT_REJECTED,
+            'reason': 'release_mismatch',
+            'detail': str(error),
+        })
+    event = {
+        'song': song,
+        'status': 'error',
+        'message': message,
+        'detail': str(error)[:300],
+        'sources': sources,
+        'playlist_name': playlist_name,
+    }
+    if sources:
+        # The badge names the last source tried.
+        event['provider'] = sources[-1]['provider']
+    return event
 
 
 def _forget_stale_failures(
@@ -2710,7 +2757,7 @@ async def check_artist(  # noqa: PLR0914  # one sweep: discography, releases, tr
                     settings or {},
                 )
             ):
-                raise ValueError(
+                raise ReleaseMismatchError(
                     'Downloaded file does not validate against the requested release'
                 )
             await asyncio.to_thread(
@@ -2780,12 +2827,15 @@ async def check_artist(  # noqa: PLR0914  # one sweep: discography, releases, tr
             await asyncio.to_thread(
                 _record_failure, db, playlist.id, song, exc
             )
-            await broadcast({
-                'song': song,
-                'status': 'error',
-                'message': 'Artist release download or validation failed',
-                'playlist_name': playlist.name,
-            })
+            await broadcast(
+                _failure_event(
+                    song,
+                    exc,
+                    playlist.name,
+                    'Artist release download or validation failed',
+                    observed,
+                )
+            )
         return ok
 
     await _side_by_side(
