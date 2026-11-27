@@ -129,6 +129,22 @@
             >
               {{ t('link.addPlaylist') }}
             </UiButton>
+            <!-- Keep this page in Library > Playlists to stream; nothing
+                 is downloaded (issue #731). -->
+            <UiButton
+              v-if="saveable"
+              variant="ghost"
+              size="lg"
+              :icon="savedLink ? 'bookmark' : 'bookmark-outline'"
+              :loading="savingLink"
+              :aria-pressed="Boolean(savedLink)"
+              :title="
+                t(savedLink ? 'savedLinks.unsaveHint' : 'savedLinks.saveHint')
+              "
+              @click="toggleSaved"
+            >
+              {{ t(savedLink ? 'savedLinks.saved' : 'savedLinks.save') }}
+            </UiButton>
             <!-- Already watched: say so, with its page and Stop watching. -->
             <UiMenu v-if="watchable && existingWatch" :items="watchedMenu">
               <template #trigger>
@@ -350,10 +366,12 @@ import {
 } from '/src/model/download'
 import { useLibrary } from '/src/model/library'
 import { usePlaylistActions } from '/src/model/playlistActions'
+import { useSavedLinks } from '/src/model/savedLinks'
 import { songDownloadState } from '/src/lib/downloadState'
 import { useUi } from '/src/model/ui'
 import { useAuth } from '/src/model/auth'
 import { classifyInput } from '/src/lib/input'
+import { canSaveLink, savedLinkPayload } from '/src/lib/savedLinks'
 import { findWatch } from '/src/lib/watchMatch'
 import { watchRouteFor } from '/src/lib/watchStats'
 import { confirmWatchMix, isPersonalMix } from '/src/lib/spotifyMix'
@@ -368,6 +386,7 @@ const dm = useDownloadManager()
 const tracker = useProgressTracker()
 const library = useLibrary()
 const playlistActions = usePlaylistActions()
+const savedLinks = useSavedLinks()
 const ui = useUi()
 const auth = useAuth()
 
@@ -388,6 +407,9 @@ const watching = ref(false)
 // This user's watch of the link (or, for an artist, of their name).
 const existingWatch = ref(null)
 const savingPlaylist = ref(false)
+// This account's saved link for the page (Save shows it), or null.
+const savedLink = ref(null)
+const savingLink = ref(false)
 const filter = ref('all')
 const selected = ref(new Set())
 
@@ -400,6 +422,7 @@ async function resolve() {
   error.value = ''
   details.value = null
   existingWatch.value = null
+  savedLink.value = null
   selected.value = new Set()
   filter.value = 'all'
   try {
@@ -407,6 +430,7 @@ async function resolve() {
     details.value = res.data
     library.lookupSongs(res.data?.tracks || [])
     lookupWatch()
+    lookupSavedLink()
   } catch (err) {
     error.value = err?.response?.data?.detail || err?.message || ''
   } finally {
@@ -465,6 +489,8 @@ const watchable = computed(
     (details.value?.kind === 'playlist' || details.value?.kind === 'artist') &&
     (kind.value.source !== 'deezer' || details.value?.kind === 'playlist')
 )
+
+const saveable = computed(() => canSaveLink(details.value, kind.value))
 
 const personalMix = computed(
   () => details.value?.kind === 'playlist' && isPersonalMix(url.value)
@@ -622,6 +648,49 @@ async function download(songs, { asAlbum = false } = {}) {
     })
   } finally {
     submitting.value = false
+  }
+}
+
+// Whether this account saved the link; a failed lookup leaves Save.
+async function lookupSavedLink() {
+  const shown = details.value
+  if (!saveable.value) return
+  try {
+    const found = await savedLinks.find(url.value)
+    if (details.value === shown) savedLink.value = found
+  } catch {
+    /* keep offering to save */
+  }
+}
+
+async function toggleSaved() {
+  if (savingLink.value) return
+  const shown = details.value
+  const name = shown.name || t('link.untitled')
+  savingLink.value = true
+  try {
+    if (savedLink.value) {
+      await savedLinks.remove(savedLink.value.url)
+      if (details.value === shown) savedLink.value = null
+      ui.toast(t('savedLinks.removed', { name }))
+    } else {
+      const saved = await savedLinks.save(savedLinkPayload(shown, url.value))
+      if (details.value === shown) savedLink.value = saved
+      ui.toast(t('savedLinks.added', { name }), {
+        kind: 'success',
+        action: {
+          label: t('savedLinks.open'),
+          run: () =>
+            router.push({ name: 'Library', params: { tab: 'playlists' } }),
+        },
+      })
+    }
+  } catch (err) {
+    ui.toast(err?.response?.data?.detail || t('toast.actionFailed'), {
+      kind: 'error',
+    })
+  } finally {
+    savingLink.value = false
   }
 }
 

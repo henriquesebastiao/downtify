@@ -57,6 +57,7 @@ Tudo o que o Downtify faz, agrupado por área como na barra lateral. Cada recurs
 | [Monitor de playlists](playlist-monitor.md) | Acompanhe playlists e artistas do Spotify, Deezer e YouTube Music e baixe faixas e lançamentos novos na frequência que você escolher |
 | [Nomes de exibição das playlists](playlist-names.md) | Renomeie como uma playlist importada ou sincronizada aparece, sem mexer na origem nem na sincronização |
 | [Playlists favoritas](playlist-favorites.md) | Fixe playlists no topo das suas listas e da tela inicial, na web e nos apps |
+| [Links salvos](saved-links.md) | Salve o link de uma playlist ou álbum para voltar e ouvir em Biblioteca → Playlists; nada é baixado |
 | [Músicas ocultas da playlist](hidden-playlist-songs.md) | Tire de uma playlist baixada ou monitorada as músicas que você não quer e mantenha-as fora; os arquivos continuam na biblioteca |
 | [Playlists colaborativas](collaborative-playlists.md) | Deixe algumas das pessoas com quem você compartilha uma playlist da biblioteca adicionar e remover músicas; renomear, compartilhar e excluir continuam com você |
 | [Ordem e músicas repetidas](playlist-order.md) | Coloque as músicas de uma playlist da biblioteca na ordem que quiser e repita uma música nela |

@@ -644,6 +644,22 @@ function setPlaylistFavorite(name, favorite) {
   return API.put('/api/library/playlists/favorite', { name, favorite })
 }
 
+// Saved links (issue #731): playlist and album links kept to stream.
+// With `url`, only the saved link that is that playlist or album.
+function getSavedLinks(url = '') {
+  return API.get('/api/library/saved-links', {
+    params: url ? { url } : {},
+  })
+}
+
+function saveLink({ url, name = '', cover = '' }) {
+  return API.put('/api/library/saved-links', { url, name, cover })
+}
+
+function removeSavedLink(url) {
+  return API.delete('/api/library/saved-links', { params: { url } })
+}
+
 function copyLibraryPlaylist(name, newName = '') {
   return API.post('/api/library/playlists/copy', {
     name,
@@ -1407,6 +1423,9 @@ export default {
   renameLibraryPlaylist,
   setPlaylistVisibility,
   setPlaylistFavorite,
+  getSavedLinks,
+  saveLink,
+  removeSavedLink,
   copyLibraryPlaylist,
   detachLibraryPlaylist,
   getPlaylistDetails,

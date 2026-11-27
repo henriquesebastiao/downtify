@@ -180,6 +180,19 @@ export default {
     add: 'Çalma listesini favorilere ekle',
     remove: 'Çalma listesini favorilerden kaldır',
   },
+  savedLinks: {
+    title: 'Kaydedilen bağlantılar',
+    hint: 'Bağlantısından kaydettiğin çalma listeleri ve albümler. Canlı açılırlar: kitaplığındaki şarkılar oradan çalar, gerisi akışla çalınır. Hiçbir şey indirilmez.',
+    save: 'Kaydet',
+    saved: 'Kaydedildi',
+    saveHint:
+      'Bu sayfayı daha sonra dinlemek için Kitaplık → Çalma listeleri altında tut. Hiçbir şey indirilmez.',
+    unsaveHint: 'Kaydedilen bağlantılardan kaldır',
+    added: '“{name}” kitaplığına kaydedildi',
+    removed: '“{name}” kaydedilen bağlantılardan kaldırıldı',
+    open: 'Kitaplığı aç',
+    remove: 'Kaldır',
+  },
   normalization: {
     level: 'Ses seviyesi',
     levelNormal: 'Normal',

@@ -284,8 +284,10 @@
       </VirtualGrid>
     </div>
 
-    <!-- Other people's playlists, never mixed into the user's own -->
+    <!-- Links saved to stream, then other people's playlists: never
+         mixed into the user's own -->
     <template v-if="tab === 'playlists' && library.loaded.value">
+      <SavedLinks :filter="filter" />
       <SharedPlaylists
         :title="t('sharing.sharedWithMe')"
         :hint="t('sharing.sharedWithMeHint')"
@@ -327,6 +329,7 @@ import PageHeader from '/src/components/library/PageHeader.vue'
 import ExternalPlaylistImport from '/src/components/library/ExternalPlaylistImport.vue'
 import PlaylistStatus from '/src/components/library/PlaylistStatus.vue'
 import SelectionBar from '/src/components/library/SelectionBar.vue'
+import SavedLinks from '/src/components/library/SavedLinks.vue'
 import SharedPlaylists from '/src/components/library/SharedPlaylists.vue'
 import TrackList from '/src/components/library/TrackList.vue'
 import TrackSortSelect from '/src/components/library/TrackSortSelect.vue'

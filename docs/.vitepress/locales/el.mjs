@@ -85,6 +85,7 @@ export default {
       'features/download-exclusions.md': 'Εξαιρέσεις λήψης',
       'features/playlist-names.md': 'Ονόματα λιστών',
       'features/playlist-favorites.md': 'Αγαπημένες λίστες',
+      'features/saved-links.md': 'Αποθηκευμένοι σύνδεσμοι',
       'features/hidden-playlist-songs.md': 'Κρυμμένα τραγούδια λίστας',
       'features/playlist-monitor.md': 'Παρακολούθηση λιστών',
       'features/top-songs.md': 'Δημοφιλέστερα τραγούδια',

@@ -84,6 +84,7 @@ export default {
       'features/download-exclusions.md': 'Exclusiones de descarga',
       'features/playlist-names.md': 'Nombres de playlists',
       'features/playlist-favorites.md': 'Playlists favoritas',
+      'features/saved-links.md': 'Enlaces guardados',
       'features/hidden-playlist-songs.md': 'Canciones ocultas de una playlist',
       'features/playlist-monitor.md': 'Monitor de playlists',
       'features/top-songs.md': 'Canciones más populares',

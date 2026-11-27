@@ -83,6 +83,7 @@ export default {
       'features/download-exclusions.md': '下载排除',
       'features/playlist-names.md': '播放列表显示名称',
       'features/playlist-favorites.md': '收藏的播放列表',
+      'features/saved-links.md': '已保存的链接',
       'features/hidden-playlist-songs.md': '隐藏的播放列表歌曲',
       'features/playlist-monitor.md': '播放列表监控',
       'features/top-songs.md': '热门歌曲',

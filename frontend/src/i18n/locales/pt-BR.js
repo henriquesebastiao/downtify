@@ -185,6 +185,19 @@ export default {
     add: 'Adicionar playlist aos favoritos',
     remove: 'Remover playlist dos favoritos',
   },
+  savedLinks: {
+    title: 'Links salvos',
+    hint: 'Playlists e álbuns que você salvou pelo link. Eles abrem ao vivo: as músicas da sua biblioteca tocam dela, o resto é transmitido. Nada é baixado.',
+    save: 'Salvar',
+    saved: 'Salvo',
+    saveHint:
+      'Mantenha esta página em Biblioteca → Playlists para ouvir depois. Nada é baixado.',
+    unsaveHint: 'Remover dos seus links salvos',
+    added: '“{name}” salvo na sua biblioteca',
+    removed: '“{name}” removido dos seus links salvos',
+    open: 'Abrir biblioteca',
+    remove: 'Remover',
+  },
   normalization: {
     level: 'Nível de volume',
     levelNormal: 'Normal',

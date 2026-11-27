@@ -84,6 +84,7 @@ export default {
       'features/download-exclusions.md': 'Изключения от изтегляне',
       'features/playlist-names.md': 'Имена на плейлисти',
       'features/playlist-favorites.md': 'Любими плейлисти',
+      'features/saved-links.md': 'Запазени връзки',
       'features/hidden-playlist-songs.md': 'Скрити песни в плейлист',
       'features/playlist-monitor.md': 'Следене на плейлисти',
       'features/top-songs.md': 'Най-популярни песни',

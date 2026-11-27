@@ -1653,6 +1653,56 @@ Hide songs from an **imported** playlist, or show hidden ones again. A hidden so
 
 ---
 
+### `GET /api/library/saved-links`
+
+The signed-in account's [saved links](features/saved-links.md), the most recently saved first: Spotify, Deezer and YouTube Music playlists and albums kept to stream from the link page. Each account only ever sees its own. Signed-in browsers only: `401` without a session, `403` for a paired app.
+
+**Query:** `?url=…` (optional) — only the saved link that is that playlist or album, pasted in any form (`links` is empty when it isn't saved). `400` for a link that can't be saved (see `PUT` below).
+
+**Response:**
+
+```json
+{
+  "links": [
+    {
+      "url": "https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M",
+      "source": "spotify",
+      "kind": "playlist",
+      "name": "Today's Top Hits",
+      "cover": "https://i.scdn.co/image/ab67706f00000002…",
+      "saved_at": "2026-11-27T21:30:00+00:00"
+    }
+  ],
+  "limit": 500
+}
+```
+
+`url` is the link's canonical form — what the web app opens (`/link?url=…`) and what `DELETE` takes. `source` is `spotify`, `deezer` or `youtube` (YouTube Music); `kind` is `playlist` or `album`. `limit` is how many links an account may keep.
+
+---
+
+### `PUT /api/library/saved-links`
+
+Save a link for the signed-in account. Nothing is downloaded: no M3U, Navidrome playlist or playlist catalog row is made. Only Spotify, Deezer and YouTube Music **playlist** and **album** links are accepted (`400` for anything else, a song or an artist link included). The link is stored under its canonical URL, rebuilt from the service and id the link page reads, so tracking parameters (`?si=`), locale segments and other hosts don't save the same playlist twice. Saving a link again only refreshes its `name` and `cover` and keeps its place in the list. `409` once the account keeps 500 links.
+
+**Request body:** `{ "url": "https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M?si=abc", "name": "Today's Top Hits", "cover": "https://i.scdn.co/image/…" }`
+
+`name` is cut to 200 characters. `cover` is kept only when it is an `https` URL (anything else is stored as `""`). Both must be strings (`400` otherwise) and both may be left out.
+
+**Response:** the saved link, as in `GET` above.
+
+---
+
+### `DELETE /api/library/saved-links`
+
+Forget one of the signed-in account's saved links. Removing a link that isn't saved is not an error.
+
+**Query:** `?url=…` — the link in any form (`400` for a link that can't be saved).
+
+**Response:** `{ "url": "https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M", "removed": true }`
+
+---
+
 ### `POST /api/library/reconcile`
 
 Fix library paths after files were moved or deleted outside Downtify, then rewrite the affected M3U files / Navidrome playlists when those are enabled. See [Fix library paths](features/library-catalog.md#fix-library-paths).

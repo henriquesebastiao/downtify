@@ -57,6 +57,7 @@ Everything Downtify does, grouped by area as in the sidebar. Every feature has i
 | [Playlist Monitor](playlist-monitor.md) | Watch Spotify, Deezer and YouTube Music playlists and artists, and download new tracks and releases on a schedule |
 | [Playlist display names](playlist-names.md) | Rename how an imported or synchronized playlist is shown, without touching its source or its sync |
 | [Favorite playlists](playlist-favorites.md) | Pin playlists to the top of your lists and the home screen, on the web and in the apps |
+| [Saved links](saved-links.md) | Save a pasted playlist or album link to come back and stream it from Library → Playlists; nothing is downloaded |
 | [Hidden playlist songs](hidden-playlist-songs.md) | Take songs you don't want out of a downloaded or watched playlist and keep them out; the files stay in your library |
 | [Collaborative playlists](collaborative-playlists.md) | Let some of the people you share a Library playlist with add and remove its songs; renaming, sharing and deleting stay yours |
 | [Playlist order & repeated songs](playlist-order.md) | Put the songs of a Library playlist in any order, and play a song more than once in it |

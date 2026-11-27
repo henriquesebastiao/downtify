@@ -177,6 +177,19 @@ export default {
     add: 'Add playlist to favorites',
     remove: 'Remove playlist from favorites',
   },
+  savedLinks: {
+    title: 'Saved links',
+    hint: 'Playlists and albums you saved from their link. They open live: songs in your library play from it, the rest stream. Nothing is downloaded.',
+    save: 'Save',
+    saved: 'Saved',
+    saveHint:
+      'Keep this page in Library → Playlists to stream it later. Nothing is downloaded.',
+    unsaveHint: 'Remove from your saved links',
+    added: 'Saved “{name}” to your Library',
+    removed: 'Removed “{name}” from your saved links',
+    open: 'Open Library',
+    remove: 'Remove',
+  },
   normalization: {
     level: 'Playback level',
     levelNormal: 'Normal',

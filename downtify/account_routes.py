@@ -392,8 +392,8 @@ def _build_user_stats() -> dict[str, Any]:
 
 def _forget_user_library(user_id: int) -> None:
     """Release a deleted account's library: track ownership, likes,
-    manual playlists, podcast shows, watches, listens and traffic.
-    Files stay on disk (now admin-visible)."""
+    manual playlists, saved links, podcast shows, watches, listens and
+    traffic. Files stay on disk (now admin-visible)."""
 
     try:
         if api.state.track_owners is not None:
@@ -406,6 +406,8 @@ def _forget_user_library(user_id: int) -> None:
             api.state.manual_playlist_owners.remove_user(user_id)
         if api.state.playlist_shares is not None:
             api.state.playlist_shares.remove_user(user_id)
+        if api.state.saved_links is not None:
+            api.state.saved_links.remove_user(user_id)
         if api.state.podcasts is not None:
             api.state.podcasts.remove_user(user_id)
         if api.state.discover is not None:

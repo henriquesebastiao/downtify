@@ -201,6 +201,12 @@ downloads are shared, and files are never stored twice.
   paths to hide, hidden song keys to show again; a hidden song stays
   out of the playlist when its watch or link brings it back - see
   ``downtify/playlist_hidden.py``)
+* ``GET|PUT|DELETE /api/library/saved-links`` (the signed-in account's
+  saved Spotify, Deezer and YouTube Music playlist and album links,
+  newest first, ``?url=`` for just that link; ``PUT`` body ``{url,
+  name, cover}`` saves one under its canonical URL, ``DELETE ?url=``
+  forgets it. Bookmarks only: nothing is downloaded - see
+  ``downtify/saved_links.py``)
 * ``POST /api/library/reconcile`` (fix stored library paths after files
   moved on disk, then refresh M3U/Navidrome playlists)
 * ``POST /api/library/external/sync`` (start a background scan of
@@ -713,6 +719,13 @@ from .podcasts import (
     fetch_feed,
     resolve_spotify_podcast,
     search_shows,
+)
+from .saved_links import (
+    MAX_SAVED_LINKS,
+    LinkTarget,
+    SavedLinks,
+    SavedLinksFull,
+    saved_link_target,
 )
 from .server_identity import ServerIdentity
 from .slskd_misses import SlskdMisses
@@ -1421,6 +1434,8 @@ class AppState:
     library_visibility: Optional[LibraryVisibility] = None
     manual_playlist_owners: Optional[ManualPlaylistOwners] = None
     playlist_shares: Optional[PlaylistShares] = None
+    # Each account's saved playlist / album links (downtify/saved_links.py).
+    saved_links: Optional[SavedLinks] = None
     playlist_hidden: Optional[PlaylistHiddenSongs] = None
     # Which audio provider fetched each file (downtify/file_providers.py).
     file_providers: Optional[FileProviders] = None
@@ -8498,6 +8513,84 @@ async def set_playlist_favorite_endpoint(request: Request) -> dict[str, Any]:
     )
     await announce_playlists_changed()
     return {'name': name, 'favorite': favorite}
+
+
+def _saved_links_for(request: Request) -> tuple[int, SavedLinks]:
+    """The signed-in account behind *request* and the saved-links store."""
+
+    user_id = request_user_id(request)
+    if not user_id:
+        raise HTTPException(status_code=401, detail='Sign in required')
+    if state.saved_links is None:
+        raise HTTPException(status_code=503, detail='Starting up')
+    return user_id, state.saved_links
+
+
+def _saved_link_target(url: Any) -> LinkTarget:
+    """The playlist or album *url* points at, or ``400``."""
+
+    target = saved_link_target(url)
+    if target is None:
+        raise HTTPException(
+            status_code=400,
+            detail='Only Spotify, Deezer and YouTube Music playlist and '
+            'album links can be saved',
+        )
+    return target
+
+
+@router.get('/api/library/saved-links')
+async def list_saved_links_endpoint(
+    request: Request, url: str = Query('')
+) -> dict[str, Any]:
+    """The signed-in account's saved links, newest first; with ``url``,
+    only the saved link that is that playlist or album (none when it
+    isn't saved)."""
+
+    user_id, store = _saved_links_for(request)
+    if url:
+        link = await asyncio.to_thread(
+            store.get, user_id, _saved_link_target(url).url
+        )
+        links = [link] if link else []
+    else:
+        links = await asyncio.to_thread(store.list, user_id)
+    return {'links': links, 'limit': MAX_SAVED_LINKS}
+
+
+@router.put('/api/library/saved-links')
+async def save_link_endpoint(request: Request) -> dict[str, Any]:
+    """Save a playlist or album link for the signed-in account only.
+    Saving it again refreshes its name and cover. Nothing is
+    downloaded."""
+
+    user_id, store = _saved_links_for(request)
+    payload = await _json_object(request)
+    target = _saved_link_target(payload.get('url'))
+    name = payload.get('name', '')
+    cover = payload.get('cover', '')
+    if not isinstance(name, str) or not isinstance(cover, str):
+        raise HTTPException(
+            status_code=400, detail='name and cover must be text'
+        )
+    try:
+        return await asyncio.to_thread(
+            store.save, user_id, target, name, cover
+        )
+    except SavedLinksFull as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
+@router.delete('/api/library/saved-links')
+async def remove_saved_link_endpoint(
+    request: Request, url: str = Query(...)
+) -> dict[str, Any]:
+    """Forget one of the signed-in account's saved links."""
+
+    user_id, store = _saved_links_for(request)
+    canonical = _saved_link_target(url).url
+    removed = await asyncio.to_thread(store.remove, user_id, canonical)
+    return {'url': canonical, 'removed': removed}
 
 
 def _owner_of(entry: dict[str, Any]) -> int:

@@ -189,6 +189,19 @@ export default {
     add: 'Playlist zu Favoriten hinzufügen',
     remove: 'Playlist aus Favoriten entfernen',
   },
+  savedLinks: {
+    title: 'Gespeicherte Links',
+    hint: 'Playlists und Alben, die du über ihren Link gespeichert hast. Sie öffnen sich live: Songs aus deiner Bibliothek spielen von dort, der Rest wird gestreamt. Nichts wird heruntergeladen.',
+    save: 'Speichern',
+    saved: 'Gespeichert',
+    saveHint:
+      'Diese Seite unter Bibliothek → Playlists behalten, um sie später zu streamen. Nichts wird heruntergeladen.',
+    unsaveHint: 'Aus deinen gespeicherten Links entfernen',
+    added: '„{name}“ in deiner Bibliothek gespeichert',
+    removed: '„{name}“ aus deinen gespeicherten Links entfernt',
+    open: 'Bibliothek öffnen',
+    remove: 'Entfernen',
+  },
   normalization: {
     level: 'Lautstärke',
     levelNormal: 'Normal',
