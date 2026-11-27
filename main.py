@@ -565,8 +565,11 @@ def _open_library_stores(monitor_db_path: Path | Database) -> None:
         DATABASE_DIR / 'external_sync.json'
     )
     ctx = api.library_context()
-    # The library is unreachable until these two finish, and they go
-    # through every watch's download history on every start.
+    # The library is unreachable until these two finish. They go through
+    # every watch's download history on every start but write only what
+    # changed, so a normal start is quick. They stay before the library
+    # opens: watches and the restored queue must see old songs indexed,
+    # or they would download them again.
     backfill_started = time.monotonic()
     try:
         imported = api.state.track_index.backfill_from_monitor_db(
