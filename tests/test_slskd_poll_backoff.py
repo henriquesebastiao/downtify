@@ -348,3 +348,109 @@ def test_five_idle_minutes_use_five_snapshots_and_deep_probes(
         assert scans == [0, 60, 120, 180, 240]
     finally:
         client.session.close()
+
+
+def _deep_scans(monkeypatch, clock):
+    scans = []
+
+    def rglob(_root, pattern):
+        if pattern == 'track.flac':
+            scans.append(clock[0][0])
+        return iter(())
+
+    monkeypatch.setattr(Path, 'rglob', rglob)
+    return scans
+
+
+def test_queued_transfer_waits_for_the_regular_deep_scan(
+    monkeypatch, clock, tmp_path
+):
+    # Queued can last hours; a walk of slskd's folders every 5 s for
+    # each queued song found nothing it could use.
+    client = Mock()
+    client.find_transfer.return_value = {
+        'state': 'Queued, Remotely',
+        'size': 9_000_000,
+        'bytesTransferred': 0,
+    }
+    scans = _deep_scans(monkeypatch, clock)
+    wait(
+        client,
+        [tmp_path],
+        deadline=125,
+        settings={'queued_timeout_seconds': 3600},
+    )
+    assert scans == [0, 60, 120]
+
+
+def test_part_transferred_file_waits_for_the_regular_deep_scan(
+    monkeypatch, clock, tmp_path
+):
+    progress = iter(range(1, 10_000))
+    client = Mock()
+    client.find_transfer.side_effect = lambda *a: {
+        'state': 'InProgress',
+        'size': 9_000_000,
+        'bytesTransferred': next(progress) * 1000,
+    }
+    scans = _deep_scans(monkeypatch, clock)
+    wait(client, [tmp_path], deadline=65)
+    assert scans == [0, 60]
+
+
+def test_a_transfer_that_looks_done_is_scanned_at_once(
+    monkeypatch, clock, tmp_path
+):
+    # slskd saved the file under another name: only a deep scan finds
+    # it, on the tick its record says the transfer is done.
+    saved = tmp_path / 'peer' / 'track (1).flac'
+    ticks = iter(range(100))
+    client = Mock()
+
+    def transfer(*_args):
+        tick = next(ticks)
+        if tick < 3:
+            return {
+                'state': 'InProgress',
+                'size': 100_000,
+                'bytesTransferred': (tick + 1) * 10_000,
+            }
+        saved.parent.mkdir(exist_ok=True)
+        saved.write_bytes(b'a' * 100_000)
+        return {
+            'state': 'Completed, Succeeded',
+            'size': 100_000,
+            'bytesTransferred': 100_000,
+        }
+
+    client.find_transfer.side_effect = transfer
+    assert (
+        provider._wait_for_slskd_file(
+            client,
+            {'name': 'Track'},
+            'peer',
+            'album/track.flac',
+            {'poll_max_attempts': 300},
+            [tmp_path],
+            expected_size=100_000,
+        )
+        == saved
+    )
+    assert clock[0][0] == 15
+
+
+@pytest.mark.parametrize(
+    ('status', 'unfinished'),
+    [
+        ({'state': 'Queued', 'size': 10, 'bytesTransferred': 0}, True),
+        ({'state': 'InProgress', 'size': 100, 'bytesTransferred': 94}, True),
+        ({'state': 'InProgress', 'size': 100, 'bytesTransferred': 95}, False),
+        ({'state': 'Completed, Succeeded', 'size': 100}, False),
+        ({'state': 'Completed, Errored', 'size': 100}, False),
+        # No size: unclear, so the old every-tick scan stays.
+        ({'state': 'InProgress', 'bytesTransferred': 1}, False),
+        ({'state': 'InProgress', 'size': 'x', 'bytesTransferred': 1}, False),
+    ],
+)
+def test_transfer_unfinished(status, unfinished):
+    assert provider._transfer_unfinished(status) is unfinished
