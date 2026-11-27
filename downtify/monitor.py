@@ -23,6 +23,7 @@ from . import (
     m3u,
     musicbrainz,
     notifications,
+    playlist_names,
     providers,
     spotify,
     spotify_companion,
@@ -61,6 +62,7 @@ from .navidrome import (
     _effective_navidrome_settings,
     cache_navidrome_song_id,
     enrich_song_from_library_file,
+    follow_playlist_rename,
     sync_playlist_to_navidrome,
 )
 from .navidrome_index import NavidromeIndex
@@ -102,6 +104,13 @@ class LibraryStores:
     # watch links a song the library already holds under another name
     # instead of downloading it again (see downtify.library_songs).
     listing: Optional[Callable[[], list[dict[str, Any]]]] = None
+    # What else follows a playlist renamed on its source (see
+    # follow_source_name): its sharing, its import record, its owner,
+    # and whether someone gave it a name of their own in Downtify.
+    playlist_shares: Optional[Any] = None
+    external_playlist_imports: Optional[Any] = None
+    manual_playlist_owners: Optional[Any] = None
+    named_by_user: Optional[Callable[[str], bool]] = None
 
 
 def _now_iso() -> str:
@@ -309,6 +318,21 @@ def fetch_playlist_tracks(
     if source == SOURCE_DEEZER:
         return fetch_playlist(source, playlist_id)[1]
     return providers.playlist_tracks_from_id(playlist_id)
+
+
+def fetch_playlist_named(
+    source: str, playlist_id: str
+) -> tuple[str, list[dict[str, Any]]]:
+    """``(name, tracks)`` of a watched playlist (blocking), with no more
+    requests than :func:`fetch_playlist_tracks`: the name comes with the
+    songs. ``''`` when the service gave none."""
+
+    if source == SOURCE_DEEZER:
+        name, tracks = fetch_playlist(source, playlist_id)
+        return ('' if name == playlist_id else name), tracks
+    tracks = fetch_playlist_tracks(source, playlist_id)
+    service = 'spotify' if source == SOURCE_SPOTIFY else 'youtube_music'
+    return playlist_names.seen(service, playlist_id), tracks
 
 
 def fetch_playlist_cover_url(source: str, playlist_id: str) -> str:
@@ -1072,7 +1096,7 @@ async def _fill_from_spotify_track(song: dict[str, Any]) -> None:
         song['explicit'] = True
 
 
-async def check_playlist(
+async def check_playlist(  # noqa: PLR0914  # one sweep: fetch, rename, songs, files
     playlist: MonitoredPlaylist,
     db: PlaylistMonitorDB,
     downloader: Downloader,
@@ -1099,8 +1123,8 @@ async def check_playlist(
     # statistics keep that apart from what it adds over time.
     initial = playlist.last_checked is None
     try:
-        tracks = await asyncio.to_thread(
-            fetch_playlist_tracks, playlist.source, playlist.spotify_id
+        source_name, tracks = await asyncio.to_thread(
+            fetch_playlist_named, playlist.source, playlist.spotify_id
         )
     except spotify_companion.CompanionWaiting:
         # A personal mix the Spotify companion hasn't read yet (a new
@@ -1121,6 +1145,16 @@ async def check_playlist(
         )
         return 0
     library = library or LibraryStores()
+    # Renamed on its service: the watch, the playlist and everything kept
+    # under its name follow (its files further down, after the songs).
+    renamed = await asyncio.to_thread(
+        follow_source_name, playlist, source_name, db, downloader, library
+    )
+    renamed_from = playlist.name if renamed is not None else None
+    playlist = renamed or playlist
+    if renamed is not None:
+        # Open pages list the playlists again (as after a Library rename).
+        await broadcast({'type': 'playlists_changed'})
     if from_spotify and library.playlist_spotify_cache is not None:
         await asyncio.to_thread(
             library.playlist_spotify_cache.store,
@@ -1142,6 +1176,17 @@ async def check_playlist(
     tracks = _without_hidden(
         tracks, _hidden_songs(library, playlist.name), known_tracks
     )
+    old_m3u = ''
+    if renamed_from is not None:
+        old_m3u = await asyncio.to_thread(
+            _move_renamed_playlist_files,
+            renamed_from,
+            playlist,
+            tracks,
+            downloader,
+            known_tracks,
+            settings,
+        )
 
     pl_subdir = m3u.sanitize_playlist_name(playlist.name)
 
@@ -1278,7 +1323,7 @@ async def check_playlist(
         {str(t.get('song_id')) for t in tracks if t.get('song_id')},
     )
 
-    if downloaded > 0 or linked_from_library > 0:
+    if downloaded > 0 or linked_from_library > 0 or renamed_from is not None:
         known_tracks = await asyncio.to_thread(
             db.get_track_filenames, playlist.id
         )
@@ -1292,6 +1337,14 @@ async def check_playlist(
                 known_tracks,
                 settings=settings,
             )
+        if renamed_from is not None and _navidrome_sync_on(settings):
+            await asyncio.to_thread(
+                follow_playlist_rename,
+                renamed_from,
+                playlist.name,
+                settings or {},
+                old_m3u=old_m3u,
+            )
         await asyncio.to_thread(
             _sync_library_playlist,
             playlist,
@@ -1300,8 +1353,179 @@ async def check_playlist(
             known_tracks,
             library,
             settings,
+            # Navidrome imports the renamed M3U on a scan.
+            trigger_scan=True if renamed_from is not None else None,
         )
     return downloaded
+
+
+def follow_source_name(
+    playlist: MonitoredPlaylist,
+    source_name: str,
+    db: PlaylistMonitorDB,
+    downloader: Downloader,
+    library: LibraryStores,
+) -> Optional[MonitoredPlaylist]:
+    """Rename a watched playlist that was renamed on its service.
+
+    The watch and what is kept under the playlist's name - its catalog
+    rows, hidden songs, sharing, import record and owner - move to the
+    new name; the M3U and Navidrome follow later in the check
+    (:func:`_move_renamed_playlist_files`, :func:`follow_playlist_rename`).
+    Audio files stay where they are, so nothing is downloaded again and
+    Navidrome keeps their plays and ratings.
+
+    The old name stays when someone named the playlist themselves in
+    Downtify (that name is theirs), or when another playlist already has
+    the new name (they are never merged). Returns the renamed watch, or
+    ``None`` when nothing changed.
+    """
+
+    new = str(source_name or '').strip()
+    old = playlist.name
+    if playlist.kind != KIND_PLAYLIST or new in {'', old, playlist.spotify_id}:
+        return None
+    reason = _rename_blocked(playlist, new, db, downloader, library)
+    if reason:
+        logger.info(
+            'Watch "{}" is called "{}" on its service now; keeping its '
+            'name: {}',
+            old,
+            new,
+            reason,
+        )
+        return None
+    catalog = library.playlist_catalog
+    if catalog is not None:
+        catalog.rename_playlist(old, new)
+    if library.playlist_hidden is not None:
+        library.playlist_hidden.rename(old, new)
+    for store, method in (
+        (library.playlist_shares, 'rename'),
+        (library.external_playlist_imports, 'rename'),
+        (library.manual_playlist_owners, 'rename_owner'),
+    ):
+        if store is None:
+            continue
+        try:
+            getattr(store, method)(old, new)
+        except Exception:
+            logger.opt(exception=True).warning(
+                'Could not move "{}" to its new name "{}"', old, new
+            )
+    updated = db.update_playlist(playlist.id, name=new)
+    logger.info('Watch "{}" was renamed on its service: now "{}"', old, new)
+    invalidate_library_paths_cache()
+    return updated
+
+
+def _rename_blocked(
+    playlist: MonitoredPlaylist,
+    new: str,
+    db: PlaylistMonitorDB,
+    downloader: Downloader,
+    library: LibraryStores,
+) -> str:
+    """Why *playlist* can't take the name *new* (``''`` when it can)."""
+
+    if library.named_by_user is not None:
+        try:
+            if library.named_by_user(playlist.name):
+                return 'it has a name someone gave it in Downtify'
+        except Exception:
+            logger.opt(exception=True).debug(
+                'Could not read the display name of "{}"', playlist.name
+            )
+    own = _file_key(playlist.name)
+    want = _file_key(new)
+    if want == own:
+        # Only letter case or characters a file name can't hold changed:
+        # same M3U, same keys, just the name shown.
+        return ''
+    for other in db.list_playlists():
+        if (
+            other.id != playlist.id
+            and other.kind == KIND_PLAYLIST
+            and _file_key(other.name) == want
+        ):
+            return f'the watch "{other.name}" already has that name'
+    if library.playlist_catalog is not None:
+        for name in library.playlist_catalog.list_playlist_names():
+            if _file_key(name) == want:
+                return f'the playlist "{name}" already has that name'
+    found = m3u.find_m3u_for_name(
+        Path(downloader.download_dir), m3u.sanitize_playlist_name(new)
+    )
+    if found is not None:
+        return f'{found.name} already exists'
+    return ''
+
+
+def _file_key(name: str) -> str:
+    """A playlist name as its M3U is called, case-insensitively."""
+
+    return m3u.sanitize_playlist_name(str(name or '').strip()).casefold()
+
+
+def _move_renamed_playlist_files(
+    old_name: str,
+    playlist: MonitoredPlaylist,
+    tracks: list[dict[str, Any]],
+    downloader: Downloader,
+    known_tracks: dict[str, Optional[str]],
+    settings: Optional[dict[str, Any]],
+) -> str:
+    """Give the M3U of a playlist renamed on its source (see
+    :func:`follow_source_name`) the new name, and its cover with it.
+
+    The M3U is written afresh under the new name - its folder may differ,
+    so its relative paths are worked out again - and the old one goes.
+    New songs land in the new name's folder; songs already downloaded
+    stay where they are. Returns the old M3U's path relative to the
+    downloads folder (``''`` when there was none), for Navidrome to drop
+    its import of it.
+    """
+
+    download_dir = Path(downloader.download_dir)
+    old = m3u.find_m3u_for_name(
+        download_dir, m3u.sanitize_playlist_name(old_name)
+    )
+    if old is None:
+        return ''
+    try:
+        old_rel = old.relative_to(download_dir).as_posix()
+    except ValueError:
+        old_rel = ''
+    if settings is not None and not settings.get('generate_m3u', True):
+        return ''
+    new = _regenerate_m3u(
+        playlist, tracks, downloader, None, known_tracks, settings=settings
+    )
+    if new is None or _same_file(new, old):
+        # Only the letter case changed, on a file system that ignores it.
+        return ''
+    cover = old.with_suffix('.jpg')
+    new_cover = new.with_suffix('.jpg')
+    try:
+        if cover.is_file() and not new_cover.exists():
+            cover.replace(new_cover)
+        old.unlink(missing_ok=True)
+        if cover.is_file() and new_cover.is_file():
+            cover.unlink(missing_ok=True)
+    except OSError:
+        logger.opt(exception=True).warning(
+            'Could not remove the old playlist file {}', old
+        )
+        return ''
+    logger.info('Playlist file {} is now {}', old.name, new.name)
+    return old_rel
+
+
+def _same_file(one: Path, other: Path) -> bool:
+    try:
+        return os.path.samefile(one, other)
+    except OSError:
+        return one.resolve() == other.resolve()
 
 
 def _hidden_songs(library: LibraryStores, name: str) -> HiddenSongs:
@@ -1667,9 +1891,12 @@ def _sync_library_playlist(
     known_tracks: dict[str, Optional[str]],
     library: LibraryStores,
     settings: Optional[dict[str, Any]],
+    *,
+    trigger_scan: Optional[bool] = None,
 ) -> None:
     """After a sweep: mirror the playlist's on-disk tracks into the
-    catalog and, when Navidrome sync is on, update its Navidrome playlist."""
+    catalog and, when Navidrome sync is on, update its Navidrome playlist
+    (*trigger_scan*: see :func:`sync_playlist_to_navidrome`)."""
 
     download_dir = Path(downloader.download_dir)
     slskd_dir = slskd_dir_from_downloader(downloader)
@@ -1701,11 +1928,7 @@ def _sync_library_playlist(
                 'Playlist catalog sync failed for "{}"', playlist.name
             )
 
-    if (
-        not settings
-        or settings.get('sync_navidrome', True) is False
-        or not _effective_navidrome_settings(settings).get('enabled')
-    ):
+    if not _navidrome_sync_on(settings):
         return
     songs = [
         enrich_song_from_library_file(
@@ -1728,9 +1951,18 @@ def _sync_library_playlist(
             settings,
             navidrome_index=library.navidrome_index,
             download_dir=download_dir,
+            trigger_scan=trigger_scan,
         )
     except Exception:
         logger.exception('Navidrome sync failed for "{}"', playlist.name)
+
+
+def _navidrome_sync_on(settings: Optional[dict[str, Any]]) -> bool:
+    return bool(
+        settings
+        and settings.get('sync_navidrome', True) is not False
+        and _effective_navidrome_settings(settings).get('enabled')
+    )
 
 
 #: Where the "Parallel downloads" limit lives (``api.state

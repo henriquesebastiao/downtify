@@ -39,6 +39,7 @@ from ytmusicapi.navigation import (
 )
 from ytmusicapi.parsers.library import parse_albums as _parse_ytm_albums
 
+from . import playlist_names
 from .album_artist import album_artist_fields, is_act_of
 from .file_naming import file_name_key
 from .proxy_config import requests_proxies_for_youtube_music
@@ -3591,7 +3592,10 @@ def playlist_info_and_tracks_from_id(
 
 
 def playlist_tracks_from_id(playlist_id: str) -> list[dict[str, Any]]:
-    return playlist_info_and_tracks_from_id(playlist_id)[1]
+    # The title is noted for a watch's check (see playlist_names).
+    title, songs = playlist_info_and_tracks_from_id(playlist_id)
+    playlist_names.remember('youtube_music', playlist_id, title)
+    return songs
 
 
 def playlist_cover_url_from_id(playlist_id: str) -> str:

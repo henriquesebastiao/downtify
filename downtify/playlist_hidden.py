@@ -294,6 +294,30 @@ class PlaylistHiddenSongs:
                 self._changed()
             return cur.rowcount
 
+    def rename(self, name: Any, new_name: Any) -> int:
+        """Keep a playlist's hidden songs hidden under its new name.
+        How many moved."""
+
+        old, new = hidden_key(name), hidden_key(new_name)
+        if not old or not new or old == new:
+            return 0
+        with self._lock, self._connect() as conn:
+            # A song already hidden under the new name stays as it is.
+            conn.execute(
+                'DELETE FROM playlist_hidden_songs WHERE name_key = ? '
+                'AND item_key IN (SELECT item_key FROM '
+                'playlist_hidden_songs WHERE name_key = ?)',
+                (old, new),
+            )
+            cur = conn.execute(
+                'UPDATE playlist_hidden_songs SET name_key = ? '
+                'WHERE name_key = ?',
+                (new, old),
+            )
+            if cur.rowcount:
+                self._changed()
+            return cur.rowcount
+
     def rekey(self, old_key: str, new_key: str, stored_path: str = '') -> int:
         """Follow a hidden song's file when it is rewritten (upgrade,
         replace) - a song's track id never changes, its file may."""

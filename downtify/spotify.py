@@ -18,7 +18,7 @@ from urllib.parse import urlsplit
 import httpx
 from loguru import logger
 
-from . import spotify_companion
+from . import playlist_names, spotify_companion
 from .album_artist import album_artist_fields
 from .file_naming import file_name_key
 from .telemetry import json_log_blob, redact_sensitive_mapping
@@ -1125,21 +1125,29 @@ def tracks_from_graphql_items(items: Any) -> list[dict[str, Any]]:
 def playlist_tracks_from_id(playlist_id: str) -> list[dict[str, Any]]:
     # A personal mix, with the Spotify companion on: your version, from
     # the companion, never the signed-out one (issue #489).
+    # The playlist's current name is noted too (see playlist_names): a
+    # watch's check notices a rename from it without asking again.
     personal = spotify_companion.personal_playlist(playlist_id)
     if personal is not None:
+        playlist_names.remember('spotify', playlist_id, personal[0])
         return personal[1]
     payload = _fetch_embed_json('playlist', playlist_id)
     entity = _entity_from(payload)
+    embed_name = entity.get('name') or entity.get('title')
     token = _token_from_embed_payload(payload)
     if token:
         try:
-            _, tracks = _graphql_all_tracks(playlist_id, token)
+            graphql_name, tracks = _graphql_all_tracks(playlist_id, token)
+            playlist_names.remember(
+                'spotify', playlist_id, graphql_name or embed_name
+            )
             return _with_embed_previews(tracks, entity)
         except Exception:
             logger.opt(exception=True).warning(
                 'GraphQL pagination failed for {}; using embed data (limited)',
                 playlist_id,
             )
+    playlist_names.remember('spotify', playlist_id, embed_name)
     return _parse_playlist_tracks(entity)
 
 

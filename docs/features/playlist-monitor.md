@@ -263,6 +263,19 @@ Manual playlist/album downloads and CSV imports behave the same way. See [M3U Ex
 
 With [Save playlist cover art](playlist-cover-art.md) on, the cover is fetched once per sweep that has tracks to download — before the first of them, so the folder looks like the playlist while it fills up. A sweep that finds nothing new doesn't re-fetch it.
 
+## When a playlist is renamed on its service
+
+Rename a watched playlist on Spotify, YouTube Music or Deezer and the next check renames it in Downtify too. The name comes with the songs, so this costs no extra request.
+
+- The watch, the Library playlist and its M3U take the new name. The cover moves with the M3U, and hidden songs, sharing and favourites carry over.
+- **Audio files stay where they are.** Songs already downloaded keep their place in the old name's folder, and the new M3U points at them there, so nothing is downloaded again. New songs go to the new name's folder.
+- **Navidrome follows.** Downtify's own Navidrome playlist keeps its id and gets the new name, so players that pinned it still have it. With M3U import on, Navidrome's import of the old M3U is removed and the renamed M3U is imported on the scan that follows.
+
+The old name stays in two cases, and the log says why:
+
+- You gave the playlist a name of your own with **Rename** in the Library. That name is yours, and the source's new name doesn't overwrite it.
+- Another playlist already has the new name. The two are never merged.
+
 ## What happens to songs that leave a playlist
 
 Live playlists (Spotify's *Top 50*, *Discover Weekly*, editorial charts) change every week. Downtify treats a watch as a **source of new music**, never as something that governs what you keep:

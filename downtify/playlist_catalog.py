@@ -59,7 +59,7 @@ def _text_order(dialect: Dialect) -> str:
     return ' COLLATE "C"' if dialect is Dialect.POSTGRES else ''
 
 
-class PlaylistCatalog:
+class PlaylistCatalog:  # noqa: PLR0904
     """Maps playlist names to ordered track identities and library paths."""
 
     def __init__(self, path_or_db: str | Path | Database) -> None:
@@ -478,6 +478,39 @@ class PlaylistCatalog:
             )
             conn.execute('DELETE FROM playlists WHERE name = ?', (pl_name,))
         return filenames
+
+    def rename_playlist(self, playlist_name: str, new_name: str) -> bool:
+        """Move a playlist and its track rows to *new_name* (its source
+        renamed it). ``False`` when there is nothing to move, or a
+        playlist called *new_name* already exists."""
+
+        old = str(playlist_name or '').strip()
+        new = str(new_name or '').strip()
+        if not old or not new or old == new:
+            return False
+        with self._connect() as conn:
+            if conn.execute(
+                'SELECT 1 FROM playlists WHERE name = ?', (new,)
+            ).fetchone():
+                return False
+            # A new row first, then the tracks, then the old row: the
+            # tracks' foreign key always has a playlist to point at.
+            cur = conn.execute(
+                """INSERT INTO playlists (name, spotify_id, updated_at,
+                                          user_id)
+                   SELECT ?, spotify_id, ?, user_id FROM playlists
+                   WHERE name = ?""",
+                (new, _now_iso(), old),
+            )
+            if not cur.rowcount:
+                return False
+            conn.execute(
+                'UPDATE playlist_tracks SET playlist_name = ? '
+                'WHERE playlist_name = ?',
+                (new, old),
+            )
+            conn.execute('DELETE FROM playlists WHERE name = ?', (old,))
+        return True
 
     def remove_tracks_for_filename(
         self, filename: str, playlist_name: Optional[str] = None
