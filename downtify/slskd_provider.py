@@ -245,9 +245,14 @@ class _PollSchedule:
         self, attempt: int, transfer: Optional[dict[str, Any]]
     ) -> bool:
         now = time.monotonic()
+        # A deep scan walks every slskd folder: about 0.5 s for 10,000
+        # files, per song, per tick. While slskd's own record says the
+        # file is still queued or partly transferred, no file on disk can
+        # pass the size check yet, so the scan waits for the transfer to
+        # look done (or the regular every-12-ticks / 60 s scan).
         scan = (
             attempt % self.deep_scan_every == 0
-            or bool(transfer)
+            or (bool(transfer) and not _transfer_unfinished(transfer))
             or now - self.last_deep_scan >= 60
         )
         if scan:
@@ -1614,6 +1619,27 @@ def _transfer_succeeded(status: dict[str, Any]) -> bool:
         or 'Succeeded' in state
         or 'Completed' in state
     )
+
+
+def _transfer_unfinished(status: dict[str, Any]) -> bool:
+    """True only when slskd's record shows the file can't be complete:
+    it has a known size and less than 95% of it arrived (the share
+    ``_disk_complete`` asks of the file on disk). Anything unclear - no
+    size, a finished or failed state, unreadable numbers - is False."""
+
+    state = str(status.get('state') or '')
+    if (
+        _transfer_failed(status)
+        or 'Succeeded' in state
+        or 'Completed' in state
+    ):
+        return False
+    try:
+        size = int(status.get('size') or 0)
+        transferred = int(status.get('bytesTransferred') or 0)
+    except (TypeError, ValueError):
+        return False
+    return size > 0 and transferred < size * 0.95
 
 
 def _slskd_transfer_progress_pct(
