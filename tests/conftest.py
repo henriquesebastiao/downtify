@@ -7,7 +7,7 @@ import psycopg
 import pytest
 import requests
 
-from downtify import cookie_refresh, slskd_provider
+from downtify import cookie_refresh, library_name_index, slskd_provider
 from downtify import downloader as downloader_mod
 from downtify.db.core import Database
 from downtify.db.migrations.runner import run_migrations
@@ -40,6 +40,16 @@ def _no_remembered_slskd_failures():
     slskd_provider.forget_failures()
     yield
     slskd_provider.forget_failures()
+
+
+@pytest.fixture(autouse=True)
+def _no_remembered_library_names():
+    """The library's file names are kept per folder for a minute
+    (``library_name_index``): each test reads its folder afresh."""
+
+    library_name_index.forget_all()
+    yield
+    library_name_index.forget_all()
 
 
 @pytest.fixture(autouse=True)

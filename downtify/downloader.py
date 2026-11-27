@@ -38,7 +38,7 @@ from mutagen.oggopus import OggOpus
 from mutagen.oggvorbis import OggVorbis
 from yt_dlp.postprocessor.ffmpeg import FFmpegExtractAudioPP
 
-from . import cover_sources
+from . import cover_sources, library_name_index
 from . import deezer as deezer_mod
 from . import isrc as isrc_mod
 from . import lyrics as lyrics_mod
@@ -64,6 +64,7 @@ from .download_sources import track_keys
 from .file_naming import sanitize_file_name
 from .image_size import image_short_side
 from .itunes import fetch_genre as _fetch_itunes_genre
+from .library_name_index import AUDIO_EXTENSIONS
 from .library_paths import library_stored_path, slskd_dir_from_downloader
 from .m3u import sanitize_playlist_name
 from .providers import (
@@ -88,7 +89,7 @@ from .slskd_provider import take_miss as take_slskd_miss
 # Extensions that count as "this song is already downloaded". Deliberately
 # excludes sidecars written next to the audio (.lrc, cover.jpg, .m3u) so a
 # leftover lyrics file can never stand in for a missing track.
-_AUDIO_EXTENSIONS = frozenset({'mp3', 'flac', 'ogg', 'opus', 'm4a'})
+_AUDIO_EXTENSIONS = AUDIO_EXTENSIONS
 
 
 def _valid_imported_audio(path: Path) -> bool:
@@ -967,28 +968,26 @@ class Downloader:
         parents: list[str],
         release: Optional[dict[str, Any]] = None,
     ) -> Optional[str]:
+        """The first audio file in folder order named *stem* (casefolded)
+        under folders ending in *parents*. Reads the in-memory listing
+        (:mod:`library_name_index`), not the whole folder each time."""
+
         root_dir = self.download_dir
-        for root, dirs, files in os.walk(root_dir):
-            dirs[:] = sorted(d for d in dirs if not d.startswith('.'))
-            for name in sorted(files):
-                base, dot, ext = name.rpartition('.')
-                if (
-                    not dot
-                    or ext.lower() not in _AUDIO_EXTENSIONS
-                    or base.casefold() != stem
+        for rel_name in library_name_index.candidates(root_dir, stem):
+            rel = Path(rel_name)
+            if not (root_dir / rel).is_file():
+                library_name_index.note_gone(root_dir, rel_name)
+                continue
+            if parents:
+                folders = [p.casefold() for p in rel.parts[:-1]]
+                if folders[-len(parents) :] != parents:
+                    continue
+            if release:
+                if not matches_release(
+                    root_dir / rel, release, self.slskd_settings
                 ):
                     continue
-                rel = Path(root, name).relative_to(root_dir)
-                if parents:
-                    folders = [p.casefold() for p in rel.parts[:-1]]
-                    if folders[-len(parents) :] != parents:
-                        continue
-                if release:
-                    if not matches_release(
-                        root_dir / rel, release, self.slskd_settings
-                    ):
-                        continue
-                return rel.as_posix()
+            return rel.as_posix()
         return None
 
     def _can_resolve_path_early(self, song: dict[str, Any]) -> bool:
@@ -1369,6 +1368,7 @@ class Downloader:
         if source_id:
             song['download_source_id'] = str(source_id)
         self._record_source(song, filename, source_id)
+        library_name_index.note_saved(self.download_dir, filename)
         hook = self.on_downloaded
         if hook is not None:
             try:
