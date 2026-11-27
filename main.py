@@ -152,6 +152,7 @@ from downtify.server_port import (
     write_runtime_port,
 )
 from downtify.slskd_misses import SlskdMisses
+from downtify.startup_timing import StartupTimings
 from downtify.storage_quota import StorageQuotas
 from downtify.stream import stream_cache_from_env
 from downtify.telemetry import redact_url_secrets
@@ -442,18 +443,38 @@ def _downloads_using_disk() -> bool:
 def _warm_library_listing() -> None:
     """Build ``GET /tracks`` in the background so the first UI load is warm."""
 
+    began = time.monotonic()
     try:
         ctx = api.library_context()
         set_listing_refresh_fn(lambda: list_library_entries(ctx))
-        list_library_entries(ctx)
+        entries = list_library_entries(ctx)
     except Exception:
         logger.opt(exception=True).debug('Library listing warm failed')
+        return
+    # In the background, after start-up: the first library page waits
+    # for it, so it gets its own line.
+    logger.info(
+        'Library listing ready: {} song(s) in {:.1f} s',
+        len(entries),
+        time.monotonic() - began,
+    )
 
 
-def _open_library_stores(monitor_db_path: Path | Database) -> None:
+def _since(timings: Optional[StartupTimings], name: str, began: float) -> None:
+    if timings is not None:
+        timings.since(name, began)
+
+
+def _open_library_stores(
+    monitor_db_path: Path | Database,
+    timings: Optional[StartupTimings] = None,
+) -> None:
     """Open the library catalog/index/cache stores in /data and backfill the
-    track index and playlist catalog from Playlist Monitor history."""
+    track index and playlist catalog from Playlist Monitor history.
 
+    With *timings*, each part is timed for the start-up log."""
+
+    stores_began = time.monotonic()
     library_db = db_runtime.db_target('library', DATABASE_DIR)
     api.state.track_index = TrackIndex(library_db)
     api.state.navidrome_index = NavidromeIndex(library_db)
@@ -564,6 +585,7 @@ def _open_library_stores(monitor_db_path: Path | Database) -> None:
     api.state.external_sync = ExternalSyncJob(
         DATABASE_DIR / 'external_sync.json'
     )
+    _since(timings, 'opening the library stores', stores_began)
     ctx = api.library_context()
     # The library is unreachable until these two finish, and they go
     # through every watch's download history on every start.
@@ -580,6 +602,8 @@ def _open_library_stores(monitor_db_path: Path | Database) -> None:
             )
     except Exception:
         logger.exception('Track library backfill from monitor db failed')
+    _since(timings, 'watch history: track index', backfill_started)
+    catalog_began = time.monotonic()
     try:
         linked = api.state.playlist_catalog.backfill_from_monitor_db(
             monitor_db_path,
@@ -593,10 +617,12 @@ def _open_library_stores(monitor_db_path: Path | Database) -> None:
             )
     except Exception:
         logger.exception('Playlist catalog backfill from monitor db failed')
+    _since(timings, 'watch history: playlist catalog', catalog_began)
     logger.info(
         'Watch history checked against the library in {:.1f} s',
         time.monotonic() - backfill_started,
     )
+    batches_began = time.monotonic()
     try:
         registered = ensure_batch_records(
             api.state.playlist_batch_store,
@@ -609,6 +635,7 @@ def _open_library_stores(monitor_db_path: Path | Database) -> None:
             )
     except Exception:
         logger.exception('Playlist batch sync from library failed')
+    _since(timings, 'playlist batches', batches_began)
 
 
 def open_auth_store() -> AuthStore:
@@ -655,6 +682,8 @@ def build_app() -> FastAPI:
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
+        # The page answers once every step up to ``yield`` is done.
+        timings = StartupTimings()
         loop = asyncio.get_running_loop()
         start_catalog_worker()
         api.state.loop = loop
@@ -664,14 +693,15 @@ def build_app() -> FastAPI:
             )
         )
         db_path = db_runtime.db_target('monitor', DATABASE_DIR)
-        api.state.monitor_db = PlaylistMonitorDB(db_path)
+        with timings.step('opening the watch database'):
+            api.state.monitor_db = PlaylistMonitorDB(db_path)
         api.state.downloader.download_policy = (
             api.state.monitor_db.download_policy
         )
         api.state.downloader.download_policy_limit = lambda: (
             api.state.settings.get('download_retry_budget_minutes', 0)
         )
-        _open_library_stores(db_path)
+        _open_library_stores(db_path, timings)
         if api.state.library_trash is not None:
             api.spawn_task(
                 trash_routes.watch_trash(), name='library-trash-events'
@@ -681,7 +711,8 @@ def build_app() -> FastAPI:
         # batches, shows, watches and history). Later arrivals record
         # their real downloader.
         try:
-            await asyncio.to_thread(api.migrate_first_run_ownership)
+            with timings.step('ownership check'):
+                await asyncio.to_thread(api.migrate_first_run_ownership)
         except Exception:
             logger.opt(exception=True).warning(
                 'Ownership backfill failed; will retry on next start'
@@ -704,7 +735,8 @@ def build_app() -> FastAPI:
         # The Spotify companion's store, before the monitor starts: with
         # it on, personal Spotify mixes are read by the companion, never
         # signed out (downtify/spotify_companion.py).
-        spotify_companion_routes.store()
+        with timings.step('Spotify companion'):
+            spotify_companion_routes.store()
         api.spawn_task(spotify_companion_routes.run(), name='companion-loop')
         # Watch downloads share the "Parallel downloads" limit.
         share_download_slots(lambda: api.state.download_semaphore)
@@ -782,12 +814,14 @@ def build_app() -> FastAPI:
                 port=_LISTEN['port'],
                 host=_LISTEN['host'],
             )
-            if await announcer.start():
-                api.state.discovery = announcer
+            with timings.step('network discovery'):
+                if await announcer.start():
+                    api.state.discovery = announcer
         # The liked songs playlist is a file; if it was deleted (or the
         # library moved) while Downtify was off, write it again.
         try:
-            api._sync_liked_playlist()
+            with timings.step('liked songs playlist'):
+                api._sync_liked_playlist()
         except Exception:
             logger.exception('Liked songs playlist: could not sync')
         # A library upgrade can run for hours, so a restart in the
@@ -796,15 +830,18 @@ def build_app() -> FastAPI:
             'library_only'
         ):
             try:
-                api.state.upgrade_runner.resume_after_restart()
+                with timings.step('library upgrade resume'):
+                    api.state.upgrade_runner.resume_after_restart()
             except Exception:
                 logger.exception('Library upgrade: could not resume')
         # The download queue (and its pause switch) outlives a restart
         # or an update: unfinished jobs are queued again.
         try:
-            await api.restore_download_queue()
+            with timings.step('download queue restore'):
+                await api.restore_download_queue()
         except Exception:
             logger.exception('Download queue: could not restore')
+        timings.log_ready()
 
         yield
 
