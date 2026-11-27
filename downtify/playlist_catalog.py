@@ -163,6 +163,19 @@ class PlaylistCatalog:
             return
         ck = file_content_key(full_path)
         self.ensure_playlist(pl_name, spotify_id=None)
+        self._write_member(pl_name, tid, ck, name, int(track_order))
+
+    def _write_member(
+        self,
+        pl_name: str,
+        tid: str,
+        ck: Optional[str],
+        name: str,
+        track_order: int,
+    ) -> None:
+        """Insert or replace one ``playlist_tracks`` row (the playlist row
+        must exist already)."""
+
         with self._connect() as conn:
             conn.execute(
                 """INSERT INTO playlist_tracks
@@ -214,6 +227,13 @@ class PlaylistCatalog:
 
         ``monitor_db_path`` is either the monitor's ``Database`` (any
         backend) or a legacy SQLite file path.
+
+        Runs on every start, so it only writes what differs: a track the
+        catalog already has with the same file (name and content key)
+        is left alone, and one it has under another file keeps its place
+        in the playlist (``track_order``, set by the watch's last sweep).
+        A track the catalog lacks goes after the playlist's last one, in
+        download order. Returns how many tracks were added or changed.
         """
 
         rows = read_monitor_rows(
@@ -222,23 +242,62 @@ class PlaylistCatalog:
             """SELECT p.name, p.spotify_id, dt.track_spotify_id, dt.filename
                FROM downloaded_tracks dt
                JOIN monitored_playlists p ON p.id = dt.playlist_id
-               WHERE dt.filename IS NOT NULL AND dt.filename != ''""",
+               WHERE dt.filename IS NOT NULL AND dt.filename != ''
+               ORDER BY dt.downloaded_at""",
         )
+        if not rows:
+            return 0
+
+        # What the catalog holds now, read once instead of per row.
+        with self._connect() as conn:
+            playlists = {
+                str(r['name']): r['spotify_id']
+                for r in conn.execute('SELECT name, spotify_id FROM playlists')
+            }
+            members: dict[tuple[str, str], tuple[str, Optional[str], int]] = {}
+            next_order: dict[str, int] = {}
+            for r in conn.execute(
+                """SELECT playlist_name, track_spotify_id, content_key,
+                          filename, track_order
+                   FROM playlist_tracks"""
+            ):
+                pl = str(r['playlist_name'])
+                order = int(r['track_order'])
+                members[(pl, str(r['track_spotify_id']))] = (
+                    _norm_path(str(r['filename'])),
+                    r['content_key'],
+                    order,
+                )
+                next_order[pl] = max(next_order.get(pl, 0), order + 1)
 
         linked = 0
         # A few commits instead of three per row (downtify/db/batching.py).
         for row in in_short_transactions(self.db, rows):
             pl_name = str(row[0] or '').strip()
             spotify_id = str(row[1] or '').strip() or None
-            tid = str(row[2] or '').strip()
+            tid = _catalog_track_id({'song_id': str(row[2] or '').strip()})
             filename = _norm_path(str(row[3] or ''))
             if not pl_name or not tid or not filename:
                 continue
             full = locate_library_file(filename, download_dir, slskd_dir)
             if full is None:
                 continue
-            self.ensure_playlist(pl_name, spotify_id=spotify_id)
-            self.upsert_track(pl_name, {'song_id': tid}, filename, full)
+            if pl_name not in playlists or (
+                spotify_id is not None and playlists[pl_name] != spotify_id
+            ):
+                self.ensure_playlist(pl_name, spotify_id=spotify_id)
+                playlists[pl_name] = spotify_id or playlists.get(pl_name)
+            ck = file_content_key(full)
+            current = members.get((pl_name, tid))
+            if current is not None and current[:2] == (filename, ck):
+                continue
+            if current is not None:
+                order = current[2]
+            else:
+                order = next_order.get(pl_name, 0)
+                next_order[pl_name] = order + 1
+            self._write_member(pl_name, tid, ck, filename, order)
+            members[(pl_name, tid)] = (filename, ck, order)
             linked += 1
         return linked
 

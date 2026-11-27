@@ -289,16 +289,29 @@ class TrackIndex:
                FROM downloaded_tracks
                WHERE filename IS NOT NULL AND filename != ''""",
         )
+        if not rows:
+            return 0
+        # Runs on every start: read the index once and write only the
+        # rows whose file differs, instead of a lookup and a write per row.
+        with self._connect() as conn:
+            current = {
+                str(r['spotify_track_id']): str(r['filename'])
+                for r in conn.execute(
+                    'SELECT spotify_track_id, filename FROM library_tracks'
+                )
+            }
         imported = 0
         # A few commits instead of one per row (downtify/db/batching.py).
         for track_id, filename in in_short_transactions(self.db, rows):
             tid = str(track_id or '').strip()
-            if not _SPOTIFY_TRACK_ID.fullmatch(tid):
+            name = str(filename or '').strip().replace('\\', '/')
+            if not _SPOTIFY_TRACK_ID.fullmatch(tid) or not name:
                 continue
-            before = self.lookup(tid)
-            self.register(tid, str(filename))
-            if before != str(filename):
-                imported += 1
+            if current.get(tid) == name:
+                continue
+            self.register(tid, name)
+            current[tid] = name
+            imported += 1
         return imported
 
 
