@@ -3496,7 +3496,7 @@ User. Change your password: `{ "current_password": "…", "new_password": "…" 
 
 ### `GET /api/me/preferences` · `PUT /api/me/preferences`
 
-User. Your preferences (Settings → General): `theme` (`dark`/`light`/`system`), `locale`, `show_lyrics`, `play_videos` (show a song's [music video](features/music-videos.md) in Now playing), `search_albums`, `show_public_playlists` (other people's public playlists in your lists; on unless set to `false`, and the playlists you follow show either way). `PUT` merges what it's sent into them and answers the result; other keys are ignored. `search_albums: false` makes `GET /api/albums/search` answer `[]` for you, whatever the server's setting.
+User. Your preferences (Settings → General): `theme` (`dark`/`grey`/`light`/`system`), `locale`, `show_lyrics`, `play_videos` (show a song's [music video](features/music-videos.md) in Now playing), `search_albums`, `show_public_playlists` (other people's public playlists in your lists; on unless set to `false`, and the playlists you follow show either way). `PUT` merges what it's sent into them and answers the result; other keys are ignored. `search_albums: false` makes `GET /api/albums/search` answer `[]` for you, whatever the server's setting.
 
 ---
 

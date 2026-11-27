@@ -5,8 +5,8 @@
  * (docs-site/). No @import here: each consumer brings its own Tailwind
  * and fonts.
  *
- * Colours are CSS variables so the light theme is a variable swap on
- * <html data-theme="light">; `@theme inline` maps them onto Tailwind
+ * Colours are CSS variables so the grey and light themes are a variable
+ * swap on <html data-theme="grey|light">; `@theme inline` maps them onto Tailwind
  * utilities (bg-surface, text-muted, border-line, ...).
  */
 :root {
@@ -40,6 +40,42 @@
   --c-deezer: #a238ff;
   --sh-float: 0 20px 50px rgb(0 0 0 / 0.5);
   --sh-cover: 0 10px 30px rgb(0 0 0 / 0.35);
+}
+
+/* Grey: the dark layout on mid greys, with softer text, for long
+   sessions where the dark theme's contrast tires the eyes and the light
+   one is too bright. Text stays above 4.5:1 on the backgrounds. */
+:root[data-theme='grey'] {
+  color-scheme: dark;
+  --c-bg: #2b2d31;
+  --c-side: #26282c;
+  --c-surface: #313338;
+  --c-surface-2: #383a40;
+  --c-raised: #43454b;
+  --c-line: #36383d;
+  --c-line-2: #3b3d43;
+  --c-line-3: #45474d;
+  --c-text: #e0e1e4;
+  --c-text-2: #cdcfd3;
+  --c-text-3: #b9bbc0;
+  --c-muted: #9a9da4;
+  --c-faint: #7b7e86;
+  --c-accent: #2bd468;
+  --c-accent-hi: #52de8b;
+  --c-on-accent: #04140a;
+  --c-danger: #f47f7f;
+  --c-warn: #eab55a;
+  --c-glass: rgb(49 51 56 / 0.88);
+  --c-invert: #e0e1e4;
+  --c-on-invert: #2b2d31;
+  --c-src-ytm: #ff6b63;
+  --c-src-yt: #ff8a7d;
+  --c-src-slskd: #6cc6f6;
+  --c-src-soundcloud: #ff8a4a;
+  --c-spotify: #1ed760;
+  --c-deezer: #b462ff;
+  --sh-float: 0 20px 50px rgb(0 0 0 / 0.35);
+  --sh-cover: 0 10px 30px rgb(0 0 0 / 0.25);
 }
 
 :root[data-theme='light'] {
