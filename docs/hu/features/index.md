@@ -57,6 +57,7 @@ Minden, amit a Downtify tud, területenként csoportosítva, ahogy az oldalsávo
 | [Lejátszási lista figyelő](playlist-monitor.md) | Figyelj Spotify-, Deezer- és YouTube Music-lejátszási listákat és előadókat, és töltsd le az új számokat és kiadványokat az általad választott gyakorisággal |
 | [Lejátszási listák nevei](playlist-names.md) | Nevezd át, hogyan jelenjen meg egy importált vagy szinkronizált lista, a forrása és a szinkronizálása érintése nélkül |
 | [Kedvenc lejátszási listák](playlist-favorites.md) | Rögzítsd a listákat a listáid és a kezdőlap tetejére, a weben és az alkalmazásokban |
+| [Mentett linkek](saved-links.md) | Lejátszási lista vagy album linkjének mentése, hogy később a Könyvtár → Lejátszási listák alól meghallgathasd; semmi sem töltődik le |
 | [Elrejtett számok a listákban](hidden-playlist-songs.md) | Vedd ki a nem kívánt számokat egy letöltött vagy figyelt listából, és tartsd is kint őket; a fájlok a könyvtárban maradnak |
 | [Közösen szerkesztett listák](collaborative-playlists.md) | Engedd meg néhány embernek, akikkel egy könyvtári listát megosztasz, hogy számokat adjanak hozzá és távolítsanak el; az átnevezés, a megosztás és a törlés a tiéd marad |
 | [Sorrend és ismétlődő számok](playlist-order.md) | Rendezd egy könyvtári lista számait tetszőleges sorrendbe, és játssz le benne egy számot többször is |

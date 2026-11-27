@@ -185,6 +185,19 @@ export default {
     add: 'Lista hozzáadása a kedvencekhez',
     remove: 'Lista eltávolítása a kedvencekből',
   },
+  savedLinks: {
+    title: 'Mentett linkek',
+    hint: 'A linkjükről mentett lejátszási listák és albumok. Élőben nyílnak meg: a könyvtáradban lévő számok onnan szólnak, a többi streamelve. Semmi sem töltődik le.',
+    save: 'Mentés',
+    saved: 'Mentve',
+    saveHint:
+      'Az oldal megtartása a Könyvtár → Lejátszási listák alatt, hogy később meghallgathasd. Semmi sem töltődik le.',
+    unsaveHint: 'Eltávolítás a mentett linkek közül',
+    added: '„{name}” mentve a könyvtáradba',
+    removed: '„{name}” eltávolítva a mentett linkek közül',
+    open: 'Könyvtár megnyitása',
+    remove: 'Eltávolítás',
+  },
   normalization: {
     level: 'Hangerőszint',
     levelNormal: 'Normál',

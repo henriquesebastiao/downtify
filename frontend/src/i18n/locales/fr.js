@@ -191,6 +191,19 @@ export default {
     add: 'Mettre la playlist en favoris',
     remove: 'Retirer la playlist des favoris',
   },
+  savedLinks: {
+    title: 'Liens enregistrés',
+    hint: 'Les playlists et albums enregistrés depuis leur lien. Ils s’ouvrent en direct : les titres de votre bibliothèque sont lus depuis celle-ci, les autres en streaming. Rien n’est téléchargé.',
+    save: 'Enregistrer',
+    saved: 'Enregistré',
+    saveHint:
+      'Garder cette page dans Bibliothèque → Playlists pour l’écouter plus tard. Rien n’est téléchargé.',
+    unsaveHint: 'Retirer de vos liens enregistrés',
+    added: '« {name} » enregistré dans votre bibliothèque',
+    removed: '« {name} » retiré de vos liens enregistrés',
+    open: 'Ouvrir la bibliothèque',
+    remove: 'Retirer',
+  },
   normalization: {
     level: 'Niveau sonore',
     levelNormal: 'Normal',

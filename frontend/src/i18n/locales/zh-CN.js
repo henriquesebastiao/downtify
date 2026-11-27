@@ -160,6 +160,19 @@ export default {
     add: '收藏播放列表',
     remove: '取消收藏播放列表',
   },
+  savedLinks: {
+    title: '已保存的链接',
+    hint: '你从链接保存的播放列表和专辑。打开时总是最新内容：音乐库中已有的歌曲从库中播放，其余的流式播放。不会下载任何内容。',
+    save: '保存',
+    saved: '已保存',
+    saveHint:
+      '将此页面保留在“音乐库 → 播放列表”中，以便稍后流式播放。不会下载任何内容。',
+    unsaveHint: '从已保存的链接中移除',
+    added: '已将“{name}”保存到音乐库',
+    removed: '已从已保存的链接中移除“{name}”',
+    open: '打开音乐库',
+    remove: '移除',
+  },
   normalization: {
     level: '播放音量等级',
     levelNormal: '标准',

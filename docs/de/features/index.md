@@ -57,6 +57,7 @@ Alles, was Downtify kann, nach Bereichen gruppiert wie in der Seitenleiste. Jede
 | [Playlist-Überwachung](playlist-monitor.md) | Spotify-, Deezer- und YouTube-Music-Playlists und -Künstler beobachten und neue Titel und Veröffentlichungen nach deinem Zeitplan herunterladen |
 | [Anzeigenamen von Playlists](playlist-names.md) | Ändern, wie eine importierte oder synchronisierte Playlist heißt, ohne ihre Quelle oder ihren Abgleich anzufassen |
 | [Lieblings-Playlists](playlist-favorites.md) | Playlists oben in deinen Listen und auf der Startseite anheften, im Web und in den Apps |
+| [Gespeicherte Links](saved-links.md) | Den Link einer Playlist oder eines Albums speichern und ihn unter Bibliothek → Playlists wieder öffnen und streamen; nichts wird heruntergeladen |
 | [Ausgeblendete Playlist-Titel](hidden-playlist-songs.md) | Nimm ungewollte Titel aus einer heruntergeladenen oder überwachten Playlist und halte sie draußen; die Dateien bleiben in der Bibliothek |
 | [Gemeinsam bearbeitete Playlists](collaborative-playlists.md) | Lass einige der Personen, mit denen du eine Bibliotheks-Playlist teilst, Titel hinzufügen und entfernen; Umbenennen, Teilen und Löschen bleiben bei dir |
 | [Reihenfolge und wiederholte Titel](playlist-order.md) | Bring die Titel einer Bibliotheks-Playlist in jede beliebige Reihenfolge und spiele einen Titel darin mehrmals |

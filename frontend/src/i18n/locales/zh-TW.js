@@ -165,6 +165,19 @@ export default {
     add: '將播放清單加入最愛',
     remove: '將播放清單從最愛移除',
   },
+  savedLinks: {
+    title: '已儲存的連結',
+    hint: '你從連結儲存的播放清單和專輯。開啟時永遠是最新內容：媒體庫中已有的歌曲從媒體庫播放，其餘以串流播放。不會下載任何內容。',
+    save: '儲存',
+    saved: '已儲存',
+    saveHint:
+      '將此頁面保留在「媒體庫 → 播放清單」中，以便稍後串流收聽。不會下載任何內容。',
+    unsaveHint: '從已儲存的連結中移除',
+    added: '已將「{name}」儲存到媒體庫',
+    removed: '已從已儲存的連結中移除「{name}」',
+    open: '開啟媒體庫',
+    remove: '移除',
+  },
   normalization: {
     level: '播放音量等級',
     levelNormal: '標準',

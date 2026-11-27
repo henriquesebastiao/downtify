@@ -143,6 +143,7 @@ from downtify.playlist_spotify_cache import (
 )
 from downtify.podcasts import PodcastStore
 from downtify.proxy_config import configure_outbound_proxy
+from downtify.saved_links import SavedLinks
 from downtify.server_identity import ServerIdentity
 from downtify.server_port import (
     DEFAULT_PORT,
@@ -463,6 +464,8 @@ def _open_library_stores(monitor_db_path: Path | Database) -> None:
     api.state.playlist_catalog = PlaylistCatalog(library_db)
     api.state.manual_playlist_owners = ManualPlaylistOwners(library_db)
     api.state.playlist_shares = PlaylistShares(library_db)
+    # Playlist and album links saved to stream (downtify/saved_links.py).
+    api.state.saved_links = SavedLinks(library_db)
     api.state.playlist_hidden = PlaylistHiddenSongs(library_db)
     api.state.file_providers = FileProviders(library_db)
     api.state.download_log = DownloadLog(library_db)

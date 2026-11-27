@@ -84,6 +84,7 @@ export default {
       'features/download-exclusions.md': 'Letöltési kizárások',
       'features/playlist-names.md': 'Lejátszási listák nevei',
       'features/playlist-favorites.md': 'Kedvenc lejátszási listák',
+      'features/saved-links.md': 'Mentett linkek',
       'features/hidden-playlist-songs.md': 'Elrejtett számok a listákban',
       'features/playlist-monitor.md': 'Lejátszási lista figyelő',
       'features/top-songs.md': 'Legnépszerűbb számok',

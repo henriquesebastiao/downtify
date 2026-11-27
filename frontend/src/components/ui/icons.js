@@ -126,6 +126,10 @@ export const STROKE = {
   // "not liked"; the solid one is "liked".
   'heart-outline':
     '<path d="M12 20s-7-4.4-9.2-8.6C1.2 8.2 3 4.5 6.6 4.5c2.1 0 3.6 1.2 5.4 3.1 1.8-1.9 3.3-3.1 5.4-3.1 3.6 0 5.4 3.7 3.8 6.9C19 15.6 12 20 12 20z"/>',
+  // The same bookmark as the solid one under FILLED, drawn as an outline
+  // for "not saved"; the solid one is "saved" (saved links).
+  'bookmark-outline':
+    '<path d="M6 3h12a1 1 0 0 1 1 1v17l-7-4.5L5 21V4a1 1 0 0 1 1-1z"/>',
   tag: '<path d="M3 3h8l10 10-8 8L3 11z"/><circle cx="7.5" cy="7.5" r="1.5"/>',
   cookie:
     '<path d="M21 12a9 9 0 1 1-9-9 3 3 0 0 0 4 3 3 3 0 0 0 5 6z"/><path d="M8.5 9.5h.01M12 14h.01M8 15h.01M15 16h.01"/>',
@@ -178,4 +182,5 @@ export const FILLED = {
     '<path d="M14 3.5h-1.6c-2.3 0-3.8 1.5-3.8 3.9V9.5H6.3v3.2h2.3V21h3.4v-8.3h2.6l.5-3.2h-3.1V7.7c0-.9.4-1.4 1.4-1.4H14z"/>',
   heart:
     '<path d="M12 20s-7-4.4-9.2-8.6C1.2 8.2 3 4.5 6.6 4.5c2.1 0 3.6 1.2 5.4 3.1 1.8-1.9 3.3-3.1 5.4-3.1 3.6 0 5.4 3.7 3.8 6.9C19 15.6 12 20 12 20z"/>',
+  bookmark: '<path d="M6 3h12a1 1 0 0 1 1 1v17l-7-4.5L5 21V4a1 1 0 0 1 1-1z"/>',
 }

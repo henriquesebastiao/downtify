@@ -1015,6 +1015,8 @@ RULES: list[tuple[frozenset[str], re.Pattern[str], str]] = [
         # below on purpose: first match wins.
         (_m('DELETE'), r'^/(delete|delete/batch)$', USER),
         (_ALL, r'^/api/library/playlist', USER),
+        # Playlist and album links one saved to stream (saved_links.py).
+        (_ALL, r'^/api/library/saved-links$', USER),
         (_m('POST'), r'^/api/library/archive', USER),
         (_READ, r'^/api/library/archive/', USER),
         # Moving a song's lyrics timing, like editing its tags (#663).

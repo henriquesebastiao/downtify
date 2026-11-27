@@ -83,6 +83,7 @@ export default {
       'features/download-exclusions.md': '다운로드 제외',
       'features/playlist-names.md': '재생목록 이름',
       'features/playlist-favorites.md': '즐겨찾는 재생목록',
+      'features/saved-links.md': '저장한 링크',
       'features/hidden-playlist-songs.md': '재생목록에서 숨긴 곡',
       'features/playlist-monitor.md': '재생목록 모니터',
       'features/top-songs.md': '인기곡',

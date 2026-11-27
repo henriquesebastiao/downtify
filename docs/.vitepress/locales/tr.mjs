@@ -84,6 +84,7 @@ export default {
       'features/download-exclusions.md': 'İndirme istisnaları',
       'features/playlist-names.md': 'Çalma listesi adları',
       'features/playlist-favorites.md': 'Favori çalma listeleri',
+      'features/saved-links.md': 'Kaydedilen bağlantılar',
       'features/hidden-playlist-songs.md': 'Listeden gizlenen şarkılar',
       'features/playlist-monitor.md': 'Çalma listesi izleyici',
       'features/top-songs.md': 'En çok dinlenen şarkılar',

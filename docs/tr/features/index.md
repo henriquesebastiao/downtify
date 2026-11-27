@@ -57,6 +57,7 @@ Downtify’ın yaptığı her şey, kenar çubuğundaki gibi alanlara göre grup
 | [Çalma listesi izleyici](playlist-monitor.md) | Spotify, Deezer ve YouTube Music çalma listelerini ve sanatçılarını izleyin, yeni parçaları ve çıkışları seçtiğiniz sıklıkta indirin |
 | [Çalma listesi adları](playlist-names.md) | İçe aktarılan ya da eşitlenen bir çalma listesinin görünen adını, kaynağına ve eşitlemesine dokunmadan değiştirin |
 | [Favori çalma listeleri](playlist-favorites.md) | Çalma listelerini listelerinizin ve ana sayfanın en üstüne sabitleyin; web’de ve uygulamalarda |
+| [Kaydedilen bağlantılar](saved-links.md) | Bir çalma listesi ya da albüm bağlantısını kaydet, Kitaplık → Çalma listeleri altından geri dönüp akışla dinle; hiçbir şey indirilmez |
 | [Listeden gizlenen şarkılar](hidden-playlist-songs.md) | İndirilen ya da izlenen bir listeden istemediğin şarkıları çıkar ve dışarıda tut; dosyalar kitaplıkta kalır |
 | [Birlikte düzenlenen listeler](collaborative-playlists.md) | Kitaplıktaki bir listeyi paylaştığın kişilerden bazılarının şarkı ekleyip çıkarmasına izin ver; yeniden adlandırma, paylaşma ve silme sende kalır |
 | [Sıralama ve tekrarlanan şarkılar](playlist-order.md) | Kitaplıktaki bir listenin şarkılarını istediğin sıraya koy ve bir şarkıyı listede birden fazla kez çal |

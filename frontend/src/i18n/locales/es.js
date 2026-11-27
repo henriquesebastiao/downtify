@@ -187,6 +187,19 @@ export default {
     add: 'Añadir playlist a favoritos',
     remove: 'Quitar playlist de favoritos',
   },
+  savedLinks: {
+    title: 'Enlaces guardados',
+    hint: 'Playlists y álbumes que guardaste desde su enlace. Se abren en directo: las canciones de tu biblioteca suenan desde ella y el resto en streaming. No se descarga nada.',
+    save: 'Guardar',
+    saved: 'Guardado',
+    saveHint:
+      'Conserva esta página en Biblioteca → Playlists para escucharla más tarde. No se descarga nada.',
+    unsaveHint: 'Quitar de tus enlaces guardados',
+    added: '“{name}” guardado en tu biblioteca',
+    removed: '“{name}” quitado de tus enlaces guardados',
+    open: 'Abrir biblioteca',
+    remove: 'Quitar',
+  },
   normalization: {
     level: 'Nivel de volumen',
     levelNormal: 'Normal',

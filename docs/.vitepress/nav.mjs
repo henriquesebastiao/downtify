@@ -89,6 +89,7 @@ export const NAV = [
       { title: 'Playlist Monitor', page: 'features/playlist-monitor.md' },
       { title: 'Playlist display names', page: 'features/playlist-names.md' },
       { title: 'Favorite playlists', page: 'features/playlist-favorites.md' },
+      { title: 'Saved links', page: 'features/saved-links.md' },
       {
         title: 'Hidden playlist songs',
         page: 'features/hidden-playlist-songs.md',

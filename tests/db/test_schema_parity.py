@@ -54,6 +54,7 @@ from downtify.playlist_hidden import PlaylistHiddenSongs
 from downtify.playlist_shares import PlaylistShares
 from downtify.playlist_spotify_cache import PlaylistSpotifyCache
 from downtify.podcasts import PodcastStore
+from downtify.saved_links import SavedLinks
 from downtify.slskd_misses import SlskdMisses
 from downtify.storage_quota import StorageQuotas
 from downtify.track_index import TrackIndex
@@ -76,6 +77,7 @@ _LIBRARY_STORES: tuple[Callable[[Path], Any], ...] = (
     PlaylistCatalog,
     ManualPlaylistOwners,
     PlaylistShares,
+    SavedLinks,
     PlaylistHiddenSongs,
     FileProviders,
     HandReplacedFiles,
