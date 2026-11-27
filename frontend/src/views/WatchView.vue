@@ -255,6 +255,14 @@
                   when: timeAgo(failure.last_failed_at, locale),
                 })
               }}
+              ·
+              {{
+                failure.next_try
+                  ? t('watchStats.nextTry', {
+                      when: timeAgo(failure.next_try, locale),
+                    })
+                  : t('watchStats.nextTryNextCheck')
+              }}
             </span>
             <span
               v-if="failure.error"

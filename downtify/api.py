@@ -485,6 +485,7 @@ from . import (
     navidrome_ratings,
     notifications,
     providers,
+    retry_backoff,
     spotify,
     spotify_companion,
     stream,
@@ -1394,6 +1395,8 @@ class AppState:
     # The unfinished jobs and the pause switch, for the next start
     # (downtify/download_queue.py).
     pending_downloads: Optional[PendingDownloads] = None
+    # A new version started: the saved failed jobs run again once.
+    retry_failed_after_update: bool = False
     # Fire-and-forget work owned by the process (import batches, monitor
     # loops, playlist refresh). Cancelled in :func:`shutdown_resources`.
     background_tasks: set[asyncio.Task[Any]] = set()
@@ -9676,6 +9679,55 @@ async def resume_queue() -> dict[str, Any]:
     return await _set_queue_paused(False)
 
 
+#: Saved in ``download_queue_state``: the versions of the last start, and
+#: when the waits of failing watch songs last started over.
+_RETRY_FINGERPRINT_KEY = 'retry_fingerprint'
+_RETRY_STARTED_OVER_KEY = 'retry_started_over'
+
+
+def _start_retry_waits_over(reason: str) -> None:
+    """Every failing watch song is tried on its watch's next check."""
+
+    moment = retry_backoff.start_over()
+    logger.info('Failing watch songs are tried again: {}', reason)
+    store = state.pending_downloads
+    if store is None:
+        return
+    try:
+        store.set_state_value(_RETRY_STARTED_OVER_KEY, moment.isoformat())
+    except Exception:
+        logger.exception('Could not save when the retries started over')
+
+
+def load_retry_waits() -> bool:
+    """At startup, before any watch check: when the waits last started
+    over. Another Downtify or yt-dlp version than on the last start
+    starts them over, and makes the saved failed downloads run again
+    (:func:`restore_download_queue`). Whether the version changed."""
+
+    store = state.pending_downloads
+    if store is None:
+        return False
+    try:
+        retry_backoff.set_started_over(
+            store.state_value(_RETRY_STARTED_OVER_KEY)
+        )
+        current = retry_backoff.fingerprint()
+        saved = store.state_value(_RETRY_FINGERPRINT_KEY)
+        if saved == current:
+            return False
+        store.set_state_value(_RETRY_FINGERPRINT_KEY, current)
+    except Exception:
+        logger.exception('Could not read the retry state')
+        return False
+    if saved is None:
+        # The first start that keeps it: nothing to compare with.
+        return False
+    _start_retry_waits_over('Downtify or yt-dlp was updated')
+    state.retry_failed_after_update = True
+    return True
+
+
 async def restore_download_queue() -> int:
     """Pick the saved queue back up after a restart; how many jobs.
 
@@ -9691,6 +9743,16 @@ async def restore_download_queue() -> int:
         return 0
     if await asyncio.to_thread(store.paused):
         queue_pause.pause()
+    if state.retry_failed_after_update:
+        # A new version may download what failed: the saved failed
+        # jobs run again, once, as if each was retried.
+        state.retry_failed_after_update = False
+        requeued = await asyncio.to_thread(store.requeue_failed)
+        if requeued:
+            logger.info(
+                'Download queue: {} failed job(s) retried after the update',
+                requeued,
+            )
     rows = await asyncio.to_thread(store.rows)
     await _restore_failed_jobs(store, {row.song_id for row in rows})
     if not rows or state.downloader is None:
@@ -10086,6 +10148,12 @@ async def update_settings_endpoint(
             state.settings['audio_providers'] = _effective_audio_providers(
                 state.settings
             )
+            if state.settings['audio_providers'] != (
+                _effective_audio_providers(previous)
+            ):
+                # Other sources may have what failed: every failing
+                # watch song is tried on its next check.
+                _start_retry_waits_over('the audio sources changed')
         if 'format' in payload:
             # The Downloads format can't be one to avoid.
             state.settings['avoid_formats'] = normalize_formats(
@@ -12241,17 +12309,19 @@ async def download_missing_artist_releases(
 
     async def run() -> None:
         try:
-            await check_watch(
-                watch,
-                db,
-                state.downloader,  # type: ignore[arg-type]
-                state.connections.broadcast,
-                loop,
-                state.settings,
-                library_stores(),
-                state.podcasts,
-                fill_missing=True,
-            )
+            # Asked for: failing songs are tried too, waiting or not.
+            with retry_backoff.every_failure():
+                await check_watch(
+                    watch,
+                    db,
+                    state.downloader,  # type: ignore[arg-type]
+                    state.connections.broadcast,
+                    loop,
+                    state.settings,
+                    library_stores(),
+                    state.podcasts,
+                    fill_missing=True,
+                )
         except Exception:
             logger.exception('Downloading what "{}" misses failed', watch.name)
 
@@ -12326,18 +12396,21 @@ async def manual_check_playlist(
 
     async def _run() -> None:
         try:
-            count = await check_watch(
-                playlist,
-                db,
-                state.downloader,
-                state.connections.broadcast,
-                loop,
-                # Was omitted before, which silently ignored the
-                # delay-between-downloads setting on a manual check.
-                state.settings,
-                library_stores(),
-                state.podcasts,
-            )
+            # A check asked for tries every failing song, waiting or not
+            # (downtify/retry_backoff.py).
+            with retry_backoff.every_failure():
+                count = await check_watch(
+                    playlist,
+                    db,
+                    state.downloader,
+                    state.connections.broadcast,
+                    loop,
+                    # Was omitted before, which silently ignored the
+                    # delay-between-downloads setting on a manual check.
+                    state.settings,
+                    library_stores(),
+                    state.podcasts,
+                )
             logger.info(
                 'Manual check: downloaded {} new track(s) from "{}"',
                 count,
@@ -12698,6 +12771,26 @@ def _monitor_provenance(
     }
 
 
+def _failures_with_next_try(
+    failures: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Each failing song with ``next_try``: when its watch tries it again
+    (ISO), ``None`` on the next check (downtify/retry_backoff.py)."""
+
+    waiting = retry_backoff.waiting(failures)
+    return [
+        {
+            **row,
+            'next_try': (
+                waiting[str(row.get('track_id'))].isoformat()
+                if str(row.get('track_id')) in waiting
+                else None
+            ),
+        }
+        for row in failures
+    ]
+
+
 @router.delete('/api/monitor/playlists/{playlist_id}/failures')
 async def monitor_playlist_clear_failures(
     playlist_id: int, request: Request
@@ -12788,5 +12881,5 @@ def _monitor_watch_tracks(
         'watch': watch.to_dict(),
         'tracks': tracks,
         'missing': len(order) - len(on_disk),
-        'failures': db.history.failures(watch.id),
+        'failures': _failures_with_next_try(db.history.failures(watch.id)),
     }
