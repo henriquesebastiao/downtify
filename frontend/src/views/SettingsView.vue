@@ -397,6 +397,16 @@
                     />
                   </div>
                 </div>
+                <div class="grid gap-4 px-5 py-4 sm:grid-cols-2">
+                  <UiInput
+                    v-model="s.slskd.outage_pause_after"
+                    :label="t('settings.slskdOutagePause')"
+                    :hint="t('settings.slskdOutagePauseHint')"
+                    type="number"
+                    min="0"
+                    max="1000"
+                  />
+                </div>
                 <div class="px-5 py-4">
                   <ConnectionTest
                     kind="slskd"
@@ -481,6 +491,7 @@
             </SettingGroup>
 
             <SettingGroup :title="t('settings.youtubeTitle')">
+              <YtdlpCard />
               <CookiesCard />
             </SettingGroup>
           </template>
@@ -488,6 +499,18 @@
           <!-- Downloads & files -->
           <template v-else-if="section === 'files'">
             <GlobalQueueControl />
+            <SettingGroup :title="t('settings.diskSpaceGroup')">
+              <div class="grid gap-4 px-5 py-4 sm:grid-cols-2">
+                <UiInput
+                  v-model="s.min_free_space_gb"
+                  :label="t('settings.minFreeSpace')"
+                  :hint="t('settings.minFreeSpaceHint')"
+                  type="number"
+                  min="0"
+                  max="10000"
+                />
+              </div>
+            </SettingGroup>
             <SettingGroup :title="t('settings.audioGroup')">
               <SettingRow
                 :label="t('settings.format')"
@@ -1393,6 +1416,7 @@ import UiSwitch from '/src/components/ui/UiSwitch.vue'
 import ExperimentalBadge from '/src/components/ui/ExperimentalBadge.vue'
 import PageHeader from '/src/components/library/PageHeader.vue'
 import CookiesCard from '/src/components/settings/CookiesCard.vue'
+import YtdlpCard from '/src/components/settings/YtdlpCard.vue'
 import AcoustidSettings from '/src/components/settings/AcoustidSettings.vue'
 import FormatPicker from '/src/components/settings/FormatPicker.vue'
 import { downloadsFormat } from '/src/lib/audioFormats'

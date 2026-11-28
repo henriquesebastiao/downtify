@@ -522,6 +522,7 @@ export default {
     reason: {
       not_configured: 'slskd not set up',
       unreachable: "Couldn't reach slskd",
+      offline: 'slskd was off the Soulseek network',
       search_failed: "Search didn't start",
       search_timeout: 'Search ran out of time',
       no_results: 'Nobody shared it',
@@ -538,6 +539,8 @@ export default {
         'Fill in the server URL and API key in Settings → Audio sources.',
       unreachable:
         'slskd was down or unreachable at the time. Check that it runs and the server URL is right.',
+      offline:
+        'slskd was running but not logged in to the Soulseek network (the Soulseek server was down, or slskd was disconnected). slskd reconnects by itself; downloads pause after a run of these (Settings → Audio sources).',
       search_failed:
         'slskd refused the search, often while it is still connecting to the Soulseek network.',
       search_timeout:
@@ -1821,6 +1824,9 @@ export default {
     slskdQueuedTimeout: 'Queued timeout',
     slskdTimeoutHint:
       'How long one download may take before the next candidate is tried.',
+    slskdOutagePause: 'Pause downloads when slskd is down',
+    slskdOutagePauseHint:
+      'After this many songs in a row that slskd could not search for (offline, or cut off from the Soulseek network), the queue pauses instead of fetching them from YouTube, and the notification channels hear about it. It resumes by itself once slskd is back. 0 turns this off.',
     slskdQueuedTimeoutHint:
       'How long to wait in another user’s upload queue before moving on.',
     slskdProfile: 'Quality profile',
@@ -1878,6 +1884,43 @@ export default {
       'YouTube no longer accepts these cookies. Sign in to YouTube in a private window, export a new cookies.txt, close the window and upload the file here.',
     cookiesKeepAliveHint:
       'Downtify keeps these cookies signed in by refreshing them every few minutes. Export them from a private window and close it afterwards: a browser tab left open rotates them and signs this copy out.',
+    ytdlpTitle: 'yt-dlp',
+    ytdlpHint:
+      'The program that downloads from YouTube. YouTube changes often, and an older yt-dlp then fails every download until it is updated.',
+    ytdlpRunning: 'In use: {version}',
+    ytdlpFromImage: 'built in',
+    ytdlpFromUpdate: 'updated',
+    ytdlpLatest: 'Newest: {version}',
+    ytdlpChecked: 'checked {when}',
+    ytdlpAuto: 'Update yt-dlp by itself',
+    ytdlpAutoHint:
+      'Once a day Downtify looks for a newer yt-dlp, downloads it from PyPI, checks it against its published checksum and tests it on a YouTube video. Only a version that passes is used; the one before it is kept.',
+    ytdlpAutoRestart: "Restart when it's quiet",
+    ytdlpAutoRestartHint:
+      'A new yt-dlp is loaded when Downtify starts. With this on, Downtify restarts by itself once nothing is downloading or running.',
+    ytdlpCheck: 'Check now',
+    ytdlpChecking: 'Checking…',
+    ytdlpDownloading: 'Downloading…',
+    ytdlpTesting: 'Testing…',
+    ytdlpRestart: 'Restart now',
+    ytdlpRestarting: 'Restarting Downtify…',
+    ytdlpPending: 'yt-dlp {version} is ready and loads at the next restart.',
+    ytdlpPendingImage: 'The built-in yt-dlp loads again at the next restart.',
+    ytdlpUsePrevious: 'Go back to {version}',
+    ytdlpUseImage: 'Use the built-in version',
+    ytdlpUseImageConfirm:
+      'Go back to the yt-dlp that came with Downtify? Updating by itself is switched off too.',
+    ytdlpUpdateOut:
+      'yt-dlp {version} is out. Switch on updating by itself to use it before the next Downtify release.',
+    ytdlpFailing:
+      'YouTube downloads keep failing ({count} in a row). Last error: {error}',
+    ytdlpBootError: 'The updated yt-dlp would not load: {error}',
+    ytdlpNotify:
+      'Settings > Notifications can tell you when YouTube downloads keep failing, when yt-dlp is updated and when the cookies are signed out.',
+    diskSpaceGroup: 'Disk space',
+    minFreeSpace: 'Pause downloads below this much free space (GB)',
+    minFreeSpaceHint:
+      'Checked every 30 seconds on the download and data folders. Downloads resume by themselves once there is 1 GB more than this. 0 turns it off.',
     audioGroup: 'Audio',
     format: 'Format',
     formatHint: 'Files downloaded from YouTube are converted to this format.',
@@ -2525,6 +2568,11 @@ export default {
     event_watch_done: 'Watch downloads',
     event_spotify_companion:
       'Spotify companion: signed out, other account, quiet or back',
+    event_slskd_outage: 'slskd off Soulseek: downloads paused or resumed',
+    event_ytdlp:
+      'yt-dlp: YouTube downloads failing or working again, updated, update out',
+    event_youtube_cookies: 'YouTube cookies signed out, or a sign-in wanted',
+    event_disk_space: 'Disk almost full: downloads paused or resumed',
     test: 'Test',
     testHint:
       'Sends one message now with what is filled in above, saved or not.',

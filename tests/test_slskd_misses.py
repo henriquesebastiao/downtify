@@ -31,6 +31,10 @@ class _Client:
         return True
 
     @staticmethod
+    def server_state() -> None:
+        return None
+
+    @staticmethod
     def start_search(query: str) -> str:
         return 'search-1'
 

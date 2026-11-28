@@ -95,6 +95,16 @@ Predictable file locations are probed every tick; throttling affects only recurs
 
 `httpx` and `httpcore` request logs are restricted to WARNING. `uvicorn.access` is WARNING too, except with `--log-level DEBUG`. Downtify's own progress and failure logs remain available. Counting request log lines is not a reliable measure of HTTP traffic once INFO logs are suppressed: use the slskd-side access log or a counting test client when comparing request rates.
 
+### When slskd is off the Soulseek network
+
+slskd's own web page can be up while slskd is cut off from the Soulseek network: the Soulseek server is down, or slskd was disconnected and can't log back in. slskd then refuses every search, and each song would be fetched from the next source (YouTube Music, YouTube…) instead — for a long queue or a batch of new [artist watches](playlist-monitor.md), thousands of songs.
+
+Before searching, Downtify asks slskd whether it is logged in to Soulseek. If it isn't, the song goes straight to the next source, and the [Why slskd wasn't used](download-queue.md#why-slskd-wasnt-used) panel counts it as **slskd was off the Soulseek network**.
+
+**Pause downloads when slskd is down** (Settings → Audio sources → slskd, `25` by default) stops that run. After that many songs in a row that slskd could not search for (off the network, unreachable, or refusing searches), Downtify [pauses the download queue](download-queue.md#pausing-and-resuming) and tells the [notification](notifications.md) channels. Songs slskd searched for but didn't find don't count, and any song slskd searches for starts the count over.
+
+While the queue is paused this way, Downtify asks slskd every minute and resumes the queue once slskd is logged in again, with a second message. Pressing **Resume downloads** (or **Pause downloads**) yourself takes over: Downtify stops waiting for slskd. After a restart the queue stays paused until you resume it. `0` turns this off.
+
 ### Leave files in place
 
 With **Leave slskd files in place** on (the default), the downloaded file stays in the slskd folder: Downtify writes the metadata, cover art and lyrics into it there and registers it in the library under a `slskd/…` path. The Library, player and M3U files use that path, and it's served through `/media/slskd/…`.

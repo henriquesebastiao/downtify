@@ -45,6 +45,7 @@ from typing import Any, Optional
 import requests
 from loguru import logger
 
+from . import notifications
 from .cookies import (
     UNKNOWN_HEALTH,
     CookiesStore,
@@ -131,8 +132,20 @@ def _set_health(store: CookiesStore, **changes: Any) -> None:
             'cookies.txt in Settings > YouTube cookies.',
             store.health.get('message') or 'session refused',
         )
+        notifications.emit(
+            'youtube_cookies',
+            'Signed out',
+            'YouTube no longer accepts the cookies, so age-restricted '
+            'songs and bot checks will fail. Upload a fresh cookies.txt '
+            'in Settings > Sources > YouTube cookies.',
+        )
     elif state == 'valid' and previous == 'signed_out':
         logger.info('YouTube cookies are signed in again')
+        notifications.emit(
+            'youtube_cookies',
+            'Signed in again',
+            'YouTube accepts the cookies again.',
+        )
 
 
 def note_ytdlp_message(message: str) -> None:
