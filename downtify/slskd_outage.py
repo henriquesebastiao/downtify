@@ -90,7 +90,7 @@ def pause_after(slskd_settings: dict) -> int:
     """``slskd.outage_pause_after`` as a whole number, 0 = never."""
 
     raw = slskd_settings.get('outage_pause_after')
-    if raw is None or raw == '':
+    if raw is None or (isinstance(raw, str) and not raw.strip()):
         return DEFAULT_PAUSE_AFTER
     try:
         value = int(raw)
