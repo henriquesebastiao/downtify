@@ -98,11 +98,16 @@ export function countWatches(items) {
  * Watches of one kind, optionally only paused ones, matching every word
  * of `query` in the name or the link.
  */
-export function filterWatches(items, { kind, query = '', paused = false }) {
+export function filterWatches(
+  items,
+  { kind, query = '', paused = false, failing = false }
+) {
   const words = fold(query).split(/\s+/).filter(Boolean)
   return items.filter((item) => {
     if (kind && watchKind(item) !== kind) return false
     if (paused && item.enabled) return false
+    // Watches whose playlist/artist can't be read (downtify/watch_reads.py).
+    if (failing && !item.read_failure) return false
     if (!words.length) return true
     const haystack = fold(`${item.name} ${item.url}`)
     return words.every((word) => haystack.includes(word))

@@ -485,9 +485,11 @@ from . import (
     navidrome_ratings,
     notifications,
     providers,
+    slskd_outage,
     spotify,
     spotify_companion,
     stream,
+    watch_reads,
 )
 from .activity import ActivityLog, NowPlaying, describe_user_agent
 from .album_artist import PLAYLIST_ALBUM, as_playlist_album
@@ -717,6 +719,7 @@ from .podcasts import (
 from .server_identity import ServerIdentity
 from .slskd_misses import SlskdMisses
 from .slskd_provider import (
+    SlskdClient,
     normalize_slskd_quality,
     reset_slskd_parallelism,
 )
@@ -867,6 +870,9 @@ DEFAULT_SETTINGS: dict[str, Any] = {
         'search_retries': 5,
         'search_poll_seconds': 15,
         'download_attempts': 5,
+        # Pause the queue after this many songs in a row slskd couldn't
+        # search for (downtify/slskd_outage.py); 0 = never.
+        'outage_pause_after': 25,
         'poll_interval_seconds': 5,
         'poll_max_attempts': 60,
         'download_timeout_seconds': 600,
@@ -1122,6 +1128,8 @@ def _effective_slskd_settings(settings: dict[str, Any]) -> dict[str, Any]:
         'search_retries': bounded('search_retries', 5, 1, 20),
         'search_poll_seconds': bounded('search_poll_seconds', 15, 3, 60),
         'download_attempts': bounded('download_attempts', 5, 1, 10),
+        # 0 is a real value here (never pause), so not ``bounded``.
+        'outage_pause_after': slskd_outage.pause_after(raw),
         'poll_interval_seconds': bounded('poll_interval_seconds', 5, 1, 30),
         'poll_max_attempts': bounded('poll_max_attempts', 60, 1, 300),
         'download_timeout_seconds': bounded(
@@ -3883,6 +3891,7 @@ def record_download_outcome(
     the download's own thread; never raises."""
 
     _record_slskd_miss(song, outcome)
+    _note_slskd_outage(song, outcome)
     log = state.download_log
     if log is None:
         return
@@ -3904,6 +3913,101 @@ def record_download_outcome(
         logger.opt(exception=True).debug(
             'Could not log the download of {}', song.get('name')
         )
+
+
+def _note_slskd_outage(song: dict[str, Any], outcome: str) -> None:
+    """Count the downloads in a row slskd couldn't search for, and pause
+    the queue once there are ``slskd.outage_pause_after`` of them (see
+    :mod:`downtify.slskd_outage`). Runs on the download's own thread."""
+
+    if outcome not in {OUTCOME_COMPLETED, 'failed'}:
+        return
+    slskd = state.settings.get('slskd') or {}
+    if not slskd.get('enabled'):
+        return
+    miss = song.get('slskd_miss')
+    if not isinstance(miss, dict):
+        if str(song.get('download_provider') or '') == 'slskd':
+            slskd_outage.watch.reset()
+        return
+    reason = str(miss.get('reason') or '')
+    if not slskd_outage.watch.note(reason, slskd_outage.pause_after(slskd)):
+        return
+    loop = state.loop
+    if loop is None or loop.is_closed():
+        return
+    try:
+        asyncio.run_coroutine_threadsafe(_pause_for_slskd_outage(), loop)
+    except Exception:
+        logger.opt(exception=True).debug('Could not pause for slskd')
+
+
+async def _pause_for_slskd_outage() -> None:
+    """Pause the queue for an slskd outage, say so, and wait for slskd."""
+
+    if queue_pause.paused:
+        return
+    watch = slskd_outage.watch
+    count = watch.streak
+    why = slskd_outage.reason_text(watch.last_reason)
+    await _set_queue_paused(True)
+    watch.paused_by_outage = True
+    logger.warning(
+        'slskd: {} downloads in a row could not use slskd ({}); '
+        'download queue paused until slskd is back',
+        count,
+        why,
+    )
+    notifications.emit(
+        'slskd_outage',
+        'downloads paused',
+        f'{count} songs in a row could not use slskd: {why}. '
+        'Downloads resume by themselves once slskd is logged in to '
+        'Soulseek again, or press Resume on the queue to carry on now.',
+    )
+    spawn_task(_watch_slskd_outage(), name='slskd-outage-watch')
+
+
+def _slskd_is_back(settings: dict[str, Any]) -> bool:
+    client = SlskdClient(settings)
+    if not client.configured():
+        return False
+    logged_in = client.logged_in()
+    if logged_in is None:
+        # An slskd that doesn't report its Soulseek login: its web API
+        # answering is all that can be told.
+        return client.can_connect()
+    return logged_in
+
+
+async def _watch_slskd_outage() -> None:
+    """Resume the queue paused by :func:`_pause_for_slskd_outage` once
+    slskd is logged in again; stop if an admin took over."""
+
+    watch = slskd_outage.watch
+    while watch.paused_by_outage and queue_pause.paused:
+        await asyncio.sleep(slskd_outage.CHECK_SECONDS)
+        if not (watch.paused_by_outage and queue_pause.paused):
+            return
+        slskd = state.settings.get('slskd') or {}
+        if not slskd.get('enabled'):
+            continue
+        try:
+            back = await asyncio.to_thread(_slskd_is_back, slskd)
+        except Exception:
+            back = False
+        if not back or not watch.paused_by_outage:
+            continue
+        watch.paused_by_outage = False
+        watch.reset()
+        await _set_queue_paused(False)
+        logger.info('slskd: back on the Soulseek network; queue resumed')
+        notifications.emit(
+            'slskd_outage',
+            'downloads resumed',
+            'slskd is logged in to Soulseek again.',
+        )
+        return
 
 
 def _record_slskd_miss(song: dict[str, Any], outcome: str) -> None:
@@ -9666,6 +9770,7 @@ async def _set_queue_paused(paused: bool) -> dict[str, Any]:
 async def pause_queue() -> dict[str, Any]:
     """Start no new download until resumed; running ones finish."""
 
+    slskd_outage.watch.admin_took_over()
     return await _set_queue_paused(True)
 
 
@@ -9673,6 +9778,7 @@ async def pause_queue() -> dict[str, Any]:
 async def resume_queue() -> dict[str, Any]:
     """Carry on with the waiting jobs, with the current settings."""
 
+    slskd_outage.watch.admin_took_over()
     return await _set_queue_paused(False)
 
 
@@ -11692,7 +11798,12 @@ async def list_monitor_playlists(request: Request) -> list[dict[str, Any]]:
     db = _require_monitor_db()
     scope = None if request_is_admin(request) else request_user_id(request)
     playlists = await asyncio.to_thread(db.list_playlists, scope)
-    return [p.to_dict() for p in playlists]
+    # A watch whose playlist/artist keeps failing to read
+    # (downtify/watch_reads.py); ``None`` while it reads fine.
+    return [
+        {**p.to_dict(), 'read_failure': watch_reads.reads.status(p.id)}
+        for p in playlists
+    ]
 
 
 @router.get('/api/monitor/playlists/{playlist_id}/cover')
@@ -12785,7 +12896,10 @@ def _monitor_watch_tracks(
             },
         })
     return {
-        'watch': watch.to_dict(),
+        'watch': {
+            **watch.to_dict(),
+            'read_failure': watch_reads.reads.status(watch.id),
+        },
         'tracks': tracks,
         'missing': len(order) - len(on_disk),
         'failures': db.history.failures(watch.id),

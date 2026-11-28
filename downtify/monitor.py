@@ -26,6 +26,7 @@ from . import (
     providers,
     spotify,
     spotify_companion,
+    watch_reads,
 )
 from .artist_catalogue import (
     ArtistCatalogue,
@@ -670,7 +671,10 @@ class PlaylistMonitorDB:
                 'DELETE FROM monitored_playlists WHERE id = ?',
                 (playlist_id,),
             )
-            return cur.rowcount > 0
+            deleted = cur.rowcount > 0
+        if deleted:
+            watch_reads.reads.forget(playlist_id)
+        return deleted
 
     def update_playlist(
         self, playlist_id: int, **kwargs: Any
@@ -1114,12 +1118,14 @@ async def check_playlist(
         if store is not None:
             await asyncio.to_thread(store.request, playlist.id)
         return 0
-    except Exception:
+    except Exception as exc:
         logger.exception('Failed to fetch playlist {}', playlist.spotify_id)
         await asyncio.to_thread(
             db.update_playlist, playlist.id, last_checked=_now_iso()
         )
+        await asyncio.to_thread(watch_reads.note_failure, playlist, exc)
         return 0
+    await asyncio.to_thread(watch_reads.note_ok, playlist)
     library = library or LibraryStores()
     if from_spotify and library.playlist_spotify_cache is not None:
         await asyncio.to_thread(
@@ -2420,14 +2426,16 @@ async def check_artist(  # noqa: PLR0914  # one sweep: discography, releases, tr
         albums = await asyncio.to_thread(
             _artist_discography, playlist, db, settings or {}
         )
-    except Exception:
+    except Exception as exc:
         logger.exception(
             'Failed to fetch discography for artist {}', playlist.spotify_id
         )
         await asyncio.to_thread(
             db.update_playlist, playlist.id, last_checked=_now_iso()
         )
+        await asyncio.to_thread(watch_reads.note_failure, playlist, exc)
         return 0
+    await asyncio.to_thread(watch_reads.note_ok, playlist)
     spread_release_dates(albums)
     # The watch's page lists the whole catalogue from this listing.
     await asyncio.to_thread(db.catalogue.record, playlist.id, albums)

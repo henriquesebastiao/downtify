@@ -744,6 +744,10 @@ def test_download_from_slskd_retries_when_tags_mismatch(monkeypatch, tmp_path):
             return True
 
         @staticmethod
+        def server_state() -> None:
+            return None
+
+        @staticmethod
         def start_search(query: str) -> str:
             return 'search-1'
 
@@ -853,6 +857,10 @@ def test_download_from_slskd_tries_next_candidate_on_failure(
         @staticmethod
         def can_connect() -> bool:
             return True
+
+        @staticmethod
+        def server_state() -> None:
+            return None
 
         @staticmethod
         def start_search(query: str) -> str:

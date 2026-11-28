@@ -1059,6 +1059,8 @@ RULES: list[tuple[frozenset[str], re.Pattern[str], str]] = [
         (_ALL, r'^/api/(slskd|navidrome|deemix)/test$', ADMIN),
         # AcoustID: the key and its test (downtify/acoustid_routes.py).
         (_ALL, r'^/api/acoustid(/key|/test)?$', ADMIN),
+        # yt-dlp updates (downtify/ytdlp_routes.py).
+        (_ALL, r'^/api/ytdlp(/check|/use|/restart)?$', ADMIN),
         # Why downloads didn't come from slskd (downtify/slskd_misses.py).
         (_ALL, r'^/api/slskd/misses$', ADMIN),
         (_ALL, r'^/api/proxy/test$', ADMIN),

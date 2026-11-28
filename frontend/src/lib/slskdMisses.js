@@ -6,6 +6,7 @@
 export const MISS_REASONS = [
   'not_configured',
   'unreachable',
+  'offline',
   'search_failed',
   'search_timeout',
   'no_results',
