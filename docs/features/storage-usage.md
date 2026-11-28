@@ -15,7 +15,8 @@ The period buttons at the top (7, 30, 90 or 365 days) set what "in the period" m
 | **Library** | Size of the library and how many songs it holds |
 | **Added in N days** | Size and number of songs that came into the library during the period and are still there |
 | **Net change** | How much the library grew (or shrank) over the period, and that change as a weekly rate |
-| **Free space** | Free space on the disk that holds the downloads folder; once the library grows fast enough to matter, roughly how many days until it is full at the current rate |
+| **Free space** | Free space on the disk that holds the downloads folder; once the library grows fast enough to matter, roughly how many days until it is full at the usual pace (see [When the disk is full](#when-the-disk-is-full)) |
+| **When the disk is full** | Roughly when the disk fills up at the library's usual pace, and why: the usual and recent pace, what is still to download, the bursts left out, and which watches make the library grow |
 | **Downloaded** | Downloads that finished in the period, with how many were skipped or failed |
 | **Could be freed** | What [Could be cleaned up](#could-be-cleaned-up) adds up to |
 | **Library size** | The library's size at the end of each day (each week for 365 days); hover the chart for a day's size and song count. Below it, what was added per day or week |
@@ -43,6 +44,19 @@ With **Leave files in the slskd folder** on, slskd's folder *is* where those son
 Downtify notes the library's size every hour, and keeps the last reading of each day. The chart draws those readings as a solid line.
 
 Days before the first reading — every past day, on the first visit — are **estimated** from the songs still in the library: when each was downloaded (known for the downloads made since Downtify started recording which source fetched each file), else the file's modification date. The estimate is drawn dashed: it can only show songs that are still there, so a song deleted since is missing from it. The longer Downtify runs, the more of the chart is measured.
+
+### When the disk is full
+
+The forecast always reads the **last 12 weeks**, whichever period is picked, and works in four steps:
+
+1. **One-off downloads are taken out.** When you add a watch, its first check downloads the whole playlist or discography at once. Those songs are a one-off, not how fast the library grows, so they are left out of the pace and listed under **Left out of the usual pace** (each new watch with what its first download added).
+2. **The usual pace is the middle week.** The 12 weeks are sorted by how much the library grew, and the middle one sets the usual pace, so one busy week — a big batch queued by hand — doesn't make the disk look full next month. A week more than three times the usual one (and over 1 GB) is listed as a **Busy week**.
+3. **What is still to come is counted first.** Songs waiting in the queue, and songs watched playlists list but haven't downloaded yet (minus the ones that keep failing), are taken off the free space before anything else, at the library's average song size.
+4. **The date.** The free space left is divided by the usual pace. When the last two weeks were faster or slower, the forecast also gives the range between the two.
+
+Growth is the library's size, so deleted songs count too. **What makes it grow** splits the pace by watch — what each one added after its first download, a week on average — and puts the rest (downloads by hand, minus deletions) on one line. Artist watches can't say how many songs they still miss, so only watched playlists count toward **Still to download**.
+
+With less than two weeks of history the forecast says it is a rough guess. When the library isn't growing, there is no date; when what is still to download is more than the free space, it says so.
 
 ### Downloads
 

@@ -720,6 +720,8 @@ from .slskd_provider import (
     normalize_slskd_quality,
     reset_slskd_parallelism,
 )
+from .storage_forecast import held_counts
+from .storage_forecast import window_start as forecast_window_start
 from .storage_quota import (
     QUOTA_STATUS_CODE,
     QuotaExceededError,
@@ -12437,16 +12439,17 @@ def _library_usage(days: int) -> dict[str, Any]:
     ctx = library_context()
     snapshots = state.usage_snapshots
     log = state.download_log
+    # One read covers the period and the forecast's own window.
+    first_day = min(start.date(), forecast_window_start(now)).isoformat()
     report = usage_report(
         **_usage_library_inputs(ctx),
-        snapshots=snapshots.since(start.date().isoformat())
-        if snapshots is not None
-        else [],
+        snapshots=snapshots.since(first_day) if snapshots is not None else [],
         downloads=log.since(start) if log is not None else [],
         downloads_since=log.first_at() if log is not None else None,
         disk=_disk_usage(ctx.download_dir),
         now=now,
         days=days,
+        **_forecast_inputs(),
     )
     if snapshots is not None:
         try:
@@ -12454,6 +12457,49 @@ def _library_usage(days: int) -> dict[str, Any]:
         except Exception:
             logger.opt(exception=True).debug('Could not note the library size')
     return report
+
+
+def _forecast_inputs() -> dict[str, Any]:
+    """What the storage forecast needs from the Playlist Monitor and the
+    queue - see :func:`downtify.library_usage.usage_report`."""
+
+    found: dict[str, Any] = {
+        'watch_events': [],
+        'watched_playlists': [],
+        'queued': 0,
+    }
+    store = state.pending_downloads
+    if store is not None:
+        try:
+            found['queued'] = len(store.rows())
+        except Exception:
+            logger.opt(exception=True).debug('Could not count the queue')
+    db = state.monitor_db
+    if db is None:
+        return found
+    try:
+        held = held_counts(db.list_all_downloaded_tracks())
+        failing = db.history.failure_counts()
+        found['watched_playlists'] = [
+            {
+                'id': watch.id,
+                'name': watch.name,
+                'expected': watch.last_track_count,
+                'held': held.get(watch.id, 0),
+                'failing': failing.get(watch.id, 0),
+            }
+            for watch in db.list_playlists()
+            # Artist watches count releases, not songs.
+            if watch.kind == KIND_PLAYLIST
+            and watch.enabled
+            and watch.last_checked
+        ]
+        found['watch_events'] = db.history.events()
+    except Exception:
+        logger.opt(exception=True).warning(
+            'Could not read the Playlist Monitor for the storage forecast'
+        )
+    return found
 
 
 @router.get('/api/library/usage/scan')

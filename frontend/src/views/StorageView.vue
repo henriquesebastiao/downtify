@@ -70,6 +70,8 @@
           </div>
         </div>
 
+        <StorageForecast :forecast="report.forecast" :disk="report.disk" />
+
         <!-- Library size over time -->
         <UiPanel
           :title="t('usage.growthTitle')"
@@ -578,6 +580,7 @@ import UiPanel from '/src/components/ui/UiPanel.vue'
 import UiSegmented from '/src/components/ui/UiSegmented.vue'
 import UiSkeleton from '/src/components/ui/UiSkeleton.vue'
 import PageHeader from '/src/components/library/PageHeader.vue'
+import StorageForecast from '/src/components/library/StorageForecast.vue'
 import API from '/src/model/api'
 import { useAuth } from '/src/model/auth'
 import { formatBytes, timeAgo } from '/src/lib/format'

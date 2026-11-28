@@ -868,8 +868,56 @@ export default {
     perWeekRate: '{size} a week',
     ofTotal: 'of {total}',
     daysLeft: {
-      one: 'of {total} · full in about {count} day at this rate',
-      other: 'of {total} · full in about {count} days at this rate',
+      one: 'of {total} · full in about {count} day at the usual pace',
+      other: 'of {total} · full in about {count} days at the usual pace',
+    },
+    forecast: {
+      title: 'When the disk is full',
+      hint: 'Worked out from the last {weeks} weeks of growth, whichever period is picked above.',
+      fullIn: 'Full in about {span}',
+      beyond: 'Not full for more than ten years',
+      notGrowing: 'The disk isn’t filling up',
+      notGrowingHint:
+        'The library hasn’t grown at its usual pace lately, so there’s no date to give.',
+      backlogTooBig: 'What’s still to download won’t fit',
+      backlogTooBigHint:
+        'About {size} is still to download, and the disk has {free} free.',
+      around: 'Around {date}, with {free} free now.',
+      range:
+        'Between {soonest} if the last two weeks’ pace keeps up and {latest} at the slower pace.',
+      tenYears: 'over ten years',
+      rough: {
+        one: 'Only {count} day of history so far, so this is a rough guess.',
+        other: 'Only {count} days of history so far, so this is a rough guess.',
+      },
+      span: {
+        day: { one: '{count} day', other: '{count} days' },
+        week: { one: '{count} week', other: '{count} weeks' },
+        month: { one: '{count} month', other: '{count} months' },
+        year: { one: '{count} year', other: '{count} years' },
+      },
+      usualPace: 'Usual pace',
+      recentPace: {
+        one: 'Last day',
+        other: 'Last {count} days',
+      },
+      stillTitle: 'Still to download',
+      stillHint:
+        '{songs} songs, about {size} at {each} a song, are taken off the free space first.',
+      queue: 'Waiting in the queue',
+      leftOutTitle: 'Left out of the usual pace',
+      leftOutHint:
+        'One-off bursts that would make the disk look like it fills much sooner than it will.',
+      firstCheck: '{name}: first download',
+      busyWeek: 'Busy week, {from} – {to}',
+      driversTitle: 'What makes it grow',
+      driversHint:
+        'What each watch added after its first download, a week on average over the last {weeks} weeks.',
+      moreWatches: {
+        one: '{count} more watch',
+        other: '{count} more watches',
+      },
+      otherGrowth: 'Everything else (downloads by hand, minus deletions)',
     },
     downloadsShort: '{skipped} skipped · {failed} failed',
     growthTitle: 'Library size',
