@@ -404,9 +404,9 @@ def test_the_report_keeps_working_copies_out_of_the_library():
     assert report['duplicates']['groups'] == 0
     assert report['period']['files'] == 1
     assert report['disk']['free'] == 100
-    assert (
-        report['disk']['days_left'] == 100 // report['growth']['per_day_bytes']
-    )
+    # The tile's days come from the storage forecast, whatever the period.
+    assert report['forecast']['full'] is not None
+    assert report['disk']['days_left'] == report['forecast']['full']['days']
     assert snapshot_of(report) == {
         'files': 1,
         'bytes': 30,

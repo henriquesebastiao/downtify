@@ -40,6 +40,13 @@ from .download_log import OUTCOME_COMPLETED, OUTCOMES
 from .file_providers import guess_provider
 from .library_catalog import entry_content_key, song_key
 from .library_paths import EXTERNAL_LIBRARY_PREFIX, SLSKD_LIBRARY_PREFIX
+from .storage_forecast import (
+    STATUS_OK,
+    WINDOW_DAYS,
+    backlog,
+    storage_forecast,
+    watch_additions,
+)
 from .watch_stats import (
     DEFAULT_DAYS,
     bucket_days_for,
@@ -547,6 +554,10 @@ def usage_report(
     disk: Optional[dict[str, int]],
     now: datetime,
     days: int = DEFAULT_DAYS,
+    forecast_snapshots: Optional[list[dict[str, Any]]] = None,
+    watch_events: Iterable[dict[str, Any]] = (),
+    watched_playlists: Iterable[dict[str, Any]] = (),
+    queued: int = 0,
 ) -> dict[str, Any]:
     """Everything the library usage page shows but the folder scan.
 
@@ -556,6 +567,14 @@ def usage_report(
     *snapshots* the daily sizes kept (:class:`UsageSnapshots`),
     *downloads* the download log rows of the period and *disk* the
     downloads folder's volume (``{total, used, free}``).
+
+    The ``forecast`` (:func:`downtify.storage_forecast.storage_forecast`)
+    reads its own :data:`~downtify.storage_forecast.WINDOW_DAYS`, whatever
+    the period: *forecast_snapshots* are the snapshots of that window
+    (*snapshots* when ``None``), *watch_events* the Playlist Monitor's
+    history, *watched_playlists* each watched playlist's ``{id, name,
+    expected, held, failing}`` and *queued* the songs waiting in the
+    queue.
     """
 
     days = clamp_days(days)
@@ -576,6 +595,20 @@ def usage_report(
         current={'files': totals['files'], 'bytes': totals['bytes']},
     )
     largest = sorted(working.items(), key=lambda item: (-item[1], item[0]))
+    forecast = _forecast(
+        library,
+        times,
+        totals,
+        snapshots=snapshots
+        if forecast_snapshots is None
+        else forecast_snapshots,
+        watch_events=watch_events,
+        watched_playlists=watched_playlists,
+        queued=queued,
+        disk=disk,
+        now=now,
+    )
+    full = forecast['full'] if forecast['status'] == STATUS_OK else None
     return {
         'days': days,
         'generated_at': now.isoformat(),
@@ -596,11 +629,57 @@ def usage_report(
             ],
         },
         'disk': (
-            {**disk, 'days_left': forecast_days(disk, grown['per_day_bytes'])}
+            {
+                **disk,
+                'days_left': None
+                if full is None or full['beyond']
+                else full['days'],
+            }
             if disk
             else None
         ),
+        'forecast': forecast,
     }
+
+
+def _forecast(
+    library: list[dict[str, Any]],
+    times: dict[str, datetime],
+    totals: dict[str, Any],
+    *,
+    snapshots: list[dict[str, Any]],
+    watch_events: Iterable[dict[str, Any]],
+    watched_playlists: Iterable[dict[str, Any]],
+    queued: int,
+    disk: Optional[dict[str, int]],
+    now: datetime,
+) -> dict[str, Any]:
+    window = growth(
+        snapshots,
+        library,
+        times,
+        now=now,
+        days=WINDOW_DAYS,
+        current={'files': totals['files'], 'bytes': totals['bytes']},
+    )
+    sizes = {norm_path(e.get('file')): _size(e) for e in library}
+    sizes.pop('', None)
+    average = totals['bytes'] // totals['files'] if totals['files'] else 0
+    return storage_forecast(
+        points=window['points'],
+        additions=watch_additions(
+            watch_events,
+            sizes,
+            since=now - timedelta(days=WINDOW_DAYS + 1),
+        ),
+        disk=disk,
+        still_to_come=backlog(
+            queued=queued,
+            watches=watched_playlists,
+            average_bytes=average,
+        ),
+        now=now,
+    )
 
 
 def snapshot_of(report: dict[str, Any]) -> dict[str, Any]:

@@ -1879,7 +1879,41 @@ Admin. The library's size, growth and download outcomes over the last `days` (qu
     "slskd_in_place": false,
     "examples": [{ "file": "slskd/user/Dummy/05 Roads.flac", "bytes": 34000000 }]
   },
-  "disk": { "total": 2000000000000, "used": 1500000000000, "free": 500000000000, "days_left": 5769 }
+  "disk": { "total": 2000000000000, "used": 1500000000000, "free": 500000000000, "days_left": 410 },
+  "forecast": {
+    "window_days": 84,
+    "history_days": 84,
+    "estimated_days": 20,
+    "rough": false,
+    "usual_per_day_bytes": 1150000000,
+    "recent_per_day_bytes": 2100000000,
+    "recent_days": 14,
+    "one_off": {
+      "bytes": 42000000000,
+      "watches": [{ "id": 12, "name": "Dummy Artist", "bytes": 42000000000, "songs": 3800 }]
+    },
+    "spikes": [{ "from": "2026-11-01", "to": "2026-11-07", "bytes": 21000000000 }],
+    "drivers": {
+      "watches": [{ "id": 3, "name": "Dummy Mix", "bytes": 9000000000, "songs": 900, "per_week_bytes": 750000000 }],
+      "more_watches": 0,
+      "more_watches_bytes": 0,
+      "other_bytes": 4000000000,
+      "other_per_week_bytes": 330000000
+    },
+    "still_to_come": {
+      "songs": 1200,
+      "bytes": 10200000000,
+      "queued": 200,
+      "watch_songs": 1000,
+      "average_bytes": 8500000,
+      "watches": [{ "id": 7, "name": "Dummy Playlist", "songs": 1000, "bytes": 8500000000 }]
+    },
+    "room_bytes": 489800000000,
+    "status": "ok",
+    "full": { "days": 425, "date": "2028-01-27", "beyond": false },
+    "soonest": { "days": 233, "date": "2027-07-19", "beyond": false },
+    "latest": { "days": 425, "date": "2028-01-27", "beyond": false }
+  }
 }
 ```
 
@@ -1889,7 +1923,8 @@ Admin. The library's size, growth and download outcomes over the last `days` (qu
 - `growth.points` run from `days` ago to today (one a day up to 90 days, one a week beyond); a day before the first daily snapshot is `estimated` from the same file dates. `since` is the oldest snapshot used, `null` when none.
 - `downloads` counts every attempt that ended in the period, from the queue and Playlist Monitor alike; `since` is the oldest one still kept (400 days at most), `null` when none.
 - `duplicates.bytes` is what keeping only the largest file of each group would free; `examples` are the 50 groups that would free most. `kind` is `exact` (one name and size) or `likely` (same artist and title, lengths within 3 s).
-- `disk` is the volume of the downloads folder (`null` when unreadable); `days_left` is `null` while the library isn't growing.
+- `disk` is the volume of the downloads folder (`null` when unreadable); `days_left` is `forecast.full.days`, `null` while there is no date (or it is over ten years).
+- `forecast` always reads the last `window_days` (84), whatever `days` is. The library's daily growth, minus what watches downloaded on their first check (`one_off`), gives the `usual_per_day_bytes` (the median week) and `recent_per_day_bytes` (the last `recent_days`). `spikes` are weeks over three times the usual one and over 1 GB. `still_to_come` (queued songs, and songs watched playlists list but neither hold nor keep failing on, at `average_bytes` each) is taken off `free` into `room_bytes`. `full` is `room_bytes` at the usual pace, `soonest`/`latest` at the faster/slower of the two paces; each is `null` without a date, and `beyond` past ten years. `status` is `ok`, `not_growing`, `backlog_too_big` or `no_disk`. `drivers` splits the growth by watch (after its first check) and `other` (downloads by hand, minus deletions); `rough` is fewer than 14 days of history.
 
 ---
 

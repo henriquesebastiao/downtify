@@ -197,3 +197,60 @@ export function formatDay(day, locale = 'en') {
     return date.toISOString().slice(0, 10)
   }
 }
+
+/**
+ * Days as the unit a person would say them in: `{ unit, count }` with
+ * `unit` one of `day`, `week`, `month`, `year` (days under two weeks,
+ * weeks under two months, months under two years).
+ */
+export function timeSpan(days) {
+  const value = Math.max(0, Number(days) || 0)
+  if (value < 14) return { unit: 'day', count: Math.round(value) }
+  if (value < 61) return { unit: 'week', count: Math.round(value / 7) }
+  if (value < 730) return { unit: 'month', count: Math.round(value / 30.44) }
+  return { unit: 'year', count: Math.round(value / 365.25) }
+}
+
+/**
+ * What the storage forecast section shows, from the report's
+ * `forecast`: the headline (`state`: `ok`, `beyond`, `not_growing`,
+ * `backlog_too_big` or `null` with no disk reading), the range when it
+ * differs from the headline, and the lists that explain it.
+ */
+export function forecastSummary(forecast) {
+  if (!forecast) return null
+  const full = forecast.full
+  let state = forecast.status === 'no_disk' ? null : forecast.status
+  if (state === 'ok' && full?.beyond) state = 'beyond'
+  const soonest = forecast.soonest
+  const latest = forecast.latest
+  const range =
+    state === 'ok' &&
+    soonest &&
+    latest &&
+    timeSpanKey(soonest) !== timeSpanKey(latest)
+      ? { soonest, latest }
+      : null
+  return {
+    state,
+    full: full && !full.beyond ? full : null,
+    span: full && !full.beyond ? timeSpan(full.days) : null,
+    tone: state === 'backlog_too_big' ? 'danger' : daysLeftTone(full?.days),
+    range,
+    usualPerWeek: (forecast.usual_per_day_bytes || 0) * 7,
+    recentPerWeek: (forecast.recent_per_day_bytes || 0) * 7,
+    recentDays: forecast.recent_days || 0,
+    rough: !!forecast.rough,
+    historyDays: forecast.history_days || 0,
+    stillToCome: forecast.still_to_come || { songs: 0, bytes: 0 },
+    oneOff: forecast.one_off || { bytes: 0, watches: [] },
+    spikes: forecast.spikes || [],
+    drivers: forecast.drivers || { watches: [], other_per_week_bytes: 0 },
+  }
+}
+
+function timeSpanKey(when) {
+  if (when.beyond) return 'beyond'
+  const span = timeSpan(when.days)
+  return `${span.count} ${span.unit}`
+}

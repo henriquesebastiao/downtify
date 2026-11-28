@@ -4,6 +4,7 @@ import {
   cleanupSummary,
   daysLeftTone,
   folderKinds,
+  forecastSummary,
   formatDay,
   growthChart,
   linePath,
@@ -11,6 +12,7 @@ import {
   nearestIndex,
   outcomeBars,
   providerRows,
+  timeSpan,
 } from '../lib/libraryUsage'
 
 function point(day, bytes, estimated = false) {
@@ -157,5 +159,59 @@ describe('library usage', () => {
   it('writes a day the short way', () => {
     expect(formatDay('2026-10-27', 'en')).toBe('Oct 27')
     expect(formatDay('nope', 'en')).toBe('nope')
+  })
+})
+
+describe('storage forecast', () => {
+  it('says days as a person would', () => {
+    expect(timeSpan(3)).toEqual({ unit: 'day', count: 3 })
+    expect(timeSpan(20)).toEqual({ unit: 'week', count: 3 })
+    expect(timeSpan(150)).toEqual({ unit: 'month', count: 5 })
+    expect(timeSpan(1000)).toEqual({ unit: 'year', count: 3 })
+  })
+
+  const base = {
+    status: 'ok',
+    full: { days: 150, date: '2027-04-27', beyond: false },
+    soonest: { days: 60, date: '2027-01-27', beyond: false },
+    latest: { days: 150, date: '2027-04-27', beyond: false },
+    usual_per_day_bytes: 10,
+    recent_per_day_bytes: 25,
+    recent_days: 14,
+    rough: false,
+    history_days: 84,
+  }
+
+  it('gives the headline, its tone and the range', () => {
+    const summary = forecastSummary(base)
+    expect(summary.state).toBe('ok')
+    expect(summary.span).toEqual({ unit: 'month', count: 5 })
+    expect(summary.tone).toBe('')
+    expect(summary.range.soonest.days).toBe(60)
+    expect(summary.usualPerWeek).toBe(70)
+    expect(summary.recentPerWeek).toBe(175)
+  })
+
+  it('drops a range that says the same as the headline', () => {
+    const summary = forecastSummary({ ...base, soonest: base.full })
+    expect(summary.range).toBeNull()
+  })
+
+  it('tells beyond, a backlog too big and no disk apart', () => {
+    expect(
+      forecastSummary({
+        ...base,
+        full: { days: 3650, date: null, beyond: true },
+      }).state
+    ).toBe('beyond')
+    const backlog = forecastSummary({
+      ...base,
+      status: 'backlog_too_big',
+      full: null,
+    })
+    expect(backlog.state).toBe('backlog_too_big')
+    expect(backlog.tone).toBe('danger')
+    expect(forecastSummary({ ...base, status: 'no_disk' }).state).toBeNull()
+    expect(forecastSummary(null)).toBeNull()
   })
 })
