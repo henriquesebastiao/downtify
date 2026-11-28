@@ -56,7 +56,20 @@ EVENTS = (
     'new_releases',
     'watch_done',
     'spotify_companion',
+    'slskd_outage',
+    'ytdlp',
+    'youtube_cookies',
+    'spotify',
 )
+#: Events added after channels were first saved, with the date. A saved
+#: channel that never saw one (``known_events`` lacks it) gets its
+#: default, so an event that is on by default reaches existing setups.
+_ADDED_EVENTS = (
+    'slskd_outage',
+    'ytdlp',
+    'youtube_cookies',
+    'spotify',
+)  # 2026-11
 CHANNELS = ('discord', 'ntfy', 'gotify', 'webhook')
 
 #: Settings that are secrets: never sent back to the page.
@@ -78,7 +91,15 @@ POLL_SECONDS = 3.0
 #: Seconds between two messages to one channel (Discord allows ~5/2s).
 CHANNEL_GAP = 1.0
 
-_DEFAULT_EVENTS = ['download_failed', 'new_releases', 'spotify_companion']
+_DEFAULT_EVENTS = [
+    'download_failed',
+    'new_releases',
+    'spotify_companion',
+    'slskd_outage',
+    'ytdlp',
+    'youtube_cookies',
+    'spotify',
+]
 _DEFAULT_PHASES = ['start', 'finish', 'fail']
 
 
@@ -92,6 +113,7 @@ def _channel_defaults(name: str) -> dict[str, Any]:
             if p in _DEFAULT_PHASES or (p == 'progress' and name == 'discord')
         ],
         'events': list(_DEFAULT_EVENTS),
+        'known_events': list(EVENTS),
     }
     if name == 'discord':
         base.update(
@@ -138,6 +160,19 @@ def _user_ids(value: Any) -> str:
     return ' '.join(p for p in parts if p.isdigit())[:1000]
 
 
+def _events(given: dict[str, Any], default: list[str]) -> list[str]:
+    """A saved channel's events, plus the default-on events it never saw."""
+
+    events = _pick(given.get('events'), EVENTS, default)
+    if not isinstance(given.get('events'), list):
+        return events
+    known = given.get('known_events')
+    if not isinstance(known, list):
+        known = [e for e in EVENTS if e not in _ADDED_EVENTS]
+    unseen = {e for e in default if e not in known}
+    return [e for e in EVENTS if e in events or e in unseen]
+
+
 def effective(raw: Any) -> dict[str, Any]:
     """A fresh, complete settings dict; unknown or bad values fall back
     to their defaults."""
@@ -161,7 +196,8 @@ def effective(raw: Any) -> dict[str, Any]:
             'enabled': given.get('enabled') is True,
             'tasks': _pick(given.get('tasks'), TASKS, base['tasks']),
             'phases': _pick(given.get('phases'), PHASES, base['phases']),
-            'events': _pick(given.get('events'), EVENTS, base['events']),
+            'events': _events(given, base['events']),
+            'known_events': list(EVENTS),
         }
         if name == 'discord':
             mode = given.get('mode')
@@ -350,6 +386,22 @@ _EVENT_TEXT = {
         'Spotify companion: {n} changes',
         'warning',
     ),
+    # slskd couldn't search, so the queue was paused - or it is back
+    # (downtify/slskd_outage.py).
+    'slskd_outage': ('slskd', 'slskd: {n} changes', 'warning'),
+    # YouTube downloads keep failing, or yt-dlp was updated, failed its
+    # test or has an update (downtify/ytdlp_health.py, ytdlp_update.py).
+    'ytdlp': ('yt-dlp', 'yt-dlp: {n} changes', 'warning'),
+    # The YouTube cookies were signed out, or YouTube asks for a sign-in
+    # (downtify/cookie_refresh.py, ytdlp_health.py).
+    'youtube_cookies': (
+        'YouTube cookies',
+        'YouTube cookies: {n} changes',
+        'warning',
+    ),
+    # Spotify changed a query code: found again, or still broken
+    # (downtify/spotify_hashes.py).
+    'spotify': ('Spotify', 'Spotify: {n} changes', 'warning'),
 }
 
 

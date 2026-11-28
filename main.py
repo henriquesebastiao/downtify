@@ -31,6 +31,10 @@ from starlette.exceptions import HTTPException as StaticHTTPException
 from starlette.middleware.gzip import GZipMiddleware
 from uvicorn import Config, Server
 
+# Must stay the first downtify import: it puts the yt-dlp saved by
+# Settings > Sources > YouTube on sys.path before anything imports
+# yt-dlp (downtify/ytdlp_boot.py).
+import downtify.ytdlp_boot  # noqa: F401
 from downtify import (
     __version__,
     account_routes,
@@ -46,10 +50,14 @@ from downtify import (
     mobile_routes,
     navidrome_ratings_routes,
     notification_routes,
+    notifications,
     spotify_companion_routes,
+    spotify_hashes,
     storage_quota_routes,
     trash_routes,
     wanted_routes,
+    ytdlp_health,
+    ytdlp_routes,
 )
 from downtify.activity import ActivityLog
 from downtify.auth import AuthMiddleware, AuthStore, auth_disabled_from_env
@@ -146,6 +154,7 @@ from downtify.proxy_config import configure_outbound_proxy
 from downtify.server_identity import ServerIdentity
 from downtify.server_port import (
     DEFAULT_PORT,
+    request_restart,
     resolve_port,
     restart_wanted,
     set_restart_handler,
@@ -164,6 +173,12 @@ from downtify.traffic import (
 )
 from downtify.transcode import transcoder_from_env
 from downtify.update_check import UpdateChecker, update_check_loop
+from downtify.ytdlp_update import (
+    YtdlpUpdater,
+    version_key,
+    ytdlp_update_loop,
+)
+from downtify.ytdlp_update import running_version as running_ytdlp_version
 
 load_dotenv()
 
@@ -238,6 +253,63 @@ def _setup_logging(level: str) -> None:
 DOWNLOAD_DIR = Path(os.getenv('DOWNLOAD_DIR', '/downloads'))
 DATABASE_DIR = Path(os.getenv('DATABASE_DIR', '/data'))
 WEB_GUI_LOCATION = os.getenv('WEB_GUI_LOCATION', '/downtify/frontend/dist')
+
+
+def _downtify_quiet() -> bool:
+    """Nothing is downloading and no long job runs: a restart (for a new
+    yt-dlp) interrupts nothing."""
+
+    if any(
+        job.get('status') in {'queued', 'downloading'}
+        for job in api.state.download_jobs.values()
+    ):
+        return False
+    runner = api.state.upgrade_runner
+    if runner is not None and runner.busy():
+        return False
+    return not any(
+        task.state == 'running'
+        for task in notifications.dispatcher.read_tasks()
+    )
+
+
+def _ytdlp_updater() -> YtdlpUpdater:
+    def cookies_file() -> Optional[str]:
+        store = api.state.cookies_store
+        path = store.active_path() if store is not None else None
+        return str(path) if path else None
+
+    updater = YtdlpUpdater(
+        DATABASE_DIR,
+        cookies_file=cookies_file,
+        is_idle=_downtify_quiet,
+        restart=request_restart,
+    )
+
+    def update_hint() -> str:
+        state = updater.load()
+        latest = state['latest']
+        newer = latest and version_key(latest) > version_key(
+            running_ytdlp_version()
+        )
+        if state['enabled']:
+            return 'Checking for a newer yt-dlp now. '
+        if newer:
+            return (
+                f'yt-dlp {latest} is out: turn on "Update yt-dlp by '
+                'itself" in Settings > Sources. '
+            )
+        return (
+            'Turn on "Update yt-dlp by itself" in Settings > Sources to '
+            'get fixes without waiting for a Downtify release. '
+        )
+
+    ytdlp_health.monitor.version = running_ytdlp_version
+    ytdlp_health.monitor.on_broken = updater.ask_soon
+    ytdlp_health.monitor.update_hint = update_hint
+    return updater
+
+
 #: ``Cache-Control`` for the hashed files under ``assets/``.
 IMMUTABLE_ASSET = 'public, max-age=31536000, immutable'
 DEFAULT_HOST = os.getenv('HOST', '0.0.0.0')
@@ -756,6 +828,14 @@ def build_app() -> FastAPI:
             update_check_loop(api.state.update_checker),
             name='update-check-loop',
         )
+        # Settings > Sources > YouTube: yt-dlp updates itself when that
+        # is on, and YouTube downloads that keep failing are reported
+        # (downtify/ytdlp_update.py, downtify/ytdlp_health.py).
+        api.state.ytdlp_updater = _ytdlp_updater()
+        api.spawn_task(
+            ytdlp_update_loop(api.state.ytdlp_updater),
+            name='ytdlp-update-loop',
+        )
         # The library's size once an hour, for the growth on the library
         # usage page (downtify/library_usage.py).
         api.spawn_task(api.usage_snapshot_loop(), name='usage-snapshot-loop')
@@ -895,6 +975,10 @@ def build_app() -> FastAPI:
 
     # Lives alongside settings.json in the /data volume so an uploaded
     # cookies.txt survives container updates.
+    # Spotify query codes learnt from its player after it changed them
+    # (downtify/spotify_hashes.py), kept across restarts.
+    spotify_hashes.configure(DATABASE_DIR / spotify_hashes.FILE_NAME)
+
     cookies_store = CookiesStore(DATABASE_DIR / 'cookies.txt')
     api.state.cookies_store = cookies_store
     # yt-dlp's "cookies are no longer valid" / bot-check warnings land in
@@ -976,6 +1060,7 @@ def build_app() -> FastAPI:
     app.include_router(notification_routes.router)
     app.include_router(spotify_companion_routes.router)
     app.include_router(aurral_routes.router)
+    app.include_router(ytdlp_routes.router)
 
     @app.get('/list')
     def list_downloads(request: Request, refresh: bool = False) -> list[str]:
