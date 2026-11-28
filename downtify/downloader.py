@@ -38,7 +38,7 @@ from mutagen.oggopus import OggOpus
 from mutagen.oggvorbis import OggVorbis
 from yt_dlp.postprocessor.ffmpeg import FFmpegExtractAudioPP
 
-from . import cover_sources
+from . import cover_sources, ytdlp_health
 from . import deezer as deezer_mod
 from . import isrc as isrc_mod
 from . import lyrics as lyrics_mod
@@ -1823,6 +1823,8 @@ class Downloader:
                 ydl.add_post_processor(extraction, when='post_process')
                 ydl.download([url])
         except Exception as exc:
+            if soundcloud is None:
+                ytdlp_health.report_failure(video_id, str(exc))
             if soundcloud is not None and _is_missing_format_error(exc):
                 raise RuntimeError(
                     f'"{song.get("name") or "This track"}" only streams a '
@@ -1832,6 +1834,8 @@ class Downloader:
             raise _translate_download_error(
                 exc, song, has_cookies=has_cookies
             ) from exc
+        if soundcloud is None:
+            ytdlp_health.report_success()
 
         return _downloaded_audio(target_dir, basename, fmt, extraction.written)
 

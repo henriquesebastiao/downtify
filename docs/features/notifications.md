@@ -26,6 +26,9 @@ For each task you pick the moments you want to hear about: **Started**, **Progre
 | Songs downloaded | A song finished downloading (off by default: a big playlist sends a lot). |
 | New releases found | An artist watch found releases it did not have, with their names. |
 | Watch downloads | A watch's automatic check downloaded new songs. |
+| slskd off Soulseek | The queue was [paused because slskd could not search](slskd-navidrome.md#when-slskd-is-off-the-soulseek-network), and again when slskd is back and the queue resumed. On by default, also for channels saved before it existed. |
+| yt-dlp | [YouTube downloads keep failing](updates.md#when-youtube-downloads-keep-failing) or work again; [yt-dlp was updated](updates.md#yt-dlp-updates), failed its test or would not load; with updating off, a newer yt-dlp is out while downloads fail. On by default, also for channels saved before it existed. |
+| YouTube cookies | YouTube signed the [cookies](youtube-cookies.md) out, or signed them in again, or YouTube downloads keep hitting its bot check. On by default, also for channels saved before it existed. |
 
 A burst of the same event is grouped: Downtify waits 30 seconds and sends one message such as "12 downloads failed" with the first ten songs listed, not twelve messages.
 
