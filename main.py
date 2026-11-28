@@ -52,6 +52,7 @@ from downtify import (
     notification_routes,
     notifications,
     spotify_companion_routes,
+    spotify_hashes,
     storage_quota_routes,
     trash_routes,
     wanted_routes,
@@ -974,6 +975,10 @@ def build_app() -> FastAPI:
 
     # Lives alongside settings.json in the /data volume so an uploaded
     # cookies.txt survives container updates.
+    # Spotify query codes learnt from its player after it changed them
+    # (downtify/spotify_hashes.py), kept across restarts.
+    spotify_hashes.configure(DATABASE_DIR / spotify_hashes.FILE_NAME)
+
     cookies_store = CookiesStore(DATABASE_DIR / 'cookies.txt')
     api.state.cookies_store = cookies_store
     # yt-dlp's "cookies are no longer valid" / bot-check warnings land in

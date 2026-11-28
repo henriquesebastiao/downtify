@@ -18,7 +18,7 @@ from urllib.parse import urlsplit
 import httpx
 from loguru import logger
 
-from . import spotify_companion
+from . import spotify_companion, spotify_hashes
 from .album_artist import album_artist_fields
 from .file_naming import file_name_key
 from .telemetry import json_log_blob, redact_sensitive_mapping
@@ -900,11 +900,60 @@ def _token_from_embed_payload(payload: dict[str, Any]) -> Optional[str]:
 
 _PARTNER_API = 'https://api-partner.spotify.com/pathfinder/v1/query'
 # sha256 of the fetchPlaylist GraphQL document in the Spotify web player.
-# Update when the player bundle rolls and the API returns PersistedQueryNotFound.
+# When Spotify stops accepting it (PersistedQueryNotFound), the current
+# one is looked up in the player (downtify/spotify_hashes.py).
 # Location in the bundle: new tz.l("fetchPlaylist","query","<hash>",null)
 _GRAPHQL_HASH = (
     'a65e12194ed5fc443a1cdebed5fabe33ca5b07b987185d63c72483867ad13cb4'
 )
+
+
+def _persisted_query(
+    operation: str,
+    variables: dict[str, Any],
+    builtin_hash: str,
+    token: str,
+) -> dict[str, Any]:
+    """The JSON answer of one persisted query against the player's
+    GraphQL (``data`` and/or ``errors``).
+
+    When Spotify no longer knows the query's code, the current one is
+    looked up in Spotify's player and the request is sent once more
+    (:mod:`downtify.spotify_hashes`).
+    """
+
+    sha256_hash = spotify_hashes.current(operation, builtin_hash)
+    for attempt in range(2):
+        resp = httpx.get(
+            _PARTNER_API,
+            params={
+                'operationName': operation,
+                'variables': json.dumps(variables),
+                'extensions': json.dumps({
+                    'persistedQuery': {
+                        'version': 1,
+                        'sha256Hash': sha256_hash,
+                    }
+                }),
+            },
+            headers={
+                'Authorization': f'Bearer {token}',
+                'User-Agent': _USER_AGENT,
+                'app-platform': 'WebPlayer',
+            },
+            timeout=15,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        if attempt or not spotify_hashes.is_stale(data):
+            return data
+        fresh = spotify_hashes.store.repair(
+            operation, sha256_hash, builtin_hash
+        )
+        if not fresh:
+            return data
+        sha256_hash = fresh
+    return data
 
 
 def _track_dict_from_graphql_item(
@@ -988,33 +1037,18 @@ def _graphql_album_artist(album: Any) -> dict[str, Any]:
 def _graphql_fetch_page(
     playlist_id: str, token: str, offset: int, limit: int = 100
 ) -> dict[str, Any]:
-    resp = httpx.get(
-        _PARTNER_API,
-        params={
-            'operationName': 'fetchPlaylist',
-            'variables': json.dumps({
-                'uri': f'spotify:playlist:{playlist_id}',
-                'offset': offset,
-                'limit': limit,
-                'enableWatchFeedEntrypoint': False,
-                'includeEpisodeContentRatingsV2': False,
-            }),
-            'extensions': json.dumps({
-                'persistedQuery': {
-                    'version': 1,
-                    'sha256Hash': _GRAPHQL_HASH,
-                }
-            }),
+    data = _persisted_query(
+        'fetchPlaylist',
+        {
+            'uri': f'spotify:playlist:{playlist_id}',
+            'offset': offset,
+            'limit': limit,
+            'enableWatchFeedEntrypoint': False,
+            'includeEpisodeContentRatingsV2': False,
         },
-        headers={
-            'Authorization': f'Bearer {token}',
-            'User-Agent': _USER_AGENT,
-            'app-platform': 'WebPlayer',
-        },
-        timeout=15,
+        _GRAPHQL_HASH,
+        token,
     )
-    resp.raise_for_status()
-    data = resp.json()
     logger.debug(
         'Spotify GraphQL fetchPlaylist id={} offset={}: {}',
         playlist_id,
@@ -1263,24 +1297,7 @@ def _partner_query(
 ) -> dict[str, Any]:
     """The ``data`` of one persisted query against the player's GraphQL."""
 
-    resp = httpx.get(
-        _PARTNER_API,
-        params={
-            'operationName': operation,
-            'variables': json.dumps(variables),
-            'extensions': json.dumps({
-                'persistedQuery': {'version': 1, 'sha256Hash': sha256_hash}
-            }),
-        },
-        headers={
-            'Authorization': f'Bearer {token}',
-            'User-Agent': _USER_AGENT,
-            'app-platform': 'WebPlayer',
-        },
-        timeout=15,
-    )
-    resp.raise_for_status()
-    data = resp.json()
+    data = _persisted_query(operation, variables, sha256_hash, token)
     if 'errors' in data:
         raise ValueError(f'GraphQL errors: {data["errors"]}')
     return data['data']
@@ -1712,31 +1729,16 @@ def _artist_overview(artist_id: str) -> dict[str, Any]:
     if not token:
         return {}
     try:
-        resp = httpx.get(
-            _PARTNER_API,
-            params={
-                'operationName': 'queryArtistOverview',
-                'variables': json.dumps({
-                    'uri': f'spotify:artist:{artist_id}',
-                    'locale': '',
-                    'preReleaseV2': False,
-                }),
-                'extensions': json.dumps({
-                    'persistedQuery': {
-                        'version': 1,
-                        'sha256Hash': _ARTIST_OVERVIEW_HASH,
-                    }
-                }),
+        data = _persisted_query(
+            'queryArtistOverview',
+            {
+                'uri': f'spotify:artist:{artist_id}',
+                'locale': '',
+                'preReleaseV2': False,
             },
-            headers={
-                'Authorization': f'Bearer {token}',
-                'User-Agent': _USER_AGENT,
-                'app-platform': 'WebPlayer',
-            },
-            timeout=15,
+            _ARTIST_OVERVIEW_HASH,
+            token,
         )
-        resp.raise_for_status()
-        data = resp.json()
     except Exception:
         logger.opt(exception=True).debug(
             'Spotify artist overview fetch failed for {}', artist_id
@@ -1862,33 +1864,18 @@ def _search_suggestion_items(text: str) -> list[Any]:
     if not token:
         raise ValueError('No anonymous Spotify token')
     try:
-        resp = httpx.get(
-            _PARTNER_API,
-            params={
-                'operationName': 'searchSuggestions',
-                'variables': json.dumps({
-                    'query': text,
-                    'limit': 20,
-                    'numberOfTopResults': 20,
-                    'offset': 0,
-                    'includeAuthors': False,
-                }),
-                'extensions': json.dumps({
-                    'persistedQuery': {
-                        'version': 1,
-                        'sha256Hash': _SEARCH_SUGGESTIONS_HASH,
-                    }
-                }),
+        data = _persisted_query(
+            'searchSuggestions',
+            {
+                'query': text,
+                'limit': 20,
+                'numberOfTopResults': 20,
+                'offset': 0,
+                'includeAuthors': False,
             },
-            headers={
-                'Authorization': f'Bearer {token}',
-                'User-Agent': _USER_AGENT,
-                'app-platform': 'WebPlayer',
-            },
-            timeout=15,
+            _SEARCH_SUGGESTIONS_HASH,
+            token,
         )
-        resp.raise_for_status()
-        data = resp.json()
     except Exception as exc:
         logger.opt(exception=True).debug(
             'Spotify search failed for {!r}', text

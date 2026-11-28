@@ -38,6 +38,7 @@ from . import (
     spotify,
     spotify_companion,
     spotify_companion_agent,
+    spotify_hashes,
 )
 from .monitor import (
     KIND_PLAYLIST,
@@ -368,7 +369,11 @@ async def poll(body: dict[str, Any] = Body(...)) -> dict[str, Any]:
     _send(await asyncio.to_thread(found.report, now, body))
     pairs = await asyncio.to_thread(_watches)
     decision = await asyncio.to_thread(
-        found.plan, now, [w for _p, w in pairs], spotify._GRAPHQL_HASH
+        found.plan,
+        now,
+        [w for _p, w in pairs],
+        # The code learnt from Spotify's player, when it changed.
+        spotify_hashes.current('fetchPlaylist', spotify._GRAPHQL_HASH),
     )
     return {**decision, 'enabled': found.enabled}
 

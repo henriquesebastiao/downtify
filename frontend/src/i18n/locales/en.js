@@ -2568,6 +2568,7 @@ export default {
     event_ytdlp:
       'yt-dlp: YouTube downloads failing or working again, updated, update out',
     event_youtube_cookies: 'YouTube cookies signed out, or a sign-in wanted',
+    event_spotify: 'Spotify changed its player: fixed by itself, or broken',
     test: 'Test',
     testHint:
       'Sends one message now with what is filled in above, saved or not.',

@@ -59,11 +59,17 @@ EVENTS = (
     'slskd_outage',
     'ytdlp',
     'youtube_cookies',
+    'spotify',
 )
 #: Events added after channels were first saved, with the date. A saved
 #: channel that never saw one (``known_events`` lacks it) gets its
 #: default, so an event that is on by default reaches existing setups.
-_ADDED_EVENTS = ('slskd_outage', 'ytdlp', 'youtube_cookies')  # 2026-11
+_ADDED_EVENTS = (
+    'slskd_outage',
+    'ytdlp',
+    'youtube_cookies',
+    'spotify',
+)  # 2026-11
 CHANNELS = ('discord', 'ntfy', 'gotify', 'webhook')
 
 #: Settings that are secrets: never sent back to the page.
@@ -92,6 +98,7 @@ _DEFAULT_EVENTS = [
     'slskd_outage',
     'ytdlp',
     'youtube_cookies',
+    'spotify',
 ]
 _DEFAULT_PHASES = ['start', 'finish', 'fail']
 
@@ -392,6 +399,9 @@ _EVENT_TEXT = {
         'YouTube cookies: {n} changes',
         'warning',
     ),
+    # Spotify changed a query code: found again, or still broken
+    # (downtify/spotify_hashes.py).
+    'spotify': ('Spotify', 'Spotify: {n} changes', 'warning'),
 }
 
 

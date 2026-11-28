@@ -30,7 +30,7 @@ If it still fails with cookies configured, the cookies are stale or the account 
 **Fix**, in order of how often it helps:
 
 1. **Upload a `cookies.txt`** ([YouTube Cookies](features/youtube-cookies.md)). An authenticated session is challenged far less often. This is the single most effective fix.
-2. **Add a delay between downloads** — **Settings** → *Delay between downloads* (try 5–15 s) and lower *Parallel downloads*. Hammering YouTube with a whole playlist at once is what triggers rate limiting.
+2. **Add a delay between downloads** — **Settings** → _Delay between downloads_ (try 5–15 s) and lower _Parallel downloads_. Hammering YouTube with a whole playlist at once is what triggers rate limiting.
 3. **Force IPv4** — set `DOWNTIFY_FORCE_IPV4=1` if your host advertises IPv6 but can't actually route it (shows up as DNS/`EAI_AGAIN` errors).
 4. **Update the image** — `docker compose pull && docker compose up -d`. YouTube changes its defenses often and each release ships a newer `yt-dlp`.
 
@@ -38,7 +38,7 @@ If it still fails with cookies configured, the cookies are stale or the account 
 
 **Symptom** — `DOWNTIFY_COOKIES_FILE` is set but Downtify behaves as if there were no cookies.
 
-**Cause** — the path is a *container* path. A Windows path like `C:\Users\me\cookies.txt` means nothing inside the container, and the file must be bind-mounted before the variable can point at it.
+**Cause** — the path is a _container_ path. A Windows path like `C:\Users\me\cookies.txt` means nothing inside the container, and the file must be bind-mounted before the variable can point at it.
 
 **Fix** — skip the variable entirely and upload the file through **Settings** → **YouTube cookies**. That path needs no mounts and works identically on every platform.
 
@@ -62,7 +62,7 @@ The uploaded file lives in Downtify's data directory (`/data`). If that director
 ```yaml
 volumes:
   - ./downloads:/downloads
-  - downtify_data:/data   # ← keep this
+  - downtify_data:/data # ← keep this
 ```
 
 ## "cookies.txt is invalid" when uploading
@@ -82,6 +82,17 @@ If files vanish on every restart, the `/downloads` volume isn't persisted — sa
 ## A Spotify mix downloads songs that aren't in my mix
 
 Daily Mixes, Discover Weekly, Release Radar and Spotify's other "made for you" playlists show your songs only to you, signed in. Downtify reads Spotify without an account, so it gets the version Spotify shows someone who isn't signed in, which can hold completely different songs. Copy the mix's songs into a playlist of your own on Spotify and watch that one instead. See [Spotify mixes made for you](features/playlist-monitor.md#spotify-mixes-made-for-you).
+
+## Spotify playlists stop loading
+
+Downtify reads Spotify signed out, the way Spotify's own web player does. Each request names its query by a code from that player, and Spotify changes those codes now and then. When Spotify stops accepting one (it answers `PersistedQueryNotFound`), Downtify:
+
+1. opens `open.spotify.com`, reads the player's script (and, for an artist's full discography, the part of the player that loads it) and finds the current code;
+2. sends the request again with it, and keeps the code in `<data>/spotify_hashes.json` so it is used from then on, also after a restart.
+
+The log says `Spotify changed the fetchPlaylist query; using its new code …`, and the **Spotify** [notification](features/notifications.md) says "Fixed by itself". Looking for a code happens at most once every 10 minutes per query.
+
+If the player no longer has that query at all, the log says `Spotify refuses the … query and no new code was found` and the notification says "Reading Spotify is broken". Then Spotify playlists, watches and artist pages fail until a Downtify update follows Spotify's change. A learnt code is only used over the built-in code it replaced, so an update that ships newer codes uses those.
 
 ## "Could not find a YouTube match for '…'"
 
