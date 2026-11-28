@@ -1917,6 +1917,10 @@ export default {
     ytdlpBootError: 'The updated yt-dlp would not load: {error}',
     ytdlpNotify:
       'Settings > Notifications can tell you when YouTube downloads keep failing, when yt-dlp is updated and when the cookies are signed out.',
+    diskSpaceGroup: 'Disk space',
+    minFreeSpace: 'Pause downloads below this much free space (GB)',
+    minFreeSpaceHint:
+      'Checked every 30 seconds on the download and data folders. Downloads resume by themselves once there is 1 GB more than this. 0 turns it off.',
     audioGroup: 'Audio',
     format: 'Format',
     formatHint: 'Files downloaded from YouTube are converted to this format.',
@@ -2568,6 +2572,7 @@ export default {
     event_ytdlp:
       'yt-dlp: YouTube downloads failing or working again, updated, update out',
     event_youtube_cookies: 'YouTube cookies signed out, or a sign-in wanted',
+    event_disk_space: 'Disk almost full: downloads paused or resumed',
     test: 'Test',
     testHint:
       'Sends one message now with what is filled in above, saved or not.',

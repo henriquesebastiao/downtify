@@ -838,6 +838,8 @@ def build_app() -> FastAPI:
         # The library's size once an hour, for the growth on the library
         # usage page (downtify/library_usage.py).
         api.spawn_task(api.usage_snapshot_loop(), name='usage-snapshot-loop')
+        # Pause downloads before the disk is full (downtify/disk_guard.py).
+        api.spawn_task(api.disk_guard_loop(), name='disk-guard-loop')
         # Automatic backups (Settings > Server > Backups).
         api.spawn_task(backup_routes.schedule_loop(), name='backup-schedule')
         # Settings > Notifications: off until turned on; reads the job

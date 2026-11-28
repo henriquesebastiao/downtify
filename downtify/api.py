@@ -472,6 +472,7 @@ from . import (
     cookie_refresh,
     cover_sources,
     deezer,
+    disk_guard,
     download_sources,
     integration_check,
     library_import,
@@ -820,6 +821,9 @@ DEFAULT_SETTINGS: dict[str, Any] = {
     # the copy the library already has (issue #546).
     'artist_watch_complete_albums': False,
     'max_parallel_downloads': 3,
+    # Pause downloads while a folder Downtify writes to has less free
+    # space than this, in GB (downtify/disk_guard.py); 0 = never.
+    'min_free_space_gb': 5,
     'download_delay_seconds': 0,
     'download_retry_budget_minutes': 0,
     'max_track_duration_seconds': MAX_TRACK_DURATION_SECONDS,
@@ -9770,6 +9774,7 @@ async def pause_queue() -> dict[str, Any]:
     """Start no new download until resumed; running ones finish."""
 
     slskd_outage.watch.admin_took_over()
+    disk_guard.guard.admin_took_over()
     return await _set_queue_paused(True)
 
 
@@ -9778,6 +9783,7 @@ async def resume_queue() -> dict[str, Any]:
     """Carry on with the waiting jobs, with the current settings."""
 
     slskd_outage.watch.admin_took_over()
+    disk_guard.guard.admin_took_over()
     return await _set_queue_paused(False)
 
 
@@ -10113,6 +10119,8 @@ async def update_settings_endpoint(
                 continue
             if key == 'max_parallel_downloads':
                 state.settings[key] = _clamp_parallel_downloads(raw_value)
+            elif key == 'min_free_space_gb':
+                state.settings[key] = disk_guard.min_free_gb({key: raw_value})
             elif key == 'download_retry_budget_minutes':
                 state.settings[key] = _clamp_retry_budget(raw_value)
             elif key == 'download_delay_seconds':
@@ -12613,6 +12621,91 @@ def take_usage_snapshot() -> None:
         state.download_log.prune()
     if state.slskd_misses is not None:
         state.slskd_misses.prune()
+
+
+def _disk_guard_paths() -> list[Path]:
+    """The folders downloads and the databases are written to."""
+
+    paths: list[Path] = []
+    downloader = state.downloader
+    if downloader is not None:
+        paths.append(Path(downloader.download_dir))
+    if state.settings_path:
+        paths.append(Path(state.settings_path).parent)
+    return paths
+
+
+async def disk_guard_tick() -> str:
+    """One look at the free space (see :mod:`downtify.disk_guard`)."""
+
+    guard = disk_guard.guard
+    limit = disk_guard.min_free_gb(state.settings)
+    worst = await asyncio.to_thread(disk_guard.lowest, _disk_guard_paths())
+    action = guard.decide(worst, limit, queue_pause.paused)
+    if not action:
+        return ''
+    left = disk_guard.human(worst.free) if worst else '?'
+    where = worst.path if worst else '?'
+    if action in {'pause', 'repause'}:
+        await _set_queue_paused(True)
+    if action == 'pause':
+        logger.warning(
+            'Only {} free in {} (limit {} GB); download queue paused',
+            left,
+            where,
+            limit,
+        )
+        notifications.emit(
+            'disk_space',
+            'downloads paused',
+            f'Only {left} free in {where}, below the {limit} GB limit '
+            '(Settings > Downloads & files). Downloads resume by '
+            'themselves once there is room again.',
+        )
+    elif action == 'warn':
+        logger.warning(
+            'Only {} free in {} (limit {} GB); the queue stays paused',
+            left,
+            where,
+            limit,
+        )
+        notifications.emit(
+            'disk_space',
+            'almost full',
+            f'Only {left} free in {where}, below the {limit} GB limit. '
+            'The queue is paused already; make room before resuming it.',
+        )
+    elif action == 'resume':
+        if slskd_outage.watch.paused_by_outage:
+            # slskd still holds the pause; it resumes it when it's back.
+            logger.info('Disk space is back; the queue waits for slskd')
+        else:
+            await _set_queue_paused(False)
+            logger.info('{} free in {}; download queue resumed', left, where)
+        notifications.emit(
+            'disk_space',
+            'room again',
+            f'{left} free in {where}.'
+            + (
+                ' Downloads wait for slskd, which is still away.'
+                if slskd_outage.watch.paused_by_outage
+                else ' Downloads resumed.'
+            ),
+        )
+    return action
+
+
+async def disk_guard_loop(
+    interval_seconds: float = disk_guard.CHECK_SECONDS,
+) -> None:
+    """Background task: pause downloads before the disk is full."""
+
+    while True:
+        try:
+            await disk_guard_tick()
+        except Exception:
+            logger.exception('Could not check the free disk space')
+        await asyncio.sleep(interval_seconds)
 
 
 async def usage_snapshot_loop(

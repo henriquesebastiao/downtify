@@ -94,6 +94,7 @@ const settings = ref({
   cache_cover_art: false,
   organize_by_album: true,
   max_parallel_downloads: 3,
+  min_free_space_gb: 5,
   download_delay_seconds: 0,
   max_track_duration_seconds: 600,
   external_sync_delay_seconds: 0,

@@ -499,6 +499,18 @@
           <!-- Downloads & files -->
           <template v-else-if="section === 'files'">
             <GlobalQueueControl />
+            <SettingGroup :title="t('settings.diskSpaceGroup')">
+              <div class="grid gap-4 px-5 py-4 sm:grid-cols-2">
+                <UiInput
+                  v-model="s.min_free_space_gb"
+                  :label="t('settings.minFreeSpace')"
+                  :hint="t('settings.minFreeSpaceHint')"
+                  type="number"
+                  min="0"
+                  max="10000"
+                />
+              </div>
+            </SettingGroup>
             <SettingGroup :title="t('settings.audioGroup')">
               <SettingRow
                 :label="t('settings.format')"

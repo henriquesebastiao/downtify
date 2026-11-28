@@ -22,20 +22,31 @@ Everyone sees whether the queue is paused; only an admin can pause or resume it,
 
 The same global control is available at the top of Settings → Downloads & files (`/settings/files`) and in Playlist Monitor (`/monitor`), next to Check all. Both read the confirmed server state. They require an administrator's web session; a paired phone token does not grant server administration. On a lost confirmation, use Check status before sending another change.
 
+## When the disk is almost full
+
+Downtify pauses the queue by itself before the disk runs out, instead of letting every download fail with "No space left on device" (and leave half-written files behind).
+
+- Every 30 seconds it looks at the free space of the download folder and of the data folder (settings and databases).
+- When either has less than **Pause downloads below this much free space** (Settings → Downloads & files → Disk space, 5 GB by default, `0` = never), the queue is paused like **Pause downloads** does, and the **Disk space** [notification](notifications.md) says which folder and how much is left. Running downloads finish.
+- Once every folder has 1 GB more than the limit again, the queue resumes by itself, with a second message. If the queue is also paused because [slskd is away](slskd-navidrome.md#when-slskd-is-off-the-soulseek-network), it waits for slskd.
+- If the queue was already paused when space ran low, it only says so and leaves the pause to you.
+- Pausing or resuming by hand takes over: after you resume on a nearly full disk, Downtify won't pause again until space has gone back above the limit and dropped once more.
+- The pause is kept across a restart like any other; resume it by hand if Downtify restarted while it was paused.
+
 ## Why slskd wasn't used
 
 With [slskd](slskd-navidrome.md) first in the source order, a song it can't serve is downloaded by the next source (YouTube Music, YouTube…) or not at all. For an admin, the **Why slskd wasn't used** panel next to the queue counts why that happened, as bars, most frequent first:
 
-| Reason                                                                    | What it means                                                                        |
-| ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
-| **Nobody shared it**                                                      | No user had the song with a free upload slot                                         |
-| **No file matched the song**                                              | Files came back, but none matched the title, artist and length                       |
-| **Match below the minimum score**                                         | A close file scored below the threshold that keeps remixes and live versions out     |
-| **Blocked by quality rules**                                              | Matching files failed the format or bitrate rules (Settings → Audio sources → slskd) |
-| **Search / Download ran out of time**                                     | The search or the transfer took longer than the slskd timeouts                       |
-| **Transfers failed**                                                      | Every file picked was refused or never arrived complete                              |
-| **Wrong song in the file**                                                | The downloaded file's tags named another song; it was kept in slskd's folder         |
-| **Couldn't reach slskd** / **Search didn't start** / **slskd not set up** | slskd itself wasn't available                                                        |
+| Reason                                                                    | What it means                                                                                                               |
+| ------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| **Nobody shared it**                                                      | No user had the song with a free upload slot                                                                                |
+| **No file matched the song**                                              | Files came back, but none matched the title, artist and length                                                              |
+| **Match below the minimum score**                                         | A close file scored below the threshold that keeps remixes and live versions out                                            |
+| **Blocked by quality rules**                                              | Matching files failed the format or bitrate rules (Settings → Audio sources → slskd)                                        |
+| **Search / Download ran out of time**                                     | The search or the transfer took longer than the slskd timeouts                                                              |
+| **Transfers failed**                                                      | Every file picked was refused or never arrived complete                                                                     |
+| **Wrong song in the file**                                                | The downloaded file's tags named another song; it was kept in slskd's folder                                                |
+| **Couldn't reach slskd** / **Search didn't start** / **slskd not set up** | slskd itself wasn't available                                                                                               |
 | **slskd was off the Soulseek network**                                    | slskd ran but wasn't logged in to Soulseek ([what happens then](slskd-navidrome.md#when-slskd-is-off-the-soulseek-network)) |
 
 Click a reason to see what to change and the latest songs it happened to, with details such as the best match's score or how many files the quality rules turned down. The line below says what was used instead. Songs slskd served, and songs already in the library, aren't counted. **Reset** starts the count over, so after changing a setting the next downloads show whether it helped. Songs and files are not touched.
