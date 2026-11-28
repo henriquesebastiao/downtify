@@ -948,6 +948,70 @@ class NavidromeClient:
             },
         )
 
+    def _set_playlist_image(self, playlist_id: str, image: bytes) -> bool:
+        """Give a playlist its own picture, in place of the mosaic
+        Navidrome makes from its songs' covers (Navidrome's own API,
+        ``POST /api/playlist/{id}/image``). Signs in with the login that
+        owns Downtify's playlists. ``False`` when that fails, e.g. on a
+        Navidrome too old to take playlist pictures."""
+
+        try:
+            login = httpx.post(
+                f'{self.base_url}/auth/login',
+                json={'username': self.username, 'password': self.password},
+                timeout=self.timeout,
+                follow_redirects=True,
+            )
+            login.raise_for_status()
+            token = str((login.json() or {}).get('token') or '')
+            if not token:
+                return False
+            resp = httpx.post(
+                f'{self.base_url}/api/playlist/{playlist_id}/image',
+                headers={'x-nd-authorization': f'Bearer {token}'},
+                files={'image': ('cover.jpg', image, 'image/jpeg')},
+                timeout=self.timeout,
+                follow_redirects=True,
+            )
+            resp.raise_for_status()
+        except (httpx.HTTPError, ValueError) as exc:
+            logger.info(
+                'navidrome: playlist picture not uploaded id={} err={}',
+                playlist_id,
+                exc,
+            )
+            return False
+        return True
+
+
+#: The picture last given to each of Downtify's Navidrome playlists
+#: (playlist id -> SHA-256 of the image), so a sync uploads it only when
+#: it is new or changed. Empty after a restart: the next sync of each
+#: playlist uploads its picture once.
+_playlist_pictures: dict[str, str] = {}
+
+
+def _give_playlist_picture(
+    client: NavidromeClient, playlist_id: str, cover: Optional[Path]
+) -> None:
+    """Upload *cover* (the picture saved beside the playlist's M3U) to
+    Downtify's Navidrome playlist *playlist_id* when it changed."""
+
+    if cover is None or not playlist_id:
+        return
+    try:
+        image = cover.read_bytes()
+    except OSError:
+        return
+    if not image:
+        return
+    digest = hashlib.sha256(image).hexdigest()
+    if _playlist_pictures.get(playlist_id) == digest:
+        return
+    if client._set_playlist_image(playlist_id, image):
+        _playlist_pictures[playlist_id] = digest
+        logger.info('navidrome: playlist picture set id={}', playlist_id)
+
 
 def played_and_starred(
     client: NavidromeClient, *, max_albums: int = 1000
@@ -1367,12 +1431,18 @@ def sync_playlist_to_navidrome(  # noqa: PLR0914
     comment: str = 'Synced from Spotify via Downtify',
     trigger_scan: Optional[bool] = None,
     delete_tag_mismatches: Optional[TagMismatchDeleteContext] = None,
+    cover: Optional[Path] = None,
 ) -> Optional[PlaylistSyncResult]:
     """Match *songs* in Navidrome and create/replace a server playlist.
 
     *trigger_scan*: when ``None``, use ``scan_after_download`` from settings
     (typical after new downloads). Pass ``False`` after deletes or path fixes
     when files were removed, not added.
+
+    *cover*: the picture saved beside the playlist's M3U, given to the
+    playlist Downtify makes so Navidrome doesn't show a mosaic of its
+    songs' covers instead (one Navidrome imports from the M3U finds the
+    picture by itself).
     """
     cfg = _effective_navidrome_settings(settings)
     if not cfg.get('enabled'):
@@ -1522,6 +1592,7 @@ def sync_playlist_to_navidrome(  # noqa: PLR0914
             comment=comment,
             public=bool(cfg.get('public_playlist')),
         )
+        _give_playlist_picture(client, playlist_id, cover)
     except Exception as exc:
         logger.info(
             'navidrome: playlist create failed name={!r} matched={}/{} err={}',

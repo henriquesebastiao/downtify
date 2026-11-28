@@ -1130,6 +1130,7 @@ def playlist_tracks_from_id(playlist_id: str) -> list[dict[str, Any]]:
         return personal[1]
     payload = _fetch_embed_json('playlist', playlist_id)
     entity = _entity_from(payload)
+    _note_playlist_cover(playlist_id, entity)
     token = _token_from_embed_payload(payload)
     if token:
         try:
@@ -1153,6 +1154,7 @@ def playlist_info_and_tracks(
     payload = _fetch_embed_json('playlist', playlist_id)
     entity = _entity_from(payload)
     embed_name = entity.get('name') or entity.get('title') or playlist_id
+    _note_playlist_cover(playlist_id, entity)
     token = _token_from_embed_payload(payload)
     if token:
         try:
@@ -1189,6 +1191,34 @@ def playlist_cover_url_from_id(playlist_id: str) -> str:
     payload = _fetch_embed_json('playlist', playlist_id)
     entity = _entity_from(payload)
     return _cover_url(entity)
+
+
+#: The cover each playlist's embed page showed when its songs were last
+#: read (playlist id -> (when, address)): a Playlist Monitor check then
+#: sees a changed picture without asking Spotify for the page twice.
+_seen_playlist_covers: dict[str, tuple[float, str]] = {}
+_SEEN_COVER_SECONDS = 10 * 60
+
+
+def _note_playlist_cover(playlist_id: str, entity: dict[str, Any]) -> None:
+    try:
+        url = _cover_url(entity)
+    except Exception:
+        return
+    if url:
+        _seen_playlist_covers[playlist_id] = (time.monotonic(), url)
+
+
+def seen_playlist_cover(playlist_id: str) -> str:
+    """The cover the playlist's embed page showed when its songs were
+    read in the last few minutes, else ``''`` (then ask
+    :func:`playlist_cover_url_from_id`). Read once: it is forgotten
+    here."""
+
+    hit = _seen_playlist_covers.pop(playlist_id, None)
+    if hit is None or time.monotonic() - hit[0] > _SEEN_COVER_SECONDS:
+        return ''
+    return hit[1]
 
 
 def _id_from_uri(uri: str) -> str:

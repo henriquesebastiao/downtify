@@ -4,6 +4,7 @@ organize_by_artist routing logic."""
 from __future__ import annotations
 
 import base64
+import os
 import shutil
 import subprocess
 import time
@@ -590,6 +591,20 @@ def test_save_playlist_cover_writes_jpg_next_to_m3u(tmp_path, monkeypatch):
     expected = tmp_path / 'My Playlist.jpg'
     assert result == expected
     assert expected.read_bytes() == b'IMG-BYTES'
+
+
+def test_save_playlist_cover_leaves_the_same_picture_untouched(
+    tmp_path, monkeypatch
+):
+    # A media server sees no change when the picture is the same.
+    monkeypatch.setattr(downloader_mod, '_download_cover', lambda url: b'IMG')
+    m3u_path = tmp_path / 'P.m3u'
+    cover = tmp_path / 'P.jpg'
+    cover.write_bytes(b'IMG')
+    os.utime(cover, ns=(1_000_000_000, 1_000_000_000))
+
+    assert save_playlist_cover('https://img/cover', m3u_path) == cover
+    assert cover.stat().st_mtime_ns == 1_000_000_000
 
 
 def test_save_playlist_cover_noop_when_no_url(tmp_path, monkeypatch):

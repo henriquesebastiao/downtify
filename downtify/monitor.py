@@ -1072,7 +1072,7 @@ async def _fill_from_spotify_track(song: dict[str, Any]) -> None:
         song['explicit'] = True
 
 
-async def check_playlist(
+async def check_playlist(  # noqa: PLR0914
     playlist: MonitoredPlaylist,
     db: PlaylistMonitorDB,
     downloader: Downloader,
@@ -1179,12 +1179,14 @@ async def check_playlist(
             len(new_tracks),
             playlist.name,
         )
-        if settings is None or settings.get('generate_m3u', True):
-            # Once per sweep, and before the tracks — a sweep that finds
-            # nothing new never re-fetches it.
-            await asyncio.to_thread(
-                _download_cover_for_watch, playlist, downloader, settings or {}
-            )
+    cover_changed = False
+    if settings is None or settings.get('generate_m3u', True):
+        # Every check, before the tracks: a picture changed on the
+        # service (one uploaded in place of Spotify's four-song mosaic)
+        # replaces the saved one even when no song is new.
+        cover_changed = await asyncio.to_thread(
+            _download_cover_for_watch, playlist, downloader, settings or {}
+        )
 
     delay_seconds = (settings or {}).get('download_delay_seconds', 0) or 0
     track_positions = {id(t): i for i, t in enumerate(tracks)}
@@ -1278,11 +1280,15 @@ async def check_playlist(
         {str(t.get('song_id')) for t in tracks if t.get('song_id')},
     )
 
-    if downloaded > 0 or linked_from_library > 0:
+    # A new picture alone also reaches Navidrome (its scan, or the
+    # picture of Downtify's own playlist there).
+    if downloaded > 0 or linked_from_library > 0 or cover_changed:
         known_tracks = await asyncio.to_thread(
             db.get_track_filenames, playlist.id
         )
-        if settings is None or settings.get('generate_m3u', True):
+        if (downloaded > 0 or linked_from_library > 0) and (
+            settings is None or settings.get('generate_m3u', True)
+        ):
             await asyncio.to_thread(
                 _regenerate_m3u,
                 playlist,
@@ -1728,6 +1734,7 @@ def _sync_library_playlist(
             settings,
             navidrome_index=library.navidrome_index,
             download_dir=download_dir,
+            cover=saved_watch_cover(playlist, downloader),
         )
     except Exception:
         logger.exception('Navidrome sync failed for "{}"', playlist.name)
@@ -2884,15 +2891,21 @@ def _download_cover_for_watch(
     playlist: MonitoredPlaylist,
     downloader: Downloader,
     settings: dict[str, Any],
-) -> Optional[Path]:
-    """Save a watched playlist's cover where its M3U lives.
+) -> bool:
+    """Save a watched playlist's cover where its M3U lives, or bring the
+    saved one up to date.
 
-    Called once per sweep that has tracks to fetch, before the first of
-    them — the path is resolved from the playlist's name rather than
-    read back from a written M3U, so the artwork is in place while the
-    folder fills up.
+    Called on every check, before its first download — the path is
+    resolved from the playlist's name rather than read back from a
+    written M3U, so the artwork is in place while the folder fills up.
+    A picture changed on the service (one uploaded in Spotify in place
+    of its four-song mosaic, a mix's new picture) replaces the saved
+    one; a picture already saved isn't downloaded again. ``True`` when
+    the saved picture is new or changed.
     """
 
+    if not settings.get('download_cover_art_playlists'):
+        return False
     organize = downloader.organize_by_artist or downloader.organize_by_album
     pl_subdir = m3u.sanitize_playlist_name(playlist.name)
     m3u_path = m3u.m3u_path_for(
@@ -2900,9 +2913,59 @@ def _download_cover_for_watch(
         playlist.name,
         playlist_subdir=None if organize else pl_subdir,
     )
-    return download_playlist_cover(
-        playlist.source, playlist.spotify_id, m3u_path, settings
+    cover_path = Path(m3u_path).with_suffix('.jpg')
+    # Spotify's page was just read for the songs: its picture comes along.
+    url = ''
+    if playlist.source == SOURCE_SPOTIFY:
+        url = spotify.seen_playlist_cover(playlist.spotify_id)
+    if not url:
+        try:
+            url = fetch_playlist_cover_url(
+                playlist.source, playlist.spotify_id
+            )
+        except Exception:
+            logger.opt(exception=True).warning(
+                'Failed to resolve playlist cover art for {} ({})',
+                playlist.spotify_id,
+                playlist.source,
+            )
+            return False
+    if not url:
+        return False
+    key = str(cover_path)
+    if _saved_watch_covers.get(key) == url and cover_path.is_file():
+        return False
+    before = _file_stamp(cover_path)
+    if save_playlist_cover(url, m3u_path) is None:
+        return False
+    _saved_watch_covers[key] = url
+    _watch_cover_urls[(playlist.source, playlist.spotify_id)] = (
+        monotonic(),
+        url,
     )
+    changed = _file_stamp(cover_path) != before
+    if changed and before is not None:
+        logger.info(
+            'Playlist "{}" has a new picture on {}; saved it',
+            playlist.name,
+            playlist.source,
+        )
+    return changed
+
+
+#: The cover address last saved beside each watched playlist's M3U (by
+#: the picture's path), so a check whose playlist kept its picture skips
+#: the download. Empty after a restart: the first check then downloads
+#: the picture once and leaves the file alone when it is the same.
+_saved_watch_covers: dict[str, str] = {}
+
+
+def _file_stamp(path: Path) -> Optional[tuple[int, int]]:
+    try:
+        stat = path.stat()
+    except OSError:
+        return None
+    return stat.st_mtime_ns, stat.st_size
 
 
 # Ids of watches with a check running right now. Adding a watch starts its
