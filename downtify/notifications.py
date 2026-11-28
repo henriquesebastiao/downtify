@@ -57,11 +57,13 @@ EVENTS = (
     'watch_done',
     'spotify_companion',
     'slskd_outage',
+    'ytdlp',
+    'youtube_cookies',
 )
 #: Events added after channels were first saved, with the date. A saved
 #: channel that never saw one (``known_events`` lacks it) gets its
 #: default, so an event that is on by default reaches existing setups.
-_ADDED_EVENTS = ('slskd_outage',)  # 2026-11
+_ADDED_EVENTS = ('slskd_outage', 'ytdlp', 'youtube_cookies')  # 2026-11
 CHANNELS = ('discord', 'ntfy', 'gotify', 'webhook')
 
 #: Settings that are secrets: never sent back to the page.
@@ -88,6 +90,8 @@ _DEFAULT_EVENTS = [
     'new_releases',
     'spotify_companion',
     'slskd_outage',
+    'ytdlp',
+    'youtube_cookies',
 ]
 _DEFAULT_PHASES = ['start', 'finish', 'fail']
 
@@ -378,6 +382,16 @@ _EVENT_TEXT = {
     # slskd couldn't search, so the queue was paused - or it is back
     # (downtify/slskd_outage.py).
     'slskd_outage': ('slskd', 'slskd: {n} changes', 'warning'),
+    # YouTube downloads keep failing, or yt-dlp was updated, failed its
+    # test or has an update (downtify/ytdlp_health.py, ytdlp_update.py).
+    'ytdlp': ('yt-dlp', 'yt-dlp: {n} changes', 'warning'),
+    # The YouTube cookies were signed out, or YouTube asks for a sign-in
+    # (downtify/cookie_refresh.py, ytdlp_health.py).
+    'youtube_cookies': (
+        'YouTube cookies',
+        'YouTube cookies: {n} changes',
+        'warning',
+    ),
 }
 
 

@@ -240,7 +240,12 @@ def test_resuming_by_hand_ends_the_watch(outage):
 def test_new_event_reaches_channels_saved_before_it():
     saved = {'channels': {'discord': {'events': ['download_failed']}}}
     events = notifications.effective(saved)['channels']['discord']['events']
-    assert events == ['download_failed', 'slskd_outage']
+    assert events == [
+        'download_failed',
+        'slskd_outage',
+        'ytdlp',
+        'youtube_cookies',
+    ]
 
 
 def test_an_unticked_event_stays_off():

@@ -61,7 +61,7 @@ Downtify keeps the uploaded file signed in by itself:
 What you still have to do:
 
 - **Export from a private/incognito window and close it.** Sign in to YouTube in a private window, open `youtube.com/robots.txt` in that tab, export the cookies, then close the window. A tab you keep using rotates the session itself, and the copy Downtify has is signed out within minutes. Don't use the same account in a normal browser window at the same time if you can avoid it.
-- **Upload a new file when the screen says *Signed out*.** Google can still end the session (a password change, "sign out of all devices", a security review). The log says so too: `YouTube cookies are signed out`.
+- **Upload a new file when the screen says *Signed out*.** Google can still end the session (a password change, "sign out of all devices", a security review). The log says so too: `YouTube cookies are signed out`, and so does the **YouTube cookies** [notification](notifications.md) (on by default once a channel is set up).
 - Some regions require full identity verification on the Google account before YouTube serves age-restricted content at all. Being signed in is not always enough.
 
 ::: info Why there is no "Sign in with Google" button

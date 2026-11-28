@@ -491,6 +491,7 @@
             </SettingGroup>
 
             <SettingGroup :title="t('settings.youtubeTitle')">
+              <YtdlpCard />
               <CookiesCard />
             </SettingGroup>
           </template>
@@ -1403,6 +1404,7 @@ import UiSwitch from '/src/components/ui/UiSwitch.vue'
 import ExperimentalBadge from '/src/components/ui/ExperimentalBadge.vue'
 import PageHeader from '/src/components/library/PageHeader.vue'
 import CookiesCard from '/src/components/settings/CookiesCard.vue'
+import YtdlpCard from '/src/components/settings/YtdlpCard.vue'
 import AcoustidSettings from '/src/components/settings/AcoustidSettings.vue'
 import FormatPicker from '/src/components/settings/FormatPicker.vue'
 import { downloadsFormat } from '/src/lib/audioFormats'

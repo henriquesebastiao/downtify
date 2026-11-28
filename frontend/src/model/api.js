@@ -1067,6 +1067,27 @@ function testAcoustid() {
   return API.post('/api/acoustid/test')
 }
 
+// ── yt-dlp updates (admins): Settings > Sources > YouTube ─────────────
+function getYtdlp() {
+  return API.get('/api/ytdlp')
+}
+
+function setYtdlp(switches) {
+  return API.put('/api/ytdlp', switches)
+}
+
+function checkYtdlp() {
+  return API.post('/api/ytdlp/check')
+}
+
+function useYtdlp(version) {
+  return API.post('/api/ytdlp/use', { version })
+}
+
+function restartForYtdlp() {
+  return API.post('/api/ytdlp/restart')
+}
+
 // ── Library storage and usage (admins) ───────────────────────────────
 // Size, growth, downloads, duplicates and working copies over `days`.
 function getLibraryUsage(days = 30) {
@@ -1561,6 +1582,11 @@ export default {
   getAcoustid,
   setAcoustidKey,
   testAcoustid,
+  getYtdlp,
+  setYtdlp,
+  checkYtdlp,
+  useYtdlp,
+  restartForYtdlp,
   getCookiesStatus,
   uploadCookies,
   deleteCookies,
