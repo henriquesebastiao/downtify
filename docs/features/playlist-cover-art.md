@@ -42,9 +42,11 @@ Both services serve JPEG for these URLs even when the original artwork was a PNG
 **Before the tracks**, in both cases — the folder already looks like the playlist while it fills up, and a media server that scans mid-download finds the artwork rather than a bare folder:
 
 - **A manual playlist download** — once, as soon as the playlist name is resolved, before the first track starts.
-- **[Playlist Monitor](playlist-monitor.md)** — once per sweep that has something to download, before that sweep's first track. A sweep that finds nothing new doesn't re-fetch it.
+- **[Playlist Monitor](playlist-monitor.md)** — on every check, before that check's first track, even when no song is new. When the picture changed on the service, the saved one is replaced; when it didn't, nothing is downloaded again.
 
-Failing to resolve or download the cover (a network error, a playlist with no artwork) is logged and skipped — it never holds up or fails the download itself.
+Failing to resolve or download the cover (a network error, a playlist with no artwork) is logged and skipped — it never holds up or fails the download itself, and a picture saved earlier stays.
+
+A Spotify playlist without a picture of its own gets a mosaic of its first four albums' covers, and that is what Downtify saves. To show a picture of your own instead, set one for the playlist in Spotify. The next check of the watch replaces the saved mosaic, and Navidrome shows the new picture too.
 
 ## In the Downtify interface
 
@@ -54,7 +56,9 @@ On a playlist you created, choose **Upload cover** to use your own JPEG, PNG or 
 
 ## Navidrome
 
-Nothing to configure: Navidrome resolves playlist artwork from a **sidecar image** — a file named after the playlist, in the same folder — which is exactly what Downtify writes. As long as Navidrome's music folder covers your downloads folder, the artwork appears on its next scan. No API call from Downtify is involved. See [slskd & Navidrome](slskd-navidrome.md#navidrome).
+Nothing to configure: Navidrome resolves playlist artwork from a **sidecar image** — a file named after the playlist, in the same folder — which is exactly what Downtify writes. As long as Navidrome's music folder covers your downloads folder, the artwork appears on its next scan, and a replaced picture shows after the scan that follows. A watch whose picture changed asks for that scan, like a check that downloaded songs.
+
+The playlist Downtify makes in Navidrome itself (when Navidrome doesn't import the M3U) has no sidecar, so Navidrome would show a mosaic of its songs' covers. Downtify uploads the saved picture to that playlist instead, again whenever it changes. This needs a Navidrome that takes playlist pictures (0.64 does). On an older one the upload is skipped and noted in the log. See [slskd & Navidrome](slskd-navidrome.md#navidrome).
 
 ## Cleanup
 

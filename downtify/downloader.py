@@ -2075,13 +2075,19 @@ def save_playlist_cover(cover_url: str, m3u_path: Path) -> Optional[Path]:
     serve JPEG for these URLs, so the extension is fixed rather than
     sniffed from the response. Returns the written path, or ``None``
     when there's no cover URL, the fetch fails, or the file can't be
-    written.
+    written. A file that already holds this very picture is left as it
+    is (and its path returned), so a media server sees no change.
     """
 
     data = _download_cover(cover_url)
     if not data:
         return None
     cover_path = m3u_path.with_suffix('.jpg')
+    try:
+        if cover_path.is_file() and cover_path.read_bytes() == data:
+            return cover_path
+    except OSError:
+        pass
     try:
         # The cover can land before the first track, so the playlist's
         # folder may not exist yet.

@@ -30,6 +30,14 @@ from downtify.monitor import (
 PLAYLIST_NAME = 'My Playlist'
 
 
+@pytest.fixture(autouse=True)
+def _forget_saved_covers(monkeypatch):
+    """Each test starts with no cover remembered as saved or seen."""
+    monkeypatch.setattr(monitor, '_saved_watch_covers', {})
+    monkeypatch.setattr(monitor, '_watch_cover_urls', {})
+    monkeypatch.setattr(monitor.spotify, '_seen_playlist_covers', {})
+
+
 # ── fetch_playlist_cover_url ────────────────────────────────────────────────
 
 
@@ -487,6 +495,215 @@ def test_check_playlist_saves_the_cover_before_the_first_track(
 
     assert asyncio.run(_scenario()) == 1
     assert cover_seen == [True]
+
+
+# ── a watched playlist whose picture changes ───────────────────────────────
+
+
+def _check_no_new_songs(dl, settings=None):
+    """One check of a watch whose playlist has no song to download."""
+
+    async def _scenario():
+        return await monitor.check_playlist(
+            _monitored_playlist(),
+            _FakeMonitorDB(),
+            dl,
+            _fake_broadcast,
+            asyncio.get_running_loop(),
+            settings=settings
+            or {'generate_m3u': True, 'download_cover_art_playlists': True},
+        )
+
+    return asyncio.run(_scenario())
+
+
+def _serve_covers(monkeypatch, covers: dict[str, bytes]) -> list[str]:
+    fetched: list[str] = []
+
+    def _download_cover(url):
+        fetched.append(url)
+        return covers.get(url)
+
+    monkeypatch.setattr(downloader_mod, '_download_cover', _download_cover)
+    return fetched
+
+
+def _no_songs(monkeypatch):
+    monkeypatch.setattr(
+        monitor.spotify, 'playlist_tracks_from_id', lambda spotify_id: []
+    )
+
+
+def test_check_with_no_new_songs_replaces_a_changed_picture(
+    monkeypatch, tmp_path
+):
+    # The playlist had Spotify's four-song mosaic; its owner then
+    # uploaded a picture. No song is new, yet the saved file follows.
+    dl = Downloader(download_dir=tmp_path, audio_format='mp3')
+    _no_songs(monkeypatch)
+    cover = {'url': 'https://mosaic.scdn.co/640/abc'}
+    monkeypatch.setattr(
+        monitor.spotify, 'playlist_cover_url_from_id', lambda pid: cover['url']
+    )
+    _serve_covers(
+        monkeypatch,
+        {
+            'https://mosaic.scdn.co/640/abc': b'MOSAIC',
+            'https://i.scdn.co/image/uploaded': b'UPLOADED',
+        },
+    )
+    cover_path = tmp_path / PLAYLIST_NAME / f'{PLAYLIST_NAME}.jpg'
+
+    _check_no_new_songs(dl)
+    assert cover_path.read_bytes() == b'MOSAIC'
+
+    cover['url'] = 'https://i.scdn.co/image/uploaded'
+    _check_no_new_songs(dl)
+    assert cover_path.read_bytes() == b'UPLOADED'
+    # The Monitor page's fallback address follows too.
+    remembered = monitor._watch_cover_urls[(SOURCE_SPOTIFY, 'pl123')][1]
+    assert remembered == 'https://i.scdn.co/image/uploaded'
+
+
+def test_an_unchanged_picture_is_not_downloaded_again(monkeypatch, tmp_path):
+    dl = Downloader(download_dir=tmp_path, audio_format='mp3')
+    _no_songs(monkeypatch)
+    monkeypatch.setattr(
+        monitor.spotify,
+        'playlist_cover_url_from_id',
+        lambda pid: 'https://img/cover',
+    )
+    fetched = _serve_covers(monkeypatch, {'https://img/cover': b'IMG'})
+
+    _check_no_new_songs(dl)
+    _check_no_new_songs(dl)
+
+    assert fetched == ['https://img/cover']
+
+
+def test_a_new_picture_alone_updates_navidrome(monkeypatch, tmp_path):
+    # No song is new, but the picture is: the playlist is synced to
+    # Navidrome (its scan, or the picture of Downtify's own copy there).
+    dl = Downloader(download_dir=tmp_path, audio_format='mp3')
+    _no_songs(monkeypatch)
+    cover = {'url': 'https://img/one'}
+    monkeypatch.setattr(
+        monitor.spotify, 'playlist_cover_url_from_id', lambda pid: cover['url']
+    )
+    _serve_covers(
+        monkeypatch, {'https://img/one': b'ONE', 'https://img/two': b'TWO'}
+    )
+    synced: list[str] = []
+    monkeypatch.setattr(
+        monitor,
+        '_sync_library_playlist',
+        lambda playlist, *a, **k: synced.append(playlist.name),
+    )
+    # The M3U is only rewritten for songs, not for a picture.
+    monkeypatch.setattr(
+        monitor,
+        '_regenerate_m3u',
+        lambda *a, **k: pytest.fail('M3U rewritten for a picture'),
+    )
+
+    _check_no_new_songs(dl)  # the first picture
+    _check_no_new_songs(dl)  # same picture: nothing to do
+    cover['url'] = 'https://img/two'
+    _check_no_new_songs(dl)  # a new one
+
+    assert synced == [PLAYLIST_NAME, PLAYLIST_NAME]
+
+
+def test_a_picture_deleted_by_hand_is_saved_again(monkeypatch, tmp_path):
+    dl = Downloader(download_dir=tmp_path, audio_format='mp3')
+    _no_songs(monkeypatch)
+    monkeypatch.setattr(
+        monitor.spotify,
+        'playlist_cover_url_from_id',
+        lambda pid: 'https://img/cover',
+    )
+    _serve_covers(monkeypatch, {'https://img/cover': b'IMG'})
+    cover_path = tmp_path / PLAYLIST_NAME / f'{PLAYLIST_NAME}.jpg'
+
+    _check_no_new_songs(dl)
+    cover_path.unlink()
+    _check_no_new_songs(dl)
+
+    assert cover_path.read_bytes() == b'IMG'
+
+
+def test_a_check_keeps_the_saved_picture_when_the_service_has_none(
+    monkeypatch, tmp_path
+):
+    dl = Downloader(download_dir=tmp_path, audio_format='mp3')
+    _no_songs(monkeypatch)
+    monkeypatch.setattr(
+        monitor.spotify, 'playlist_cover_url_from_id', lambda pid: ''
+    )
+    cover_path = tmp_path / PLAYLIST_NAME / f'{PLAYLIST_NAME}.jpg'
+    cover_path.parent.mkdir(parents=True)
+    cover_path.write_bytes(b'OLD')
+
+    _check_no_new_songs(dl)
+
+    assert cover_path.read_bytes() == b'OLD'
+
+
+def test_a_check_without_the_setting_leaves_the_picture_alone(
+    monkeypatch, tmp_path
+):
+    dl = Downloader(download_dir=tmp_path, audio_format='mp3')
+    _no_songs(monkeypatch)
+
+    def _boom(*_a, **_kw):
+        raise AssertionError('should not fetch a playlist cover when off')
+
+    monkeypatch.setattr(monitor.spotify, 'playlist_cover_url_from_id', _boom)
+
+    _check_no_new_songs(dl, settings={'generate_m3u': True})
+
+    assert not (tmp_path / PLAYLIST_NAME / f'{PLAYLIST_NAME}.jpg').exists()
+
+
+def test_the_check_uses_the_picture_seen_with_the_songs(monkeypatch, tmp_path):
+    # Spotify's page was read for the songs a moment ago: its picture is
+    # taken from there instead of asking Spotify for the page again.
+    dl = Downloader(download_dir=tmp_path, audio_format='mp3')
+
+    def _songs(spotify_id):
+        monitor.spotify._note_playlist_cover(
+            spotify_id,
+            {'coverArt': {'sources': [{'url': 'https://img/seen'}]}},
+        )
+        return []
+
+    monkeypatch.setattr(monitor.spotify, 'playlist_tracks_from_id', _songs)
+
+    def _boom(*_a, **_kw):
+        raise AssertionError('should not read the page a second time')
+
+    monkeypatch.setattr(monitor.spotify, 'playlist_cover_url_from_id', _boom)
+    _serve_covers(monkeypatch, {'https://img/seen': b'SEEN'})
+
+    _check_no_new_songs(dl)
+
+    cover_path = tmp_path / PLAYLIST_NAME / f'{PLAYLIST_NAME}.jpg'
+    assert cover_path.read_bytes() == b'SEEN'
+
+
+def test_seen_playlist_cover_is_read_once_and_goes_stale(monkeypatch):
+    spotify_mod = monitor.spotify
+    now = {'t': 1000.0}
+    monkeypatch.setattr(spotify_mod.time, 'monotonic', lambda: now['t'])
+    entity = {'coverArt': {'sources': [{'url': 'https://img/a'}]}}
+
+    spotify_mod._note_playlist_cover('pl1', entity)
+    assert spotify_mod.seen_playlist_cover('pl1') == 'https://img/a'
+    assert not spotify_mod.seen_playlist_cover('pl1')
+
+    spotify_mod._note_playlist_cover('pl1', entity)
+    now['t'] += spotify_mod._SEEN_COVER_SECONDS + 1
+    assert not spotify_mod.seen_playlist_cover('pl1')
 
 
 # ── api._process_batch explicit cover_url (no real playlist, e.g. an

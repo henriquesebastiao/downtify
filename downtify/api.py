@@ -8894,6 +8894,7 @@ def _sync_navidrome_playlist(name: str) -> None:
             navidrome_index=state.navidrome_index,
             download_dir=ctx.download_dir,
             trigger_scan=False,
+            cover=path.with_suffix('.jpg'),
         )
     except Exception:
         logger.opt(exception=True).warning(
