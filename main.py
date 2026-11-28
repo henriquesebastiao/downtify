@@ -55,6 +55,7 @@ from downtify import (
     storage_quota_routes,
     trash_routes,
     wanted_routes,
+    watch_reads,
     ytdlp_health,
     ytdlp_routes,
 )
@@ -974,6 +975,10 @@ def build_app() -> FastAPI:
 
     # Lives alongside settings.json in the /data volume so an uploaded
     # cookies.txt survives container updates.
+    # Watches whose playlist or artist keeps failing to read
+    # (downtify/watch_reads.py), kept across restarts.
+    watch_reads.configure(DATABASE_DIR / watch_reads.FILE_NAME)
+
     cookies_store = CookiesStore(DATABASE_DIR / 'cookies.txt')
     api.state.cookies_store = cookies_store
     # yt-dlp's "cookies are no longer valid" / bot-check warnings land in

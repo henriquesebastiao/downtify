@@ -399,11 +399,20 @@
                     >
                     <span
                       v-if="
+                        item.read_failure ||
                         releaseFilterSummary(item).types.length ||
                         releaseFilterSummary(item).newOnly
                       "
                       class="mt-1 flex flex-wrap gap-1"
                     >
+                      <UiBadge
+                        v-if="item.read_failure"
+                        tone="danger"
+                        icon="alert"
+                        :title="readFailureTitle(item.read_failure)"
+                      >
+                        {{ t('monitor.cantRead') }}
+                      </UiBadge>
                       <UiBadge v-if="releaseFilterSummary(item).types.length">
                         {{
                           releaseFilterSummary(item)
@@ -1035,11 +1044,23 @@ const copy = computed(() =>
 const inTab = computed(() => filterWatches(items.value, { kind: tab.value }))
 const enabledInTab = computed(() => inTab.value.filter((i) => i.enabled))
 
+// Hover text of the "Can't read" badge: why, since when, the error.
+function readFailureTitle(failure) {
+  return t('monitor.cantReadTitle', {
+    reason: failure.reason || '',
+    count: failure.failures || 0,
+    when: failure.since ? timeAgo(failure.since, locale.value) : '?',
+    error: failure.error || '',
+  })
+}
+
 const showFilters = computed(() => {
   const paused = inTab.value.filter((i) => !i.enabled).length
+  const failing = inTab.value.filter((i) => i.read_failure).length
   return [
     { id: 'all', label: t('monitor.filterAll'), count: inTab.value.length },
     { id: 'paused', label: t('monitor.filterPaused'), count: paused },
+    { id: 'failing', label: t('monitor.filterCantRead'), count: failing },
   ].filter((item) => item.id === 'all' || item.count || show.value === item.id)
 })
 
@@ -1049,6 +1070,7 @@ const visible = computed(() =>
       kind: tab.value,
       query: query.value,
       paused: show.value === 'paused',
+      failing: show.value === 'failing',
     }),
     sortKey.value,
     sortDir.value,

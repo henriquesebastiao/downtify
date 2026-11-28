@@ -10,25 +10,26 @@ It is **off** until you turn it on: with the main switch off, Downtify makes no 
 
 ## What it tells you
 
-| Task | What it covers |
-| --- | --- |
-| Doctor | Every [Doctor](doctor.md) job: the health check, the slskd check and cleanup, duplicate merges, playlist and Navidrome repairs. |
+| Task                                      | What it covers                                                                                                                                                                                           |
+| ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Doctor                                    | Every [Doctor](doctor.md) job: the health check, the slskd check and cleanup, duplicate merges, playlist and Navidrome repairs.                                                                          |
 | Library upgrade (cover art, lyrics, tags) | The [Library upgrade](library-upgrade.md) scan, then the run that repairs cover art, lyrics, tags or ISRC codes. The finish message says how many songs were updated and, for lyrics, how many got some. |
-| Star ratings | Each [Ratings from Deezer](navidrome-ratings.md) run and preview, scheduled or started by hand. |
-| Wanted catch-up | **Check all now** and **Download all** on the Wanted list of the [artist watches](playlist-monitor.md). |
-| Backups | Each [backup](backups.md), automatic or **Back up now**. |
+| Star ratings                              | Each [Ratings from Deezer](navidrome-ratings.md) run and preview, scheduled or started by hand.                                                                                                          |
+| Wanted catch-up                           | **Check all now** and **Download all** on the Wanted list of the [artist watches](playlist-monitor.md).                                                                                                  |
+| Backups                                   | Each [backup](backups.md), automatic or **Back up now**.                                                                                                                                                 |
 
 For each task you pick the moments you want to hear about: **Started**, **Progress**, **Finished** and **Failed**.
 
-| Other event | When |
-| --- | --- |
-| Download failed | A song in the queue could not be downloaded, with the reason. |
-| Songs downloaded | A song finished downloading (off by default: a big playlist sends a lot). |
-| New releases found | An artist watch found releases it did not have, with their names. |
-| Watch downloads | A watch's automatic check downloaded new songs. |
-| slskd off Soulseek | The queue was [paused because slskd could not search](slskd-navidrome.md#when-slskd-is-off-the-soulseek-network), and again when slskd is back and the queue resumed. On by default, also for channels saved before it existed. |
-| yt-dlp | [YouTube downloads keep failing](updates.md#when-youtube-downloads-keep-failing) or work again; [yt-dlp was updated](updates.md#yt-dlp-updates), failed its test or would not load; with updating off, a newer yt-dlp is out while downloads fail. On by default, also for channels saved before it existed. |
-| YouTube cookies | YouTube signed the [cookies](youtube-cookies.md) out, or signed them in again, or YouTube downloads keep hitting its bot check. On by default, also for channels saved before it existed. |
+| Other event        | When                                                                                                                                                                                                                                                                                                         |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Download failed    | A song in the queue could not be downloaded, with the reason.                                                                                                                                                                                                                                                |
+| Songs downloaded   | A song finished downloading (off by default: a big playlist sends a lot).                                                                                                                                                                                                                                    |
+| New releases found | An artist watch found releases it did not have, with their names.                                                                                                                                                                                                                                            |
+| Watch downloads    | A watch's automatic check downloaded new songs.                                                                                                                                                                                                                                                              |
+| slskd off Soulseek | The queue was [paused because slskd could not search](slskd-navidrome.md#when-slskd-is-off-the-soulseek-network), and again when slskd is back and the queue resumed. On by default, also for channels saved before it existed.                                                                              |
+| yt-dlp             | [YouTube downloads keep failing](updates.md#when-youtube-downloads-keep-failing) or work again; [yt-dlp was updated](updates.md#yt-dlp-updates), failed its test or would not load; with updating off, a newer yt-dlp is out while downloads fail. On by default, also for channels saved before it existed. |
+| Watch              | A watch's playlist or artist [could not be read three checks in a row](playlist-monitor.md#watches-that-cant-be-read), with the likely reason, and again when it works again. On by default, also for channels saved before it existed.                                                                      |
+| YouTube cookies    | YouTube signed the [cookies](youtube-cookies.md) out, or signed them in again, or YouTube downloads keep hitting its bot check. On by default, also for channels saved before it existed.                                                                                                                    |
 
 A burst of the same event is grouped: Downtify waits 30 seconds and sends one message such as "12 downloads failed" with the first ten songs listed, not twelve messages.
 
@@ -89,17 +90,17 @@ Downtify sends a JSON `POST` to the URL for every message:
 
 With **Answer commands** on, the bot answers these in its channel:
 
-| Command | Answer |
-| --- | --- |
-| `/help` | The list of commands. |
-| `/status` | Every long task running now with its progress, and the download queue's counts. |
-| `/progress task` | One task: Doctor, Library upgrade, Star ratings, Wanted catch-up or Download queue. |
-| `/queue` | The download queue: downloading, waiting, done, failed, and what is downloading. |
-| `/doctor` | The Doctor's running or last job. |
-| `/upgrade` | The Library upgrade's running or last run. |
-| `/lyrics` | What the lyrics part of the last Library upgrade found: added, none found, failed, still to go. |
-| `/ratings` | The running or last star ratings run, and when the next scheduled one is due. |
-| `/wanted` | The Wanted catch-up job. |
+| Command          | Answer                                                                                          |
+| ---------------- | ----------------------------------------------------------------------------------------------- |
+| `/help`          | The list of commands.                                                                           |
+| `/status`        | Every long task running now with its progress, and the download queue's counts.                 |
+| `/progress task` | One task: Doctor, Library upgrade, Star ratings, Wanted catch-up or Download queue.             |
+| `/queue`         | The download queue: downloading, waiting, done, failed, and what is downloading.                |
+| `/doctor`        | The Doctor's running or last job.                                                               |
+| `/upgrade`       | The Library upgrade's running or last run.                                                      |
+| `/lyrics`        | What the lyrics part of the last Library upgrade found: added, none found, failed, still to go. |
+| `/ratings`       | The running or last star ratings run, and when the next scheduled one is due.                   |
+| `/wanted`        | The Wanted catch-up job.                                                                        |
 
 The commands only **read**: nobody in Discord can start, stop or change anything in Downtify. The bot answers only in the channel set in **Channel ID** (elsewhere it replies, visible only to the asker, that it is not listening there). To limit it to some people, list their Discord user IDs in **Allowed users** (right-click a user → **Copy User ID** with Developer Mode on).
 
@@ -111,8 +112,8 @@ If the bot shows **Stopped** with "Discord rejected the bot token", the token wa
 
 All admin only:
 
-| Request | What it does |
-| --- | --- |
-| `GET /api/notifications` | The settings (each secret only as `<name>_set`), the last error of each channel and the bot's state. |
-| `PUT /api/notifications` | Save `{settings, clear}`. A blank secret keeps the saved one; `clear` lists secrets to remove, such as `discord.bot_token`. |
-| `POST /api/notifications/test/{channel}` | Send a test message on `discord`, `ntfy`, `gotify` or `webhook`, with `{channel: {...}}` as unsaved values. |
+| Request                                  | What it does                                                                                                                |
+| ---------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `GET /api/notifications`                 | The settings (each secret only as `<name>_set`), the last error of each channel and the bot's state.                        |
+| `PUT /api/notifications`                 | Save `{settings, clear}`. A blank secret keeps the saved one; `clear` lists secrets to remove, such as `discord.bot_token`. |
+| `POST /api/notifications/test/{channel}` | Send a test message on `discord`, `ntfy`, `gotify` or `webhook`, with `{channel: {...}}` as unsaved values.                 |

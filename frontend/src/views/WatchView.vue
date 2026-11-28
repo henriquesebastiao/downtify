@@ -70,6 +70,13 @@
         <UiBadge v-if="!watch.enabled" tone="warn">{{
           t('monitor.activeOff')
         }}</UiBadge>
+        <UiBadge
+          v-if="watch.read_failure"
+          tone="danger"
+          icon="alert"
+          :title="watch.read_failure.error"
+          >{{ t('monitor.cantRead') }}</UiBadge
+        >
         <a
           :href="watch.url"
           target="_blank"
@@ -79,6 +86,17 @@
           >{{ watch.url }}</a
         >
       </div>
+      <p
+        v-if="watch.read_failure"
+        class="mt-2 flex items-start gap-2 text-[13px] text-pretty text-danger"
+      >
+        <AppIcon name="alert" :size="15" class="mt-0.5 shrink-0" />{{
+          t('monitor.cantReadLine', {
+            reason: watch.read_failure.reason,
+            count: watch.read_failure.failures,
+          })
+        }}
+      </p>
 
       <div
         v-if="stats"

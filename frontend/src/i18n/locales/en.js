@@ -1356,6 +1356,12 @@ export default {
     wantedSearch: 'Search artists or releases',
     wantedAllTypes: 'All types',
     filterPaused: 'Paused',
+    filterCantRead: "Can't read",
+    cantRead: "Can't read",
+    cantReadLine:
+      '{reason}. The last {count} checks failed, so this watch gets no new songs until it can be read again.',
+    cantReadTitle:
+      '{reason}. {count} checks in a row failed (first {when}); the watch gets no new songs until it can be read. Error: {error}',
     sortAdded: 'Date added',
     sortName: 'Name',
     sortChecked: 'Last checked',
@@ -2568,6 +2574,7 @@ export default {
     event_ytdlp:
       'yt-dlp: YouTube downloads failing or working again, updated, update out',
     event_youtube_cookies: 'YouTube cookies signed out, or a sign-in wanted',
+    event_watch_failing: "A watch can't be read, or works again",
     test: 'Test',
     testHint:
       'Sends one message now with what is filled in above, saved or not.',

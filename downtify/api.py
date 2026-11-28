@@ -489,6 +489,7 @@ from . import (
     spotify,
     spotify_companion,
     stream,
+    watch_reads,
 )
 from .activity import ActivityLog, NowPlaying, describe_user_agent
 from .album_artist import PLAYLIST_ALBUM, as_playlist_album
@@ -11797,7 +11798,12 @@ async def list_monitor_playlists(request: Request) -> list[dict[str, Any]]:
     db = _require_monitor_db()
     scope = None if request_is_admin(request) else request_user_id(request)
     playlists = await asyncio.to_thread(db.list_playlists, scope)
-    return [p.to_dict() for p in playlists]
+    # A watch whose playlist/artist keeps failing to read
+    # (downtify/watch_reads.py); ``None`` while it reads fine.
+    return [
+        {**p.to_dict(), 'read_failure': watch_reads.reads.status(p.id)}
+        for p in playlists
+    ]
 
 
 @router.get('/api/monitor/playlists/{playlist_id}/cover')
@@ -12890,7 +12896,10 @@ def _monitor_watch_tracks(
             },
         })
     return {
-        'watch': watch.to_dict(),
+        'watch': {
+            **watch.to_dict(),
+            'read_failure': watch_reads.reads.status(watch.id),
+        },
         'tracks': tracks,
         'missing': len(order) - len(on_disk),
         'failures': db.history.failures(watch.id),

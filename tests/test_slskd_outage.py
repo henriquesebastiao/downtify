@@ -245,6 +245,7 @@ def test_new_event_reaches_channels_saved_before_it():
         'slskd_outage',
         'ytdlp',
         'youtube_cookies',
+        'watch_failing',
     ]
 
 
