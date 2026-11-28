@@ -522,6 +522,7 @@ export default {
     reason: {
       not_configured: 'slskd not set up',
       unreachable: "Couldn't reach slskd",
+      offline: 'slskd was off the Soulseek network',
       search_failed: "Search didn't start",
       search_timeout: 'Search ran out of time',
       no_results: 'Nobody shared it',
@@ -538,6 +539,8 @@ export default {
         'Fill in the server URL and API key in Settings → Audio sources.',
       unreachable:
         'slskd was down or unreachable at the time. Check that it runs and the server URL is right.',
+      offline:
+        'slskd was running but not logged in to the Soulseek network (the Soulseek server was down, or slskd was disconnected). slskd reconnects by itself; downloads pause after a run of these (Settings → Audio sources).',
       search_failed:
         'slskd refused the search, often while it is still connecting to the Soulseek network.',
       search_timeout:
@@ -1821,6 +1824,9 @@ export default {
     slskdQueuedTimeout: 'Queued timeout',
     slskdTimeoutHint:
       'How long one download may take before the next candidate is tried.',
+    slskdOutagePause: 'Pause downloads when slskd is down',
+    slskdOutagePauseHint:
+      'After this many songs in a row that slskd could not search for (offline, or cut off from the Soulseek network), the queue pauses instead of fetching them from YouTube, and the notification channels hear about it. It resumes by itself once slskd is back. 0 turns this off.',
     slskdQueuedTimeoutHint:
       'How long to wait in another user’s upload queue before moving on.',
     slskdProfile: 'Quality profile',
@@ -2525,6 +2531,7 @@ export default {
     event_watch_done: 'Watch downloads',
     event_spotify_companion:
       'Spotify companion: signed out, other account, quiet or back',
+    event_slskd_outage: 'slskd off Soulseek: downloads paused or resumed',
     test: 'Test',
     testHint:
       'Sends one message now with what is filled in above, saved or not.',

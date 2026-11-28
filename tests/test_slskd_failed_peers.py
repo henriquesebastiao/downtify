@@ -114,6 +114,7 @@ def _fake_client(transfers: dict[str, dict[str, Any]], cancelled: list):
         base_url = 'https://slskd.example'
         configured = staticmethod(lambda: True)
         can_connect = staticmethod(lambda: True)
+        server_state = staticmethod(lambda: None)
         start_search = staticmethod(lambda query: 'search-1')
         wait_search_complete = staticmethod(lambda *a, **k: True)
         delete_search = staticmethod(lambda search_id: None)

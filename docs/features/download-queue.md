@@ -36,6 +36,7 @@ With [slskd](slskd-navidrome.md) first in the source order, a song it can't serv
 | **Transfers failed**                                                      | Every file picked was refused or never arrived complete                              |
 | **Wrong song in the file**                                                | The downloaded file's tags named another song; it was kept in slskd's folder         |
 | **Couldn't reach slskd** / **Search didn't start** / **slskd not set up** | slskd itself wasn't available                                                        |
+| **slskd was off the Soulseek network**                                    | slskd ran but wasn't logged in to Soulseek ([what happens then](slskd-navidrome.md#when-slskd-is-off-the-soulseek-network)) |
 
 Click a reason to see what to change and the latest songs it happened to, with details such as the best match's score or how many files the quality rules turned down. The line below says what was used instead. Songs slskd served, and songs already in the library, aren't counted. **Reset** starts the count over, so after changing a setting the next downloads show whether it helped. Songs and files are not touched.
 

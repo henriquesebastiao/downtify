@@ -398,6 +398,31 @@ class SlskdClient:
                 continue
         return False
 
+    def server_state(self) -> Optional[dict[str, Any]]:
+        """slskd's link to the Soulseek server (``state``,
+        ``isConnected``, ``isLoggedIn``...), from ``GET
+        /api/v0/application``; ``None`` when slskd doesn't say.
+
+        slskd's own web API can be up while it is cut off from the
+        Soulseek network; every search then fails with HTTP 409.
+        """
+
+        try:
+            data = self._request('GET', '/api/v0/application')
+        except Exception:
+            return None
+        server = data.get('server') if isinstance(data, dict) else None
+        return server if isinstance(server, dict) else None
+
+    def logged_in(self) -> Optional[bool]:
+        """Whether slskd is logged in to the Soulseek network; ``None``
+        when it can't be told (an older slskd, or slskd unreachable)."""
+
+        server = self.server_state()
+        if server is None or 'isLoggedIn' not in server:
+            return None
+        return server.get('isLoggedIn') is True
+
     def _request(
         self,
         method: str,
@@ -1940,6 +1965,7 @@ def _wait_for_slskd_file(
 MISS_REASONS = (
     'not_configured',
     'unreachable',
+    'offline',
     'search_failed',
     'search_timeout',
     'no_results',
@@ -2021,6 +2047,16 @@ def download_from_slskd(  # noqa: PLR0914  # search, rank, enqueue, poll, finali
             'slskd: connectivity check failed base_url={!r}', client.base_url
         )
         return _missed('unreachable')
+    server = client.server_state()
+    if server is not None and server.get('isLoggedIn') is False:
+        # Every search would fail (HTTP 409) until slskd logs back in.
+        logger.info(
+            'slskd: not logged in to the Soulseek network state={!r} '
+            'title={!r}',
+            server.get('state'),
+            song.get('name'),
+        )
+        return _missed('offline', str(server.get('state') or ''))
 
     output_dir = Path(
         str(
